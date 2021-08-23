@@ -12,17 +12,12 @@ namespace KafkaLens.Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class KafkaClusterController : ControllerBase
+    public class ClustersController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
+        private readonly ILogger<ClustersController> _logger;
+        private readonly ClustersService _service;
 
-        private readonly ILogger<KafkaClusterController> _logger;
-        private readonly KafkaClusterService _service;
-
-        public KafkaClusterController(ILogger<KafkaClusterController> logger, KafkaClusterService service)
+        public ClustersController(ILogger<ClustersController> logger, ClustersService service)
         {
             _logger = logger;
             _service = service;
@@ -44,6 +39,12 @@ namespace KafkaLens.Server.Controllers
         public ActionResult<IEnumerable<KafkaCluster>> GetAll()
         {
             return new JsonResult(_service.GetAllClusters());
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<KafkaCluster>> DeleteById(string id)
+        {
+            return await _service.RemoveByIdAsync(id);
         }
     }
 }

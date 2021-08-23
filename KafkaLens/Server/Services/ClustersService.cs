@@ -11,13 +11,13 @@ using System.Threading.Tasks;
 
 namespace KafkaLens.Server.Services
 {
-    public class KafkaClusterService
+    public class ClustersService
     {
-        private readonly ILogger<KafkaClusterService> _logger;
+        private readonly ILogger<ClustersService> _logger;
         private readonly KafkaContext _dbContext;
         public DbSet<Entities.KafkaCluster> Clusters => _dbContext.KafkaClusters;
 
-        public KafkaClusterService(ILogger<KafkaClusterService> logger, KafkaContext dbContext)
+        public ClustersService(ILogger<ClustersService> logger, KafkaContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -51,8 +51,16 @@ namespace KafkaLens.Server.Services
 
         internal async Task<KafkaCluster> GetByIdAsync(string id)
         {
-            var item = await Clusters.FirstOrDefaultAsync(cluster => cluster.Id == id);
-            return item == null ? null : ToModel(item);
+            var cluster = await Validate(id);
+            return ToModel(cluster);
+        }
+
+        internal async Task<KafkaCluster> RemoveByIdAsync(string id)
+        {
+            var cluster = await Validate(id);
+            Clusters.Remove(cluster);
+            await _dbContext.SaveChangesAsync();
+            return ToModel(cluster);
         }
 
         #region Validations
@@ -66,6 +74,16 @@ namespace KafkaLens.Server.Services
             {
                 throw new ArgumentException($"Cluster with name {existing.Name} already exists");
             }
+        }
+
+        private async Task<Entities.KafkaCluster> Validate(string id)
+        {
+            var cluster = await Clusters.FindAsync(id);
+            if (cluster == null)
+            {
+                throw new ArgumentException("", nameof(id));
+            }
+            return cluster;
         }
         #endregion Validations
 

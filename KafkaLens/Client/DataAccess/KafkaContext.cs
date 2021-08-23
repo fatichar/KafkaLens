@@ -22,11 +22,16 @@ namespace KafkaLens.Client.DataAccess
         {
             if (Clusters == null)
             {
-                var clusters = await http.GetFromJsonAsync<IEnumerable<KafkaCluster>>("KafkaCluster");
-
-                SetClusters(clusters);
+                await Refresh();
             }
             return Clusters.Values.ToList();
+        }
+
+        private async Task Refresh()
+        {
+            var clusters = await http.GetFromJsonAsync<IEnumerable<KafkaCluster>>("KafkaCluster");
+
+            SetClusters(clusters);
         }
 
         public KafkaCluster GetById(string id)
@@ -47,9 +52,17 @@ namespace KafkaLens.Client.DataAccess
             return cluster;
         }
 
-        public bool Remove(String id)
+        public async Task<bool> RemoveAsync(String id)
         {
-            return Clusters.Remove(id);
+            var response = await http.DeleteAsync("KafkaCluster/" + id);
+            if (response.IsSuccessStatusCode)
+            {
+                var before = Clusters.Count;
+                Clusters.Remove(id);
+                var after = Clusters.Count;
+                var keys = Clusters.Keys;
+            }
+            return response.IsSuccessStatusCode;
         }
     }
 }

@@ -13,7 +13,8 @@
     {
         var pagePath = "/cluster/" + cluster.Id;
         <li>
-            <a href="@pagePath">@cluster.Name</a>
+            <NavLink href="@pagePath">@cluster.Name</NavLink>
+            <button @onclick="() => RemoveClusterAsync(cluster.Id)">Remove</button>
         </li>
     }
 </ul>

@@ -42,8 +42,8 @@ namespace KafkaLens.Client.Pages
 
         private async void AddClusterAsync()
         {
-            var state = await LocalStorage.GetItemAsync<string>("state");
-            await LocalStorage.SetItemAsync("state", "add cluster");
+            //var state = await LocalStorage.GetItemAsync<string>("state");
+            //await LocalStorage.SetItemAsync("state", "add cluster");
             Logger.LogDebug("Adding a cluster");
             try
             {
@@ -54,6 +54,16 @@ namespace KafkaLens.Client.Pages
             }
             catch (Exception e)
             {
+            }
+        }
+
+        private async Task RemoveClusterAsync(String clusterId)
+        {
+            var removed = await KafkaContext.RemoveAsync(clusterId);
+            if (removed)
+            {
+                clusters = await KafkaContext.GetAllClustersAsync();
+                StateHasChanged();
             }
         }
     }
