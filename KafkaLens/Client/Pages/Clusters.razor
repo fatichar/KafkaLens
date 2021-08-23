@@ -1,0 +1,23 @@
+﻿@page "/"
+@page "/clusters"
+
+@using KafkaLens.Shared.Models
+@using KafkaLens.Client.DataAccess
+
+@inject HttpClient Http
+
+<h3>Kafka Clusters</h3>
+
+<ul>
+    @foreach (var cluster in clusters)
+    {
+        var pagePath = "/cluster/" + cluster.Id;
+        <li>
+            <a href="@pagePath">@cluster.Name</a>
+        </li>
+    }
+</ul>
+
+<input placeholder="Cluster Name" @bind="clusterName" />
+<input placeholder="Bootstrap Servers" @bind="kafkaUrl" />
+<button @onclick="AddClusterAsync">Add Cluster</button>
