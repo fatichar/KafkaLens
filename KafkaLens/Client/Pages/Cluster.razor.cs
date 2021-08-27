@@ -1,12 +1,9 @@
 ﻿using Blazored.LocalStorage;
 using KafkaLens.Client.DataAccess;
-using KafkaLens.Shared.Models;
+using KafkaLens.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace KafkaLens.Client.Pages
@@ -23,14 +20,26 @@ namespace KafkaLens.Client.Pages
         private ILocalStorageService LocalStorage { get; set; }
 
         [Parameter]
-        public string clusterId { get; set; }
+        public string ClusterId { get; set; }
 
-        public KafkaCluster KafkaCluster { get; set; }
+        public string ClusterName => KafkaCluster?.Name ?? "";
 
-        protected override void OnParametersSet()
+        private KafkaCluster KafkaCluster { get; set; }
+        private List<KafkaCluster> KafkaClusters => new() { KafkaCluster };
+
+        public IList<INode> Topics => KafkaCluster?.Children;
+
+        protected override async Task OnParametersSetAsync()
         {
-            if (KafkaContext != null)
-                KafkaCluster = KafkaContext.GetById(clusterId);
+            if (KafkaContext == null)
+            {
+                Logger.LogError("KafkaContext is not set");
+                return;
+            }
+            KafkaCluster = await KafkaContext.GetByIdAsync(ClusterId);
+            KafkaCluster.Children = await KafkaContext.GetTopicsAsync(ClusterId);
+
+            StateHasChanged();
         }
     }
 }

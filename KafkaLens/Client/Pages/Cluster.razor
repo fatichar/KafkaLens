@@ -1,7 +1,26 @@
-﻿@page "/cluster/{clusterId}"
+﻿@page "/cluster/{ClusterId}"
 
-@using KafkaLens.Shared.Models
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Lists
+@using ViewModels;
 
-<h1>Kafka Cluster</h1>
+<h1>Cluster: @ClusterName</h1>
 
-<p>@clusterId</p>
+<br />
+
+@if (Topics == null)
+{
+    <h2>Loading...</h2>
+}
+else
+{
+    <SfTreeView TValue="INode">
+        <TreeViewFieldsSettings TValue="INode" DataSource="@KafkaClusters"
+                                Id="Name"
+                                Text="Name"
+                                Expanded="Expanded"
+                                HasChildren="HasChildren"
+                                Child="Children">
+        </TreeViewFieldsSettings>
+    </SfTreeView>
+}

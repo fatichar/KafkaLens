@@ -4,7 +4,7 @@
     {
         public Partition(int id)
         {
-            this.Id = id;
+            Id = id;
         }
 
         public int Id { get; set; }

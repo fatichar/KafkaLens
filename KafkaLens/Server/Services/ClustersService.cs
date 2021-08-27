@@ -23,15 +23,15 @@ namespace KafkaLens.Server.Services
             _dbContext = dbContext;
         }
 
-        internal KafkaCluster Add(NewKafkaCluster newCluster)
+        internal async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
         {
             Validate(newCluster);
 
             var cluster = CreateCluster(newCluster);
 
-            Clusters.Add(cluster);
+            await Clusters.AddAsync(cluster);
 
-            _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
             
             return ToModel(cluster);
         }

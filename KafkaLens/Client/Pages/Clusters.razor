@@ -1,7 +1,6 @@
 ﻿@page "/"
 @page "/clusters"
 
-@using KafkaLens.Shared.Models
 @using KafkaLens.Client.DataAccess
 
 @inject HttpClient Http
@@ -9,7 +8,7 @@
 <h3>Kafka Clusters</h3>
 
 <ul>
-    @foreach (var cluster in clusters)
+    @foreach (var cluster in clusters.Values)
     {
         var pagePath = "/cluster/" + cluster.Id;
         <li>

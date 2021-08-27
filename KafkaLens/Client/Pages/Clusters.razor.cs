@@ -7,7 +7,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Blazored.LocalStorage;
 using KafkaLens.Client.DataAccess;
-using KafkaLens.Shared.Models;
+using KafkaLens.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -24,19 +24,16 @@ namespace KafkaLens.Client.Pages
         [Inject]
         private ILocalStorageService LocalStorage { get; set; }
 
-        private IList<KafkaCluster> clusters = new List<KafkaCluster>();
+        private IDictionary<string, KafkaCluster> clusters = new Dictionary<string, KafkaCluster>();
         private string clusterName;
         private string kafkaUrl;
-
-        protected override async Task OnInitializedAsync()
-        {
-        }
 
         protected override async Task OnParametersSetAsync()
         {
             if (KafkaContext != null)
             {
                 clusters = await KafkaContext.GetAllClustersAsync();
+                StateHasChanged();
             }
         }
 
@@ -48,12 +45,13 @@ namespace KafkaLens.Client.Pages
             try
             {
                 var cluster = 
-                    await KafkaContext.AddAsync(new NewKafkaCluster(clusterName, kafkaUrl));
+                    await KafkaContext.AddAsync(new KafkaLens.Shared.Models.NewKafkaCluster(clusterName, kafkaUrl));
 
                 StateHasChanged();
             }
             catch (Exception e)
             {
+                Logger.LogError(e.Message);
             }
         }
 

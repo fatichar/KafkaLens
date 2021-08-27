@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace KafkaLens.Server.Services
 {
-    class ConfluentConsumer : IKafkaConsumer
+    class ConfluentConsumer : IKafkaConsumer, IDisposable
     {
         private readonly double queryWatermarkTimeout = 2;
         private readonly double queryTopicsTimeout = 5;
@@ -42,32 +42,41 @@ namespace KafkaLens.Server.Services
             }
         }
 
+        private ConsumerConfig CreateConsumerConfig()
+        {
+            return new ConsumerConfig
+            {
+                GroupId = "KafkaLens.Server",
+                ClientId = "KafkaLens.Server",
+                BootstrapServers = ServersUrl,
+                EnableAutoOffsetStore = false,
+                EnableAutoCommit = false
+            };
+        }
+
         private IAdminClient CreateAdminClient()
         {
             var config = new AdminClientConfig
             {
                 BootstrapServers = ServersUrl
             };
-            AdminClientBuilder adminClientBuilder = new AdminClientBuilder(config);
-            IAdminClient adminClient = adminClientBuilder.Build();
-            return adminClient;
-        }
-
-        private ConsumerConfig CreateConsumerConfig()
-        {
-            return new ConsumerConfig
-            {
-                GroupId = "KafkaLens",
-                BootstrapServers = ServersUrl,
-                AutoOffsetReset = AutoOffsetReset.Latest
-            };
+            return new AdminClientBuilder(config).Build();
         }
 
         public IList<Topic> GetTopics()
         {
-            Metadata metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(queryTopicsTimeout));
+            var metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(queryTopicsTimeout));
 
-            return metadata.Topics.ToList().ConvertAll(topic => new Topic(topic.Topic, topic.Partitions.Count));
+            var topics = metadata.Topics
+                            .ConvertAll(topic => new Topic(topic.Topic, topic.Partitions.Count));
+            topics.Sort(CompareTopics);
+
+            return topics;
+        }
+
+        private int CompareTopics(Topic x, Topic y)
+        {
+            return x.Name.CompareTo(y.Name);
         }
 
         public void Dispose()

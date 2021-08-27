@@ -10,29 +10,60 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Confluent.Kafka;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KafkaLens.Server.Services
 {
     public class ClusterService
     {
         private readonly ILogger<ClusterService> _logger;
-        private readonly KafkaContext _dbContext;
-        private readonly IKafkaConsumer _consumer;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IDictionary<string, IKafkaConsumer> _consumers = new Dictionary<string, IKafkaConsumer>();
 
-        public ClusterService(ILogger<ClusterService> logger, IKafkaConsumer consumer)
+        public ClusterService(ILogger<ClusterService> logger, IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
-            _consumer = consumer;
+            _scopeFactory = scopeFactory;
+            _ = CreateConsumersAsync();
         }
 
-        internal Task<ActionResult<List<Message>>> GetMessages(string topic, int limit)
+        private async Task CreateConsumersAsync()
+        {
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<KafkaContext>();
+
+                await db.KafkaClusters.ForEachAsync(async cluster =>
+                {
+                    _consumers.Add(cluster.Id, await CreateConsumerAsync(cluster));
+                });
+            }
+        }
+
+        private async Task<IKafkaConsumer> CreateConsumerAsync(Entities.KafkaCluster cluster)
+        {
+            return new ConfluentConsumer(cluster.BootstrapServers);
+        }
+
+        internal async Task<IList<Topic>> GetTopicsAsync(string clusterId)
+        {
+            Validate(clusterId, out var consumer);
+            return consumer.GetTopics();
+        }
+
+        internal Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic1, int limit)
         {
             throw new NotImplementedException();
         }
 
-        internal object GetTopics()
+        #region validations
+        private void Validate(string clusterId, out IKafkaConsumer consumer)
         {
-            return _consumer.GetTopics();
+            if (!_consumers.TryGetValue(clusterId, out consumer))
+            {
+                throw new ArgumentException("", nameof(clusterId));
+            }
         }
+        #endregion validations
     }
 }

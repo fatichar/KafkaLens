@@ -39,8 +39,8 @@ namespace KafkaLens.Server
                     });
             });
 
-            services.AddScoped<ClusterService>();
-            services.AddSingleton<IKafkaConsumer, ConfluentConsumer>();
+            services.AddScoped<ClustersService>();
+            services.AddSingleton<ClusterService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

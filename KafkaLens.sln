@@ -11,6 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KafkaLens.Server", "KafkaLe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C57A5300-E6C7-42B0-8283-507FA59F76B9}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		TODO.txt = TODO.txt
 	EndProjectSection
 EndProject
