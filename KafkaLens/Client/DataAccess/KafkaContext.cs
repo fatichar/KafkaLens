@@ -54,11 +54,40 @@ namespace KafkaLens.Client.DataAccess
 
         internal async Task<IList<INode>> GetTopicsAsync(string clustername)
         {
-            var topics = await _http.GetFromJsonAsync<IEnumerable<KafkaLens.Shared.Models.Topic>>(
+            try
+            {
+                var topics = await _http.GetFromJsonAsync<IEnumerable<KafkaLens.Shared.Models.Topic>>(
                 $"{BASE_URL}/{clustername}/topics");
 
-            var topicsList = topics?.Select(topic => (INode)ToViewModel(topic, clustername)).ToList();
-            return topicsList;
+                var topicsList = topics?.Select(topic => (INode)ToViewModel(topic, clustername)).ToList();
+                return topicsList;
+            } catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+            }
+            return null;
+        }
+
+        internal async Task<List<Message>> GetMessagesAsync(string clustername, string topic)
+        {
+            try
+            {
+                string requestUri = $"{BASE_URL}/{clustername}/{topic}/messages?limit=10";
+                var messages = await _http.GetFromJsonAsync<IEnumerable<KafkaLens.Shared.Models.Message>>(
+                    requestUri);
+
+                return messages.Select(ToViewModel).ToList();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+            }
+            return null;
+        }
+
+        Message ToViewModel(KafkaLens.Shared.Models.Message message)
+        {
+            return new(message.Key, message.Value);
         }
 
         public async Task<KafkaCluster> AddAsync(KafkaLens.Shared.Models.NewKafkaCluster newCluster)

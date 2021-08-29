@@ -2,13 +2,13 @@
 {
     public class Message
     {
-        public Message(object key, object body)
+        public Message(byte[] key, byte[] body)
         {
-            Key = key;
-            Body = body;
+            Key = System.Text.Encoding.Default.GetString(key);
+            Body = System.Text.Encoding.Default.GetString(body);
         }
 
-        public object Key { get; }
-        public object Body { get; }
+        public string Key { get; }
+        public string Body { get; }
     }
 }

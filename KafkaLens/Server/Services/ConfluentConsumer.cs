@@ -2,6 +2,7 @@
 using KafkaLens.Shared.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -11,9 +12,9 @@ namespace KafkaLens.Server.Services
 {
     class ConfluentConsumer : IKafkaConsumer, IDisposable
     {
-        private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(2);
-        private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
-        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(2);
+        private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(10);
+        private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(10);
+        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(10);
 
         public string ServersUrl { get; }
 
@@ -91,18 +92,46 @@ namespace KafkaLens.Server.Services
 
         private List<Message> GetMessages(string topic, int partition, FetchOptions options)
         {
+            var watch = new Stopwatch();
+            watch.Start();
             TopicPartition tp = new(topic, partition);
-            var watermarks = consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout);
-            var tpo = CreateTopicPartitionOffset(tp, watermarks, options);
-            consumer.Seek(tpo);
-
             var messages = new List<Message>();
-
-            var result = consumer.Consume(consumeTimeout);
-            while (!result.IsPartitionEOF)
+            lock (consumer)
             {
-                messages.Add(CreateMessage(result));
-                result = consumer.Consume(consumeTimeout);
+                Console.WriteLine($"Got lock in {watch.ElapsedMilliseconds} ms");
+                watch.Restart();
+                consumer.Assign(tp);
+                Console.WriteLine($"assigned tp in {watch.ElapsedMilliseconds} ms");
+                watch.Restart();
+                var watermarks = consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout);
+                Console.WriteLine($"Got watermarks in {watch.ElapsedMilliseconds} ms");
+                watch.Restart();
+                var tpo = CreateTopicPartitionOffset(tp, watermarks, options);
+                consumer.Seek(tpo);
+                Console.WriteLine($"Seeked in {watch.ElapsedMilliseconds} ms");
+                watch.Restart();
+
+
+                Console.WriteLine($"Got first message in {watch.ElapsedMilliseconds} ms");
+                watch.Restart();
+                while (messages.Count < options.Limit)
+                {
+                    var result = consumer.Consume(consumeTimeout);
+                    if (result == null)
+                    {
+                        Console.WriteLine("Got null message. Must be timed out.");
+                        break;
+                    }
+                    if (result.IsPartitionEOF)
+                    {
+                        Console.WriteLine("End of partition reached.");
+                        break;
+                    }
+
+                    messages.Add(CreateMessage(result));
+                }
+                Console.WriteLine($"Got remaining messages in {watch.ElapsedMilliseconds} ms");
+                watch.Stop();
             }
 
             return messages;
