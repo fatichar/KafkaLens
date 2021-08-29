@@ -5,76 +5,79 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace KafkaLens.Client.DataAccess
 {
     public class KafkaContext
     {
         private const string BASE_URL = "Clusters";
-        private readonly HttpClient http;
+        private readonly HttpClient _http;
+        private readonly ILogger<KafkaContext> _logger;
         private Task _getClustersTask;
 
-        private IDictionary<string, KafkaCluster> Clusters { get; set; }
+        private Dictionary<string, KafkaCluster> Clusters { get; set; }
 
-        public KafkaContext(HttpClient http)
+        public KafkaContext(HttpClient http, ILogger<KafkaContext> logger)
         {
-            this.http = http;
-            _getClustersTask = Refresh();
+            this._http = http;
+            _logger = logger;
+            _getClustersTask = RefreshClusters();
         }
 
-        private async Task Refresh()
+        private async Task<Dictionary<string, KafkaCluster>> RefreshClusters()
         {
-            var clusters = await http.GetFromJsonAsync<IEnumerable<KafkaCluster>>("Clusters");
+            try
+            {
+                var clusters = await _http.GetFromJsonAsync<IEnumerable<KafkaCluster>>("Clusters");
+                Clusters = clusters?.ToDictionary(cluster => cluster.Name, ToViewModel);
+            }
+            catch (HttpRequestException e)
+            {
+                _logger.LogError(e.Message);
+            }
 
-            SetClusters(clusters);
+            return null;
         }
 
         public async Task<IDictionary<string, KafkaCluster>> GetAllClustersAsync()
         {
-            if (Clusters == null)
-            {
-                await _getClustersTask;
-            }
+            await _getClustersTask;
             return Clusters;
         }
 
-        private void SetClusters(IEnumerable<KafkaCluster> clusters)
+        public async Task<KafkaCluster> GetByNameAsync(string clusterName)
         {
-            Clusters = clusters.ToDictionary(cluster => cluster.Id, cluster => ToViewModel(cluster));
+            await _getClustersTask;
+            return Clusters.TryGetValue(clusterName, out var cluster) ? cluster : null;
         }
 
-        public async Task<KafkaCluster> GetByIdAsync(string clusterId)
+        internal async Task<IList<INode>> GetTopicsAsync(string clustername)
         {
-            if (Clusters == null)
-            {
-                await _getClustersTask;
-            }
-            return Clusters.TryGetValue(clusterId, out var cluster) ? cluster : null;
-        }
+            var topics = await _http.GetFromJsonAsync<IEnumerable<KafkaLens.Shared.Models.Topic>>(
+                $"{BASE_URL}/{clustername}/topics");
 
-        internal async Task<IList<INode>> GetTopicsAsync(string clusterId)
-        {
-            var cluster = GetByIdAsync(clusterId);
-            var topics = await http.GetFromJsonAsync<IEnumerable<KafkaLens.Shared.Models.Topic>>($"{BASE_URL}/{clusterId}/topics");
-
-            var topicsList = topics.Select(topic => (INode)ToViewModel(topic, clusterId)).ToList();
+            var topicsList = topics?.Select(topic => (INode)ToViewModel(topic, clustername)).ToList();
             return topicsList;
         }
 
         public async Task<KafkaCluster> AddAsync(KafkaLens.Shared.Models.NewKafkaCluster newCluster)
         {
-            var response = await http.PostAsJsonAsync(BASE_URL, newCluster);
+            var response = await _http.PostAsJsonAsync(BASE_URL, newCluster);
             var cluster = await response.Content.ReadFromJsonAsync<KafkaCluster>();
-            Clusters.Add(cluster.Id, cluster);
+            if (cluster != null)
+            {
+                Clusters.Add(cluster.Name, cluster);
+            }
             return cluster;
         }
 
-        public async Task<bool> RemoveAsync(String clusterId)
+        public async Task<bool> RemoveAsync(String clusterName)
         {
-            var response = await http.DeleteAsync(BASE_URL + "/" + clusterId);
+            var response = await _http.DeleteAsync(BASE_URL + "/" + clusterName);
             if (response.IsSuccessStatusCode)
             {
-                Clusters.Remove(clusterId);
+                Clusters.Remove(clusterName);
             }
             return response.IsSuccessStatusCode;
         }
@@ -82,12 +85,12 @@ namespace KafkaLens.Client.DataAccess
         #region converters
         private KafkaCluster ToViewModel(KafkaCluster cluster)
         {
-            return new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
+            return new KafkaCluster(cluster.Name, cluster.BootstrapServers);
         }
 
-        private Topic ToViewModel(KafkaLens.Shared.Models.Topic topic, string clusterId)
+        private static Topic ToViewModel(KafkaLens.Shared.Models.Topic topic, string clusterName)
         {
-            return new Topic(topic.Name, topic.PartitionCount, clusterId);
+            return new Topic(topic.Name, topic.PartitionCount, clusterName);
         }
         #endregion converters
     }

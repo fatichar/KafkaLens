@@ -1,4 +1,9 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using KafkaLens.Client.AppConsatnts;
+using KafkaLens.Client.DataAccess;
+using KafkaLens.Client.ViewModels;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
+using Syncfusion.Blazor.Navigations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,18 +13,52 @@ namespace KafkaLens.Client.Shared
 {
     public partial class NavMenu : ComponentBase
     {
-        private bool collapseNavMenu = true;
+        [Inject]
+        private KafkaContext KafkaContext { get; set; }
 
-        private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+        [Inject]
+        ILogger<NavMenu> Logger { get; set; }
 
-        private void ToggleNavMenu()
-        {
-            collapseNavMenu = !collapseNavMenu;
-        }
+        private IDictionary<string, KafkaCluster> Clusters { get; set; } = new Dictionary<string, KafkaCluster>();
+
+        private SfTreeView<INode> tree;
+        [Inject]
+        NavigationManager NavigationManager { get; set; }
+        //private Dictionary<string, INode> AllNodes { get; } = new ();
 
         protected override async Task OnParametersSetAsync()
         {
-            await base.OnParametersSetAsync();
+            if (KafkaContext == null)
+            {
+                Logger.LogError("KafkaContext is not set");
+                return;
+            }
+            Clusters = await KafkaContext.GetAllClustersAsync();
+            if (Clusters.Count > 0)
+            {
+                Clusters.Values.First().Expanded = true;
+            }
+            StateHasChanged();
+
+            foreach (var cluster in Clusters.Values)
+            {
+                cluster.Children = await KafkaContext.GetTopicsAsync(cluster.Id);
+                //PopulateAllNodes(cluster);
+                StateHasChanged();
+            }
+        }
+
+        private void NodeSelectionChanged(NodeSelectEventArgs args)
+        {
+            var nodeId = args.NodeData.Id;
+            //var node = AllNodes[nodeId];
+            var selectedNode = tree.GetTreeData(nodeId).FirstOrDefault();
+            if (selectedNode == null)
+            {
+                return;
+            }
+            var uri = "Cluster/" + selectedNode.Id;
+            NavigationManager.NavigateTo(uri);
         }
     }
 }

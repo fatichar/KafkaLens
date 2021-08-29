@@ -29,41 +29,67 @@ namespace KafkaLens.Server.Services
 
         private async Task CreateConsumersAsync()
         {
-            using (var scope = _scopeFactory.CreateScope())
-            {
-                var db = scope.ServiceProvider.GetRequiredService<KafkaContext>();
-
-                await db.KafkaClusters.ForEachAsync(async cluster =>
-                {
-                    _consumers.Add(cluster.Id, await CreateConsumerAsync(cluster));
-                });
-            }
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<KafkaContext>();
+            await db.KafkaClusters.ForEachAsync(cluster => _consumers.Add(cluster.Name, CreateConsumer(cluster)));
         }
 
-        private async Task<IKafkaConsumer> CreateConsumerAsync(Entities.KafkaCluster cluster)
+        private static IKafkaConsumer CreateConsumer(Entities.KafkaCluster cluster)
         {
             return new ConfluentConsumer(cluster.BootstrapServers);
         }
 
-        internal async Task<IList<Topic>> GetTopicsAsync(string clusterId)
+        public async Task<IList<Topic>> GetTopicsAsync(string clusterName)
         {
-            Validate(clusterId, out var consumer);
-            return consumer.GetTopics();
+            Validate(clusterName, out var consumer);
+
+            var topics = await consumer.GetTopicsAsync();
+            topics.Sort(CompareTopics);
+
+            return topics;
         }
 
-        internal Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic1, int limit)
+        public async Task<ActionResult<List<Message>>> GetMessagesAsync(
+            string clusterName, 
+            string topic, 
+            int partition, 
+            FetchOptions options)
         {
-            throw new NotImplementedException();
+            Validate(clusterName, out var consumer);
+            return await consumer.GetMessagesAsync(topic, partition, options);
         }
 
-        #region validations
-        private void Validate(string clusterId, out IKafkaConsumer consumer)
+        #region Validations
+        private void Validate(string clusterName, out IKafkaConsumer consumer)
         {
-            if (!_consumers.TryGetValue(clusterId, out consumer))
+            if (!_consumers.TryGetValue(clusterName, out consumer))
             {
-                throw new ArgumentException("", nameof(clusterId));
+                throw new ArgumentException("", nameof(clusterName));
             }
         }
-        #endregion validations
+        #endregion Validations
+
+        #region Helpers
+        private int CompareTopics(Topic x, Topic y)
+        {
+            int underScoresX = CountPrefix(x.Name, '_');
+            int underScoresY = CountPrefix(y.Name, '_');
+            if (underScoresX == underScoresY)
+            {
+                return x.Name.CompareTo(y.Name);
+            }
+            return underScoresX < underScoresY ? -1 : +1;
+        }
+
+        private int CountPrefix(string s, char c)
+        {
+            int i = 0;
+            while (i < s.Length && s[i] == c)
+            {
+                ++i;
+            }
+            return i;
+        }
+        #endregion Helpers
     }
 }

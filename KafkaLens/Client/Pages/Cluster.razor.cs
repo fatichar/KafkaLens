@@ -16,13 +16,14 @@ namespace KafkaLens.Client.Pages
         [Inject]
         ILogger<Cluster> Logger { get; set; }
 
-        [Inject]
-        private ILocalStorageService LocalStorage { get; set; }
+        [Parameter]
+        public string ClusterName { get; set; }
 
         [Parameter]
-        public string ClusterId { get; set; }
+        public string TopicName { get; set; }
 
-        public string ClusterName => KafkaCluster?.Name ?? "";
+        [Parameter]
+        public int? PartitionNo { get; set; }
 
         private KafkaCluster KafkaCluster { get; set; }
         private List<KafkaCluster> KafkaClusters => new() { KafkaCluster };
@@ -36,8 +37,7 @@ namespace KafkaLens.Client.Pages
                 Logger.LogError("KafkaContext is not set");
                 return;
             }
-            KafkaCluster = await KafkaContext.GetByIdAsync(ClusterId);
-            KafkaCluster.Children = await KafkaContext.GetTopicsAsync(ClusterId);
+            KafkaCluster = await KafkaContext.GetByNameAsync(ClusterName);
 
             StateHasChanged();
         }

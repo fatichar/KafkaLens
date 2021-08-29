@@ -58,9 +58,9 @@ namespace KafkaLens.Server.Controllers
         }
 
         [HttpGet("{clusterId}/topics/{topic}/messages")]
-        public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, int limit)
+        public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, [FromQuery]int limit)
         {
-            return await _clusterService.GetMessages(clusterId, topic, limit);
+            return await _clusterService.GetMessagesAsync(clusterName: clusterId, topic: topic, partition: 0, new FetchOptions(){Limit = limit});
         }
     }
 }

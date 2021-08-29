@@ -1,26 +1,20 @@
-﻿@page "/cluster/{ClusterId}"
+﻿@page "/cluster/{ClusterName}"
+@page "/cluster/{ClusterName}/{TopicName}"
+@page "/cluster/{ClusterName}/{TopicName}/{PartitionNo:int?}"
 
-@using Syncfusion.Blazor.Navigations
-@using Syncfusion.Blazor.Lists
-@using ViewModels;
+<p>Cluster: @ClusterName</p>
+<p>Topic: @TopicName</p>
+<p>Partition: @PartitionNo</p>
 
-<h1>Cluster: @ClusterName</h1>
-
-<br />
-
-@if (Topics == null)
+@if (TopicName == null)
 {
-    <h2>Loading...</h2>
+    <ClusterView Cluster="@KafkaCluster"/>
+}
+else if (PartitionNo == null)
+{
+    <TopicView Cluster="@KafkaCluster" TopicName="@TopicName"/>
 }
 else
 {
-    <SfTreeView TValue="INode">
-        <TreeViewFieldsSettings TValue="INode" DataSource="@KafkaClusters"
-                                Id="Name"
-                                Text="Name"
-                                Expanded="Expanded"
-                                HasChildren="HasChildren"
-                                Child="Children">
-        </TreeViewFieldsSettings>
-    </SfTreeView>
+    @*<PartitionView />*@
 }

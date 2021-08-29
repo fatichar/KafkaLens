@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace KafkaLens.Server.Entities
 {
-    [Table(name:"cluster")]
+    [Table("cluster")]
     public class KafkaCluster
     {
         public KafkaCluster(string id, string name, string bootstrapServers)
