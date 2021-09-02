@@ -1,9 +1,11 @@
-﻿@using Syncfusion.Blazor.Grids
+﻿@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Grids
 
-<h3>TopicView</h3>
-
-<h2>Topic: @TopicName</h2>
-
-<SfGrid DataSource="@_messages">
-    
+<SfGrid DataSource="@_messages" AllowSorting="true" AllowFiltering="true">
+    <GridColumns>
+        <GridColumn Field=@nameof(Message.Partition) HeaderText="Partition" TextAlign="TextAlign.Center" Width="120" AllowFiltering="false" AllowSorting="true"/>
+        <GridColumn Field=@nameof(Message.Offset) HeaderText="Offset" Width="150" AllowFiltering="true" AllowSorting="true"></GridColumn>
+        <GridColumn Field=@nameof(Message.Key) HeaderText="Key" TextAlign="TextAlign.Center" Width="250"></GridColumn>
+        <GridColumn Field=@nameof(Message.Body) HeaderText="Body" TextAlign="TextAlign.Left" ></GridColumn>
+    </GridColumns>
 </SfGrid>

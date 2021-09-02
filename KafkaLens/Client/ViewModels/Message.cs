@@ -10,5 +10,7 @@
 
         public string Key { get; }
         public string Body { get; }
+        public int Partition { get; set; }
+        public long Offset { get; set; }
     }
 }

@@ -87,7 +87,11 @@ namespace KafkaLens.Client.DataAccess
 
         Message ToViewModel(KafkaLens.Shared.Models.Message message)
         {
-            return new(message.Key, message.Value);
+            return new(message.Key, message.Value)
+            {
+                Partition = message.Partition,
+                Offset = message.Offset
+            };
         }
 
         public async Task<KafkaCluster> AddAsync(KafkaLens.Shared.Models.NewKafkaCluster newCluster)

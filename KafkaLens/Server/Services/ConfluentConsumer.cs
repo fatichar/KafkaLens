@@ -17,6 +17,7 @@ namespace KafkaLens.Server.Services
         private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(10);
 
         public string ServersUrl { get; }
+        public Dictionary<string, Topic> Topics { get; private set; }
 
         private IConsumer<byte[], byte[]> consumer;
         private IAdminClient adminClient;
@@ -77,17 +78,19 @@ namespace KafkaLens.Server.Services
             var topics = metadata.Topics
                 .ConvertAll(topic => new Topic(topic.Topic, topic.Partitions.Count));
 
-            return topics;
-        }
+            Topics = topics.ToDictionary(topic => topic.Name, topic => topic);
 
-        public List<Message> GetMessages(string topic, FetchOptions options)
-        {
-            throw new NotImplementedException();
+            return topics;
         }
 
         public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options)
         {
             return await Task.Run(() => GetMessages(topic, partition, options));
+        }
+
+        public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options)
+        {
+            return await Task.Run(() => GetMessages(topic, options));
         }
 
         private List<Message> GetMessages(string topic, int partition, FetchOptions options)
@@ -137,6 +140,19 @@ namespace KafkaLens.Server.Services
             return messages;
         }
 
+        private List<Message> GetMessages(string topicName, FetchOptions options)
+        {
+            var topicMessages = new List<Message>();
+            var topic = Topics[topicName];
+
+            for (int i = 0; i < topic.PartitionCount; i++)
+            {
+                var messages = GetMessages(topicName, i, options);
+                topicMessages.AddRange(messages);
+            }
+            return topicMessages;
+        }
+
         private TopicPartitionOffset CreateTopicPartitionOffset(TopicPartition tp, WatermarkOffsets watermarks, FetchOptions options)
         {
             switch (options.From)
@@ -160,7 +176,11 @@ namespace KafkaLens.Server.Services
             var headers = result.Message.Headers.ToDictionary(header => 
                     header.Key, header => header.GetValueBytes());
 
-            return new Message(epochMillis, headers, result.Message.Key, result.Message.Value);
+            return new Message(epochMillis, headers, result.Message.Key, result.Message.Value)
+            {
+                Partition = result.Partition.Value,
+                Offset = result.Offset.Value
+            };
         }
 
         #region IDisposable implemenatation

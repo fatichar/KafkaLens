@@ -1,4 +1,4 @@
-﻿using KafkaLens.Client.DataAccess;
+using KafkaLens.Client.DataAccess;
 using KafkaLens.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -34,6 +34,7 @@ namespace KafkaLens.Client.Components
         private async Task FetchMessagesAsync()
         {
             _messages = await KafkaContext.GetMessagesAsync(Cluster.Name, TopicName);
+            StateHasChanged();
         }
     }
 }

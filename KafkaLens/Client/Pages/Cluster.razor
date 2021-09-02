@@ -2,10 +2,6 @@
 @page "/cluster/{ClusterName}/{TopicName}"
 @page "/cluster/{ClusterName}/{TopicName}/{PartitionNo:int?}"
 
-<p>Cluster: @ClusterName</p>
-<p>Topic: @TopicName</p>
-<p>Partition: @PartitionNo</p>
-
 @if (TopicName == null)
 {
     <ClusterView Cluster="@KafkaCluster"/>

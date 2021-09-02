@@ -51,8 +51,17 @@ namespace KafkaLens.Server.Services
 
         public async Task<ActionResult<List<Message>>> GetMessagesAsync(
             string clusterName, 
-            string topic, 
-            int partition, 
+            string topic,
+            FetchOptions options)
+        {
+            Validate(clusterName, out var consumer);
+            return await consumer.GetMessagesAsync(topic, options);
+        }
+
+        public async Task<ActionResult<List<Message>>> GetMessagesAsync(
+            string clusterName,
+            string topic,
+            int partition,
             FetchOptions options)
         {
             Validate(clusterName, out var consumer);
