@@ -1,5 +1,4 @@
-﻿using Blazored.LocalStorage;
-using KafkaLens.Client.DataAccess;
+﻿using KafkaLens.Client.DataAccess;
 using KafkaLens.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;

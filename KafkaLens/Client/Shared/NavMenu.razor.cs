@@ -24,7 +24,6 @@ namespace KafkaLens.Client.Shared
         private SfTreeView<INode> tree;
         [Inject]
         NavigationManager NavigationManager { get; set; }
-        //private Dictionary<string, INode> AllNodes { get; } = new ();
 
         protected override async Task OnParametersSetAsync()
         {
@@ -34,24 +33,21 @@ namespace KafkaLens.Client.Shared
                 return;
             }
             Clusters = await KafkaContext.GetAllClustersAsync();
+
+            foreach (var cluster in Clusters.Values)
+            {
+                cluster.Children = await KafkaContext.GetTopicsAsync(cluster.Id);
+            }
             if (Clusters.Count > 0)
             {
                 Clusters.Values.First().Expanded = true;
             }
             StateHasChanged();
-
-            foreach (var cluster in Clusters.Values)
-            {
-                cluster.Children = await KafkaContext.GetTopicsAsync(cluster.Id);
-                //PopulateAllNodes(cluster);
-                StateHasChanged();
-            }
         }
 
         private void NodeSelectionChanged(NodeSelectEventArgs args)
         {
             var nodeId = args.NodeData.Id;
-            //var node = AllNodes[nodeId];
             var selectedNode = tree.GetTreeData(nodeId).FirstOrDefault();
             if (selectedNode == null)
             {

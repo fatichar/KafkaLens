@@ -2,15 +2,14 @@
 @page "/cluster/{ClusterName}/{TopicName}"
 @page "/cluster/{ClusterName}/{TopicName}/{PartitionNo:int?}"
 
-@if (TopicName == null)
+@if (KafkaCluster != null)
 {
-    <ClusterView Cluster="@KafkaCluster"/>
-}
-else if (PartitionNo == null)
-{
-    <TopicView Cluster="@KafkaCluster" TopicName="@TopicName"/>
-}
-else
-{
-    @*<PartitionView />*@
+    if (TopicName == null)
+    {
+        <ClusterView Cluster="@KafkaCluster" />
+    }
+    else
+    {
+        <TopicView Cluster="@KafkaCluster" TopicName="@TopicName" PartitionNumber="@PartitionNo" />
+    }
 }

@@ -8,6 +8,7 @@ namespace KafkaLens.Shared.Models
 {
     public class Message
     {
+
         public Message(long epochMillis, Dictionary<string, byte[]> headers, byte[] key, byte[] value)
         {
             EpochMillis = epochMillis;

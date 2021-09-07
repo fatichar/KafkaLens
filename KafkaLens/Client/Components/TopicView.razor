@@ -1,11 +1,10 @@
-﻿@using Syncfusion.Blazor
-@using Syncfusion.Blazor.Grids
+﻿<Label>@selectedMessage?.Key</Label>
 
-<SfGrid DataSource="@_messages" AllowSorting="true" AllowFiltering="true">
-    <GridColumns>
-        <GridColumn Field=@nameof(Message.Partition) HeaderText="Partition" TextAlign="TextAlign.Center" Width="120" AllowFiltering="false" AllowSorting="true"/>
-        <GridColumn Field=@nameof(Message.Offset) HeaderText="Offset" Width="150" AllowFiltering="true" AllowSorting="true"></GridColumn>
-        <GridColumn Field=@nameof(Message.Key) HeaderText="Key" TextAlign="TextAlign.Center" Width="250"></GridColumn>
-        <GridColumn Field=@nameof(Message.Body) HeaderText="Body" TextAlign="TextAlign.Left" ></GridColumn>
-    </GridColumns>
-</SfGrid>
+<Datagrid Items="_messages" InlineFilters="true" SelectType="SelectionType.Row" Selection="SelectionMode.Single" @bind-SelectedItem="SelectedMessage">
+    <DatagridColumn CanHide="true" Hidden="@HidePartitionColumn" Title="Partition" TRowData="Message" Field="m => m.Partition" CanFilter="false" CanSort="true" />
+    <DatagridColumn Title="Offset" TRowData="Message" Field="m => m.Offset" CanFilter="false" CanSort="true" />
+    <DatagridColumn Title="Key" TRowData="Message" Field="m => m.Key" CanFilter="true" CanSort="true" />
+    <DatagridColumn Title="Body" TRowData="Message" Field="m => m.Summary" CanFilter="true" />
+    <DatagridColumn Title="TimeStamp" TRowData="Message" Field="m => m.TimeStamp" CanFilter="false" CanSort="true" />
+</Datagrid>
+

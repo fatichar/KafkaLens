@@ -72,7 +72,24 @@ namespace KafkaLens.Client.DataAccess
         {
             try
             {
-                string requestUri = $"{BASE_URL}/{clustername}/{topic}/messages?limit=10";
+                string requestUri = $"{BASE_URL}/{clustername}/{topic}/messages?limit=40";
+                var messages = await _http.GetFromJsonAsync<IEnumerable<KafkaLens.Shared.Models.Message>>(
+                    requestUri);
+
+                return messages.Select(ToViewModel).ToList();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+            }
+            return null;
+        }
+
+        internal async Task<List<Message>> GetMessagesAsync(string clustername, string topic, int partition)
+        {
+            try
+            {
+                string requestUri = $"{BASE_URL}/{clustername}/{topic}/{partition}/messages?limit=20";
                 var messages = await _http.GetFromJsonAsync<IEnumerable<KafkaLens.Shared.Models.Message>>(
                     requestUri);
 
@@ -90,7 +107,9 @@ namespace KafkaLens.Client.DataAccess
             return new(message.Key, message.Value)
             {
                 Partition = message.Partition,
-                Offset = message.Offset
+                Offset = message.Offset,
+                //TimeStamp = DateTime.Now
+                TimeStamp = DateTimeOffset.FromUnixTimeMilliseconds(message.EpochMillis).DateTime
             };
         }
 

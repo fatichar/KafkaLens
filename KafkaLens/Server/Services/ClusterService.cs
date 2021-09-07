@@ -55,7 +55,9 @@ namespace KafkaLens.Server.Services
             FetchOptions options)
         {
             Validate(clusterName, out var consumer);
-            return await consumer.GetMessagesAsync(topic, options);
+            var messages = await consumer.GetMessagesAsync(topic, options);
+            messages.Sort((m1, m2) => (int)(m1.EpochMillis - m2.EpochMillis));
+            return messages;
         }
 
         public async Task<ActionResult<List<Message>>> GetMessagesAsync(
@@ -65,7 +67,9 @@ namespace KafkaLens.Server.Services
             FetchOptions options)
         {
             Validate(clusterName, out var consumer);
-            return await consumer.GetMessagesAsync(topic, partition, options);
+            var messages = await consumer.GetMessagesAsync(topic, partition, options);
+            messages.Sort((m1, m2) => (int) (m1.EpochMillis - m2.EpochMillis));
+            return messages;
         }
 
         #region Validations

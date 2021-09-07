@@ -20,20 +20,54 @@ namespace KafkaLens.Client.Components
         [Parameter]
         public string TopicName { get; set; }
 
+        [Parameter]
+        public int? PartitionNumber { get; set; }
+
         private List<Message> _messages;
 
-        private SfGrid<Message> dataGrid;
+        private string label = "Loading messages...";
+        public bool HidePartitionColumn = false;
+        private Message selectedMessage;
+
+        public Message SelectedMessage
+        {
+            get => selectedMessage;
+            set
+            {
+                selectedMessage = value;
+                StateHasChanged();
+            }
+        }
         #endregion Data
 
         protected override async Task OnParametersSetAsync()
         {
+            HidePartitionColumn = PartitionNumber != null;
             await FetchMessagesAsync();
-            StateHasChanged();
         }
 
         private async Task FetchMessagesAsync()
         {
-            _messages = await KafkaContext.GetMessagesAsync(Cluster.Name, TopicName);
+            Clear();
+
+            _messages = PartitionNumber == null ?
+                await KafkaContext.GetMessagesAsync(Cluster.Name, TopicName) :
+                await KafkaContext.GetMessagesAsync(Cluster.Name, TopicName, PartitionNumber.Value);
+
+            if (_messages == null)
+            {
+                label = "Failed to load messages";
+            }
+            else
+            {
+                label = "Loaded " + _messages.Count + " messages";
+                StateHasChanged();
+            }
+        }
+
+        private void Clear()
+        {
+            _messages?.Clear();
             StateHasChanged();
         }
     }

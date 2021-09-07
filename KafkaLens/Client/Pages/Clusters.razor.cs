@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using Blazored.LocalStorage;
 using KafkaLens.Client.DataAccess;
 using KafkaLens.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
@@ -20,9 +19,6 @@ namespace KafkaLens.Client.Pages
 
         [Inject]
         ILogger<Clusters> Logger { get; set; }
-
-        [Inject]
-        private ILocalStorageService LocalStorage { get; set; }
 
         private IDictionary<string, KafkaCluster> clusters = new Dictionary<string, KafkaCluster>();
         private string clusterName;

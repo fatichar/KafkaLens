@@ -10,8 +10,6 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Blazored;
-using Blazored.LocalStorage;
 using Syncfusion.Blazor;
 
 namespace KafkaLens.Client
@@ -30,7 +28,6 @@ namespace KafkaLens.Client
             builder.Services
                 .AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) })
                 .AddScoped<KafkaContext>()
-                .AddBlazoredLocalStorage()
                 .AddLogging(builder => builder
                     .AddBrowserConsole()
                     .SetMinimumLevel(LogLevel.Information));

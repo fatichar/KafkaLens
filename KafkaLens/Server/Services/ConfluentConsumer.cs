@@ -114,9 +114,6 @@ namespace KafkaLens.Server.Services
                 Console.WriteLine($"Seeked in {watch.ElapsedMilliseconds} ms");
                 watch.Restart();
 
-
-                Console.WriteLine($"Got first message in {watch.ElapsedMilliseconds} ms");
-                watch.Restart();
                 while (messages.Count < options.Limit)
                 {
                     var result = consumer.Consume(consumeTimeout);
@@ -131,7 +128,16 @@ namespace KafkaLens.Server.Services
                         break;
                     }
 
+                    Console.WriteLine($"Got message in {watch.ElapsedMilliseconds} ms");
+                    watch.Restart();
+
                     messages.Add(CreateMessage(result));
+
+                    if (result.Offset == watermarks.High - 1)
+                    {
+                        Console.WriteLine("End of partition reached.");
+                        break;
+                    }
                 }
                 Console.WriteLine($"Got remaining messages in {watch.ElapsedMilliseconds} ms");
                 watch.Stop();
@@ -145,10 +151,16 @@ namespace KafkaLens.Server.Services
             var topicMessages = new List<Message>();
             var topic = Topics[topicName];
 
+            var remaining = options.Limit;
+
             for (int i = 0; i < topic.PartitionCount; i++)
             {
+                options.Limit = remaining / (topic.PartitionCount - i);
+
                 var messages = GetMessages(topicName, i, options);
                 topicMessages.AddRange(messages);
+
+                remaining -= messages.Count;
             }
             return topicMessages;
         }
@@ -164,7 +176,7 @@ namespace KafkaLens.Server.Services
                 case FetchOptions.FetchPosition.OFFSET:
                     return new(tp, options.Offset);
                 case FetchOptions.FetchPosition.END:
-                    return new(tp, watermarks.High - options.Limit);
+                    return new(tp, Math.Max(watermarks.High - options.Limit, watermarks.Low));
             }
 
             return new(tp, watermarks.High - options.Limit);
