@@ -13,6 +13,8 @@ namespace KafkaLens.Client.Shared
 {
     public partial class NavMenu : ComponentBase
     {
+        private INode selectedNode;
+
         [Inject]
         private KafkaContext KafkaContext { get; set; }
 
@@ -21,9 +23,21 @@ namespace KafkaLens.Client.Shared
 
         private IDictionary<string, KafkaCluster> Clusters { get; set; } = new Dictionary<string, KafkaCluster>();
 
-        private SfTreeView<INode> tree;
+        //private SfTreeView<INode> tree;
         [Inject]
         NavigationManager NavigationManager { get; set; }
+
+        public IEnumerable<INode> GetChildren(INode node) => node?.Children;
+
+        private INode SelectedNode
+        {
+            get => selectedNode; 
+            set
+            {
+                selectedNode = value;
+                NodeSelectionChanged();
+            }
+        }
 
         protected override async Task OnParametersSetAsync()
         {
@@ -45,10 +59,8 @@ namespace KafkaLens.Client.Shared
             StateHasChanged();
         }
 
-        private void NodeSelectionChanged(NodeSelectEventArgs args)
+        private void NodeSelectionChanged()
         {
-            var nodeId = args.NodeData.Id;
-            var selectedNode = tree.GetTreeData(nodeId).FirstOrDefault();
             if (selectedNode == null)
             {
                 return;

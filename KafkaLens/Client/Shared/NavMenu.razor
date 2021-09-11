@@ -2,64 +2,19 @@
     <a href="https://github.com/fatichar/KafkaLens">
         <img src="icon-64.png" alt="Kafka Lens" />
     </a>
-    <button class="navbar-toggler" @onclick="ToggleNavMenu">
-        <span class="navbar-toggler-icon"></span>
-    </button>
 </div>
 
-<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
-    <SfTreeView @ref="tree" TValue="INode" CssClass="main-treeview" 
-                AllowMultiSelection="false">
-        <TreeViewFieldsSettings TValue="INode" DataSource="@Clusters.Values"
-                                Id="Id"
-                                Text="Name"
-                                Expanded="Expanded"
-                                HasChildren="HasChildren"
-                                Child="Children">
-        </TreeViewFieldsSettings>
-        <TreeViewEvents TValue="INode" NodeSelected="NodeSelectionChanged"/>
-        <TreeViewTemplates TValue="INode">
-            <NodeTemplate>
-                @{
-                    var node = ((context as INode));
-                    <div class="node_name">@node.Name</div>
-                }
-            </NodeTemplate>
-        </TreeViewTemplates>
-    </SfTreeView>
-</div>
-<style>
-    .e-treeview.e-list-item.e-hover {
-        color: black;
-    }
-
-    .e-treeview.e-list-item.e-active.e-hover {
-        color: black;
-    }
-
-    /**.e-hover.* {*/
-    /*    color: black;*/
-    /*}*/
-    *.custom.e-treeview .e-fullrow {
-        height: 24px;
-    }
-    .custom.e-treeview .e-list-text {
-        line-height: normal;
-    }
-
-    .node_name {
-        color: white;
-    }
-</style>
-
-@code
+@if (Clusters?.Values != null)
 {
-    private bool collapseNavMenu = true;
-
-    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
+    <div class="clr-col-4">
+        <Tree>
+            <TreeTemplate TData="INode" Data="@Clusters.Values" GetChildren="@GetChildren" ExpandBy="Expanded">
+                <TitleTemplate>
+                    <button class="clr-treenode-link" @onclick="() => SelectedNode = context">
+                        @context.Name
+                    </button>
+                </TitleTemplate>
+            </TreeTemplate>
+        </Tree>
+    </div>
 }

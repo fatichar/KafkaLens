@@ -4,6 +4,8 @@ namespace KafkaLens.Client.ViewModels
 {
     public class KafkaCluster : INode
     {
+        private bool expanded;
+
         public KafkaCluster(string name, string bootstrapServers)
         {
             Name = name;
@@ -15,7 +17,9 @@ namespace KafkaLens.Client.ViewModels
         public string BootstrapServers { get; set; }
 
         public IList<INode> Children { get; set; }
-        public bool Expanded { get; set; }
+        public bool Expanded { get => true; set => expanded = value; }
+        public bool CanSelect => true;
         public INode.NodeType Type => INode.NodeType.CLUSTER;
+        public bool Selected { get; set; }
     }
 }

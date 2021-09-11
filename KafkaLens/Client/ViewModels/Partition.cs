@@ -17,8 +17,9 @@ namespace KafkaLens.Client.ViewModels
         public string Name => Number.ToString();
         public string ParentId { get; }
         public bool Expanded { get; set; }
+        public bool Selected { get; set; }
+        public bool CanSelect => true;
         public IList<INode> Children => null;
-
         public INode.NodeType Type => INode.NodeType.PARTITION;
 
         //public int MaxOffset { get; set; }

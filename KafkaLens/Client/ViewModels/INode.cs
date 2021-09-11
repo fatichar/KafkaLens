@@ -18,5 +18,7 @@ namespace KafkaLens.Client.ViewModels
         IList<INode> Children { get; }
         bool HasChildren => (Children?.Count ?? 0) > 0;
         bool Expanded { get; set; }
+        bool Selected { get; set; }
+        bool CanSelect { get; }
     }
 }

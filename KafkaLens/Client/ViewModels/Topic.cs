@@ -21,6 +21,8 @@ namespace KafkaLens.Client.ViewModels
         public int PartitionCount => Children?.Count ?? 0;
         public IList<INode> Children { get; }
         public bool Expanded { get; set; } = false;
+        public bool Selected { get; set; }
+        public bool CanSelect => true;
         public INode.NodeType Type => INode.NodeType.TOPIC;
     }
 }
