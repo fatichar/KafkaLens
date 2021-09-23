@@ -1,5 +1,5 @@
 ﻿<div style="max-height: 500">
-    <Datagrid Items="_messages" InlineFilters="true" SelectType="SelectionType.Row" Selection="SelectionMode.Single"
+    <Datagrid Items="_messages" InlineFilters="true" SelectType="SelectionType.Row" Selection="SelectionMode.Single" Fixed="FixedMode.All" style="height: 600px"
         @bind-SelectedItem="SelectedMessage">
         <DatagridColumn CanHide="true" Hidden="@HidePartitionColumn" Title="Partition" TRowData="Message"
             Field="m => m.Partition" CanFilter="false" CanSort="true" />
@@ -9,5 +9,5 @@
         <DatagridColumn Title="TimeStamp" TRowData="Message" Field="m => m.TimeStamp" CanFilter="false" CanSort="true" />
         </Datagrid>
 
-    <MessageView Message=SelectedMessage />
+    <MessageView Message="@SelectedMessage" />
     </div>
