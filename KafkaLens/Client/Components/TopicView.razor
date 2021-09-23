@@ -1,10 +1,13 @@
-﻿<Label>@selectedMessage?.Key</Label>
+﻿<div style="max-height: 500">
+    <Datagrid Items="_messages" InlineFilters="true" SelectType="SelectionType.Row" Selection="SelectionMode.Single"
+        @bind-SelectedItem="SelectedMessage">
+        <DatagridColumn CanHide="true" Hidden="@HidePartitionColumn" Title="Partition" TRowData="Message"
+            Field="m => m.Partition" CanFilter="false" CanSort="true" />
+        <DatagridColumn Title="Offset" TRowData="Message" Field="m => m.Offset" CanFilter="false" CanSort="true" />
+        <DatagridColumn Title="Key" TRowData="Message" Field="m => m.Key" CanFilter="true" CanSort="true" />
+        <DatagridColumn Title="Body" TRowData="Message" Field="m => m.Summary" CanFilter="true" />
+        <DatagridColumn Title="TimeStamp" TRowData="Message" Field="m => m.TimeStamp" CanFilter="false" CanSort="true" />
+        </Datagrid>
 
-<Datagrid Items="_messages" InlineFilters="true" SelectType="SelectionType.Row" Selection="SelectionMode.Single" @bind-SelectedItem="SelectedMessage">
-    <DatagridColumn CanHide="true" Hidden="@HidePartitionColumn" Title="Partition" TRowData="Message" Field="m => m.Partition" CanFilter="false" CanSort="true" />
-    <DatagridColumn Title="Offset" TRowData="Message" Field="m => m.Offset" CanFilter="false" CanSort="true" />
-    <DatagridColumn Title="Key" TRowData="Message" Field="m => m.Key" CanFilter="true" CanSort="true" />
-    <DatagridColumn Title="Body" TRowData="Message" Field="m => m.Summary" CanFilter="true" />
-    <DatagridColumn Title="TimeStamp" TRowData="Message" Field="m => m.TimeStamp" CanFilter="false" CanSort="true" />
-</Datagrid>
-
+    <MessageView Message=SelectedMessage />
+    </div>

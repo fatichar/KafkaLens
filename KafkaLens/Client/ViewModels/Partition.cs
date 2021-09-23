@@ -14,7 +14,7 @@ namespace KafkaLens.Client.ViewModels
 
         public string Id { get; }
         public int Number { get; }
-        public string Name => Number.ToString();
+        public string Name => "Partition_" + Number.ToString();
         public string ParentId { get; }
         public bool Expanded { get; set; }
         public bool Selected { get; set; }

@@ -110,7 +110,7 @@ namespace KafkaLens.Server.Services
                 Console.WriteLine($"Got watermarks in {watch.ElapsedMilliseconds} ms");
                 watch.Restart();
                 var tpo = CreateTopicPartitionOffset(tp, watermarks, options);
-                consumer.Seek(tpo);
+                consumer.Assign(tpo);
                 Console.WriteLine($"Seeked in {watch.ElapsedMilliseconds} ms");
                 watch.Restart();
 
@@ -148,6 +148,10 @@ namespace KafkaLens.Server.Services
 
         private List<Message> GetMessages(string topicName, FetchOptions options)
         {
+            if (Topics == null)
+            {
+                _ = GetTopics();
+            }
             var topicMessages = new List<Message>();
             var topic = Topics[topicName];
 

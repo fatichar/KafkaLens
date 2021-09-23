@@ -1,5 +1,16 @@
 ﻿@inherits LayoutComponentBase
 
+@* <MainContainer>
+    <SideNavigationRegion>
+        <VerticalNav HasIcons="true" Collapsible="true" CollapseAtTop="@atTop" @bind-Collapsed="collapsed">
+            <NavMenu />
+        </VerticalNav>
+    </SideNavigationRegion>
+    <ContentArea>
+        @Body
+    </ContentArea>
+</MainContainer> *@
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />

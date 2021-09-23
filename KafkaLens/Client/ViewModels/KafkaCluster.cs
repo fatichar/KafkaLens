@@ -17,7 +17,7 @@ namespace KafkaLens.Client.ViewModels
         public string BootstrapServers { get; set; }
 
         public IList<INode> Children { get; set; }
-        public bool Expanded { get => true; set => expanded = value; }
+        public bool Expanded { get; set; }
         public bool CanSelect => true;
         public INode.NodeType Type => INode.NodeType.CLUSTER;
         public bool Selected { get; set; }

@@ -1,20 +1,20 @@
-﻿<div class="top-row pl-4 navbar navbar-light">
-    <a href="https://github.com/fatichar/KafkaLens">
-        <img src="icon-64.png" alt="Kafka Lens" />
-    </a>
-</div>
-
-@if (Clusters?.Values != null)
+﻿@if (Clusters?.Values != null)
 {
-    <div class="clr-col-4">
-        <Tree>
-            <TreeTemplate TData="INode" Data="@Clusters.Values" GetChildren="@GetChildren" ExpandBy="Expanded">
-                <TitleTemplate>
-                    <button class="clr-treenode-link" @onclick="() => SelectedNode = context">
-                        @context.Name
-                    </button>
-                </TitleTemplate>
-            </TreeTemplate>
-        </Tree>
-    </div>
+    <Tree>
+        <TreeTemplate TData="INode" Data="@Clusters.Values" GetChildren="@GetChildren" ExpandBy="Expanded">
+            <TitleTemplate>
+                <button class="clr-treenode-link" @onclick="() => SelectedNode = context">
+                    @context.Name
+                </button>
+            </TitleTemplate>
+        </TreeTemplate>
+    </Tree>
+
+}
+
+@code
+{
+    private const string selectedItemClass = "clr-treenode-link";
+    private const string defaultItemClass = "clr-treenode-link";
+    private string treeItemClass = "clr-treenode-link";
 }
