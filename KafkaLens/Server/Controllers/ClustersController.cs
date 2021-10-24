@@ -29,7 +29,9 @@ namespace KafkaLens.Server.Controllers
         [HttpPost]
         public async Task<ActionResult<KafkaCluster>> Add(NewKafkaCluster newCluster)
         {
-            return CreatedAtAction(nameof(GetById), await _clustersService.AddAsync(newCluster));
+            var cluster = await _clustersService.AddAsync(newCluster);
+            _clusterService.Add(cluster);
+            return base.CreatedAtAction(nameof(GetById), cluster.Name, cluster);
         }
 
         [HttpGet]

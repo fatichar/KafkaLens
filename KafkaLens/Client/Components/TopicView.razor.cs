@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Syncfusion.Blazor.Grids;
+using KafkaLens.Client.Formatters;
 
 namespace KafkaLens.Client.Components
 {
@@ -24,8 +25,8 @@ namespace KafkaLens.Client.Components
         public int? PartitionNumber { get; set; }
 
         private List<Message> _messages;
+        private List<IMessageFormatter> _formatters;
 
-        private string label = "Loading messages...";
         public bool HidePartitionColumn = false;
         private Message selectedMessage;
 
@@ -43,6 +44,8 @@ namespace KafkaLens.Client.Components
         protected override async Task OnParametersSetAsync()
         {
             HidePartitionColumn = PartitionNumber != null;
+            _formatters = new List<IMessageFormatter> { new JsonFormatter() };
+
             await FetchMessagesAsync();
         }
 
@@ -54,15 +57,15 @@ namespace KafkaLens.Client.Components
                 await KafkaContext.GetMessagesAsync(Cluster.Name, TopicName) :
                 await KafkaContext.GetMessagesAsync(Cluster.Name, TopicName, PartitionNumber.Value);
 
-            if (_messages == null)
-            {
-                label = "Failed to load messages";
-            }
-            else
-            {
-                label = "Loaded " + _messages.Count + " messages";
-                StateHasChanged();
-            }
+            Format(_messages);
+
+            StateHasChanged();
+        }
+
+        private void Format(List<Message> messages)
+        {
+            var formatter = _formatters[0];
+            messages.ForEach(msg => msg.FormattedBody = formatter.Format(msg.Body));
         }
 
         private void Clear()

@@ -31,12 +31,18 @@ namespace KafkaLens.Server.Services
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<KafkaContext>();
-            await db.KafkaClusters.ForEachAsync(cluster => _consumers.Add(cluster.Name, CreateConsumer(cluster)));
+            await db.KafkaClusters.ForEachAsync(cluster => 
+                    _consumers.Add(cluster.Name, CreateConsumer(cluster.BootstrapServers)));
         }
 
-        private static IKafkaConsumer CreateConsumer(Entities.KafkaCluster cluster)
+        internal void Add(KafkaCluster cluster)
         {
-            return new ConfluentConsumer(cluster.BootstrapServers);
+            _consumers.Add(cluster.Name, CreateConsumer(cluster.BootstrapServers));
+        }
+
+        private static IKafkaConsumer CreateConsumer(string bootstrapServers)
+        {
+            return new ConfluentConsumer(bootstrapServers);
         }
 
         public async Task<IList<Topic>> GetTopicsAsync(string clusterName)

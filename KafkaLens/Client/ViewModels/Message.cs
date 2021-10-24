@@ -14,5 +14,6 @@
         public int Partition { get; set; }
         public long Offset { get; set; }
         public System.DateTime TimeStamp { get; set; }
+        public string FormattedBody { get; set; }
     }
 }

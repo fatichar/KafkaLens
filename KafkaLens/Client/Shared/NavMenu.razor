@@ -3,7 +3,7 @@
     <Tree>
         <TreeTemplate TData="INode" Data="@Clusters.Values" GetChildren="@GetChildren" ExpandBy="Expanded">
             <TitleTemplate>
-                <button class="clr-treenode-link" @onclick="() => SelectedNode = context">
+                <button class="@treeItemClass" @onclick="() => SelectedNode = context">
                     @context.Name
                 </button>
             </TitleTemplate>
@@ -14,7 +14,5 @@
 
 @code
 {
-    private const string selectedItemClass = "clr-treenode-link";
-    private const string defaultItemClass = "clr-treenode-link";
     private string treeItemClass = "clr-treenode-link";
 }

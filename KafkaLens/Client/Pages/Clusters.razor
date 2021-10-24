@@ -1,4 +1,4 @@
-﻿@page "/clusters"
+﻿@page "/home"
 
 @using KafkaLens.Client.DataAccess
 
@@ -12,7 +12,7 @@
         var pagePath = "/cluster/" + cluster.Id;
         <li>
             <NavLink href="@pagePath">@cluster.Name</NavLink>
-            <button @onclick="() => RemoveClusterAsync(cluster.Id)">Remove</button>
+            <a @onclick="() => RemoveClusterAsync(cluster.Id)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Remove</a>
         </li>
     }
 </ul>

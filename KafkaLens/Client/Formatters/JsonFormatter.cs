@@ -20,6 +20,7 @@ namespace KafkaLens.Client.Formatters
                 MemoryStream stream = new();
                 Utf8JsonWriter writer = new(stream, Options);
                 document.WriteTo(writer);
+                writer.Flush();
 
                 string json = Encoding.UTF8.GetString(stream.ToArray());
                 return json;

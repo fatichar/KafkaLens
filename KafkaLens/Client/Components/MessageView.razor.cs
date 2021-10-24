@@ -14,7 +14,17 @@ namespace KafkaLens.Client.Components
         [Parameter]
         public Message Message { get; set; }
 
-        private string Text => Message?.Body ?? "No message selected";
+        private string Text
+        {
+            get
+            {
+                if (Message == null)
+                {
+                    return "No message selected";
+                }
+                return Message.FormattedBody ?? Message.Body ?? "";
+            }
+        }
         #endregion Data
     }
 }
