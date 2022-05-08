@@ -1,0 +1,20 @@
+﻿@if (Clusters?.Values != null)
+{
+    <Tree>
+        <TreeTemplate TData="INode" Data="@Clusters.Values" GetChildren="@GetChildren" ExpandBy="Expanded">
+            <TitleTemplate>
+                <button class="@treeItemClass" @onclick="() => SelectedNode = context">
+                    @context.Name
+                </button>
+            </TitleTemplate>
+        </TreeTemplate>
+    </Tree>
+
+}
+
+<h3 class="custom-h3">TEST CSS</h3>
+
+@code
+{
+    private string treeItemClass = "clr-treenode-link";
+}
