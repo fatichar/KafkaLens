@@ -39,7 +39,7 @@
 
   <ItemGroup>
     <!--<ProjectReference Include="..\Client\KafkaLens.Client.csproj" />-->
-    <ProjectReference Include="..\Shared\KafkaLens.Shared.csproj" />
+    <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
     <ItemGroup>

@@ -189,7 +189,7 @@ namespace KafkaLens.Core.Services
         {
             if (consumers.TryGetValue(clusterName, out var consumer))
             {
-                 return consumer;
+                return consumer;
             }
             throw new ArgumentException("", nameof(clusterName));
         }
