@@ -14,7 +14,7 @@ namespace KafkaLens.Core.Services
     {
         private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(3);
         private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(3);
-        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(3);
+        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(10);
 
         public Dictionary<string, Topic> Topics { get; private set; } = new Dictionary<string, Topic>();
 
@@ -55,19 +55,27 @@ namespace KafkaLens.Core.Services
         #endregion Create
 
         #region Read
-        public async Task<List<Topic>> GetTopicsAsync()
+        public List<Topic> GetTopics()
         {
-            return await Task.Run(GetTopics);
+            if (Topics.Count == 0)
+            {
+                LoadTopics();
+            }
+            return Topics.Values.ToList();
         }
 
-        private List<Topic> GetTopics()
+        private void LoadTopics()
+        {
+            var topics = FetchTopics();
+            topics.ForEach(topic => Topics.Add(topic.Name, topic));
+        }
+
+        private List<Topic> FetchTopics()
         {
             var metadata = AdminClient.GetMetadata(queryTopicsTimeout);
 
             var topics = metadata.Topics
                 .ConvertAll(topic => new Topic(topic.Topic, topic.Partitions.Count));
-
-            topics.ForEach(topic => Topics.Add(topic.Name, topic));
 
             return topics;
         }
@@ -82,11 +90,11 @@ namespace KafkaLens.Core.Services
             return await Task.Run(() => GetMessages(topic, options));
         }
 
-        private List<Message> GetMessages(string topic, int partition, FetchOptions options)
+        public List<Message> GetMessages(string topicName, int partition, FetchOptions options)
         {
             var watch = new Stopwatch();
             watch.Start();
-            TopicPartition tp = new(topic, partition);
+            TopicPartition tp = ValidateTopicPartition(topicName, partition);
             var messages = new List<Message>();
             lock(Consumer)
             {
@@ -135,12 +143,19 @@ namespace KafkaLens.Core.Services
             return messages;
         }
 
-        private List<Message> GetMessages(string topicName, FetchOptions options)
+        private TopicPartition ValidateTopicPartition(string topicName, int partition)
         {
-            if (Topics == null)
+            var topic = ValidateTopic(topicName);
+            if (partition < 0 || partition >= topic.PartitionCount)
             {
-                _ = GetTopics();
+                throw new ArgumentException($"Invalid partition {partition} for topic {topicName}");
             }
+            return new TopicPartition(topicName, partition);
+        }
+
+        public List<Message> GetMessages(string topicName, FetchOptions options)
+        {
+            ValidateTopic(topicName);
             var topicMessages = new List<Message>();
             var topic = Topics[topicName];
 
@@ -157,6 +172,20 @@ namespace KafkaLens.Core.Services
             }
             return topicMessages;
         }
+
+        private Topic ValidateTopic(string topicName)
+        {
+            if (Topics.Count == 0)
+            {
+                LoadTopics();
+            }
+            if (Topics.TryGetValue(topicName, out var topic))
+            {
+                return topic;
+            }
+            throw new Exception($"Topic {topicName} does not exist.");
+        }
+
         private TopicPartitionOffset CreateTopicPartitionOffset(TopicPartition tp, WatermarkOffsets watermarks, FetchOptions options)
         {
             switch (options.From)

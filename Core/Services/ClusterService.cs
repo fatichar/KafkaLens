@@ -109,11 +109,11 @@ namespace KafkaLens.Core.Services
             return ToModel(cluster);
         }
 
-        public async Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterName)
+        public IList<Topic> GetTopics([DisallowNull] string clusterName)
         {
             var consumer = GetConsumer(clusterName);
 
-            var topics = await consumer.GetTopicsAsync();
+            var topics = consumer.GetTopics();
             topics.Sort(Helper.CompareTopics);
 
             return topics;
@@ -125,7 +125,7 @@ namespace KafkaLens.Core.Services
             FetchOptions options)
         {
             var consumer = GetConsumer(clusterName);
-            var messages = await consumer.GetMessagesAsync(topic, options);
+            var messages = consumer.GetMessages(topic, options);
             messages.Sort((m1, m2) => (int)(m1.EpochMillis - m2.EpochMillis));
             return messages;
         }

@@ -66,11 +66,11 @@ namespace KafkaLens.Rest.Controllers
         }
 
         [HttpGet("{clusterId}/topics")]
-        public async Task<ActionResult<IEnumerable<Topic>>> GetTopicsAsync(string clusterId)
+        public ActionResult<IEnumerable<Topic>> GetTopics(string clusterId)
         {
             try
             {
-                IList<Topic> topics = await _clusterService.GetTopicsAsync(clusterId);
+                IList<Topic> topics = _clusterService.GetTopics(clusterId);
                 return new JsonResult(topics);
             }
             catch (Exception ex)
