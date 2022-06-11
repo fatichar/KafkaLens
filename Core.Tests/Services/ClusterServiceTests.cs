@@ -17,23 +17,37 @@ namespace KafkaLens.Core.Services
     public class ClusterServiceTests
     {
         ILogger<ClusterService> logger = Substitute.For<ILogger<ClusterService>>();
+        public ClusterService ClusterService { get; private set; }
+        public KafkaContext DbContext { get; private set; }
 
-        [Fact]
-        public async void AddAsyncTest()
+        public ClusterServiceTests()
         {
             Fixture fixture = new();
             fixture.Register(() => Substitute.For<ILogger<ClusterService>>());
-            //fixture.Register(() => Substitute.For<IServiceScopeFactory>());
 
             var builder = new DbContextOptionsBuilder<KafkaContext>();
             builder.UseSqlite("Data Source = KafkaLens.Core.UnitTest.db");
-            var dbContext = new KafkaContext(builder.Options);
-            dbContext.Database.EnsureDeleted();
-            dbContext.Database.EnsureCreated();
-            fixture.Register(() => dbContext);
+            DbContext = new KafkaContext(builder.Options);
+            DbContext.Database.EnsureDeleted();
+            DbContext.Database.EnsureCreated();
+            fixture.Register(() => DbContext);
+            ClusterService = fixture.Create<ClusterService>();
+        }
 
-            var clustersService = fixture.Create<ClusterService>();
-            var addedCluster = await clustersService.AddAsync(new NewKafkaCluster("Dev", "localhost:9092"));
+
+        [Fact()]
+        public async void AddAsync_validCluster_added()
+        {
+            // arrange
+            var oldCount = ClusterService.GetAllClusters().Count();
+            
+            // act
+            var addedCluster = await ClusterService.AddAsync(new NewKafkaCluster("Dev", "localhost:9092"));
+
+            // assert
+            var clusters = ClusterService.GetAllClusters();
+            Assert.Equal(oldCount + 1, clusters.Count());
+            Assert.Equal(addedCluster, clusters.Last());
         }
 
         [Fact()]

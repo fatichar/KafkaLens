@@ -11,19 +11,25 @@ namespace KafkaLens.Core.Services
     public class ClusterService
     {
         private readonly ILogger<ClusterService> logger;
-        private readonly KafkaContext dbContext;
-        private readonly IDictionary<string, IKafkaConsumer> consumers;
+        private readonly IServiceScopeFactory scopeFactory;
+        private readonly ConsumerFactory consumerFactory;
 
-        public DbSet<Entities.KafkaCluster> Clusters => dbContext.KafkaClusters;
+        private IDictionary<string, IKafkaConsumer> Consumers { get; }
 
-        public ClusterService([NotNull] ILogger<ClusterService> logger, [NotNull] KafkaContext dbContext)
+        public Dictionary<string, Entities.KafkaCluster> Clusters { get; }
+
+        public ClusterService(
+            [NotNull] ILogger<ClusterService> logger, 
+            [NotNull] IServiceScopeFactory scopeFactory, 
+            [NotNull] ConsumerFactory consumerFactory)
         {
             this.logger = logger;
-            this.dbContext = dbContext;
+            this.scopeFactory = scopeFactory;
+            this.consumerFactory = consumerFactory;
 
-            // This class has singleton scope, so it is created only once.
-            // So, delaying the constructor to create all the consumers is not that bad
-            consumers = CreateConsumers(dbContext.KafkaClusters.ToList());
+            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
+            Clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Name);
+            Consumers = CreateConsumers(Clusters.Values.ToList());
         }
 
         #region Create
@@ -32,49 +38,45 @@ namespace KafkaLens.Core.Services
             var consumers = new Dictionary<string, IKafkaConsumer>();
             clusters.ForEach(cluster =>
             {
-                CreateAndAddConsumer(cluster, consumers);
+                try
+                {
+                    var consumer = CreateConsumer(cluster.BootstrapServers);
+                    consumers.Add(cluster.Name, consumer);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to create consumer");
+                }
             });
             return consumers;
         }
 
-        private void CreateAndAddConsumer(Entities.KafkaCluster cluster, Dictionary<string, IKafkaConsumer> consumers)
-        {
-            try
-            {
-                var consumer = CreateConsumer(cluster.BootstrapServers);
-                consumers.Add(cluster.Name, consumer);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to create consumer");
-            }
-        }
-
-        public async Task<KafkaCluster?> AddAsync(NewKafkaCluster newCluster)
+        public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
         {
             Validate(newCluster);
 
             var cluster = CreateCluster(newCluster);
-            await Clusters.AddAsync(cluster);
+            Clusters.Add(cluster.Id, cluster);
             try
             {
-                var consumer = CreateConsumer(cluster.BootstrapServers);
-                consumers.Add(cluster.Name, consumer);
-            }
-            catch (Exception e)
-            {
-                logger.LogError("Failed to create consumer", newCluster, e);
-                return null;
-            }
-            try
-            {
+                var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
+                dbContext.KafkaClusters.Add(cluster);
                 await dbContext.SaveChangesAsync();
             }
             catch (Exception e)
             {
-                consumers.Remove(cluster.Name);
-                logger.LogError("Failed to save consumer", newCluster, e);
-                return null;
+                Clusters.Remove(cluster.Id);
+                logger.LogError(e, "Failed to save cluster", newCluster);
+                throw;
+            }
+            try
+            {
+                var consumer = CreateConsumer(cluster.BootstrapServers);
+                Consumers.Add(cluster.Name, consumer);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to create consumer", newCluster);
             }
 
             return ToModel(cluster);
@@ -82,14 +84,15 @@ namespace KafkaLens.Core.Services
 
         public static Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
         {
-            var cluster = new Entities.KafkaCluster(Guid.NewGuid().ToString(), newCluster.Name, newCluster.BootstrapServers);
-
-            return cluster;
+            return new Entities.KafkaCluster(
+                Guid.NewGuid().ToString(), 
+                newCluster.Name, 
+                newCluster.BootstrapServers);
         }
 
-        private static IKafkaConsumer CreateConsumer(string bootstrapServers)
+        private IKafkaConsumer CreateConsumer(string bootstrapServers)
         {
-            return ConfluentConsumer.Create(bootstrapServers);
+            return consumerFactory.CreateNew(bootstrapServers);
         }
         #endregion Create
 
@@ -97,12 +100,12 @@ namespace KafkaLens.Core.Services
         public IEnumerable<KafkaCluster> GetAllClusters()
         {
             Log.Information("Get all clusters");
-            return Clusters.Select(ToModel);
+            return Clusters.Values.Select(ToModel);
         }
 
-        public async Task<KafkaCluster> GetByIdAsync(string id)
+        public KafkaCluster GetById(string id)
         {
-            var cluster = await GetClusterById(id);
+            var cluster = GetClusterById(id);
             return ToModel(cluster);
         }
 
@@ -142,10 +145,20 @@ namespace KafkaLens.Core.Services
         #region Delete
         public async Task<KafkaCluster> RemoveByIdAsync(string id)
         {
-            var cluster = await GetClusterById(id);
-            Clusters.Remove(cluster);
-            await dbContext.SaveChangesAsync();
-            return ToModel(cluster);
+            if (Clusters.ContainsKey(id))
+            {
+                var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
+                var cluster = dbContext.KafkaClusters.Find(id);
+                if (cluster != null)
+                {
+                    dbContext.KafkaClusters.Remove(cluster);
+                    await dbContext.SaveChangesAsync();
+                }
+                cluster = Clusters[id];
+                Clusters.Remove(id);
+                return ToModel(cluster);
+            }
+            throw new KeyNotFoundException($"Cluster with id {id} not found");
         }
         #endregion
 
@@ -154,7 +167,8 @@ namespace KafkaLens.Core.Services
         {
             var all = Clusters.ToList();
 
-            var existing = Clusters.FirstOrDefault(cluster => cluster.Name.Equals(newCluster.Name));
+            var existing = Clusters.Values.FirstOrDefault(cluster => 
+                    cluster.Name.Equals(newCluster.Name, StringComparison.InvariantCultureIgnoreCase));
 
             if (existing != null)
             {
@@ -162,9 +176,9 @@ namespace KafkaLens.Core.Services
             }
         }
 
-        private async Task<Entities.KafkaCluster> GetClusterById(string id)
+        private Entities.KafkaCluster GetClusterById(string id)
         {
-            var cluster = await Clusters.FindAsync(id);
+            Clusters.TryGetValue(id, out var cluster);
             if (cluster == null)
             {
                 throw new ArgumentException("", nameof(id));
@@ -172,11 +186,11 @@ namespace KafkaLens.Core.Services
             return cluster;
         }
 
-        private async Task<Entities.KafkaCluster> GetClusterByName(string name)
+        private Entities.KafkaCluster GetClusterByName(string name)
         {
-            var cluster = await Clusters
+            var cluster = Clusters.Values
                 .Where(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))
-                .FirstOrDefaultAsync();
+                .FirstOrDefault();
             if (cluster == null)
             {
                 throw new ArgumentException($"Cluster with name {name} does not exist", nameof(name));
@@ -187,7 +201,7 @@ namespace KafkaLens.Core.Services
         [return: NotNull]
         private IKafkaConsumer GetConsumer(string clusterName)
         {
-            if (consumers.TryGetValue(clusterName, out var consumer))
+            if (Consumers.TryGetValue(clusterName, out var consumer))
             {
                 return consumer;
             }

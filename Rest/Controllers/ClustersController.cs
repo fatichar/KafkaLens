@@ -1,13 +1,8 @@
 ﻿
 using KafkaLens.Core.Services;
-using KafkaLens.Shared;
-using KafkaLens.KafkaLens.Shared.Models;
+using KafkaLens.Shared.Models;
+
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace KafkaLens.Rest.Controllers
 {
@@ -16,59 +11,98 @@ namespace KafkaLens.Rest.Controllers
     public class ClustersController : ControllerBase
     {
         private readonly ILogger<ClustersController> _logger;
-        private readonly ClustersService _clustersService;
         private readonly ClusterService _clusterService;
 
-        public ClustersController(ILogger<ClustersController> logger, ClustersService clustersService, ClusterService clusterService)
+        public ClustersController(ILogger<ClustersController> logger, ClusterService clusterService)
         {
             _logger = logger;
-            _clustersService = clustersService;
             _clusterService = clusterService;
         }
 
         [HttpPost]
         public async Task<ActionResult<KafkaCluster>> Add(NewKafkaCluster newCluster)
         {
-            var cluster = await _clustersService.AddAsync(newCluster);
-            _clusterService.Add(cluster);
-            return base.CreatedAtAction(nameof(GetById), cluster.Name, cluster);
+            try
+            {
+                var cluster = await _clusterService.AddAsync(newCluster);
+                return base.CreatedAtAction(nameof(GetById), cluster.Name, cluster);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet]
         public ActionResult<IEnumerable<KafkaCluster>> GetAll()
         {
-            return new JsonResult(_clustersService.GetAllClusters());
+            return new JsonResult(_clusterService.GetAllClusters());
         }
 
         [HttpGet("{clusterId}")]
-        public async Task<ActionResult<KafkaCluster>> GetById(string clusterId)
+        public ActionResult<KafkaCluster> GetById(string clusterId)
         {
-            return await _clustersService.GetByIdAsync(clusterId);
+            try
+            {
+                return _clusterService.GetById(clusterId);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpDelete("{clusterId}")]
         public async Task<ActionResult<KafkaCluster>> DeleteById(string clusterId)
         {
-            return await _clustersService.RemoveByIdAsync(clusterId);
+            try
+            {
+                return await _clusterService.RemoveByIdAsync(clusterId);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet("{clusterId}/topics")]
         public async Task<ActionResult<IEnumerable<Topic>>> GetTopicsAsync(string clusterId)
         {
-            IList<Topic> topics = await _clusterService.GetTopicsAsync(clusterId);
-            return new JsonResult(topics);
+            try
+            {
+                IList<Topic> topics = await _clusterService.GetTopicsAsync(clusterId);
+                return new JsonResult(topics);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet("{clusterId}/{topic}/messages")]
-        public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, [FromQuery]int limit)
+        public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, [FromQuery] int limit)
         {
-            return await _clusterService.GetMessagesAsync(clusterId, topic, new FetchOptions(){Limit = limit});
+            try
+            {
+                return await _clusterService.GetMessagesAsync(clusterId, topic, new FetchOptions() { Limit = limit });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet("{clusterId}/{topic}/{partition}/messages")]
         public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, int partition, [FromQuery] int limit)
         {
-            return await _clusterService.GetMessagesAsync(clusterId, topic, partition, new FetchOptions() { Limit = limit });
+            try
+            {
+                return await _clusterService.GetMessagesAsync(clusterId, topic, partition, new FetchOptions() { Limit = limit });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

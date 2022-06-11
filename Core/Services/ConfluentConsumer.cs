@@ -25,22 +25,11 @@ namespace KafkaLens.Core.Services
         private IAdminClient AdminClient { get; }
 
         #region Create
-        public static ConfluentConsumer Create(string url)
+        internal ConfluentConsumer(string url)
         {
-            var config = CreateConsumerConfig(url);
-            var adminClient = CreateAdminClient(config.BootstrapServers);
-            var consumer = new ConsumerBuilder<byte[], byte[]>(config).Build();
-            return new ConfluentConsumer(config, adminClient, consumer);
-        }
-
-        private ConfluentConsumer(
-            ConsumerConfig config,
-            IAdminClient adminClient,
-            IConsumer<byte[], byte[]> consumer)
-        {
-            Config = config;
-            AdminClient = adminClient;
-            Consumer = consumer;
+            Config = CreateConsumerConfig(url);
+            AdminClient = CreateAdminClient(Config.BootstrapServers);
+            Consumer = new ConsumerBuilder<byte[], byte[]>(Config).Build();
         }
 
         private static ConsumerConfig CreateConsumerConfig(String url)
@@ -48,10 +37,10 @@ namespace KafkaLens.Core.Services
             return new ConsumerConfig
             {
                 GroupId = "KafkaLens.Server",
-                    ClientId = "KafkaLens.Server",
-                    BootstrapServers = url,
-                    EnableAutoOffsetStore = false,
-                    EnableAutoCommit = false
+                ClientId = "KafkaLens.Server",
+                BootstrapServers = url,
+                EnableAutoOffsetStore = false,
+                EnableAutoCommit = false
             };
         }
 
