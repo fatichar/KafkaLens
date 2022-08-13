@@ -19,7 +19,7 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1",
         new Microsoft.OpenApi.Models.OpenApiInfo
         {
-            Title = "KafkaApi",
+            Title = "KafkaLens Api",
             Version = "v1"
         });
 });
@@ -27,14 +27,19 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<KafkaContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
 builder.Services.AddSingleton<ClusterService>();
 builder.Services.AddSingleton<ConsumerFactory>();
+builder.Services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
 var app = builder.Build();
 
+app.UseSwagger();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    //app.UseWebAssemblyDebugging();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "KafkaLens Api");
+    });
 }
 else
 {
@@ -43,12 +48,6 @@ else
     app.UseHsts();
 }
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
-{
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-    options.RoutePrefix = string.Empty;
-});
 
 app.UseHttpsRedirection();
 

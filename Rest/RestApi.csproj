@@ -4,10 +4,12 @@
         <TargetFramework>net6.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <AssemblyName>$(SolutionName).$(MSBuildProjectName)</AssemblyName>
+        <RootNamespace>$(SolutionName).$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
         <!--<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="5.0.8" />-->
     </ItemGroup>
 

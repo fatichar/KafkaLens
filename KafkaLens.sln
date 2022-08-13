@@ -17,6 +17,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core.Tests", "Core.Tests\Co
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestApi", "Rest\RestApi.csproj", "{992F55F1-A5C6-45CA-AB31-3C7B620EB771}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Client", "Client\Client.csproj", "{4303F9AB-F8EA-4792-8AF8-0F3C6EC903C8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{92B753D4-2E7E-418F-B04E-AC6F020F1831} = {92B753D4-2E7E-418F-B04E-AC6F020F1831}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +44,10 @@ Global
 		{992F55F1-A5C6-45CA-AB31-3C7B620EB771}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{992F55F1-A5C6-45CA-AB31-3C7B620EB771}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{992F55F1-A5C6-45CA-AB31-3C7B620EB771}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4303F9AB-F8EA-4792-8AF8-0F3C6EC903C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4303F9AB-F8EA-4792-8AF8-0F3C6EC903C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4303F9AB-F8EA-4792-8AF8-0F3C6EC903C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4303F9AB-F8EA-4792-8AF8-0F3C6EC903C8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
