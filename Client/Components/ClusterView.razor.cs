@@ -1,7 +1,6 @@
 ﻿using KafkaLens.Client.DataAccess;
 using KafkaLens.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
-using System.Threading.Tasks;
 
 namespace KafkaLens.Client.Components
 {
@@ -12,6 +11,5 @@ namespace KafkaLens.Client.Components
 
         [Inject]
         private KafkaContext KafkaContext { get; set; }
-
     }
 }
