@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Syncfusion.Blazor.Grids;
 using KafkaLens.Client.Formatters;
 
 namespace KafkaLens.Client.Components
