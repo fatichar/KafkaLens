@@ -1,10 +1,10 @@
 
 .custom-h3 {
-    background-color: navajowhite;
-    color: yellowgreen
+    color: white;
+    font-size: 36px;
 }
 
-/*.clr-treenode-link:hover, .clr-treenode-link:focus {
+.clr-treenode-link:hover, .clr-treenode-link:focus {
     background: #b82b2b;
     background: var(--clr-tree-link-hover-color, #b82b2b);
     text-decoration: double
@@ -81,8 +81,8 @@
     .navbar-toggler {
         display: none;
     }
-    .collapse {*/
+    .collapse {
         /* Never collapse the sidebar for wide screens */
-        /*display: block;
+        display: block;
     }
-}*/
+}
