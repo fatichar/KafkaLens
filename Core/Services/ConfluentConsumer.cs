@@ -94,7 +94,7 @@ namespace KafkaLens.Core.Services
         {
             var watch = new Stopwatch();
             watch.Start();
-            TopicPartition tp = ValidateTopicPartition(topicName, partition);
+            var tp = ValidateTopicPartition(topicName, partition);
             var messages = new List<Message>();
             lock(Consumer)
             {
@@ -143,14 +143,14 @@ namespace KafkaLens.Core.Services
             return messages;
         }
 
-        private TopicPartition ValidateTopicPartition(string topicName, int partition)
+        private Confluent.Kafka.TopicPartition ValidateTopicPartition(string topicName, int partition)
         {
             var topic = ValidateTopic(topicName);
             if (partition < 0 || partition >= topic.PartitionCount)
             {
                 throw new ArgumentException($"Invalid partition {partition} for topic {topicName}");
             }
-            return new TopicPartition(topicName, partition);
+            return new Confluent.Kafka.TopicPartition(topicName, partition);
         }
 
         public List<Message> GetMessages(string topicName, FetchOptions options)
@@ -186,7 +186,7 @@ namespace KafkaLens.Core.Services
             throw new Exception($"Topic {topicName} does not exist.");
         }
 
-        private TopicPartitionOffset CreateTopicPartitionOffset(TopicPartition tp, WatermarkOffsets watermarks, FetchOptions options)
+        private TopicPartitionOffset CreateTopicPartitionOffset(Confluent.Kafka.TopicPartition tp, WatermarkOffsets watermarks, FetchOptions options)
         {
             switch (options.From)
             {

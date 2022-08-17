@@ -8,19 +8,19 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace KafkaLens.Core.Services
 {
-    public class ClusterService
+    public class ClusterService : IClusterService
     {
         private readonly ILogger<ClusterService> logger;
         private readonly IServiceScopeFactory scopeFactory;
         private readonly ConsumerFactory consumerFactory;
 
-        private IDictionary<string, IKafkaConsumer> Consumers { get; }
+        private IDictionary<string, IKafkaConsumer> consumers;
 
-        public Dictionary<string, Entities.KafkaCluster> Clusters { get; }
+        private Dictionary<string, Entities.KafkaCluster> clusters;
 
         public ClusterService(
-            [NotNull] ILogger<ClusterService> logger, 
-            [NotNull] IServiceScopeFactory scopeFactory, 
+            [NotNull] ILogger<ClusterService> logger,
+            [NotNull] IServiceScopeFactory scopeFactory,
             [NotNull] ConsumerFactory consumerFactory)
         {
             this.logger = logger;
@@ -28,8 +28,8 @@ namespace KafkaLens.Core.Services
             this.consumerFactory = consumerFactory;
 
             var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
-            Clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Name);
-            Consumers = CreateConsumers(Clusters.Values.ToList());
+            clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Name);
+            consumers = CreateConsumers(clusters.Values.ToList());
         }
 
         #region Create
@@ -56,7 +56,7 @@ namespace KafkaLens.Core.Services
             Validate(newCluster);
 
             var cluster = CreateCluster(newCluster);
-            Clusters.Add(cluster.Id, cluster);
+            clusters.Add(cluster.Id, cluster);
             try
             {
                 var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
@@ -65,14 +65,14 @@ namespace KafkaLens.Core.Services
             }
             catch (Exception e)
             {
-                Clusters.Remove(cluster.Id);
+                clusters.Remove(cluster.Id);
                 logger.LogError(e, "Failed to save cluster", newCluster);
                 throw;
             }
             try
             {
                 var consumer = CreateConsumer(cluster.BootstrapServers);
-                Consumers.Add(cluster.Name, consumer);
+                consumers.Add(cluster.Name, consumer);
             }
             catch (Exception e)
             {
@@ -85,8 +85,8 @@ namespace KafkaLens.Core.Services
         public static Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
         {
             return new Entities.KafkaCluster(
-                Guid.NewGuid().ToString(), 
-                newCluster.Name, 
+                Guid.NewGuid().ToString(),
+                newCluster.Name,
                 newCluster.BootstrapServers);
         }
 
@@ -100,7 +100,7 @@ namespace KafkaLens.Core.Services
         public IEnumerable<KafkaCluster> GetAllClusters()
         {
             Log.Information("Get all clusters");
-            return Clusters.Values.Select(ToModel);
+            return clusters.Values.Select(ToModel);
         }
 
         public KafkaCluster GetById(string id)
@@ -145,7 +145,7 @@ namespace KafkaLens.Core.Services
         #region Delete
         public async Task<KafkaCluster> RemoveByIdAsync(string id)
         {
-            if (Clusters.ContainsKey(id))
+            if (clusters.ContainsKey(id))
             {
                 var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
                 var cluster = dbContext.KafkaClusters.Find(id);
@@ -154,8 +154,8 @@ namespace KafkaLens.Core.Services
                     dbContext.KafkaClusters.Remove(cluster);
                     await dbContext.SaveChangesAsync();
                 }
-                cluster = Clusters[id];
-                Clusters.Remove(id);
+                cluster = clusters[id];
+                clusters.Remove(id);
                 return ToModel(cluster);
             }
             throw new KeyNotFoundException($"Cluster with id {id} not found");
@@ -165,9 +165,9 @@ namespace KafkaLens.Core.Services
         #region Validations
         private void Validate(NewKafkaCluster newCluster)
         {
-            var all = Clusters.ToList();
+            var all = clusters.ToList();
 
-            var existing = Clusters.Values.FirstOrDefault(cluster => 
+            var existing = clusters.Values.FirstOrDefault(cluster =>
                     cluster.Name.Equals(newCluster.Name, StringComparison.InvariantCultureIgnoreCase));
 
             if (existing != null)
@@ -178,7 +178,7 @@ namespace KafkaLens.Core.Services
 
         private Entities.KafkaCluster GetClusterById(string id)
         {
-            Clusters.TryGetValue(id, out var cluster);
+            clusters.TryGetValue(id, out var cluster);
             if (cluster == null)
             {
                 throw new ArgumentException("", nameof(id));
@@ -188,7 +188,7 @@ namespace KafkaLens.Core.Services
 
         private Entities.KafkaCluster GetClusterByName(string name)
         {
-            var cluster = Clusters.Values
+            var cluster = clusters.Values
                 .Where(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))
                 .FirstOrDefault();
             if (cluster == null)
@@ -201,7 +201,7 @@ namespace KafkaLens.Core.Services
         [return: NotNull]
         private IKafkaConsumer GetConsumer(string clusterName)
         {
-            if (Consumers.TryGetValue(clusterName, out var consumer))
+            if (consumers.TryGetValue(clusterName, out var consumer))
             {
                 return consumer;
             }
