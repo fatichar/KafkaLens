@@ -3,7 +3,6 @@ using KafkaLens.Client.DataAccess;
 using KafkaLens.Client.ViewModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using Syncfusion.Blazor.Navigations;
 using System;
 using System.Collections.Generic;
 using System.Linq;

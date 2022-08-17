@@ -17,7 +17,6 @@
         <PackageReference Include="Blazority" Version="0.12.3" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.8" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="6.0.8" PrivateAssets="all" />
-        <PackageReference Include="Syncfusion.Blazor.Grid" Version="20.2.0.43" />
         <PackageReference Include="System.Net.Http.Json" Version="6.0.0" />
     </ItemGroup>
 

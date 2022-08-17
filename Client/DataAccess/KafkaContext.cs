@@ -11,12 +11,17 @@ namespace KafkaLens.Client.DataAccess
 {
     public class KafkaContext
     {
-        private const string BASE_URL = "Clusters";
+        private const string BASE_URL = "http://localhost:5149/Clusters";
         private readonly HttpClient _http;
         private readonly ILogger<KafkaContext> _logger;
         private Task _getClustersTask;
 
         private Dictionary<string, KafkaCluster> Clusters { get; set; }
+
+        void sort(List<int> nums)
+        {
+            
+        }
 
         public KafkaContext(HttpClient http, ILogger<KafkaContext> logger)
         {
@@ -29,7 +34,8 @@ namespace KafkaLens.Client.DataAccess
         {
             try
             {
-                var clusters = await _http.GetFromJsonAsync<IEnumerable<KafkaCluster>>("Clusters");
+                string requestUri = $"{BASE_URL}";
+                var clusters = await _http.GetFromJsonAsync<IEnumerable<KafkaLens.Shared.Models.KafkaCluster>>(requestUri);
                 Clusters = clusters?.ToDictionary(cluster => cluster.Name, ToViewModel);
             }
             catch (HttpRequestException e)
@@ -102,17 +108,6 @@ namespace KafkaLens.Client.DataAccess
             return null;
         }
 
-        Message ToViewModel(KafkaLens.Shared.Models.Message message)
-        {
-            return new(message.Key, message.Value)
-            {
-                Partition = message.Partition,
-                Offset = message.Offset,
-                //TimeStamp = DateTime.Now
-                TimeStamp = DateTimeOffset.FromUnixTimeMilliseconds(message.EpochMillis).DateTime
-            };
-        }
-
         public async Task<KafkaCluster> AddAsync(KafkaLens.Shared.Models.NewKafkaCluster newCluster)
         {
             var response = await _http.PostAsJsonAsync(BASE_URL, newCluster);
@@ -135,7 +130,7 @@ namespace KafkaLens.Client.DataAccess
         }
 
         #region converters
-        private KafkaCluster ToViewModel(KafkaCluster cluster)
+        private KafkaCluster ToViewModel(KafkaLens.Shared.Models.KafkaCluster cluster)
         {
             return new KafkaCluster(cluster.Name, cluster.BootstrapServers);
         }
@@ -143,6 +138,17 @@ namespace KafkaLens.Client.DataAccess
         private static Topic ToViewModel(KafkaLens.Shared.Models.Topic topic, string clusterName)
         {
             return new Topic(topic.Name, topic.PartitionCount, clusterName);
+        }
+        
+        Message ToViewModel(KafkaLens.Shared.Models.Message message)
+        {
+            return new Message(message.Key, message.Value)
+            {
+                Partition = message.Partition,
+                Offset = message.Offset,
+                //TimeStamp = DateTime.Now
+                TimeStamp = DateTimeOffset.FromUnixTimeMilliseconds(message.EpochMillis).DateTime
+            };
         }
         #endregion converters
     }

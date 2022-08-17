@@ -1,4 +1,7 @@
-﻿@if (Clusters?.Values != null)
+﻿
+<h1>KafkaLens</h1>
+
+@if (Clusters?.Values != null)
 {
     <Tree>
         <TreeTemplate TData="INode" Data="@Clusters.Values" GetChildren="@GetChildren" ExpandBy="Expanded">
@@ -11,8 +14,6 @@
     </Tree>
 
 }
-
-<h3 class="custom-h3">TEST CSS</h3>
 
 @code
 {
