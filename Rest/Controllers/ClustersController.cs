@@ -11,9 +11,9 @@ namespace KafkaLens.Rest.Controllers
     public class ClustersController : ControllerBase
     {
         private readonly ILogger<ClustersController> _logger;
-        private readonly ClusterService _clusterService;
+        private readonly IClusterService _clusterService;
 
-        public ClustersController(ILogger<ClustersController> logger, ClusterService clusterService)
+        public ClustersController(ILogger<ClustersController> logger, IClusterService clusterService)
         {
             _logger = logger;
             _clusterService = clusterService;
@@ -44,7 +44,7 @@ namespace KafkaLens.Rest.Controllers
         {
             try
             {
-                return _clusterService.GetById(clusterId);
+                return _clusterService.GetClusterById(clusterId);
             }
             catch (Exception ex)
             {
@@ -57,7 +57,7 @@ namespace KafkaLens.Rest.Controllers
         {
             try
             {
-                return await _clusterService.RemoveByIdAsync(clusterId);
+                return await _clusterService.RemoveClusterByIdAsync(clusterId);
             }
             catch (Exception ex)
             {
@@ -70,7 +70,7 @@ namespace KafkaLens.Rest.Controllers
         {
             try
             {
-                IList<Topic> topics = _clusterService.GetTopics(clusterId);
+                IList<Topic> topics = _clusterService.GetTopicsAsync(clusterId);
                 return new JsonResult(topics);
             }
             catch (Exception ex)

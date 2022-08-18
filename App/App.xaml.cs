@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -19,10 +20,13 @@ namespace KafkaLens.App
     public partial class App : Application
     {
         public IServiceProvider Services { get; }
-        
+        public new static App Current => (App)Application.Current;
+
         public App()
         {
             Services = ConfigureServices();
+
+            InitializeComponent();
         }
 
         /// <summary>
@@ -34,9 +38,10 @@ namespace KafkaLens.App
 
             services.AddSingleton<ISettingsService, SettingsService>();
             services.AddDbContext<KafkaContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
-            services.AddSingleton<IClusterService, ClusterService>();
+            services.AddSingleton<IClusterService, LocalClusterService>();
             services.AddSingleton<ConsumerFactory>();
             services.AddTransient<ClustersViewModel>();
+            services.AddLogging();
 
             return services.BuildServiceProvider();
         }

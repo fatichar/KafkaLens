@@ -8,18 +8,20 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace KafkaLens.Core.Services
 {
-    public class ClusterService : IClusterService
+    public class LocalClusterService : IClusterService
     {
-        private readonly ILogger<ClusterService> logger;
+        private readonly ILogger<LocalClusterService> logger;
         private readonly IServiceScopeFactory scopeFactory;
         private readonly ConsumerFactory consumerFactory;
 
-        private IDictionary<string, IKafkaConsumer> consumers;
+        // key = cluster id, value = kafka consumer
+        private IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
+        // key = cluster id, value = kafka cluster
         private Dictionary<string, Entities.KafkaCluster> clusters;
 
-        public ClusterService(
-            [NotNull] ILogger<ClusterService> logger,
+        public LocalClusterService(
+            [NotNull] ILogger<LocalClusterService> logger,
             [NotNull] IServiceScopeFactory scopeFactory,
             [NotNull] ConsumerFactory consumerFactory)
         {
@@ -27,28 +29,16 @@ namespace KafkaLens.Core.Services
             this.scopeFactory = scopeFactory;
             this.consumerFactory = consumerFactory;
 
-            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
-            clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Name);
-            consumers = CreateConsumers(clusters.Values.ToList());
+            using (var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>())
+            {
+                clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Id);
+            }
         }
 
         #region Create
-        private Dictionary<string, IKafkaConsumer> CreateConsumers(List<Entities.KafkaCluster> clusters)
+        public Task<KafkaCluster> ValidateConnectionAsync(string BootstrapServers)
         {
-            var consumers = new Dictionary<string, IKafkaConsumer>();
-            clusters.ForEach(cluster =>
-            {
-                try
-                {
-                    var consumer = CreateConsumer(cluster.BootstrapServers);
-                    consumers.Add(cluster.Name, consumer);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to create consumer");
-                }
-            });
-            return consumers;
+            throw new NotImplementedException();
         }
 
         public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
@@ -69,17 +59,23 @@ namespace KafkaLens.Core.Services
                 logger.LogError(e, "Failed to save cluster", newCluster);
                 throw;
             }
+
+            return ToModel(cluster);
+        }
+
+        private IKafkaConsumer Connect(Entities.KafkaCluster cluster)
+        {
             try
             {
                 var consumer = CreateConsumer(cluster.BootstrapServers);
-                consumers.Add(cluster.Name, consumer);
+                consumers.Add(cluster.Id, consumer);
+                return consumer;
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Failed to create consumer", newCluster);
+                logger.LogError(e, "Failed to create consumer", cluster);
+                throw;
             }
-
-            return ToModel(cluster);
         }
 
         public static Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
@@ -103,13 +99,19 @@ namespace KafkaLens.Core.Services
             return clusters.Values.Select(ToModel);
         }
 
-        public KafkaCluster GetById(string id)
+        public KafkaCluster GetClusterById(string clusterId)
         {
-            var cluster = GetClusterById(id);
+            var cluster = ValidateClusterId(clusterId);
             return ToModel(cluster);
         }
 
-        public IList<Topic> GetTopics([DisallowNull] string clusterName)
+        KafkaCluster IClusterService.GetClusterByName(string name)
+        {
+            var cluster = ValidateClusterId(name);
+            return ToModel(cluster);
+        }
+
+        public async Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterName)
         {
             var consumer = GetConsumer(clusterName);
 
@@ -125,7 +127,7 @@ namespace KafkaLens.Core.Services
             FetchOptions options)
         {
             var consumer = GetConsumer(clusterName);
-            var messages = consumer.GetMessages(topic, options);
+            var messages = await consumer.GetMessagesAsync(topic, options);
             messages.Sort((m1, m2) => (int)(m1.EpochMillis - m2.EpochMillis));
             return messages;
         }
@@ -142,23 +144,42 @@ namespace KafkaLens.Core.Services
             return messages;
         }
         #endregion Read
-        #region Delete
-        public async Task<KafkaCluster> RemoveByIdAsync(string id)
+
+        #region update
+        public KafkaCluster UpdateCluster(string clusterId, KafkaClusterUpdate update)
         {
-            if (clusters.ContainsKey(id))
+            ValidateClusterId(clusterId);
+
+            using (var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>())
+            {
+                Entities.KafkaCluster? existing = dbContext.KafkaClusters.Find(clusterId);
+                if (existing != null)
+                {
+                    existing.Name = update.Name;
+                    existing.BootstrapServers = update.BootstrapServers;
+                }
+            }
+            return GetClusterById(clusterId);
+        }
+        #endregion update
+
+        #region Delete
+        public async Task<KafkaCluster> RemoveClusterByIdAsync(string clusterId)
+        {
+            if (clusters.ContainsKey(clusterId))
             {
                 var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
-                var cluster = dbContext.KafkaClusters.Find(id);
+                var cluster = dbContext.KafkaClusters.Find(clusterId);
                 if (cluster != null)
                 {
                     dbContext.KafkaClusters.Remove(cluster);
                     await dbContext.SaveChangesAsync();
                 }
-                cluster = clusters[id];
-                clusters.Remove(id);
+                cluster = clusters[clusterId];
+                clusters.Remove(clusterId);
                 return ToModel(cluster);
             }
-            throw new KeyNotFoundException($"Cluster with id {id} not found");
+            throw new KeyNotFoundException($"Cluster with id {clusterId} not found");
         }
         #endregion
 
@@ -176,7 +197,7 @@ namespace KafkaLens.Core.Services
             }
         }
 
-        private Entities.KafkaCluster GetClusterById(string id)
+        private Entities.KafkaCluster ValidateClusterId(string id)
         {
             clusters.TryGetValue(id, out var cluster);
             if (cluster == null)
@@ -186,7 +207,7 @@ namespace KafkaLens.Core.Services
             return cluster;
         }
 
-        private Entities.KafkaCluster GetClusterByName(string name)
+        private Entities.KafkaCluster validateClusterName(string name)
         {
             var cluster = clusters.Values
                 .Where(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))
@@ -199,24 +220,24 @@ namespace KafkaLens.Core.Services
         }
 
         [return: NotNull]
-        private IKafkaConsumer GetConsumer(string clusterName)
+        private IKafkaConsumer GetConsumer(string clusterId)
         {
-            if (consumers.TryGetValue(clusterName, out var consumer))
+            if (consumers.TryGetValue(clusterId, out var consumer))
             {
                 return consumer;
             }
-            throw new ArgumentException("", nameof(clusterName));
+            if (clusters.TryGetValue(clusterId, out var cluster))
+            {
+                return Connect(cluster);
+            }
+            throw new ArgumentException("Unknown cluster", nameof(clusterId));
         }
         #endregion Validations
+        
         #region Mappers
         private KafkaCluster ToModel(Entities.KafkaCluster cluster)
         {
             return new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
-        }
-
-        private Entities.KafkaCluster ToEntity(KafkaCluster cluster)
-        {
-            return new Entities.KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
         }
         #endregion Mappers
     }

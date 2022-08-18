@@ -38,8 +38,8 @@ namespace KafkaLens.App.ViewModels
 
         public void Receive(PropertyChangedMessage<object> topicPartition)
         {
-            if (topicPartition.Sender.GetType() == typeof(ClusterViewModel) &&
-                topicPartition.PropertyName == nameof(ClusterViewModel.SelectedTopic))
+            if (topicPartition.Sender.GetType() == typeof(OpenedClusterViewModel) &&
+                topicPartition.PropertyName == nameof(OpenedClusterViewModel.SelectedTopic))
             {
                 TopicPartition = (TopicPartition?)topicPartition.NewValue;
 

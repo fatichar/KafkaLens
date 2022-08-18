@@ -14,16 +14,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KafkaLens.Core.Services
 {
-    public class ClusterServiceTests
+    public class LocalClusterServiceTests
     {
-        ILogger<ClusterService> logger = Substitute.For<ILogger<ClusterService>>();
-        public ClusterService ClusterService { get; private set; }
+        ILogger<LocalClusterService> logger = Substitute.For<ILogger<LocalClusterService>>();
+        public LocalClusterService ClusterService { get; private set; }
         public KafkaContext DbContext { get; private set; }
 
-        public ClusterServiceTests()
+        public LocalClusterServiceTests()
         {
             Fixture fixture = new();
-            fixture.Register(() => Substitute.For<ILogger<ClusterService>>());
+            fixture.Register(() => Substitute.For<ILogger<LocalClusterService>>());
 
             var builder = new DbContextOptionsBuilder<KafkaContext>();
             builder.UseSqlite("Data Source = KafkaLens.Core.UnitTest.db");
@@ -31,7 +31,7 @@ namespace KafkaLens.Core.Services
             DbContext.Database.EnsureDeleted();
             DbContext.Database.EnsureCreated();
             fixture.Register(() => DbContext);
-            ClusterService = fixture.Create<ClusterService>();
+            ClusterService = fixture.Create<LocalClusterService>();
         }
 
 

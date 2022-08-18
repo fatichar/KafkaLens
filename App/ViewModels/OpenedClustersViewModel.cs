@@ -11,31 +11,22 @@ using System.Threading.Tasks;
 
 namespace KafkaLens.App.ViewModels
 {
-    public sealed class ClustersViewModel : ObservableRecipient
+    public sealed class OpenedClustersViewModel : ObservableRecipient
     {
-        // services
         private readonly ISettingsService settingsService;
         private readonly IClusterService clusterService;
 
-        // commands
-        public IRelayCommand AddClusterCommand { get; }
         public IRelayCommand LoadClustersCommand { get; }
-
-        // data
-        public ObservableCollection<ClusterViewModel> Clusters { get; } = new();
+        public ObservableCollection<OpenedClusterViewModel> Clusters { get; } = new();
         
-        public ClustersViewModel(ISettingsService settingsService, IClusterService clusterService)
-        {
-            AddClusterCommand = new RelayCommand(AddClusterAsync);
-            LoadClustersCommand = new RelayCommand(LoadClustersAsync);
+        public OpenedClusterViewModel? selectedCluster;
 
+        public OpenedClustersViewModel(ISettingsService settingsService, IClusterService clusterService)
+        {
+            LoadClustersCommand = new RelayCommand(LoadClustersAsync);
             this.settingsService = settingsService;
             this.clusterService = clusterService;
-        }
-
-        private void AddClusterAsync()
-        {
-            throw new NotImplementedException();
+            var selectedClusterName = settingsService.GetValue<string>(nameof(SelectedCluster));            
         }
 
         private void LoadClustersAsync()
@@ -44,7 +35,18 @@ namespace KafkaLens.App.ViewModels
             Clusters.Clear();
             foreach (var cluster in clusters)
             {
-                Clusters.Add(new ClusterViewModel(cluster, clusterService));
+                //Clusters.Add(cluster);
+            }
+        }
+
+        public OpenedClusterViewModel? SelectedCluster
+        {
+            get => selectedCluster;
+            set
+            {
+                SetProperty(ref selectedCluster, value, true);
+
+                settingsService.SetValue(nameof(SelectedCluster), value);
             }
         }
     }

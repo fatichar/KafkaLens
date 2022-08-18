@@ -6,12 +6,32 @@ namespace KafkaLens.Core.Services
 {
     public interface IClusterService
     {
+        #region create
+        Task<KafkaCluster> ValidateConnectionAsync(string BootstrapServers);
+        
         Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster);
+        #endregion create
+
+        #region read
         IEnumerable<KafkaCluster> GetAllClusters();
-        KafkaCluster GetById(string id);
-        Task<ActionResult<List<Message>>> GetMessagesAsync(string clusterName, string topic, FetchOptions options);
-        Task<ActionResult<List<Message>>> GetMessagesAsync(string clusterName, string topic, int partition, FetchOptions options);
-        IList<Topic> GetTopics([DisallowNull] string clusterName);
-        Task<KafkaCluster> RemoveByIdAsync(string id);
+
+        KafkaCluster GetClusterById(string clusterId);
+
+        KafkaCluster GetClusterByName(string name);
+
+        Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterId);
+        
+        Task<ActionResult<List<Message>>> GetMessagesAsync(string clusterId, string topic, FetchOptions options);
+        
+        Task<ActionResult<List<Message>>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options);
+        #endregion read
+
+        #region update
+        KafkaCluster UpdateCluster(string clusterId, KafkaClusterUpdate update);
+        #endregion update
+
+        #region delete
+        Task<KafkaCluster> RemoveClusterByIdAsync(string clusterId);
+        #endregion delete
     }
 }

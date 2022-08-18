@@ -25,7 +25,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddDbContext<KafkaContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
-builder.Services.AddSingleton<ClusterService>();
+// TODO replace with SharedClusterService
+builder.Services.AddSingleton<IClusterService, LocalClusterService>();
 builder.Services.AddSingleton<ConsumerFactory>();
 builder.Services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
