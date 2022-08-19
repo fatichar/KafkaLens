@@ -15,5 +15,7 @@ namespace KafkaLens.Core.DataAccess
         }
 
         public DbSet<KafkaCluster> KafkaClusters => Set<KafkaCluster>();
+
+        // TODO: Add topic formats
     }
 }
