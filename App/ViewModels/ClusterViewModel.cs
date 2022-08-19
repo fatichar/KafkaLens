@@ -1,13 +1,11 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using KafkaLens.App.Messages;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics.Metrics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace KafkaLens.App.ViewModels
@@ -33,14 +31,13 @@ namespace KafkaLens.App.ViewModels
 
         private async void OpenClusterAsync()
         {
-            OpenedCluster = cluster;
+            _ = Messenger.Send(new OpenClusterMessage(this));
+            
             if (Topics.Count == 0)
             {
                 await LoadTopicsAsync();
             }
         }
-
-        public KafkaCluster OpenedCluster { get; set; }
 
         private async Task LoadTopicsAsync()
         {

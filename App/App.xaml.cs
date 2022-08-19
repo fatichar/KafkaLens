@@ -34,7 +34,7 @@ namespace KafkaLens.App
             services.AddDbContext<KafkaContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
             services.AddSingleton<IClusterService, LocalClusterService>();
             services.AddSingleton<ConsumerFactory>();
-            services.AddTransient<ClustersViewModel>();
+            services.AddSingleton<MainViewModel>();
             services.AddLogging();
 
             return services.BuildServiceProvider();

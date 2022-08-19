@@ -14,11 +14,11 @@ namespace KafkaLens.App
         {
             InitializeComponent();
             
-            DataContext = App.Current.Services.GetService<ClustersViewModel>();
+            DataContext = App.Current.Services.GetService<MainViewModel>();
             
             Context.LoadClustersCommand.Execute(null);
         }
 
-        private ClustersViewModel Context => (ClustersViewModel) DataContext;
+        private MainViewModel Context => (MainViewModel) DataContext;
     }
 }

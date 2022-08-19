@@ -24,6 +24,7 @@ namespace KafkaLens.App.ViewModels
             SelectedMessages = new List<Message>();
             LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
         }
+
         protected override void OnActivated()
         {
             // We use a method group here, but a lambda expression is also valid

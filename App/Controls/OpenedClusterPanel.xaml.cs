@@ -18,9 +18,9 @@ namespace KafkaLens.App.Controls
     /// <summary>
     /// Interaction logic for UserControl1.xaml
     /// </summary>
-    public partial class Navigator : UserControl
+    public partial class OpenedClusterPanel : UserControl
     {
-        public Navigator()
+        public OpenedClusterPanel()
         {
             InitializeComponent();
         }

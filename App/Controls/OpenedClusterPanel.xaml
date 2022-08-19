@@ -1,0 +1,26 @@
+﻿<UserControl x:Class="KafkaLens.App.Controls.OpenedClusterPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             mc:Ignorable="d" 
+             d:DesignHeight="1000" d:DesignWidth="200"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" 
+             xmlns:local="clr-namespace:KafkaLens.App.Controls"
+             d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Width="Auto">
+        <local:Navigator x:Name="navigator"
+                                 Width="100" 
+                                 Background="#FFDFE5EF" 
+                                 BorderThickness="1" 
+                                 BorderBrush="#FF558FE7">
+        </local:Navigator>
+
+        <Button x:Name="clusterBrowser" HorizontalAlignment="Stretch" Content="{Binding Name}" Width="1000">
+            
+        </Button>
+        
+        <local:SettingsPanel x:Name="settingsPanel" Background="#FFDFE5EF" Width="100" BorderThickness="1" BorderBrush="#FF558FE7">
+        </local:SettingsPanel>
+    </StackPanel>
+</UserControl>
