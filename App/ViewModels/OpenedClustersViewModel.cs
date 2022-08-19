@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
 using System;
@@ -49,5 +50,16 @@ namespace KafkaLens.App.ViewModels
                 settingsService.SetValue(nameof(SelectedCluster), value);
             }
         }
+
+        //public void Receive(PropertyChangedMessage<KafkaCluster> message)
+        //{
+        //    if (message.Sender.GetType() == typeof(OpenedClusterViewModel) &&
+        //            message.PropertyName == nameof(OpenedClusterViewModel.SelectedTopic))
+        //    {
+        //        TopicPartition = (TopicPartition?)message.NewValue;
+
+        //        LoadMessagesAsync();
+        //    }
+        //}
     }
 }

@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace KafkaLens.App.ViewModels
 {
-    public sealed class MessagesViewModel : ObservableRecipient//, IRecipient<PropertyChangedMessage<object>>
+    public sealed class MessagesViewModel : ObservableRecipient
     {
         private TopicPartition? topicPartition;
         public IAsyncRelayCommand LoadMessagesCommand { get; }
@@ -24,27 +24,32 @@ namespace KafkaLens.App.ViewModels
             SelectedMessages = new List<Message>();
             LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
         }
+        protected override void OnActivated()
+        {
+            // We use a method group here, but a lambda expression is also valid
+            Messenger.Register<MessagesViewModel, PropertyChangedMessage<TopicPartition>>(this, (r, m) => r.Receive(m));
+        }
 
         private Task LoadMessagesAsync()
         {
             throw new NotImplementedException();
         }
 
+        public void Receive(PropertyChangedMessage<TopicPartition> message)
+        {
+            if (message.Sender.GetType() == typeof(OpenedClusterViewModel) &&
+                    message.PropertyName == nameof(OpenedClusterViewModel.SelectedTopic))
+            {
+                TopicPartition = (TopicPartition?)message.NewValue;
+
+                LoadMessagesAsync();
+            }
+        }
+
         public TopicPartition? TopicPartition
         {
             get => topicPartition;
             set => SetProperty(ref topicPartition, value);
-        }
-
-        public void Receive(PropertyChangedMessage<object> topicPartition)
-        {
-            if (topicPartition.Sender.GetType() == typeof(OpenedClusterViewModel) &&
-                topicPartition.PropertyName == nameof(OpenedClusterViewModel.SelectedTopic))
-            {
-                TopicPartition = (TopicPartition?)topicPartition.NewValue;
-
-                LoadMessagesAsync();
-            }
         }
     }
 }

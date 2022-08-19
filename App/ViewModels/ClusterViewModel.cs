@@ -33,11 +33,14 @@ namespace KafkaLens.App.ViewModels
 
         private async void OpenClusterAsync()
         {
+            OpenedCluster = cluster;
             if (Topics.Count == 0)
             {
                 await LoadTopicsAsync();
             }
         }
+
+        public KafkaCluster OpenedCluster { get; set; }
 
         private async Task LoadTopicsAsync()
         {

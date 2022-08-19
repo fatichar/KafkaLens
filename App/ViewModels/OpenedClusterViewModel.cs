@@ -39,6 +39,8 @@ namespace KafkaLens.App.ViewModels
                 SetProperty(ref selectedTopic, value, true);
 
                 settingsService.SetValue(nameof(SelectedTopic), value);
+
+                // load messages
             }
         }
     }

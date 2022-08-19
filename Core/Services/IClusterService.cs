@@ -7,7 +7,7 @@ namespace KafkaLens.Core.Services
     public interface IClusterService
     {
         #region create
-        Task<KafkaCluster> ValidateConnectionAsync(string BootstrapServers);
+        Task<bool> ValidateConnectionAsync(string BootstrapServers);
         
         Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster);
         #endregion create
@@ -15,15 +15,15 @@ namespace KafkaLens.Core.Services
         #region read
         IEnumerable<KafkaCluster> GetAllClusters();
 
-        KafkaCluster GetClusterById(string clusterId);
+        KafkaCluster GetClusterById([DisallowNull] string clusterId);
 
-        KafkaCluster GetClusterByName(string name);
+        KafkaCluster GetClusterByName([DisallowNull] string name);
 
         Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterId);
         
-        Task<ActionResult<List<Message>>> GetMessagesAsync(string clusterId, string topic, FetchOptions options);
+        Task<ActionResult<List<Message>>> GetMessagesAsync([DisallowNull] string clusterId, [DisallowNull] string topic, FetchOptions options);
         
-        Task<ActionResult<List<Message>>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options);
+        Task<ActionResult<List<Message>>> GetMessagesAsync([DisallowNull] string clusterId, [DisallowNull] string topic, [DisallowNull] int partition, FetchOptions options);
         #endregion read
 
         #region update

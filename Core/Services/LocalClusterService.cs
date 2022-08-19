@@ -14,11 +14,11 @@ namespace KafkaLens.Core.Services
         private readonly IServiceScopeFactory scopeFactory;
         private readonly ConsumerFactory consumerFactory;
 
-        // key = cluster id, value = kafka consumer
-        private IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
-
         // key = cluster id, value = kafka cluster
         private Dictionary<string, Entities.KafkaCluster> clusters;
+
+        // key = cluster id, value = kafka consumer
+        private IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
         public LocalClusterService(
             [NotNull] ILogger<LocalClusterService> logger,
@@ -36,9 +36,9 @@ namespace KafkaLens.Core.Services
         }
 
         #region Create
-        public Task<KafkaCluster> ValidateConnectionAsync(string BootstrapServers)
+        public async Task<bool> ValidateConnectionAsync(string BootstrapServers)
         {
-            throw new NotImplementedException();
+            return false;
         }
 
         public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
@@ -111,9 +111,9 @@ namespace KafkaLens.Core.Services
             return ToModel(cluster);
         }
 
-        public async Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterName)
+        public async Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterId)
         {
-            var consumer = GetConsumer(clusterName);
+            var consumer = GetConsumer(clusterId);
 
             var topics = consumer.GetTopics();
             topics.Sort(Helper.CompareTopics);
@@ -122,23 +122,23 @@ namespace KafkaLens.Core.Services
         }
 
         public async Task<ActionResult<List<Message>>> GetMessagesAsync(
-            string clusterName,
+            string clusterId,
             string topic,
             FetchOptions options)
         {
-            var consumer = GetConsumer(clusterName);
+            var consumer = GetConsumer(clusterId);
             var messages = await consumer.GetMessagesAsync(topic, options);
             messages.Sort((m1, m2) => (int)(m1.EpochMillis - m2.EpochMillis));
             return messages;
         }
 
         public async Task<ActionResult<List<Message>>> GetMessagesAsync(
-            string clusterName,
+            string clusterId,
             string topic,
             int partition,
             FetchOptions options)
         {
-            var consumer = GetConsumer(clusterName);
+            var consumer = GetConsumer(clusterId);
             var messages = await consumer.GetMessagesAsync(topic, partition, options);
             messages.Sort((m1, m2) => (int)(m1.EpochMillis - m2.EpochMillis));
             return messages;
