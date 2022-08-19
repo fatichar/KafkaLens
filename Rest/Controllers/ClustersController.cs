@@ -70,7 +70,7 @@ namespace KafkaLens.Rest.Controllers
         {
             try
             {
-                IList<Topic> topics = _clusterService.GetTopicsAsync(clusterId);
+                IList<Topic> topics = (IList<Topic>)_clusterService.GetTopicsAsync(clusterId);
                 return new JsonResult(topics);
             }
             catch (Exception ex)
