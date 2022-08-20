@@ -57,7 +57,6 @@ namespace KafkaLens.App.ViewModels
 
         private void AddClusterAsync()
         {
-            throw new NotImplementedException();
         }
 
         public void Receive(OpenClusterMessage message)
