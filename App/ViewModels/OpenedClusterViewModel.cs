@@ -20,10 +20,11 @@ namespace KafkaLens.App.ViewModels
         public string Name => clusterViewModel.Name;
         public ObservableCollection<TopicViewModel> Topics => clusterViewModel.Topics;
 
-        public ObservableCollection<MessageViewModel> CurrentMessages { get; }  = new();
+        public MessagesViewModel CurrentMessages { get; }  = new();
 
-        public TopicViewModel? selectedTopic;
+        private TopicViewModel? selectedTopic;
 
+        
         public OpenedClusterViewModel(
             ISettingsService settingsService, 
             IClusterService clusterService,
@@ -54,6 +55,7 @@ namespace KafkaLens.App.ViewModels
             }
         }
 
+       
         public string ClusterId => clusterViewModel.Id;
 
         private async Task FetchMessagesAsync()
@@ -76,13 +78,13 @@ namespace KafkaLens.App.ViewModels
         {
             if (selectedTopic == null)
             {
-                CurrentMessages.Clear();
+                CurrentMessages.Messages.Clear();
             }
             else
             {
                 foreach (var msg in messages)
                 {
-                    CurrentMessages.Add(new MessageViewModel(msg));
+                    CurrentMessages.Messages.Add(new MessageViewModel(msg));
                 }
             }
         }

@@ -14,8 +14,8 @@
             <RowDefinition Height="5" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <DataGrid ItemsSource="{Binding CurrentMessages}" AutoGenerateColumns="False"
-                  Grid.Row="0" AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6">
+        <DataGrid Name="dataGrid" ItemsSource="{Binding CurrentMessages.Messages}" AutoGenerateColumns="False"
+                  Grid.Row="0" AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6" SelectionChanged="Selector_OnSelectionChanged">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Partition" Binding="{Binding Partition}"/>
                 <DataGridTextColumn Header="Offset" Binding="{Binding Offset}" >
@@ -50,6 +50,6 @@
         </DataGrid>
 
         <GridSplitter Grid.Row="1" ResizeDirection="Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
-        <RichTextBox Grid.Row="2"/>
+        <TextBox Grid.Row="2" Text="{Binding CurrentMessages.CurrentMessage.Message, Mode=OneWay}"/>
     </Grid>
 </UserControl>

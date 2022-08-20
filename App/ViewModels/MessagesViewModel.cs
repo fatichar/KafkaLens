@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 
@@ -12,16 +13,18 @@ namespace KafkaLens.App.ViewModels
     public sealed class MessagesViewModel : ObservableRecipient
     {
         private TopicPartition? topicPartition;
+        
+        private MessageViewModel? currentMessage;
         public IAsyncRelayCommand LoadMessagesCommand { get; }
 
-        public List<Message> Messages { get; internal set; }
-        public Message? CurrentMessage { get; internal set; }
-        public List<Message> SelectedMessages { get; internal set; }
+        public ObservableCollection<MessageViewModel> Messages { get; internal set; }
+        
+        public ObservableCollection<MessageViewModel> SelectedMessages { get; internal set; }
 
         public MessagesViewModel()
         {
-            Messages = new List<Message>();
-            SelectedMessages = new List<Message>();
+            Messages = new ();
+            SelectedMessages = new ();
             LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
         }
 
@@ -51,6 +54,12 @@ namespace KafkaLens.App.ViewModels
         {
             get => topicPartition;
             set => SetProperty(ref topicPartition, value);
+        }
+
+        public MessageViewModel? CurrentMessage
+        {
+            get => currentMessage;
+            set => SetProperty(ref currentMessage, value);
         }
     }
 }

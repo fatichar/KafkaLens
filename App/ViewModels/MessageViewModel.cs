@@ -6,7 +6,7 @@ using System;
 
 namespace KafkaLens.App.ViewModels
 {
-    public sealed class MessageViewModel //, IRecipient<PropertyChangedMessage<Message>>
+    public sealed class MessageViewModel : ObservableRecipient //, IRecipient<PropertyChangedMessage<Message>>
     {
         private Message message;
 
@@ -21,6 +21,14 @@ namespace KafkaLens.App.ViewModels
         public MessageViewModel(Message message)
         {
             this.message = message;
+
+            IsActive = true;
+        }
+
+        protected override void OnActivated()
+        {
+            // We use a method group here, but a lambda expression is also valid
+            Messenger.Register<MessageViewModel, PropertyChangedMessage<Message>>(this, (r, m) => r.Receive(m));
         }
 
         //public Message Message

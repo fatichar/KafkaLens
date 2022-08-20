@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KafkaLens.App.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,11 +21,18 @@ namespace KafkaLens.App.Controls
     /// </summary>
     public partial class Browser : UserControl
     {
+        private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
+
         public Browser()
         {
             InitializeComponent();
         }
 
-        
+
+        private void Selector_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (dataContext != null && dataGrid.SelectedItem != null)
+                dataContext.CurrentMessages.CurrentMessage = (MessageViewModel)dataGrid.SelectedItem;
+        }
     }
 }
