@@ -9,14 +9,21 @@
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
     <StackPanel>
         <Label Content="{Binding Name}"/>
-        <TreeView ItemsSource="{Binding Topics}">
+        <TreeView ItemsSource="{Binding Topics}" SelectedItemChanged="TreeView_SelectedItemChanged">
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="{x:Type TreeViewItem}">
+                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    <Setter Property="HorizontalAlignment" Value="Left"/>
+                </Style>
+            </TreeView.ItemContainerStyle>            
             <TreeView.ItemTemplate >
                 <HierarchicalDataTemplate>
-                    <TreeViewItem Header="{Binding Name}"  ItemsSource="{Binding Partitions}">
+                    <TextBlock Text="{Binding Name}">
                         <!--<HierarchicalDataTemplate>
-                            <TreeViewItem Header="{Binding Name}"/>
+                            <TextBlock Text="{Binding Name}"/>
                         </HierarchicalDataTemplate>-->
-                    </TreeViewItem>
+                    </TextBlock>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
         </TreeView>

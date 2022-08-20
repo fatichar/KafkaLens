@@ -17,6 +17,8 @@ namespace KafkaLens.App.ViewModels
         public ObservableCollection<PartitionViewModel> Partitions { get; } = new();
 
         public string Name => topic.Name;
+        public bool IsExpanded { get; set; } = false;
+        public bool IsSelected { get; set; } = false;
 
         public ObservableCollection<MessageViewModel> Messages { get; } = new();
 

@@ -24,7 +24,7 @@
             BorderBrush="#FF558FE7">
         </local:SettingsPanel>
         
-        <local:Browser x:Name="clusterBrowser" DataContext="{Binding CurrentMessages}">
+        <local:Browser x:Name="clusterBrowser" >
 
         </local:Browser>
 

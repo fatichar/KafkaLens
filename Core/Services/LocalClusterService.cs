@@ -121,7 +121,7 @@ namespace KafkaLens.Core.Services
             return topics;
         }
 
-        public async Task<ActionResult<List<Message>>> GetMessagesAsync(
+        public async Task<List<Message>> GetMessagesAsync(
             string clusterId,
             string topic,
             FetchOptions options)
@@ -132,7 +132,7 @@ namespace KafkaLens.Core.Services
             return messages;
         }
 
-        public async Task<ActionResult<List<Message>>> GetMessagesAsync(
+        public async Task<List<Message>> GetMessagesAsync(
             string clusterId,
             string topic,
             int partition,

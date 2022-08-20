@@ -21,9 +21,9 @@ namespace KafkaLens.Core.Services
 
         Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterId);
         
-        Task<ActionResult<List<Message>>> GetMessagesAsync([DisallowNull] string clusterId, [DisallowNull] string topic, FetchOptions options);
+        Task<List<Message>> GetMessagesAsync([DisallowNull] string clusterId, [DisallowNull] string topic, FetchOptions options);
         
-        Task<ActionResult<List<Message>>> GetMessagesAsync([DisallowNull] string clusterId, [DisallowNull] string topic, [DisallowNull] int partition, FetchOptions options);
+        Task<List<Message>> GetMessagesAsync([DisallowNull] string clusterId, [DisallowNull] string topic, [DisallowNull] int partition, FetchOptions options);
         #endregion read
 
         #region update

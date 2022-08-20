@@ -5,17 +5,17 @@ namespace KafkaLens.App
 {
     public class SettingsService : ISettingsService
     {
-        private readonly Dictionary<string, object> settings = new();
+        private readonly Dictionary<string, string> settings = new();
         
-        public T GetValue<T>([NotNull]string key)
+        public string? GetValue(string key)
         {
-            object val = settings.GetValueOrDefault(key, default(T));
-            return (T)val;
+            settings.TryGetValue(key, out string? val);
+            return val;
         }
         
-        public void SetValue<T>(string key, T value)
+        public void SetValue(string key, string value)
         {
-            throw new System.NotImplementedException();
+            settings[key] = value;
         }
     }
 }

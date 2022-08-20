@@ -19,8 +19,8 @@ namespace KafkaLens.App.ViewModels
 
         public string Name => clusterViewModel.Name;
         public ObservableCollection<TopicViewModel> Topics => clusterViewModel.Topics;
-        public ObservableCollection<MessageViewModel> CurrentMessages = new();
 
+        public ObservableCollection<MessageViewModel> CurrentMessages { get; }  = new();
 
         public TopicViewModel? selectedTopic;
 
@@ -46,13 +46,15 @@ namespace KafkaLens.App.ViewModels
             {
                 SetProperty(ref selectedTopic, value, true);
 
-                settingsService.SetValue(nameof(SelectedTopic), value);
+                settingsService.SetValue(nameof(SelectedTopic), value.Name);
                 if (selectedTopic != null)
                 {
-                    FetchMessagesCommand.ExecuteAsync(null);
+                    FetchMessagesCommand.Execute(null);
                 }
             }
         }
+
+        public string ClusterId => clusterViewModel.Id;
 
         private async Task FetchMessagesAsync()
         {
@@ -61,16 +63,16 @@ namespace KafkaLens.App.ViewModels
                 return;
             }
             // load messages
-            var messagesTask = clusterService.GetMessagesAsync(
+            var messages = await clusterService.GetMessagesAsync(
                 clusterViewModel.Id,
                 selectedTopic.Name, new FetchOptions()
                 {
                     Limit = 10
                 });
-            await messagesTask.ContinueWith(OnMessagesFetched);
+            OnMessagesFetched(messages);
         }
 
-        private void OnMessagesFetched(Task task)
+        private void OnMessagesFetched(List<Message> messages)
         {
             if (selectedTopic == null)
             {
@@ -78,9 +80,9 @@ namespace KafkaLens.App.ViewModels
             }
             else
             {
-                foreach (var msg in selectedTopic.Messages)
+                foreach (var msg in messages)
                 {
-                    CurrentMessages.Add(msg);
+                    CurrentMessages.Add(new MessageViewModel(msg));
                 }
             }
         }

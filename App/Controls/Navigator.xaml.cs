@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KafkaLens.App.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,5 +25,13 @@ namespace KafkaLens.App.Controls
         {
             InitializeComponent();
         }
+
+        private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (dataContext != null)
+                dataContext.SelectedTopic = (TopicViewModel)e.NewValue;
+        }
+
+        private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext; 
     }
 }

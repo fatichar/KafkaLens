@@ -51,7 +51,7 @@ namespace KafkaLens.App.ViewModels
             {
                 SetProperty(ref selectedCluster, value, true);
 
-                settingsService.SetValue(nameof(SelectedCluster), value);
+                settingsService.SetValue(nameof(SelectedCluster), value.ClusterId);
             }
         }
 

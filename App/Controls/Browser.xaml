@@ -6,12 +6,12 @@
              d:DesignHeight="980" d:DesignWidth="330"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" 
-             d:DataContext="{d:DesignInstance Type=viewmodels:TopicViewModel}">
+             d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
     <StackPanel Orientation="Vertical">
-        <DataGrid ItemsSource="{Binding Messages}">
-            <DataGrid.DataContext>
+        <DataGrid ItemsSource="{Binding CurrentMessages}">
+            <!--<DataGrid.DataContext>
                 <viewmodels:MessagesViewModel/>
-            </DataGrid.DataContext>
+            </DataGrid.DataContext>-->
             <!--<d:DesignData>
         <viewmodels:TopicViewModel>
             <Messages>
