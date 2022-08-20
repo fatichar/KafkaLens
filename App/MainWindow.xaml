@@ -17,16 +17,16 @@
                 </MenuItem>
                 <MenuItem x:Name="openClusterMenu" Header="Open cluster" ItemsSource="{Binding Clusters}">
                     <MenuItem.ItemTemplate>
-                        <HierarchicalDataTemplate>
+                        <DataTemplate>
                             <MenuItem Header="{Binding Name}" 
                                       Command="{Binding OpenClusterCommand}"/>
-                        </HierarchicalDataTemplate>
+                        </DataTemplate>
                     </MenuItem.ItemTemplate>
                 </MenuItem>
             </MenuItem>
         </Menu>
         <TabControl x:Name="openedClustersControl" ItemsSource="{Binding OpenedClusters}"
-                    SelectedItem="0">
+                    SelectedIndex="{Binding SelectedIndex}">
             <TabControl.ItemTemplate>
                 <DataTemplate>
                     <Label Content="{Binding Name}" />
