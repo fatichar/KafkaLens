@@ -1,11 +1,12 @@
 ﻿<UserControl x:Class="KafkaLens.App.Controls.Browser"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             mc:Ignorable="d" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             xmlns:System="clr-namespace:System;assembly=mscorlib"
              d:DesignHeight="980" d:DesignWidth="330"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" 
+             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
     <Grid>
         <Grid.RowDefinitions>
@@ -13,8 +14,39 @@
             <RowDefinition Height="5" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <DataGrid ItemsSource="{Binding CurrentMessages}" AutoGeneratingColumn="DataGrid_OnAutoGeneratingColumn"
-                  Grid.Row="0">
+        <DataGrid ItemsSource="{Binding CurrentMessages}" AutoGenerateColumns="False"
+                  Grid.Row="0" AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Partition" Binding="{Binding Partition}"/>
+                <DataGridTextColumn Header="Offset" Binding="{Binding Offset}" >
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="5, 3, 5, 3"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp}" >
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="5, 3, 5, 3"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Key" Binding="{Binding Key}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="5, 3, 5, 3"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Message" Binding="{Binding Summary}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10, 3, 10, 3"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
         </DataGrid>
 
         <GridSplitter Grid.Row="1" ResizeDirection="Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>

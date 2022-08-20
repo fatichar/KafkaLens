@@ -57,13 +57,13 @@ namespace KafkaLens.App.ViewModels
 
         private void AddClusterAsync()
         {
-            throw new NotImplementedException();
         }
 
         public void Receive(OpenClusterMessage message)
         {
             var cluster = new OpenedClusterViewModel(settingsService, clusterService, message.ClusterViewModel);
             OpenedClusters.Add(cluster);
+            selectedIndex = OpenedClusters.Count - 1;
         }
 
         private void LoadClustersAsync()
@@ -74,6 +74,11 @@ namespace KafkaLens.App.ViewModels
             {
                 Clusters.Add(new ClusterViewModel(cluster, clusterService));
             }
+            selectedIndex = 0;
         }
+
+        private int selectedIndex = -1;
+
+        public int SelectedIndex { get => selectedIndex; set => SetProperty(ref selectedIndex, value); }
     }
 }
