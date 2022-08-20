@@ -14,7 +14,7 @@ namespace KafkaLens.App.ViewModels
     {
         private readonly IClusterService clusterService;
         private readonly Partition partition;
-        public string name => partition.Name;
+        public string Name => partition.Name;
 
         public PartitionViewModel(IClusterService clusterService, Partition partition)
         {

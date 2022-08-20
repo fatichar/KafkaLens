@@ -7,25 +7,19 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" 
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
+    <UserControl.Resources>
+        <HierarchicalDataTemplate DataType = "{x:Type viewmodels:TopicViewModel}"
+                                ItemsSource = "{Binding Path=Partitions}">
+            <TextBlock Text="{Binding Path=Name}"/>
+        </HierarchicalDataTemplate>
+
+        <DataTemplate DataType = "{x:Type viewmodels:PartitionViewModel}">
+            <TextBlock Text="{Binding Path=Name}"/>
+        </DataTemplate>
+    </UserControl.Resources>
     <StackPanel>
         <Label Content="{Binding Name}"/>
         <TreeView ItemsSource="{Binding Topics}" SelectedItemChanged="TreeView_SelectedItemChanged">
-            <TreeView.ItemContainerStyle>
-                <Style TargetType="{x:Type TreeViewItem}">
-                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                    <Setter Property="HorizontalAlignment" Value="Left"/>
-                </Style>
-            </TreeView.ItemContainerStyle>            
-            <TreeView.ItemTemplate >
-                <HierarchicalDataTemplate>
-                    <TextBlock Text="{Binding Name}">
-                        <!--<HierarchicalDataTemplate>
-                            <TextBlock Text="{Binding Name}"/>
-                        </HierarchicalDataTemplate>-->
-                    </TextBlock>
-                </HierarchicalDataTemplate>
-            </TreeView.ItemTemplate>
         </TreeView>
     </StackPanel>
 </UserControl>
