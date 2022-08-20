@@ -1,0 +1,27 @@
+﻿<UserControl x:Class="KafkaLens.App.Controls.Browser"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             mc:Ignorable="d" 
+             d:DesignHeight="980" d:DesignWidth="330"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" 
+             d:DataContext="{d:DesignInstance Type=viewmodels:TopicViewModel}">
+    <StackPanel Orientation="Vertical">
+        <DataGrid ItemsSource="{Binding Messages}">
+            <DataGrid.DataContext>
+                <viewmodels:MessagesViewModel/>
+            </DataGrid.DataContext>
+            <!--<d:DesignData>
+        <viewmodels:TopicViewModel>
+            <Messages>
+                <viewmodels:MessageViewModel>
+                    
+                </viewmodels:MessageViewModel>
+            </Messages>
+        </viewmodels:TopicViewModel>
+    </d:DesignData>-->
+            
+        </DataGrid>
+    </StackPanel>
+</UserControl>

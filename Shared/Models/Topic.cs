@@ -1,16 +1,23 @@
-﻿namespace KafkaLens.Shared.Models
+﻿using System.Collections.Generic;
+
+namespace KafkaLens.Shared.Models
 {
     public class Topic
     {
         public Topic(string name, int partitionCount)
         {
             Name = name;
-            PartitionCount = partitionCount;
+            Partitions = new List<Partition>(partitionCount);
+            for (int i = 0; i < partitionCount; i++)
+            {
+                Partitions.Add(new Partition(i));
+            }
         }
 
         public string Name { get; set; }
 
-        public int PartitionCount { get; }
+        public int PartitionCount => Partitions.Count;
+        public List<Partition> Partitions { get; }
 
         //public string ParentId { get; set; }
     }

@@ -12,7 +12,11 @@
         <TreeView ItemsSource="{Binding Topics}">
             <TreeView.ItemTemplate >
                 <HierarchicalDataTemplate>
-                    <TextBlock Text="{Binding Name}"/>
+                    <TreeViewItem Header="{Binding Name}"  ItemsSource="{Binding Partitions}">
+                        <!--<HierarchicalDataTemplate>
+                            <TreeViewItem Header="{Binding Name}"/>
+                        </HierarchicalDataTemplate>-->
+                    </TreeViewItem>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
         </TreeView>

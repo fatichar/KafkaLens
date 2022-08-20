@@ -7,9 +7,14 @@ namespace KafkaLens.App.ViewModels
 {
     public sealed class MessageViewModel : ObservableRecipient //, IRecipient<PropertyChangedMessage<Message>>
     {
-        private Message? message;
+        private Message message;
 
-        public Message? Message
+        public MessageViewModel(Message message)
+        {
+            this.message = message;
+        }
+
+        public Message Message
         {
             get => message;
             private set => SetProperty(ref message, value);

@@ -5,9 +5,10 @@
         public Partition(int id)
         {
             Id = id;
+            Name = "Partition " + Id;
         }
 
-        public int Id { get; set; }
-        public int MaxOffset { get; set; }
+        public int Id { get; }
+        public string Name { get; }
     }
 }

@@ -16,8 +16,9 @@ namespace KafkaLens.App.ViewModels
         public IRelayCommand OpenClusterCommand { get; }
         public IAsyncRelayCommand LoadTopicsCommand { get; }
         private readonly KafkaCluster cluster;
-        public ObservableCollection<Topic> Topics { get; } = new();
+        public ObservableCollection<TopicViewModel> Topics { get; } = new();
 
+        public string Id => cluster.Id;
         public string Name => cluster.Name;
 
         public ClusterViewModel(KafkaCluster cluster, IClusterService clusterService)
@@ -44,7 +45,7 @@ namespace KafkaLens.App.ViewModels
             var topics = await clusterService.GetTopicsAsync(cluster.Id);
             foreach (var topic in topics)
             {
-                Topics.Add(topic);
+                Topics.Add(new TopicViewModel(clusterService, topic));
             }
         }
     }
