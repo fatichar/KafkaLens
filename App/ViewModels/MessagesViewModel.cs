@@ -13,18 +13,18 @@ namespace KafkaLens.App.ViewModels
     public sealed class MessagesViewModel : ObservableRecipient
     {
         private TopicPartition? topicPartition;
-        
+
         private MessageViewModel? currentMessage;
         public IAsyncRelayCommand LoadMessagesCommand { get; }
 
         public ObservableCollection<MessageViewModel> Messages { get; internal set; }
-        
+
         public ObservableCollection<MessageViewModel> SelectedMessages { get; internal set; }
 
         public MessagesViewModel()
         {
-            Messages = new ();
-            SelectedMessages = new ();
+            Messages = new();
+            SelectedMessages = new();
             LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
         }
 

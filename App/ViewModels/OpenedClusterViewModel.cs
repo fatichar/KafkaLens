@@ -24,9 +24,9 @@ namespace KafkaLens.App.ViewModels
 
         private TopicViewModel? selectedTopic;
 
-        
+
         public OpenedClusterViewModel(
-            ISettingsService settingsService, 
+            ISettingsService settingsService,
             IClusterService clusterService,
             ClusterViewModel clusterViewModel)
         {
@@ -55,7 +55,6 @@ namespace KafkaLens.App.ViewModels
             }
         }
 
-       
         public string ClusterId => clusterViewModel.Id;
 
         private async Task FetchMessagesAsync()

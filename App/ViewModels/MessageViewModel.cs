@@ -24,26 +24,5 @@ namespace KafkaLens.App.ViewModels
 
             IsActive = true;
         }
-
-        protected override void OnActivated()
-        {
-            // We use a method group here, but a lambda expression is also valid
-            Messenger.Register<MessageViewModel, PropertyChangedMessage<Message>>(this, (r, m) => r.Receive(m));
-        }
-
-        //public Message Message
-        //{
-        //    get => message;
-        //    private set => SetProperty(ref message, value);
-        //}
-
-        public void Receive(PropertyChangedMessage<Message> message)
-        {
-            //if (message.Sender.GetType() == typeof(MessagesViewModel) &&
-            //    message.PropertyName == nameof(MessagesViewModel.CurrentMessage))
-            //{
-            //    Message = message.NewValue;
-            //}
-        }
     }
 }
