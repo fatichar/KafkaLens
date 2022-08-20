@@ -28,16 +28,14 @@
         </Menu>
         <TabControl x:Name="openedClustersControl" ItemsSource="{Binding OpenedClusters}"
                     SelectedIndex="{Binding SelectedIndex}">
-            <TabControl.ItemTemplate>
-                <DataTemplate>
-                    <Label Content="{Binding Name}" />
-                </DataTemplate>
-            </TabControl.ItemTemplate>
+            <TabControl.ItemContainerStyle>
+                <Style TargetType="TabItem">
+                    <Setter Property="Header" Value="{Binding Name}" />
+                </Style>
+            </TabControl.ItemContainerStyle>
             <TabControl.ContentTemplate>
                 <DataTemplate>
-                    <local:OpenedClusterPanel>
-
-                    </local:OpenedClusterPanel>
+                    <local:OpenedClusterPanel/>
                 </DataTemplate>
             </TabControl.ContentTemplate>
         </TabControl>
