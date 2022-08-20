@@ -25,12 +25,6 @@ namespace KafkaLens.App.Controls
             InitializeComponent();
         }
 
-        private void DataGrid_OnAutoGeneratingColumn(object? sender, DataGridAutoGeneratingColumnEventArgs e)
-        {
-            if (e.PropertyName == "Message")
-            {
-                e.Cancel = true;
-            }
-        }
+        
     }
 }
