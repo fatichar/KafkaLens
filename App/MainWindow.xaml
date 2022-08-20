@@ -6,22 +6,23 @@
         mc:Ignorable="d"
         Title="KafkaLens" Height="450" Width="800"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" 
+        xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
         d:DataContext="{d:DesignInstance Type=viewmodels:MainViewModel}" >
-    
+
     <DockPanel x:Name="mainDockPanel" LastChildFill="True">
         <Menu x:Name="mainMenu" IsMainMenu="True" DockPanel.Dock="Top">
             <MenuItem x:Name="fileMenu" Header="File">
                 <MenuItem x:Name="addClusterMenu" Header="Add cluster"
                           Command="{Binding AddClusterCommand}">
                 </MenuItem>
-                <MenuItem x:Name="openClusterMenu" Header="Open cluster" ItemsSource="{Binding Clusters}">
-                    <MenuItem.ItemTemplate>
-                        <DataTemplate>
-                            <MenuItem Header="{Binding Name}" 
-                                      Command="{Binding OpenClusterCommand}"/>
-                        </DataTemplate>
-                    </MenuItem.ItemTemplate>
+                <MenuItem x:Name="openClusterMenu" Header="Open cluster" ItemsSource="{Binding Clusters}" 
+                          Command="{Binding OpenClusterCommand}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Command" Value="{Binding OpenClusterCommand}"/>
+                            <Setter Property="Header" Value="{Binding Name}"/>
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
                 </MenuItem>
             </MenuItem>
         </Menu>

@@ -24,7 +24,5 @@ namespace KafkaLens.App.Controls
         {
             InitializeComponent();
         }
-
-        
     }
 }
