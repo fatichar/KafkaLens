@@ -12,8 +12,8 @@ namespace KafkaLens.Core.Services
 {
     class ConfluentConsumer : IKafkaConsumer, IDisposable
     {
-        private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(3);
-        private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(3);
+        private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(5);
+        private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(10);
 
         public Dictionary<string, Topic> Topics { get; private set; } = new Dictionary<string, Topic>();

@@ -7,21 +7,17 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" 
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
-    <StackPanel Orientation="Vertical">
-        <DataGrid ItemsSource="{Binding CurrentMessages}">
-            <!--<DataGrid.DataContext>
-                <viewmodels:MessagesViewModel/>
-            </DataGrid.DataContext>-->
-            <!--<d:DesignData>
-        <viewmodels:TopicViewModel>
-            <Messages>
-                <viewmodels:MessageViewModel>
-                    
-                </viewmodels:MessageViewModel>
-            </Messages>
-        </viewmodels:TopicViewModel>
-    </d:DesignData>-->
-            
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="5" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <DataGrid ItemsSource="{Binding CurrentMessages}"
+                  Grid.Row="0">
         </DataGrid>
-    </StackPanel>
+
+        <GridSplitter Grid.Row="1" ResizeDirection="Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
+        <RichTextBox Grid.Row="2"/>
+    </Grid>
 </UserControl>

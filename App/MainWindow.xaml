@@ -22,7 +22,7 @@
                                       Command="{Binding OpenClusterCommand}"/>
                         </HierarchicalDataTemplate>
                     </MenuItem.ItemTemplate>
-                </MenuItem>/>
+                </MenuItem>
             </MenuItem>
         </Menu>
         <TabControl x:Name="openedClustersControl" ItemsSource="{Binding OpenedClusters}"
