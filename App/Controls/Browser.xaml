@@ -16,11 +16,35 @@
         <DataGrid ItemsSource="{Binding CurrentMessages}" AutoGenerateColumns="False"
                   Grid.Row="0">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Partition" Binding="{Binding Partition}" />
-                <DataGridTextColumn Header="Offset" Binding="{Binding Offset}" />
-                <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp}" />
-                <DataGridTextColumn Header="Key" Binding="{Binding Key}" />
-                <DataGridTextColumn Header="Message" Binding="{Binding Summary}" />
+                <DataGridTextColumn Header="Partition" Binding="{Binding Partition}"/>
+                <DataGridTextColumn Header="Offset" Binding="{Binding Offset}" >
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10, 5, 10, 5"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp}" >
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10, 5, 10, 5"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Key" Binding="{Binding Key}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10, 5, 10, 5"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Message" Binding="{Binding Summary}" >
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10, 5, 10, 5"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
         </DataGrid>
 
