@@ -59,7 +59,6 @@ namespace KafkaLens.App.ViewModels
 
         public void Receive(OpenClusterMessage message)
         {
-            var name = message.ClusterViewModel.Name;
             OpenCluster(message.ClusterViewModel);
             SelectedIndex = OpenedClusters.Count - 1;
         }
@@ -80,6 +79,7 @@ namespace KafkaLens.App.ViewModels
             var openedCluster = new OpenedClusterViewModel(settingsService, clusterService, clusterViewModel, newName);
             alreadyOpened.Add(openedCluster);
             OpenedClusters.Add(openedCluster);
+            openedCluster.LoadTopicsAsync();
         }
 
         private string GenerateNewName(string clusterName, IList<OpenedClusterViewModel> alreadyOpened)

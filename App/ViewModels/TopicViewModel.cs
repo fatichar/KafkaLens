@@ -14,8 +14,9 @@ namespace KafkaLens.App.ViewModels
         public ObservableCollection<PartitionViewModel> Partitions { get; } = new();
 
         public string Name => topic.Name;
-        public bool IsExpanded { get; set; } = false;
-        public bool IsSelected { get; set; } = false;
+        public bool IsExpandable => true;
+        public bool IsExpanded { get; set; }
+        public bool IsSelected { get; set; }
 
         public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
@@ -30,16 +31,6 @@ namespace KafkaLens.App.ViewModels
             }
 
             IsActive = true;
-        }
-
-        protected override void OnActivated()
-        {
-            // We use a method group here, but a lambda expression is also valid
-            Messenger.Register<TopicViewModel, PropertyChangedMessage<TopicPartition>>(this, (r, m) => r.Receive(m));
-        }
-
-        public void Receive(PropertyChangedMessage<TopicPartition> message)
-        {
         }
     }
 }

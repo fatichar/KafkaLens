@@ -4,6 +4,7 @@ using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.Metrics;
 using System.Threading.Tasks;
 
 namespace KafkaLens.App.ViewModels
@@ -17,7 +18,7 @@ namespace KafkaLens.App.ViewModels
         IAsyncRelayCommand FetchMessagesCommand { get; }
 
         public string Name { get; }
-        public ObservableCollection<TopicViewModel> Topics => clusterViewModel.Topics;
+        public ObservableCollection<TopicViewModel> Topics { get; }  = new();
 
         public MessagesViewModel CurrentMessages { get; }  = new();
 
@@ -37,8 +38,20 @@ namespace KafkaLens.App.ViewModels
 
             FetchMessagesCommand = new AsyncRelayCommand(FetchMessagesAsync);
 
-            //var selectedTopicName = settingsService.GetValue<string>(nameof(SelectedTopic));
             IsActive = true;
+        }
+
+        internal async Task LoadTopicsAsync()
+        {
+            if (clusterViewModel.Topics.Count == 0)
+            {
+                await clusterViewModel.LoadTopicsCommand.ExecuteAsync(null);
+            }
+            Topics.Clear();
+            foreach (var topic in clusterViewModel.Topics)
+            {
+                Topics.Add(new TopicViewModel(clusterService, topic));
+            }
         }
 
         public object? SelectedNode
@@ -56,7 +69,6 @@ namespace KafkaLens.App.ViewModels
         }
 
         public string ClusterId => clusterViewModel.Id;
-
 
         private async Task FetchMessagesAsync()
         {

@@ -15,7 +15,7 @@ namespace KafkaLens.App.ViewModels
         public IRelayCommand OpenClusterCommand { get; }
         public IAsyncRelayCommand LoadTopicsCommand { get; }
         private readonly KafkaCluster cluster;
-        public ObservableCollection<TopicViewModel> Topics { get; } = new();
+        public ObservableCollection<Topic> Topics { get; } = new();
 
         public string Id => cluster.Id;
         public string Name => cluster.Name;
@@ -32,7 +32,7 @@ namespace KafkaLens.App.ViewModels
         private async void OpenClusterAsync()
         {
             _ = Messenger.Send(new OpenClusterMessage(this));
-            
+
             if (Topics.Count == 0)
             {
                 await LoadTopicsAsync();
@@ -41,10 +41,11 @@ namespace KafkaLens.App.ViewModels
 
         private async Task LoadTopicsAsync()
         {
+            Topics.Clear();
             var topics = await clusterService.GetTopicsAsync(cluster.Id);
             foreach (var topic in topics)
             {
-                Topics.Add(new TopicViewModel(clusterService, topic));
+                Topics.Add(topic);
             }
         }
     }

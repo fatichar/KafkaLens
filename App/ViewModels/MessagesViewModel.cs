@@ -11,8 +11,6 @@ namespace KafkaLens.App.ViewModels
 {
     public sealed class MessagesViewModel : ObservableRecipient
     {
-        private TopicPartition? topicPartition;
-
         private MessageViewModel? currentMessage;
         public IAsyncRelayCommand LoadMessagesCommand { get; }
 
@@ -27,25 +25,9 @@ namespace KafkaLens.App.ViewModels
             LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
         }
 
-        protected override void OnActivated()
-        {
-            // We use a method group here, but a lambda expression is also valid
-            Messenger.Register<MessagesViewModel, PropertyChangedMessage<TopicPartition>>(this, (r, m) => r.Receive(m));
-        }
-
         private Task LoadMessagesAsync()
         {
             throw new NotImplementedException();
-        }
-
-        public void Receive(PropertyChangedMessage<TopicPartition> message)
-        {
-        }
-
-        public TopicPartition? TopicPartition
-        {
-            get => topicPartition;
-            set => SetProperty(ref topicPartition, value);
         }
 
         public MessageViewModel? CurrentMessage

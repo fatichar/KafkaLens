@@ -19,7 +19,16 @@
     </UserControl.Resources>
     <StackPanel>
         <Label Content="{Binding Name}"/>
-        <TreeView x:Name="topicsTree" ItemsSource="{Binding Topics}" SelectedItemChanged="TreeView_SelectedItemChanged">
+        <TreeView x:Name="topicsTree" 
+                  ItemsSource="{Binding Topics}" 
+                  SelectedItemChanged="TreeView_SelectedItemChanged"
+                  >
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="{x:Type TreeViewItem}">
+                    <Setter Property="IsSelected" Value="{Binding IsSelected}" />
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                </Style>
+            </TreeView.ItemContainerStyle>
         </TreeView>
     </StackPanel>
 </UserControl>

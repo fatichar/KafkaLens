@@ -18,6 +18,9 @@ namespace KafkaLens.App.ViewModels
         public string Name => partition.Name;
         private readonly TopicViewModel topic;
         public string TopicName => topic.Name;
+        public bool IsExpandable => false;
+        public bool IsExpanded { get; set; }
+        public bool IsSelected { get; set; }
 
         public PartitionViewModel(IClusterService clusterService, TopicViewModel topic, Partition partition)
         {

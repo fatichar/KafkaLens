@@ -23,10 +23,9 @@
             Width="100" BorderThickness="1" 
             BorderBrush="#FF558FE7">
         </local:SettingsPanel>
-        
+
         <local:Browser x:Name="clusterBrowser" >
 
         </local:Browser>
-
     </DockPanel>
 </UserControl>
