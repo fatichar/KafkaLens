@@ -1,6 +1,4 @@
 ﻿using KafkaLens.Shared.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace KafkaLens.Core.Services
 {

@@ -1,14 +1,12 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Messaging.Messages;
-using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
 using System;
 
 namespace KafkaLens.App.ViewModels
 {
-    public sealed class MessageViewModel : ObservableRecipient //, IRecipient<PropertyChangedMessage<Message>>
+    public sealed class MessageViewModel : ObservableRecipient
     {
-        private Message message;
+        private readonly Message message;
 
         public int Partition => message.Partition;
         public long Offset => message.Offset;
@@ -16,7 +14,6 @@ namespace KafkaLens.App.ViewModels
         public string Summary => message.ValueText.Substring(0, 100);
         public string Message => message.ValueText;
         public DateTime Timestamp => DateTime.UnixEpoch.AddMilliseconds(message.EpochMillis).ToLocalTime();
-
 
         public MessageViewModel(Message message)
         {

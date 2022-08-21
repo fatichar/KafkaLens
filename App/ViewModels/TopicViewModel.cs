@@ -2,9 +2,6 @@
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
-using System;
-using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Core.Services;
 using System.Collections.ObjectModel;
 

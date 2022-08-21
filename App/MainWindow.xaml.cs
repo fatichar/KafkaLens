@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.Mvvm.DependencyInjection;
-using KafkaLens.App.ViewModels;
+﻿using KafkaLens.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
 

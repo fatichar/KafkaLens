@@ -1,8 +1,6 @@
 ﻿using KafkaLens.Core.DataAccess;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared.Models;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Diagnostics.CodeAnalysis;
 

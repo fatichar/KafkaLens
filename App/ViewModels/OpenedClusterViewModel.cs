@@ -2,7 +2,6 @@
 using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;

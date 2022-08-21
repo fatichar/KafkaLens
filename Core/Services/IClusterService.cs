@@ -1,5 +1,4 @@
 ﻿using KafkaLens.Shared.Models;
-using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics.CodeAnalysis;
 
 namespace KafkaLens.Core.Services
