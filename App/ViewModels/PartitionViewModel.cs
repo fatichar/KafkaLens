@@ -14,14 +14,18 @@ namespace KafkaLens.App.ViewModels
     {
         private readonly IClusterService clusterService;
         private readonly Partition partition;
+        public int Id => partition.Id;
         public string Name => partition.Name;
+        private readonly TopicViewModel topic;
+        public string TopicName => topic.Name;
 
-        public PartitionViewModel(IClusterService clusterService, Partition partition)
+        public PartitionViewModel(IClusterService clusterService, TopicViewModel topic, Partition partition)
         {
             LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
             this.clusterService = clusterService;
             this.partition = partition;
-            
+            this.topic = topic;
+
             IsActive = true;
         }
 
@@ -33,7 +37,7 @@ namespace KafkaLens.App.ViewModels
 
         public IAsyncRelayCommand LoadMessagesCommand { get; }
         public ObservableCollection<MessageViewModel> Messages { get; } = new();
-        
+
         private Task LoadMessagesAsync()
         {
             throw new NotImplementedException();
@@ -41,10 +45,6 @@ namespace KafkaLens.App.ViewModels
 
         public void Receive(PropertyChangedMessage<TopicPartition> message)
         {
-            if (message.Sender.GetType() == typeof(OpenedClusterViewModel) &&
-                    message.PropertyName == nameof(OpenedClusterViewModel.SelectedTopic))
-            {
-            }
         }
     }
 }

@@ -29,9 +29,9 @@ namespace KafkaLens.App.ViewModels
 
             foreach (var parittion in topic.Partitions)
             {
-                Partitions.Add(new PartitionViewModel(clusterService, parittion));
+                Partitions.Add(new PartitionViewModel(clusterService, this, parittion));
             }
-            
+
             IsActive = true;
         }
 
@@ -43,10 +43,6 @@ namespace KafkaLens.App.ViewModels
 
         public void Receive(PropertyChangedMessage<TopicPartition> message)
         {
-            if (message.Sender.GetType() == typeof(OpenedClusterViewModel) &&
-                    message.PropertyName == nameof(OpenedClusterViewModel.SelectedTopic))
-            {
-            }
         }
     }
 }

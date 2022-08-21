@@ -82,7 +82,8 @@ namespace KafkaLens.Core.Services
 
         public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options)
         {
-            return await Task.Run(() => GetMessages(topic, partition, options));
+            return await Task.Run(() => 
+                GetMessages(topic, partition, options));
         }
 
         public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options)

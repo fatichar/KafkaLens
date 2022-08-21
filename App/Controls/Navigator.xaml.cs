@@ -29,7 +29,9 @@ namespace KafkaLens.App.Controls
         private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             if (dataContext != null)
-                dataContext.SelectedTopic = (TopicViewModel)e.NewValue;
+            {
+                dataContext.SelectedNode = e.NewValue;
+            }
         }
 
         private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext; 

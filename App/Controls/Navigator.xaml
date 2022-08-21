@@ -19,7 +19,7 @@
     </UserControl.Resources>
     <StackPanel>
         <Label Content="{Binding Name}"/>
-        <TreeView ItemsSource="{Binding Topics}" SelectedItemChanged="TreeView_SelectedItemChanged">
+        <TreeView x:Name="topicsTree" ItemsSource="{Binding Topics}" SelectedItemChanged="TreeView_SelectedItemChanged">
         </TreeView>
     </StackPanel>
 </UserControl>

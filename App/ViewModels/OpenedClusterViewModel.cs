@@ -22,8 +22,8 @@ namespace KafkaLens.App.ViewModels
 
         public MessagesViewModel CurrentMessages { get; }  = new();
 
-        private TopicViewModel? selectedTopic;
-
+        // TODO create interface for nodes
+        private object? selectedNode;
 
         public OpenedClusterViewModel(
             ISettingsService settingsService,
@@ -40,15 +40,14 @@ namespace KafkaLens.App.ViewModels
             IsActive = true;
         }
 
-        public TopicViewModel? SelectedTopic
+        public object? SelectedNode
         {
-            get => selectedTopic;
+            get => selectedNode;
             set
             {
-                SetProperty(ref selectedTopic, value, true);
+                SetProperty(ref selectedNode, value, true);
 
-                settingsService.SetValue(nameof(SelectedTopic), value.Name);
-                if (selectedTopic != null)
+                if (selectedNode != null)
                 {
                     FetchMessagesCommand.Execute(null);
                 }
@@ -57,29 +56,34 @@ namespace KafkaLens.App.ViewModels
 
         public string ClusterId => clusterViewModel.Id;
 
+
         private async Task FetchMessagesAsync()
         {
-            if (selectedTopic == null)
+            if (selectedNode == null)
             {
                 return;
             }
-            // load messages
-            var messages = await clusterService.GetMessagesAsync(
-                clusterViewModel.Id,
-                selectedTopic.Name, new FetchOptions()
-                {
-                    Limit = 10
-                });
-            OnMessagesFetched(messages);
+            List<Message>? messages = null;
+            if (selectedNode is TopicViewModel topic)
+            {
+                messages = await clusterService.GetMessagesAsync(clusterViewModel.Id, topic.Name, new FetchOptions(){Limit = 10});
+            }
+            else if (selectedNode is PartitionViewModel partition)
+            {
+                messages = await clusterService.GetMessagesAsync(clusterViewModel.Id, partition.TopicName, partition.Id, new FetchOptions(){Limit = 10});
+            }
+
+            if (messages != null)
+            {
+                CurrentMessages.Messages.Clear();
+                // TODO: fetch messages in multiple steps
+                OnMessagesFetched(messages);
+            }
         }
 
         private void OnMessagesFetched(List<Message> messages)
         {
-            if (selectedTopic == null)
-            {
-                CurrentMessages.Messages.Clear();
-            }
-            else
+            if (selectedNode != null)
             {
                 foreach (var msg in messages)
                 {

@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:KafkaLens.App.Controls"
         mc:Ignorable="d"
-        Title="KafkaLens" Height="450" Width="800"
+        Title="KafkaLens" Height="800" Width="1600"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
         d:DataContext="{d:DesignInstance Type=viewmodels:MainViewModel}" >
