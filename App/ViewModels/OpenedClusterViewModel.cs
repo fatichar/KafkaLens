@@ -16,7 +16,7 @@ namespace KafkaLens.App.ViewModels
 
         IAsyncRelayCommand FetchMessagesCommand { get; }
 
-        public string Name => clusterViewModel.Name;
+        public string Name { get; }
         public ObservableCollection<TopicViewModel> Topics => clusterViewModel.Topics;
 
         public MessagesViewModel CurrentMessages { get; }  = new();
@@ -27,11 +27,13 @@ namespace KafkaLens.App.ViewModels
         public OpenedClusterViewModel(
             ISettingsService settingsService,
             IClusterService clusterService,
-            ClusterViewModel clusterViewModel)
+            ClusterViewModel clusterViewModel,
+            string name)
         {
             this.settingsService = settingsService;
             this.clusterService = clusterService;
             this.clusterViewModel = clusterViewModel;
+            Name = name;
 
             FetchMessagesCommand = new AsyncRelayCommand(FetchMessagesAsync);
 
