@@ -15,8 +15,7 @@
                 <MenuItem x:Name="addClusterMenu" Header="Add cluster"
                           Command="{Binding AddClusterCommand}">
                 </MenuItem>
-                <MenuItem x:Name="openClusterMenu" Header="Open cluster" ItemsSource="{Binding Clusters}" 
-                          Command="{Binding OpenClusterCommand}">
+                <MenuItem x:Name="openClusterMenu" Header="Open cluster" ItemsSource="{Binding Clusters}">
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
                             <Setter Property="Command" Value="{Binding OpenClusterCommand}"/>
