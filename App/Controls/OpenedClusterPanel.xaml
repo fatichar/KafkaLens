@@ -17,15 +17,6 @@
             BorderBrush="#FF558FE7">
         </local:Navigator>
 
-        <local:SettingsPanel x:Name="settingsPanel"
-            DockPanel.Dock="Right"
-            Background="#FFDFE5EF" 
-            Width="100" BorderThickness="1" 
-            BorderBrush="#FF558FE7">
-        </local:SettingsPanel>
-
-        <local:Browser x:Name="clusterBrowser" >
-
-        </local:Browser>
+        <local:Browser x:Name="clusterBrowser" />
     </DockPanel>
 </UserControl>

@@ -16,8 +16,6 @@ namespace KafkaLens.App.ViewModels
         public ObservableCollection<OpenedClusterViewModel> OpenedClusters { get; } = new();
         private IDictionary<string, IList<OpenedClusterViewModel>> openedClustersMap = new Dictionary<string, IList<OpenedClusterViewModel>>();
 
-        public OpenedClusterViewModel? selectedCluster;
-
         // services
         private readonly ISettingsService settingsService;
         private readonly IClusterService clusterService;
@@ -42,17 +40,6 @@ namespace KafkaLens.App.ViewModels
             Messenger.Register<MainViewModel, OpenClusterMessage>(this, (r, m) => r.Receive(m));
         }
 
-        public OpenedClusterViewModel? SelectedCluster
-        {
-            get => selectedCluster;
-            set
-            {
-                SetProperty(ref selectedCluster, value, true);
-
-                settingsService.SetValue(nameof(SelectedCluster), value.ClusterId);
-            }
-        }
-
         private void AddClusterAsync()
         {
         }
@@ -66,7 +53,8 @@ namespace KafkaLens.App.ViewModels
         private void OpenCluster(ClusterViewModel clusterViewModel)
         {
             string newName = clusterViewModel.Name;
-            if (!openedClustersMap.TryGetValue(clusterViewModel.Id, out var alreadyOpened))
+            bool isOpened = openedClustersMap.TryGetValue(clusterViewModel.Id, out var alreadyOpened);
+            if (!isOpened)
             {
                 alreadyOpened = new List<OpenedClusterViewModel>();
                 openedClustersMap.Add(clusterViewModel.Id, alreadyOpened);
@@ -111,6 +99,11 @@ namespace KafkaLens.App.ViewModels
                 Clusters.Add(new ClusterViewModel(cluster, clusterService));
             }
             selectedIndex = 0;
+
+            if (Clusters.Count > 0)
+            {
+                OpenCluster(Clusters.First());
+            }
         }
 
         private int selectedIndex = -1;

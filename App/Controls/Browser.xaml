@@ -6,7 +6,7 @@
              xmlns:System="clr-namespace:System;assembly=mscorlib"
              d:DesignHeight="980" d:DesignWidth="330"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
+             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" xmlns:local="clr-namespace:KafkaLens.App.Controls"
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
     <Grid>
         <Grid.RowDefinitions>
@@ -14,43 +14,50 @@
             <RowDefinition Height="5" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <DataGrid Name="messagesGrid" ItemsSource="{Binding CurrentMessages.Messages}" AutoGenerateColumns="False"
-                  Grid.Row="0" AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6" SelectionChanged="Selector_OnSelectionChanged">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Partition" Binding="{Binding Partition, Mode=OneWay}"/>
-                <DataGridTextColumn Header="Offset" Binding="{Binding Offset, Mode=OneWay}" >
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="5, 3, 5, 3"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, Mode=OneWay}" >
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="5, 3, 5, 3"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="Key" Binding="{Binding Key, Mode=OneWay}">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="5, 3, 5, 3"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="Message" Binding="{Binding Summary, Mode=OneWay}" Width="*">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="10, 3, 10, 3"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+        <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
+            <local:FetchOptionsPanel x:Name="fetchOptionsPanel" DockPanel.Dock="Right" MinWidth="20" Width="Auto"
+                Background="#FFDFE5EF"
+                BorderThickness="1" BorderBrush="#FF558FE7">
+            </local:FetchOptionsPanel>
+            <DataGrid Name="messagesGrid" ItemsSource="{Binding CurrentMessages.Messages}" AutoGenerateColumns="False"
+                  AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6" SelectionChanged="Selector_OnSelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Partition" Binding="{Binding Partition, Mode=OneWay}"/>
+                    <DataGridTextColumn Header="Offset" Binding="{Binding Offset, Mode=OneWay}" >
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="5, 3, 5, 3"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, Mode=OneWay}" >
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="5, 3, 5, 3"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Key" Binding="{Binding Key, Mode=OneWay}">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="5, 3, 5, 3"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Message" Binding="{Binding Summary, Mode=OneWay}" Width="*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Padding" Value="10, 3, 10, 3"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
 
         <GridSplitter Grid.Row="1" ResizeDirection="Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
-        
-        <TextBox Grid.Row="2" Text="{Binding CurrentMessages.CurrentMessage.Message, Mode=OneWay}" IsEnabled="False"/>
+
+        <TextBox Grid.Row="2" Text="{Binding CurrentMessages.CurrentMessage.Message, Mode=OneWay}"
+                 IsReadOnly="True"/>
     </Grid>
 </UserControl>

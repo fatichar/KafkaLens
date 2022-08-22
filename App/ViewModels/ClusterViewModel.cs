@@ -32,11 +32,6 @@ namespace KafkaLens.App.ViewModels
         private async void OpenClusterAsync()
         {
             _ = Messenger.Send(new OpenClusterMessage(this));
-
-            if (Topics.Count == 0)
-            {
-                await LoadTopicsAsync();
-            }
         }
 
         private async Task LoadTopicsAsync()
