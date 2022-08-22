@@ -15,7 +15,8 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
-            <local:FetchOptionsPanel x:Name="fetchOptionsPanel" DockPanel.Dock="Right" MinWidth="20" Width="Auto"
+            <local:FetchOptionsPanel x:Name="fetchOptionsPanel" DockPanel.Dock="Right" 
+                                     MinWidth="20" Width="Auto" Height="Auto" VerticalAlignment="Stretch"
                 Background="#FFDFE5EF"
                 BorderThickness="1" BorderBrush="#FF558FE7">
             </local:FetchOptionsPanel>

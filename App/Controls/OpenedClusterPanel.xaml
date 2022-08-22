@@ -11,7 +11,9 @@
     <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <local:Navigator x:Name="navigator"
             DockPanel.Dock="Left"
-            Width="200" 
+            Width="200"
+            Height="Auto"
+            VerticalAlignment="Stretch"
             Background="#FFDFE5EF" 
             BorderThickness="1" 
             BorderBrush="#FF558FE7">
