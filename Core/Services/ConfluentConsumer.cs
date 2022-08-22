@@ -60,6 +60,7 @@ namespace KafkaLens.Core.Services
 
         private void LoadTopics()
         {
+            Console.WriteLine("Loading topics...");
             var topics = FetchTopics();
             topics.ForEach(topic => Topics.Add(topic.Name, topic));
         }
@@ -76,13 +77,8 @@ namespace KafkaLens.Core.Services
 
         public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options)
         {
-            return await Task.Run(() => 
+            return await Task.Run(() =>
                 GetMessages(topic, partition, options));
-        }
-
-        public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options)
-        {
-            return await Task.Run(() => GetMessages(topic, options));
         }
 
         public List<Message> GetMessages(string topicName, int partition, FetchOptions options)
@@ -95,7 +91,6 @@ namespace KafkaLens.Core.Services
             {
                 Console.WriteLine($"Got lock in {watch.ElapsedMilliseconds} ms");
                 watch.Restart();
-                Consumer.Assign(tp);
                 Console.WriteLine($"assigned tp in {watch.ElapsedMilliseconds} ms");
                 watch.Restart();
                 var watermarks = Consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout);
@@ -148,24 +143,68 @@ namespace KafkaLens.Core.Services
             return new Confluent.Kafka.TopicPartition(topicName, partition);
         }
 
+        public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options)
+        {
+            return await Task.Run(() => GetMessages(topic, options));
+        }
+
         public List<Message> GetMessages(string topicName, FetchOptions options)
         {
+            var watch = new Stopwatch();
+            watch.Start();
+
             ValidateTopic(topicName);
-            var topicMessages = new List<Message>();
+            var messages = new List<Message>();
             var topic = Topics[topicName];
 
-            var remaining = options.Limit;
+            var requiredCount = options.Limit;
+            var remaining = requiredCount;
 
-            for (int i = 0; i < topic.PartitionCount; i++)
+            var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id)).ToList();
+            var watermarks = QueryWatermarkOffsets(tps);
+            Console.WriteLine("Got watermarks in {0} ms", watch.ElapsedMilliseconds);
+            var tpos = new List<Confluent.Kafka.TopicPartitionOffset>();
+            for (int i = 0; i < tps.Count; ++i)
             {
                 options.Limit = remaining / (topic.PartitionCount - i);
-
-                var messages = GetMessages(topicName, i, options);
-                topicMessages.AddRange(messages);
-
-                remaining -= messages.Count;
+                var tpo = CreateTopicPartitionOffset(tps[i], watermarks[i], options);
+                tpos.Add(tpo);
+                remaining -= options.Limit;
             }
-            return topicMessages;
+
+            Consumer.Assign(tpos);
+            Console.WriteLine("Assigned topic in {0} ms", watch.ElapsedMilliseconds);
+
+            remaining = requiredCount;
+            while (remaining > 0)
+            {
+                var result = Consumer.Consume(consumeTimeout);
+                if (result == null)
+                {
+                    Console.WriteLine("Got null message. Must be timed out.");
+                    break;
+                }
+                if (result.IsPartitionEOF)
+                {
+                    Console.WriteLine("End of partition reached.");
+                    break;
+                }
+
+                messages.Add(CreateMessage(result));
+                --remaining;
+                Console.WriteLine("Got message in {0} ms", watch.ElapsedMilliseconds);
+            }
+
+            Console.WriteLine("Got {0} messages in {1} ms", messages.Count, watch.ElapsedMilliseconds);
+            return messages;
+        }
+
+        private List<WatermarkOffsets> QueryWatermarkOffsets(List<Confluent.Kafka.TopicPartition> tps)
+        {
+            lock(Consumer)
+            {
+                return tps.ConvertAll(tp => Consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout));
+            }
         }
 
         private Topic ValidateTopic(string topicName)

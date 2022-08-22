@@ -2,6 +2,12 @@
 {
     public class FetchOptions
     {
+        public FetchOptions(FetchPosition from, int limit)
+        {
+            From = from;
+            Limit = limit;
+        }
+
         public enum FetchPosition
         {
             START,

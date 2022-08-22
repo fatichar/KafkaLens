@@ -29,7 +29,8 @@
             <Label Grid.Row="0" Grid.Column="0"
                    Width="Auto" HorizontalAlignment="Stretch" Margin="5">Fetch from</Label>
             <ComboBox Grid.Row="0" Grid.Column="1" Margin="5" 
-                      ItemsSource="{Binding Source={StaticResource fetchPositions}}" >
+                      ItemsSource="{Binding Source={StaticResource fetchPositions}}" 
+                      SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
             </ComboBox>
             <Label Grid.Row="1" Grid.Column="0" Margin="5">Count</Label>
             <ComboBox x:Name="fetchCountBox" Grid.Row="1" Grid.Column="1" SelectedIndex="0" Margin="5" 
