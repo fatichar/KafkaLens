@@ -24,7 +24,7 @@ namespace KafkaLens.Shared.Models
             set
             {
                 key = value;
-                KeyText = Encoding.Default.GetString(key);
+                KeyText = value == null ? "" : Encoding.Default.GetString(key);
             }
         }
         public byte[] Value

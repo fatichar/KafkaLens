@@ -2,7 +2,7 @@
 {
     public class FetchOptions
     {
-        public FetchOptions(FetchPosition from, int limit)
+        public FetchOptions(FetchPosition from = FetchPosition.END, int limit = 10)
         {
             From = from;
             Limit = limit;
