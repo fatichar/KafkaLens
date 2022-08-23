@@ -59,6 +59,6 @@
         <GridSplitter Grid.Row="1" ResizeDirection="Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
 
         <TextBox Grid.Row="2" Text="{Binding CurrentMessages.CurrentMessage.Message, Mode=OneWay}"
-                 IsReadOnly="True"/>
+                 IsReadOnly="True" FontFamily="Courier New" FontSize="16"/>
     </Grid>
 </UserControl>

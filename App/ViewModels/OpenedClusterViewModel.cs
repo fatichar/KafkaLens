@@ -1,7 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KafkaLens.App.Formating;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.Metrics;
@@ -17,15 +19,16 @@ namespace KafkaLens.App.ViewModels
         private const int DEFAULT_FETCH_COUNT = 10;
 
         IAsyncRelayCommand FetchMessagesCommand { get; }
+        IAsyncRelayCommand ChangeFormatterCommand { get; }
 
         public string Name { get; }
-        public ObservableCollection<TopicViewModel> Topics { get; }  = new();
+        public ObservableCollection<TopicViewModel> Topics { get; } = new();
 
-        public MessagesViewModel CurrentMessages { get; }  = new();
+        public MessagesViewModel CurrentMessages { get; } = new();
 
         // TODO create interface for nodes
         private object? selectedNode;
-        
+
         public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
         public int FetchCount { get; set; } = 10;
 
@@ -43,8 +46,14 @@ namespace KafkaLens.App.ViewModels
             Name = name;
 
             FetchMessagesCommand = new AsyncRelayCommand(FetchMessagesAsync);
+            ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
             IsActive = true;
+        }
+
+        private Task UpdateFormatterAsync()
+        {
+            throw new NotImplementedException();
         }
 
         internal async Task LoadTopicsAsync()
@@ -106,9 +115,20 @@ namespace KafkaLens.App.ViewModels
             {
                 foreach (var msg in messages)
                 {
-                    CurrentMessages.Messages.Add(new MessageViewModel(msg));
+                    MessageViewModel viewModel = new MessageViewModel(msg, formatters["Json"]);
+                    CurrentMessages.Messages.Add(viewModel);
                 }
             }
         }
+
+        private static IDictionary<string, IMessageFormatter?> formatters = new Dictionary<string, IMessageFormatter?>();
+
+        static OpenedClusterViewModel()
+        {
+            formatters.Add("Text", new TextFormatter());
+            formatters.Add("Json", new JsonFormatter());
+        }
+
+        public ICollection<string> MessageFormats => formatters.Keys;
     }
 }
