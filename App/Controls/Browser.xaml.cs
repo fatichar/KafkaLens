@@ -18,8 +18,17 @@ namespace KafkaLens.App.Controls
 
         private void Selector_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+
             if (dataContext != null && messagesGrid.SelectedItem != null)
+            {
                 dataContext.CurrentMessages.CurrentMessage = (MessageViewModel)messagesGrid.SelectedItem;
+            }
+            else
+            {
+                dataContext.CurrentMessages.CurrentMessage = null;
+            }
+                
+            
         }
     }
 }
