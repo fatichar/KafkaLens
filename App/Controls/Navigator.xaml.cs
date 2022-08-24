@@ -18,7 +18,7 @@ namespace KafkaLens.App.Controls
         {
             if (dataContext != null)
             {
-                dataContext.SelectedNode = e.NewValue;
+                dataContext.SelectedNode = (IMessageSource?)e.NewValue;
             }
         }
 

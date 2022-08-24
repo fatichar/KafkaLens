@@ -9,9 +9,6 @@ namespace KafkaLens.App.Formating
             return Encoding.UTF8.GetString(data);
         }
 
-        public string Name()
-        {
-            return "Text";
-        }
+        public string Name => "Text";
     }
 }

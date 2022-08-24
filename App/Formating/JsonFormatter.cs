@@ -51,9 +51,6 @@ namespace KafkaLens.App.Formating
             }
         }
 
-        public string Name()
-        {
-            return "Json";
-        }
+        public string Name => "Json";
     }
 }

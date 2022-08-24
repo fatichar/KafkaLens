@@ -6,7 +6,6 @@ using KafkaLens.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics.Metrics;
 using System.Threading.Tasks;
 
 namespace KafkaLens.App.ViewModels
@@ -26,8 +25,7 @@ namespace KafkaLens.App.ViewModels
 
         public MessagesViewModel CurrentMessages { get; } = new();
 
-        // TODO create interface for nodes
-        private object? selectedNode;
+        private IMessageSource? selectedNode;
 
         public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
         public int FetchCount { get; set; } = 10;
@@ -65,11 +63,11 @@ namespace KafkaLens.App.ViewModels
             Topics.Clear();
             foreach (var topic in clusterViewModel.Topics)
             {
-                Topics.Add(new TopicViewModel(clusterService, topic));
+                Topics.Add(new TopicViewModel(clusterService, topic, jsonFormatter));
             }
         }
 
-        public object? SelectedNode
+        public IMessageSource? SelectedNode
         {
             get => selectedNode;
             set
@@ -105,17 +103,18 @@ namespace KafkaLens.App.ViewModels
             {
                 CurrentMessages.Messages.Clear();
                 // TODO: fetch messages in multiple steps
-                OnMessagesFetched(messages);
+                OnMessagesFetched(selectedNode, messages);
             }
         }
 
-        private void OnMessagesFetched(List<Message> messages)
+        private void OnMessagesFetched(IMessageSource node, List<Message> messages)
         {
-            if (selectedNode != null)
+            if (node != null)
             {
+                var formatter = node.Formatter;
                 foreach (var msg in messages)
                 {
-                    MessageViewModel viewModel = new MessageViewModel(msg, formatters["Json"]);
+                    MessageViewModel viewModel = new MessageViewModel(msg, formatter);
                     CurrentMessages.Messages.Add(viewModel);
                 }
             }
@@ -123,10 +122,12 @@ namespace KafkaLens.App.ViewModels
 
         private static IDictionary<string, IMessageFormatter?> formatters = new Dictionary<string, IMessageFormatter?>();
 
+        private static IMessageFormatter jsonFormatter = new JsonFormatter();
+        private static IMessageFormatter textFormatter = new TextFormatter();
         static OpenedClusterViewModel()
         {
-            formatters.Add("Text", new TextFormatter());
-            formatters.Add("Json", new JsonFormatter());
+            formatters.Add(textFormatter.Name, textFormatter);
+            formatters.Add(jsonFormatter.Name, jsonFormatter);
         }
 
         public ICollection<string> MessageFormats => formatters.Keys;

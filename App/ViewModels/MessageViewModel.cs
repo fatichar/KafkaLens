@@ -8,6 +8,7 @@ namespace KafkaLens.App.ViewModels
     public sealed class MessageViewModel : ObservableRecipient
     {
         private readonly Message message;
+        private readonly IMessageFormatter formatter;
 
         public int Partition => message.Partition;
         public long Offset => message.Offset;
@@ -16,9 +17,12 @@ namespace KafkaLens.App.ViewModels
         public string Message { get; }
         public DateTime Timestamp => DateTime.UnixEpoch.AddMilliseconds(message.EpochMillis).ToLocalTime();
 
+        public string FormatterName => formatter.Name;
+
         public MessageViewModel(Message message, IMessageFormatter formatter)
         {
             this.message = message;
+            this.formatter = formatter;
             Message = formatter.Format(message.Value) ?? message.ValueText;
 
             IsActive = true;

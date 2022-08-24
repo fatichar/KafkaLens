@@ -1,4 +1,5 @@
-﻿using KafkaLens.App.ViewModels;
+﻿using ICSharpCode.AvalonEdit.Highlighting;
+using KafkaLens.App.ViewModels;
 using System.Windows.Controls;
 
 namespace KafkaLens.App.Controls
@@ -15,20 +16,21 @@ namespace KafkaLens.App.Controls
             InitializeComponent();
         }
 
-
         private void Selector_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
 
             if (dataContext != null && messagesGrid.SelectedItem != null)
             {
                 dataContext.CurrentMessages.CurrentMessage = (MessageViewModel)messagesGrid.SelectedItem;
+                messageViewer.Document = new ICSharpCode.AvalonEdit.Document.TextDocument(dataContext.CurrentMessages.CurrentMessage.Message);
+                messageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(dataContext?.SelectedNode?.Formatter?.Name ?? "Json");
             }
             else
             {
                 dataContext.CurrentMessages.CurrentMessage = null;
             }
-                
-            
+
+
         }
     }
 }

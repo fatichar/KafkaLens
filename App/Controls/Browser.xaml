@@ -6,7 +6,8 @@
              xmlns:System="clr-namespace:System;assembly=mscorlib"
              d:DesignHeight="980" d:DesignWidth="330"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" xmlns:local="clr-namespace:KafkaLens.App.Controls"
+             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
+             xmlns:local="clr-namespace:KafkaLens.App.Controls"
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
     <Grid>
         <Grid.RowDefinitions>
@@ -15,7 +16,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0" HorizontalAlignment="Stretch">
-            <local:FetchOptionsPanel x:Name="fetchOptionsPanel" DockPanel.Dock="Right" 
+            <local:FetchOptionsPanel x:Name="fetchOptionsPanel" DockPanel.Dock="Right"
                                      MinWidth="20" Width="Auto" Height="Auto" VerticalAlignment="Stretch"
                 Background="#FFDFE5EF"
                 BorderThickness="1" BorderBrush="#FF558FE7">
@@ -58,7 +59,12 @@
 
         <GridSplitter Grid.Row="1" ResizeDirection="Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
 
-        <TextBox Grid.Row="2" Text="{Binding CurrentMessages.CurrentMessage.Message, Mode=OneWay}"
-                 IsReadOnly="True" FontFamily="Courier New" FontSize="16"/>
+        <avalonEdit:TextEditor Grid.Row="2"
+            xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+            Name="messageViewer"
+            FontFamily="Consolas"
+            FontSize="16"
+            IsReadOnly="True"
+            />
     </Grid>
 </UserControl>

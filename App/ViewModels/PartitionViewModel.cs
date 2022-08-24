@@ -7,10 +7,11 @@ using KafkaLens.Shared.Models;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using KafkaLens.App.Formating;
 
 namespace KafkaLens.App.ViewModels
 {
-    public class PartitionViewModel : ObservableRecipient
+    public class PartitionViewModel : ObservableRecipient, IMessageSource
     {
         private readonly IClusterService clusterService;
         private readonly Partition partition;
@@ -40,6 +41,8 @@ namespace KafkaLens.App.ViewModels
 
         public IAsyncRelayCommand LoadMessagesCommand { get; }
         public ObservableCollection<MessageViewModel> Messages { get; } = new();
+
+        public IMessageFormatter Formatter => topic.Formatter;
 
         private Task LoadMessagesAsync()
         {
