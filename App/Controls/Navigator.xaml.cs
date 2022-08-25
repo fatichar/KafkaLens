@@ -18,8 +18,12 @@ namespace KafkaLens.App.Controls
         {
             if (dataContext != null)
             {
-                dataContext.SelectedNode = (IMessageSource?)e.NewValue;
+                if (dataContext.SelectedNode != (IMessageSource?)e.NewValue)
+                {
+                    dataContext.SelectedNode = (IMessageSource?)e.NewValue;
+                }
             }
+            e.Handled = true;
         }
 
         private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext; 

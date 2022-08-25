@@ -32,6 +32,15 @@ namespace KafkaLens.App.ViewModels
 
         public FetchOptions.FetchPosition FetchPosition { get; set; } = FetchOptions.FetchPosition.END;
 
+        private int fontSize = 14;
+        public int FontSize
+        {
+            get => fontSize; 
+            set
+            {
+                SetProperty(ref fontSize, value, true);
+            }
+        }
         public OpenedClusterViewModel(
             ISettingsService settingsService,
             IClusterService clusterService,
@@ -72,11 +81,12 @@ namespace KafkaLens.App.ViewModels
             get => selectedNode;
             set
             {
-                SetProperty(ref selectedNode, value, true);
-
-                if (selectedNode != null)
+                if (SetProperty(ref selectedNode, value))
                 {
-                    FetchMessagesCommand.Execute(null);
+                    if (selectedNode != null)
+                    {
+                        FetchMessagesCommand.Execute(null);
+                    }
                 }
             }
         }
@@ -124,6 +134,7 @@ namespace KafkaLens.App.ViewModels
 
         private static IMessageFormatter jsonFormatter = new JsonFormatter();
         private static IMessageFormatter textFormatter = new TextFormatter();
+
         static OpenedClusterViewModel()
         {
             formatters.Add(textFormatter.Name, textFormatter);

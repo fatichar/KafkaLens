@@ -83,6 +83,7 @@ namespace KafkaLens.Core.Services
 
         public List<Message> GetMessages(string topicName, int partition, FetchOptions options)
         {
+            Console.WriteLine($"Getting messages for {topicName}:{partition}");
             var watch = new Stopwatch();
             watch.Start();
             var tp = ValidateTopicPartition(topicName, partition);
@@ -150,6 +151,7 @@ namespace KafkaLens.Core.Services
 
         public List<Message> GetMessages(string topicName, FetchOptions options)
         {
+            Console.WriteLine($"Getting messages for topic {topicName}");
             var watch = new Stopwatch();
             watch.Start();
 

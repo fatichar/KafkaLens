@@ -14,23 +14,31 @@ namespace KafkaLens.App.Controls
         public Browser()
         {
             InitializeComponent();
+            messageDisplayOptionsPanel.fontSizeSlider.ValueChanged += (s, e) =>
+            {
+                messageViewer.FontSize = (int)e.NewValue;
+            };
         }
 
         private void Selector_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-
-            if (dataContext != null && messagesGrid.SelectedItem != null)
+            var message = (MessageViewModel?)messagesGrid.SelectedItem;
+            if (message == null)
             {
-                dataContext.CurrentMessages.CurrentMessage = (MessageViewModel)messagesGrid.SelectedItem;
-                messageViewer.Document = new ICSharpCode.AvalonEdit.Document.TextDocument(dataContext.CurrentMessages.CurrentMessage.Message);
-                messageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(dataContext?.SelectedNode?.Formatter?.Name ?? "Json");
+                messagesGrid.SelectedItem = dataContext.CurrentMessages.CurrentMessage;
+                return;
             }
+            dataContext.CurrentMessages.CurrentMessage = message;
+            if (message != null)
+            {
+                messageViewer.Document.Text = message.Message;
+                messageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(dataContext?.SelectedNode?.Formatter?.Name ?? "Json");
+                messageViewer.FontSize = dataContext?.FontSize ?? 14;
+            } 
             else
             {
-                dataContext.CurrentMessages.CurrentMessage = null;
+                messageViewer.Document.Text = "";
             }
-
-
         }
     }
 }
