@@ -7,7 +7,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
              xmlns:local="clr-namespace:KafkaLens.App.Controls"
+             xmlns:dgx="clr-namespace:DataGridExtensions;assembly=DataGridExtensions"
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
+    <UserControl.Resources>
+        <ControlTemplate x:Key="MultipleChoiceFilter">
+            <dgx:MultipleChoiceFilter Filter="{Binding Path=Filter, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=dgx:DataGridFilterColumnControl}}" />
+        </ControlTemplate>
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -20,37 +26,44 @@
                 Background="#FFDFE5EF"
                 BorderThickness="1" BorderBrush="#FF558FE7">
             </local:FetchOptionsPanel>
-            <DataGrid Name="messagesGrid" ItemsSource="{Binding CurrentMessages.Messages}" AutoGenerateColumns="False"
+            <local:MessagesToolbar x:Name="messagesToolbar" DockPanel.Dock="Top"
+                                         Width="Auto" Height="Auto"
+                                              Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7"
+                                              >
+            </local:MessagesToolbar>
+            <DataGrid Name="messagesGrid" ItemsSource="{Binding CurrentMessages.Filtered}" AutoGenerateColumns="False"
                   AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6"
                       SelectionChanged="Selector_OnSelectionChanged"
                       CurrentItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
                       SelectedItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
                       SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
+                      LoadingRow="messagesGrid_LoadingRow"
+                      dgx:DataGridFilter.IsAutoFilterEnabled="True"
                       >
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Partition" Binding="{Binding Partition, Mode=OneWay}"/>
-                    <DataGridTextColumn Header="Offset" Binding="{Binding Offset, Mode=OneWay}" >
+                    <DataGridTextColumn Header="Partition" Binding="{Binding Partition, Mode=OneWay}" dgx:DataGridFilterColumn.Template="{StaticResource MultipleChoiceFilter}"/>
+                    <DataGridTextColumn Header="Offset" Binding="{Binding Offset, Mode=OneWay}" dgx:DataGridFilterColumn.IsFilterVisible="False">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="5, 3, 5, 3"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, Mode=OneWay}" >
+                    <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, Mode=OneWay}" dgx:DataGridFilterColumn.IsFilterVisible="False">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="5, 3, 5, 3"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Key" Binding="{Binding Key, Mode=OneWay}">
+                    <DataGridTextColumn Header="Key" Binding="{Binding Key, Mode=OneWay}" dgx:DataGridFilterColumn.Template="{StaticResource MultipleChoiceFilter}">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="5, 3, 5, 3"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Message" Binding="{Binding Summary, Mode=OneWay}" Width="*">
+                    <DataGridTextColumn Header="Message" Binding="{Binding Summary, Mode=OneWay}" Width="*" dgx:DataGridFilterColumn.IsFilterVisible="False">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="10, 3, 10, 3"/>
@@ -64,10 +77,10 @@
         <GridSplitter Grid.Row="1" ResizeDirection="Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
 
         <DockPanel Grid.Row="2" HorizontalAlignment="Stretch">
-            <local:MessageDisplayToolbar x:Name="messageDisplayOptionsPanel" DockPanel.Dock="Bottom"
-                                              MinWidth="20" Width="Auto" Height="Auto" VerticalAlignment="Stretch"
-                                              Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7"
-                                              >
+            <local:MessageDisplayToolbar x:Name="messageDisplayToolbar" DockPanel.Dock="Bottom"
+                                         Width="Auto" Height="Auto"
+                                        Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7"
+                                        >
             </local:MessageDisplayToolbar>
         <avalonEdit:TextEditor
             xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"

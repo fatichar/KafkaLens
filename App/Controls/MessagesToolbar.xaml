@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="KafkaLens.App.Controls.MessageDisplayToolbar"
+﻿<UserControl x:Class="KafkaLens.App.Controls.MessagesToolbar"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -14,13 +14,12 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
             <ToolBar Grid.Column="0">
-            <Label Content="Filter"/>
-            <TextBox x:Name="filterBox" MinWidth="300" VerticalContentAlignment="Center"/>
+            <Label Content="Contains"/>
+            <TextBox x:Name="positiveFilterBox" MinWidth="300" VerticalContentAlignment="Center"/>
+            <Label Content="But not"/>
+            <TextBox x:Name="negativeFilterBox" MinWidth="300" VerticalContentAlignment="Center"/>
         </ToolBar>
         <ToolBar Grid.Column="2">
-            <Label Content="Zoom"/>
-            <Slider x:Name="fontSizeSlider" Margin="5" Width="200"
-                Minimum="6" Maximum="32" Value="{Binding FontSize, Mode=TwoWay}"/>
         </ToolBar>
     </Grid>
 </UserControl>

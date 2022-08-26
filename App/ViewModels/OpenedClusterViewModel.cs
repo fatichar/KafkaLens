@@ -111,7 +111,7 @@ namespace KafkaLens.App.ViewModels
 
             if (messages != null)
             {
-                CurrentMessages.Messages.Clear();
+                CurrentMessages.Clear();
                 // TODO: fetch messages in multiple steps
                 OnMessagesFetched(selectedNode, messages);
             }
@@ -125,7 +125,7 @@ namespace KafkaLens.App.ViewModels
                 foreach (var msg in messages)
                 {
                     MessageViewModel viewModel = new(msg, formatter);
-                    CurrentMessages.Messages.Add(viewModel);
+                    CurrentMessages.Add(viewModel);
                 }
             }
         }
