@@ -3,9 +3,9 @@ using System.Windows.Controls;
 
 namespace KafkaLens.App.Controls
 {
-    public partial class MessageDisplayOptionsPanel : UserControl
+    public partial class MessageDisplayToolbar : UserControl
     {
-        public MessageDisplayOptionsPanel()
+        public MessageDisplayToolbar()
         {
             InitializeComponent();
         }

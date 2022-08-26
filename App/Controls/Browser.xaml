@@ -64,11 +64,11 @@
         <GridSplitter Grid.Row="1" ResizeDirection="Auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
 
         <DockPanel Grid.Row="2" HorizontalAlignment="Stretch">
-            <local:MessageDisplayOptionsPanel x:Name="messageDisplayOptionsPanel" DockPanel.Dock="Right"
+            <local:MessageDisplayToolbar x:Name="messageDisplayOptionsPanel" DockPanel.Dock="Bottom"
                                               MinWidth="20" Width="Auto" Height="Auto" VerticalAlignment="Stretch"
                                               Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7"
                                               >
-            </local:MessageDisplayOptionsPanel>
+            </local:MessageDisplayToolbar>
         <avalonEdit:TextEditor
             xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
             Name="messageViewer"

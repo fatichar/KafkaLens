@@ -2,6 +2,7 @@
 using KafkaLens.App.Formating;
 using KafkaLens.Shared.Models;
 using System;
+using System.Collections.Generic;
 
 namespace KafkaLens.App.ViewModels
 {
@@ -14,7 +15,8 @@ namespace KafkaLens.App.ViewModels
         public long Offset => message.Offset;
         public string Key => message.KeyText;
         public string Summary { get; }
-        public string Message { get; }
+        public string FormattedMessage { get; }
+        public string DisplayText { get; set; }
         public DateTime Timestamp => DateTime.UnixEpoch.AddMilliseconds(message.EpochMillis).ToLocalTime();
 
         public string FormatterName => formatter.Name;
@@ -23,10 +25,33 @@ namespace KafkaLens.App.ViewModels
         {
             this.message = message;
             this.formatter = formatter;
-            Message = formatter.Format(message.Value) ?? message.ValueText;
+            FormattedMessage = formatter.Format(message.Value) ?? message.ValueText;
             Summary = message.ValueText[..100].ReplaceLineEndings(" ");
 
+            DisplayText = FormattedMessage;
+
             IsActive = true;
+        }
+
+        public void ApplyFilter(string filter)
+        {
+            if (filter.Length > 0)
+            {
+                var lines = FormattedMessage.Split(Environment.NewLine);
+                var filteredLines = new List<string>();
+                foreach (var line in lines)
+                {
+                    if (line.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                    {
+                        filteredLines.Add(line);
+                    }
+                }
+                DisplayText = string.Join(Environment.NewLine, filteredLines);
+            }
+            else
+            {
+                DisplayText = FormattedMessage;
+            }
         }
     }
 }
