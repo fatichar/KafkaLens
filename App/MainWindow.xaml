@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:KafkaLens.App.Controls"
+        xmlns:behaviors="clr-namespace:KafkaLens.App.Controls.Behaviors"
         mc:Ignorable="d"
         Title="KafkaLens" Height="800" Width="1600"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -26,22 +27,18 @@
             </MenuItem>
         </Menu>
         <TabControl IsSynchronizedWithCurrentItem="True" x:Name="openedClustersControl" ItemsSource="{Binding OpenedClusters}"
-                    SelectedIndex="{Binding SelectedIndex}">
-            <TabControl.Resources>
-                <Style TargetType="TabItem">
-
-                </Style>
-            </TabControl.Resources>
+                    SelectedIndex="{Binding SelectedIndex}"
+                    behaviors:TabContent.IsCached="true">
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Name}"/>
+                    <TextBlock Text="{Binding Name}" MinWidth="40" TextAlignment="Center"/>
                 </DataTemplate>
             </TabControl.ItemTemplate>
-            <TabControl.ContentTemplate>
+            <behaviors:TabContent.Template>
                 <DataTemplate>
                     <local:OpenedClusterPanel/>
                 </DataTemplate>
-            </TabControl.ContentTemplate>
+            </behaviors:TabContent.Template>
         </TabControl>
     </DockPanel>
 </Window>

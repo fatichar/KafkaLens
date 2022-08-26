@@ -35,7 +35,7 @@ namespace KafkaLens.App.ViewModels
         private int fontSize = 14;
         public int FontSize
         {
-            get => fontSize; 
+            get => fontSize;
             set
             {
                 SetProperty(ref fontSize, value, true);
@@ -124,7 +124,7 @@ namespace KafkaLens.App.ViewModels
                 var formatter = node.Formatter;
                 foreach (var msg in messages)
                 {
-                    MessageViewModel viewModel = new MessageViewModel(msg, formatter);
+                    MessageViewModel viewModel = new(msg, formatter);
                     CurrentMessages.Messages.Add(viewModel);
                 }
             }

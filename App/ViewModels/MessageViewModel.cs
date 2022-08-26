@@ -13,7 +13,7 @@ namespace KafkaLens.App.ViewModels
         public int Partition => message.Partition;
         public long Offset => message.Offset;
         public string Key => message.KeyText;
-        public string Summary => message.ValueText.Substring(0, 100);
+        public string Summary { get; }
         public string Message { get; }
         public DateTime Timestamp => DateTime.UnixEpoch.AddMilliseconds(message.EpochMillis).ToLocalTime();
 
@@ -24,6 +24,7 @@ namespace KafkaLens.App.ViewModels
             this.message = message;
             this.formatter = formatter;
             Message = formatter.Format(message.Value) ?? message.ValueText;
+            Summary = message.ValueText[..100].ReplaceLineEndings(" ");
 
             IsActive = true;
         }

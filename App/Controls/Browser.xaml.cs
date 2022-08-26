@@ -22,19 +22,14 @@ namespace KafkaLens.App.Controls
 
         private void Selector_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var message = (MessageViewModel?)messagesGrid.SelectedItem;
-            if (message == null)
-            {
-                messagesGrid.SelectedItem = dataContext.CurrentMessages.CurrentMessage;
-                return;
-            }
+            var message = (MessageViewModel?)(messagesGrid.SelectedItem ?? messagesGrid.CurrentItem);
             dataContext.CurrentMessages.CurrentMessage = message;
             if (message != null)
             {
                 messageViewer.Document.Text = message.Message;
                 messageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(dataContext?.SelectedNode?.Formatter?.Name ?? "Json");
                 messageViewer.FontSize = dataContext?.FontSize ?? 14;
-            } 
+            }
             else
             {
                 messageViewer.Document.Text = "";

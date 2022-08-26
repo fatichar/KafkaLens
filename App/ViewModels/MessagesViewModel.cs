@@ -11,7 +11,6 @@ namespace KafkaLens.App.ViewModels
 {
     public sealed class MessagesViewModel : ObservableRecipient
     {
-        private MessageViewModel? currentMessage;
         public IAsyncRelayCommand LoadMessagesCommand { get; }
 
         public ObservableCollection<MessageViewModel> Messages { get; internal set; }
@@ -30,10 +29,18 @@ namespace KafkaLens.App.ViewModels
             throw new NotImplementedException();
         }
 
+        private MessageViewModel? currentMessage;
         public MessageViewModel? CurrentMessage
         {
             get => currentMessage;
             set => SetProperty(ref currentMessage, value);
+        }
+
+        private int selectedIndex;
+        public int SelectedIndex
+        {
+            get => selectedIndex;
+            set => SetProperty(ref selectedIndex, value);
         }
     }
 }

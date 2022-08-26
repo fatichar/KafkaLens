@@ -21,8 +21,11 @@
                 BorderThickness="1" BorderBrush="#FF558FE7">
             </local:FetchOptionsPanel>
             <DataGrid Name="messagesGrid" ItemsSource="{Binding CurrentMessages.Messages}" AutoGenerateColumns="False"
-                  AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6" 
+                  AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6"
                       SelectionChanged="Selector_OnSelectionChanged"
+                      CurrentItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
+                      SelectedItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
+                      SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
                       >
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Partition" Binding="{Binding Partition, Mode=OneWay}"/>
@@ -66,7 +69,7 @@
                                               Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7"
                                               >
             </local:MessageDisplayOptionsPanel>
-        <avalonEdit:TextEditor 
+        <avalonEdit:TextEditor
             xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
             Name="messageViewer"
             FontFamily="Consolas"
