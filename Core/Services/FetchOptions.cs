@@ -2,22 +2,20 @@
 {
     public class FetchOptions
     {
-        public FetchOptions(FetchPosition from = FetchPosition.END, int limit = 10)
+        public FetchOptions(FetchPosition start, int limit)
         {
-            From = from;
+            Start = start;
             Limit = limit;
         }
-
-        public enum FetchPosition
+        
+        public FetchOptions(FetchPosition start, FetchPosition? end)
         {
-            START,
-            END,
-            TIMESTAMP,
-            OFFSET
+            Start = start;
+            End = end;
         }
-        public FetchPosition From { get; set; } = FetchPosition.END;
-        public FetchPosition To { get; set; }
-        public int Limit { get; set; }
-        public int Offset { get; set; }
+
+        public FetchPosition Start { get; set; } = FetchPosition.END;
+        public FetchPosition? End { get; set; }
+        public int Limit { get; set; } = 10;
     }
 }

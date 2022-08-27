@@ -13,7 +13,7 @@
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
-            <ToolBar Grid.Column="0">
+        <ToolBar Grid.Column="0">
             <Label Content="Contains"/>
             <TextBox x:Name="positiveFilterBox" MinWidth="300" VerticalContentAlignment="Center"/>
             <Label Content="But not"/>

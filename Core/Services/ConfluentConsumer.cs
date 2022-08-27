@@ -98,6 +98,7 @@ namespace KafkaLens.Core.Services
                 Console.WriteLine($"Got watermarks in {watch.ElapsedMilliseconds} ms");
                 watch.Restart();
                 var tpo = CreateTopicPartitionOffset(tp, watermarks, options);
+                UpdateLimitUsingEnd(options);
                 Consumer.Assign(tpo);
                 Console.WriteLine($"Seeked in {watch.ElapsedMilliseconds} ms");
                 watch.Restart();
@@ -224,19 +225,80 @@ namespace KafkaLens.Core.Services
 
         private TopicPartitionOffset CreateTopicPartitionOffset(Confluent.Kafka.TopicPartition tp, WatermarkOffsets watermarks, FetchOptions options)
         {
-            switch (options.From)
-            {
-                case FetchOptions.FetchPosition.START:
-                    return new(tp, watermarks.Low);
-                case FetchOptions.FetchPosition.TIMESTAMP:
-                    break;
-                case FetchOptions.FetchPosition.OFFSET:
-                    return new(tp, options.Offset);
-                case FetchOptions.FetchPosition.END:
-                    return new(tp, Math.Max(watermarks.High - options.Limit, watermarks.Low));
-            }
+            UpdateForTimestamps(tp, options);
 
-            return new(tp, watermarks.High - options.Limit);
+            UpdateForWatermarks(options.Start, watermarks);
+            if (options.End == null)
+            {
+                options.End = new FetchPosition(PositionType.OFFSET, options.Start.Offset + options.Limit);
+            }
+            UpdateForWatermarks(options.End, watermarks);
+            return new TopicPartitionOffset(tp, options.Start.Offset);
+        }
+
+        private void UpdateForTimestamps(Confluent.Kafka.TopicPartition tp, FetchOptions options)
+        {
+            var tptList = new List<TopicPartitionTimestamp>();
+            if (options.Start.Type == PositionType.TIMESTAMP)
+            {
+                tptList.Add(new(tp, new Timestamp(options.Start.Timestamp, TimestampType.CreateTime)));
+            }
+            if (options.End?.Type == PositionType.TIMESTAMP)
+            {
+                tptList.Add(new(tp, new Timestamp(options.End.Timestamp, TimestampType.CreateTime)));
+            }
+            if (tptList.Count > 0)
+            {
+                var tops = Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout);
+                int i = 0;
+                if (options.Start.Type == PositionType.TIMESTAMP)
+                {
+                    options.Start.SetOffset(tops[i++].Offset);
+                }
+                if (options.End?.Type == PositionType.TIMESTAMP)
+                {
+                    options.End.SetOffset(tops[i++].Offset);
+                }
+            }
+        }
+
+        private static void UpdateForWatermarks(FetchPosition position, WatermarkOffsets watermarks)
+        {
+            var offset = position.Offset;
+            if (offset < 0)
+            {
+                // if options.Start.Offset = -1 => offset = watermarks.High
+                // means no message will be returned
+                offset = watermarks.High + 1 + offset;
+            }
+            if (offset < watermarks.Low)
+            {
+                offset = watermarks.Low;
+            }
+            else if (offset > watermarks.High)
+            {
+                offset = watermarks.High;
+            }
+            position.SetOffset(offset);
+        }
+
+        private void UpdateLimitUsingEnd(FetchOptions options)
+        {
+            if (options.End != null)
+            {
+                var end = options.End;
+
+                // now end has a valid offset
+                int distance = (int)(end.Offset - options.Start.Offset);
+                if (options.Limit == 0 || options.Limit > distance)
+                {
+                    options.Limit = distance;
+                }
+                else
+                {
+                    end.SetOffset(options.Start.Offset + distance);
+                }
+            }
         }
 
         private Message CreateMessage(ConsumeResult<byte[], byte[]> result)
