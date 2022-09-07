@@ -19,7 +19,5 @@
             <Label Content="But not"/>
             <TextBox x:Name="negativeFilterBox" MinWidth="300" VerticalContentAlignment="Center"/>
         </ToolBar>
-        <ToolBar Grid.Column="2">
-        </ToolBar>
     </Grid>
 </UserControl>

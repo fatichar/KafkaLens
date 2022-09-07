@@ -19,6 +19,6 @@
             BorderBrush="#FF558FE7">
         </local:Navigator>
 
-        <local:Browser x:Name="clusterBrowser" />
+        <local:Browser x:Name="browser" />
     </DockPanel>
 </UserControl>

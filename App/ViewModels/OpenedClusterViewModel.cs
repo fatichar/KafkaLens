@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace KafkaLens.App.ViewModels
 {
-    public sealed class OpenedClusterViewModel : ObservableRecipient
+    public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
     {
         private readonly ISettingsService settingsService;
         private readonly IClusterService clusterService;
@@ -29,6 +29,16 @@ namespace KafkaLens.App.ViewModels
 
         private static IMessageFormatter jsonFormatter = new JsonFormatter();
         private static IMessageFormatter textFormatter = new TextFormatter();
+
+        public ITreeNode.NodeType Type => ITreeNode.NodeType.CLUSTER;
+
+        public bool IsSelected { get; set; }
+        public bool IsExpandable => true;
+        public bool IsExpanded 
+        { 
+            get; 
+            set; 
+        }
 
         static OpenedClusterViewModel()
         {
@@ -51,17 +61,33 @@ namespace KafkaLens.App.ViewModels
         public IAsyncRelayCommand ChangeFormatterCommand { get; }
 
         public string Name { get; }
+
+        public ObservableCollection<ITreeNode> Nodes { get; } = new();
         public ObservableCollection<TopicViewModel> Topics { get; } = new();
 
         public MessagesViewModel CurrentMessages { get; } = new();
 
-        private IMessageSource? selectedNode;
+        private ITreeNode? selectedNode;
+
+        private ITreeNode.NodeType selectedNodeType = ITreeNode.NodeType.NONE;
+        public ITreeNode.NodeType SelectedNodeType
+        {
+            get
+            {
+                return selectedNodeType;
+            }
+            set
+            {
+                SetProperty(ref selectedNodeType, value);
+            }
+        }
 
         public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
         public int FetchCount { get; set; } = 10;
 
         public string FetchPosition { get; set; }
-        public String StartOffset { get; set; }
+        public string? StartOffset { get; set; }
+        public DateTime StartTimestamp { get; set; } = DateTime.Now;
 
         private int fontSize = 14;
         public int FontSize
@@ -72,6 +98,7 @@ namespace KafkaLens.App.ViewModels
                 SetProperty(ref fontSize, value, true);
             }
         }
+
         public OpenedClusterViewModel(
             ISettingsService settingsService,
             IClusterService clusterService,
@@ -87,6 +114,9 @@ namespace KafkaLens.App.ViewModels
             ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
             FetchPosition = FetchPositionsForTopic[0];
+            Nodes.Add(this);
+            IsSelected = true;
+            IsExpanded = true;
 
             IsActive = true;
         }
@@ -109,20 +139,21 @@ namespace KafkaLens.App.ViewModels
             }
         }
 
-        public IMessageSource? SelectedNode
+        public ITreeNode? SelectedNode
         {
             get => selectedNode;
             set
             {
                 if (SetProperty(ref selectedNode, value))
                 {
-                    FetchPositions = value is PartitionViewModel
+                    FetchPositions = SelectedNodeType == ITreeNode.NodeType.PARTITION
                         ? FetchPositionsForPartition
                         : FetchPositionsForTopic;
                     if (selectedNode != null)
                     {
                         FetchMessagesCommand.Execute(null);
                     }
+                    SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.NONE;
                 }
             }
         }
@@ -150,7 +181,7 @@ namespace KafkaLens.App.ViewModels
             {
                 CurrentMessages.Clear();
                 // TODO: fetch messages in multiple steps
-                OnMessagesFetched(selectedNode, messages);
+                OnMessagesFetched((IMessageSource)selectedNode, messages);
             }
         }
 
@@ -168,8 +199,9 @@ namespace KafkaLens.App.ViewModels
                     start = Core.Services.FetchPosition.START;
                     break;
                 case "Timestamp":
-                    start = new(PositionType.TIMESTAMP, DateTimeOffset.Now.ToUnixTimeSeconds() - 60);
-                    end = new(PositionType.TIMESTAMP, DateTimeOffset.Now.ToUnixTimeSeconds());
+                    long epochMs = (long)(StartTimestamp.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
+                    start = new(PositionType.TIMESTAMP, epochMs);
+                    //end = new(PositionType.TIMESTAMP, DateTimeOffset.Now.ToUnixTimeSeconds());
                     break;
                 case "Offset":
                     start = new(PositionType.OFFSET, long.TryParse(StartOffset, out long offset) ? offset : -1);                    

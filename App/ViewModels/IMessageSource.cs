@@ -3,11 +3,9 @@ using System.Collections.ObjectModel;
 
 namespace KafkaLens.App.ViewModels
 {
-    public interface IMessageSource
+    public interface IMessageSource : ITreeNode
     {
-        bool IsSelected { get; set; }
         ObservableCollection<MessageViewModel> Messages { get; }
-        string Name { get; }
         IMessageFormatter Formatter { get; }
     }
 }

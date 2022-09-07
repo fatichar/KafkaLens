@@ -20,6 +20,8 @@ namespace KafkaLens.App.ViewModels
 
         public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
+        public ITreeNode.NodeType Type => ITreeNode.NodeType.TOPIC;
+
         public TopicViewModel(IClusterService clusterService, Topic topic, IMessageFormatter formatter)
         {
             this.clusterService = clusterService;

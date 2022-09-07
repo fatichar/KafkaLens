@@ -8,6 +8,11 @@
              xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
     <UserControl.Resources>
+        <HierarchicalDataTemplate DataType = "{x:Type viewmodels:OpenedClusterViewModel}"
+                                ItemsSource = "{Binding Path=Topics}">
+            <TextBlock Text="{Binding Path=Name}"/>
+        </HierarchicalDataTemplate>
+
         <HierarchicalDataTemplate DataType = "{x:Type viewmodels:TopicViewModel}"
                                 ItemsSource = "{Binding Path=Partitions}">
             <TextBlock Text="{Binding Path=Name}"/>
@@ -20,9 +25,8 @@
     <DockPanel
             Height="Auto"
             VerticalAlignment="Stretch">
-        <Label DockPanel.Dock="Top" Content="{Binding Name}"/>
         <TreeView x:Name="topicsTree"
-                  ItemsSource="{Binding Topics}"
+                  ItemsSource="{Binding Nodes}"
                   SelectedItemChanged="TreeView_SelectedItemChanged"
                   Height="Auto"
                   VerticalAlignment="Stretch"

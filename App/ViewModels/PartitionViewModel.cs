@@ -23,6 +23,8 @@ namespace KafkaLens.App.ViewModels
         public bool IsExpanded { get; set; }
         public bool IsSelected { get; set; }
 
+        public ITreeNode.NodeType Type => ITreeNode.NodeType.PARTITION;
+
         public PartitionViewModel(IClusterService clusterService, TopicViewModel topic, Partition partition)
         {
             LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
