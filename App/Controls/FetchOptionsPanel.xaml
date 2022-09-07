@@ -9,7 +9,6 @@
              xmlns:xceed="http://schemas.xceed.com/wpf/xaml/toolkit"
              mc:Ignorable="d" d:DesignWidth="300" Height="600">
     <Expander ExpandDirection="Left" FlowDirection="LeftToRight"
-              Header="Options"
                   BorderThickness="1" IsExpanded="True">
         <Grid Margin="5">
             <Grid.RowDefinitions>
@@ -20,30 +19,51 @@
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" MinWidth="80" />
-                <ColumnDefinition Width="Auto" MinWidth="100" />
+                <ColumnDefinition Width="Auto" MinWidth="200" />
             </Grid.ColumnDefinitions>
             <Label Grid.Row="0" Grid.Column="0"
                    Width="Auto" HorizontalAlignment="Stretch" Margin="5">Fetch from</Label>
-            <ComboBox Grid.Row="0" Grid.Column="1" Margin="5" 
-                      ItemsSource="{Binding FetchPositions}" 
-                      SelectedItem="{Binding FetchPosition, Mode=OneWayToSource}"
-                      SelectedIndex="0">
+            <ComboBox Grid.Row="0" Grid.Column="1" Margin="5"
+                      ItemsSource="{Binding FetchPositions}"
+                      SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
             </ComboBox>
-            <Label Grid.Row="1" Grid.Column="0" Margin="5">Offset</Label>
-            <TextBox x:Name="startOffsetBox" Grid.Row="1" Grid.Column="1" Margin="5" 
-                        PreviewTextInput="AcceptOffset"
-                       Text="{Binding StartOffset, Mode=OneWayToSource}"
-                     IsEnabled="{Binding IsPartitionSelected}"/>
 
-            <xceed:DateTimePicker x:Name="startTimestampPicker" Grid.Row="2" Grid.Column="1" Margin="5" 
-                        Value="{Binding StartTimestamp}" />
-            <Label Grid.Row="3" Grid.Column="0" Margin="5">Count</Label>
-            <ComboBox x:Name="fetchCountBox" Grid.Row="3" Grid.Column="1" SelectedIndex="0" Margin="5" 
-                      ItemsSource="{Binding FetchCounts}" 
-                      SelectedItem="{Binding FetchCount, Mode=TwoWay}">
+            <StackPanel Grid.Row="1" Grid.Column="1">
+                <ContentPresenter Content="{Binding}">
+                    <!-- Presentations -->
+                    <ContentPresenter.Resources>
+                        <DataTemplate x:Key="TimestampPresenter">
+                            <xceed:DateTimePicker x:Name="startTimestampPicker" Margin="5"
+                            Value="{Binding StartTimestamp}" />
+                        </DataTemplate>
+                        <DataTemplate x:Key="NoPresenter">
+                            <xceed:DateTimePicker x:Name="startTimestampPicker" Margin="5"
+                            Value="{Binding StartTimestamp}" IsEnabled="False"/>
+                        </DataTemplate>
+                    </ContentPresenter.Resources>
+
+                    <!-- Triggers -->
+                    <ContentPresenter.Style>
+                        <Style TargetType="{x:Type ContentPresenter}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding FetchPosition}" Value="Timestamp">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource TimestampPresenter}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding FetchPosition}" Value="End">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource NoPresenter}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentPresenter.Style>
+                </ContentPresenter>
+            </StackPanel>
+            <Label Grid.Row="2" Grid.Column="0" Margin="5">Count</Label>
+            <ComboBox x:Name="fetchCountBox" Grid.Row="2" Grid.Column="1" SelectedIndex="0" IsEditable="True"
+                      ItemsSource="{Binding FetchCounts}" Margin="5" HorizontalContentAlignment="Right"
+                      Text="{Binding FetchCount, Mode=TwoWay}">
             </ComboBox>
-            <Button Content="Apply" Command="{Binding FetchMessagesCommand}"
-                     Grid.Row="4" Grid.ColumnSpan="2"/>
+            <Button Content="Fetch Messages" Command="{Binding FetchMessagesCommand}"
+                     Grid.Row="4" Grid.Column="1" Height="30" Margin="5"/>
         </Grid>
     </Expander>
 </UserControl>

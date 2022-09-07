@@ -21,7 +21,7 @@ namespace KafkaLens.App.ViewModels
         public IList<string> fetchPositions;
         public IList<string> FetchPositions
         {
-            get => fetchPositions; 
+            get => fetchPositions;
             set => SetProperty(ref fetchPositions, value);
         }
 
@@ -34,10 +34,10 @@ namespace KafkaLens.App.ViewModels
 
         public bool IsSelected { get; set; }
         public bool IsExpandable => true;
-        public bool IsExpanded 
-        { 
-            get; 
-            set; 
+        public bool IsExpanded
+        {
+            get;
+            set;
         }
 
         static OpenedClusterViewModel()
@@ -47,12 +47,12 @@ namespace KafkaLens.App.ViewModels
 
             FetchPositionsForTopic.Add("End");
             FetchPositionsForTopic.Add("Timestamp");
-            FetchPositionsForTopic.Add("Start");
+            //FetchPositionsForTopic.Add("Start");
 
             FetchPositionsForPartition.Add("End");
             FetchPositionsForPartition.Add("Timestamp");
-            FetchPositionsForPartition.Add("Offset");
-            FetchPositionsForPartition.Add("Start");
+            //FetchPositionsForPartition.Add("Offset");
+            //FetchPositionsForPartition.Add("Start");
         }
 
         public ICollection<string> MessageFormats => formatters.Keys;
@@ -61,6 +61,7 @@ namespace KafkaLens.App.ViewModels
         public IAsyncRelayCommand ChangeFormatterCommand { get; }
 
         public string Name { get; }
+        public string Address => clusterViewModel.Address;
 
         public ObservableCollection<ITreeNode> Nodes { get; } = new();
         public ObservableCollection<TopicViewModel> Topics { get; } = new();
@@ -84,18 +85,28 @@ namespace KafkaLens.App.ViewModels
 
         public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
         public int FetchCount { get; set; } = 10;
-
-        public string FetchPosition { get; set; }
         public string? StartOffset { get; set; }
-        public DateTime StartTimestamp { get; set; } = DateTime.Now;
+        public DateTime StartTimestamp { get; set; } = DateTime.Now.Subtract(TimeSpan.FromMinutes(1));
+        public DateTime EndTimestamp { get; set; } = DateTime.Now;
 
         private int fontSize = 14;
+        private string fetchPosition;
+
         public int FontSize
         {
             get => fontSize;
             set
             {
                 SetProperty(ref fontSize, value, true);
+            }
+        }
+
+        public string FetchPosition
+        {
+            get => fetchPosition;
+            set
+            {
+                SetProperty(ref fetchPosition, value);
             }
         }
 
@@ -204,7 +215,7 @@ namespace KafkaLens.App.ViewModels
                     //end = new(PositionType.TIMESTAMP, DateTimeOffset.Now.ToUnixTimeSeconds());
                     break;
                 case "Offset":
-                    start = new(PositionType.OFFSET, long.TryParse(StartOffset, out long offset) ? offset : -1);                    
+                    start = new(PositionType.OFFSET, long.TryParse(StartOffset, out long offset) ? offset : -1);
                     break;
                 default:
                     throw new Exception("Invalid fetch position " + FetchPosition);

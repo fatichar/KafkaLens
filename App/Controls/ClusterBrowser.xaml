@@ -8,7 +8,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800"
              d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
-    <Grid>
+    <Grid Margin="10, 50">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -19,9 +19,9 @@
             <ColumnDefinition Width="Auto" MinWidth="500"/>
         </Grid.ColumnDefinitions>
         <Label Grid.Row="0" Grid.Column="0" Content="Cluster Name:"/>
-        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ClusterName}"/>
+        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsReadOnly="True"/>
         <Label Grid.Row="1" Grid.Column="0" Content="Bootstrap Servers"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding BootstrapServers}"/>
-        <Button Grid.Row="2" Grid.Column="1" Content="Save" Command="{Binding SaveCommand}"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Address, Mode=OneWay}" IsReadOnly="True"/>
+        <!--<Button Grid.Row="2" Grid.Column="1" Content="Save" Command="{Binding SaveCommand}"/>-->
     </Grid>
 </UserControl>

@@ -19,6 +19,7 @@ namespace KafkaLens.App.ViewModels
 
         public string Id => cluster.Id;
         public string Name => cluster.Name;
+        public string Address => cluster.BootstrapServers;
 
         public ClusterViewModel(KafkaCluster cluster, IClusterService clusterService)
         {

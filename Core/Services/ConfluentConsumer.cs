@@ -1,6 +1,8 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using Confluent.Kafka;
 using KafkaLens.Shared.Models;
+using static Confluent.Kafka.ConfigPropertyNames;
 
 namespace KafkaLens.Core.Services
 {
@@ -8,7 +10,7 @@ namespace KafkaLens.Core.Services
     {
         private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
-        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(10);
+        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(20);
 
         public Dictionary<string, Topic> Topics { get; private set; } = new Dictionary<string, Topic>();
 
@@ -23,7 +25,12 @@ namespace KafkaLens.Core.Services
         {
             Config = CreateConsumerConfig(url);
             AdminClient = CreateAdminClient(Config.BootstrapServers);
-            Consumer = new ConsumerBuilder<byte[], byte[]>(Config).Build();
+            Consumer = CreateConsumer();
+        }
+
+        private IConsumer<byte[], byte[]> CreateConsumer()
+        {
+            return new ConsumerBuilder<byte[], byte[]>(Config).Build();
         }
 
         private static ConsumerConfig CreateConsumerConfig(String url)
@@ -87,52 +94,9 @@ namespace KafkaLens.Core.Services
             var watch = new Stopwatch();
             watch.Start();
             var tp = ValidateTopicPartition(topicName, partition);
-            var messages = new List<Message>();
-            lock(Consumer)
-            {
-                Console.WriteLine($"Got lock in {watch.ElapsedMilliseconds} ms");
-                watch.Restart();
-                Console.WriteLine($"assigned tp in {watch.ElapsedMilliseconds} ms");
-                watch.Restart();
-                var watermarks = Consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout);
-                Console.WriteLine($"Got watermarks in {watch.ElapsedMilliseconds} ms");
-                watch.Restart();
-                var tpo = CreateTopicPartitionOffset(tp, watermarks, options);
-                UpdateLimitUsingEnd(options);
-                Consumer.Assign(tpo);
-                Console.WriteLine($"Seeked in {watch.ElapsedMilliseconds} ms");
-                watch.Restart();
+            var messages = GetMessages(new List<Confluent.Kafka.TopicPartition>(){tp}, options);
 
-                while (messages.Count < options.Limit)
-                {
-                    var result = Consumer.Consume(consumeTimeout);
-                    if (result == null)
-                    {
-                        Console.WriteLine("Got null message. Must be timed out.");
-                        break;
-                    }
-                    if (result.IsPartitionEOF)
-                    {
-                        Console.WriteLine("End of partition reached.");
-                        break;
-                    }
-
-                    Console.WriteLine($"Got message in {watch.ElapsedMilliseconds} ms");
-                    watch.Restart();
-
-                    messages.Add(CreateMessage(result));
-
-                    if (result.Offset == watermarks.High - 1)
-                    {
-                        Console.WriteLine("End of partition reached.");
-                        break;
-                    }
-                }
-                Console.WriteLine($"Got remaining messages in {watch.ElapsedMilliseconds} ms");
-                watch.Stop();
-            }
-
-            return messages;
+            return messages.ToList();
         }
 
         private Confluent.Kafka.TopicPartition ValidateTopicPartition(string topicName, int partition)
@@ -153,35 +117,110 @@ namespace KafkaLens.Core.Services
         public List<Message> GetMessages(string topicName, FetchOptions options)
         {
             Console.WriteLine($"Getting messages for topic {topicName}");
-            var watch = new Stopwatch();
-            watch.Start();
 
             ValidateTopic(topicName);
-            var messages = new List<Message>();
             var topic = Topics[topicName];
-
-            var requiredCount = options.Limit;
-            var remaining = requiredCount;
-
             var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id)).ToList();
+
+            return GetMessages(tps, options);
+        }
+
+        private List<Message> GetMessages(List<Confluent.Kafka.TopicPartition> tps, FetchOptions options)
+        {
             var watermarks = QueryWatermarkOffsets(tps);
-            Console.WriteLine("Got watermarks in {0} ms", watch.ElapsedMilliseconds);
+            var partitionOptions = CreateOptionsForPartition(tps, options);
+            var tpos = CreateTopicPartitionOffsets(tps, watermarks, partitionOptions);
+
+            var tpoLimits = new List<(TopicPartitionOffset Tpo, int Limit)>();
+            for (int i = 0; i < tpos.Count; i++)
+            {
+                var tpoLimit = (Tpo: tpos[i], Limit: partitionOptions[i].Limit);
+                tpoLimits.Add(tpoLimit);
+            }
+            var messages = FetchMessages(tpoLimits);
+
+            return messages.ToList();
+        }
+
+        private IEnumerable<Message> FetchMessages(List<(TopicPartitionOffset Tpo, int Limit)> tpoLimits)
+        {
+            var messages = new ConcurrentBag<Message>();
+            if (tpoLimits.Count == 1)
+            {
+                Consumer.Assign(tpoLimits[0].Tpo);
+                FetchMessages(Consumer, messages, tpoLimits[0].Limit);
+                Consumer.Unassign();
+            }
+            else
+            {
+                tpoLimits.AsParallel().ForAll(tpoLimit =>
+                {
+                    using var consumer = CreateConsumer();
+                    consumer.Assign(tpoLimit.Tpo);
+                    FetchMessages(consumer, messages, tpoLimit.Limit);
+                });
+            }
+            return messages;
+        }
+
+        private List<Confluent.Kafka.TopicPartitionOffset> CreateTopicPartitionOffsets(List<Confluent.Kafka.TopicPartition> tps, List<WatermarkOffsets> watermarks, List<FetchOptions> partitionOptions)
+        {
             var tpos = new List<Confluent.Kafka.TopicPartitionOffset>();
+
             for (int i = 0; i < tps.Count; ++i)
             {
-                options.Limit = remaining / (topic.PartitionCount - i);
-                var tpo = CreateTopicPartitionOffset(tps[i], watermarks[i], options);
+                UpdateForWatermarks(partitionOptions[i].Start, watermarks[i]);
+                var tpo = new TopicPartitionOffset(tps[i], partitionOptions[i].Start.Offset);
                 tpos.Add(tpo);
-                remaining -= options.Limit;
             }
+            return tpos;
+        }
 
-            Consumer.Assign(tpos);
-            Console.WriteLine("Assigned topic in {0} ms", watch.ElapsedMilliseconds);
-
-            remaining = requiredCount;
-            while (remaining > 0)
+        private List<FetchOptions> CreateOptionsForPartition(List<Confluent.Kafka.TopicPartition> tps, FetchOptions options)
+        {
+            var partitionOptions = new List<FetchOptions>();
+            var tptList = new List<TopicPartitionTimestamp>();
+            var remaining = options.Limit;
+            switch (options.Start.Type)
             {
-                var result = Consumer.Consume(consumeTimeout);
+                case PositionType.TIMESTAMP:
+                    tps.ForEach(tp =>
+                        tptList.Add(new(tp, new Timestamp(options.Start.Timestamp, TimestampType.CreateTime))));
+
+                    var tpos = Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout);
+
+                    for (int i = 0; i < tpos.Count; i++)
+                    {
+                        var limit = remaining / (tps.Count - i);
+                        remaining -= limit;
+                        var tpo = tpos[i];
+                        partitionOptions.Add(new(new FetchPosition(PositionType.OFFSET, tpo.Offset.Value), limit));
+                    }
+                    break;
+                case PositionType.OFFSET:
+                    for (int i = 0; i < tps.Count; i++)
+                    {
+                        var limit = remaining / (tps.Count - i);
+                        remaining -= limit;
+                        long offset = options.Start.Offset;
+                        if (offset < 0)
+                        {
+                            offset = -1 -limit;
+                        }
+                        partitionOptions.Add(new(new(PositionType.OFFSET, offset), limit));
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return partitionOptions;
+        }
+
+        private int FetchMessages(IConsumer<byte[], byte[]> consumer, ConcurrentBag<Message> messages, int requiredCount)
+        {
+            while (requiredCount > 0)
+            {
+                var result = consumer.Consume(consumeTimeout);
                 if (result == null)
                 {
                     Console.WriteLine("Got null message. Must be timed out.");
@@ -194,12 +233,12 @@ namespace KafkaLens.Core.Services
                 }
 
                 messages.Add(CreateMessage(result));
-                --remaining;
-                Console.WriteLine("Got message in {0} ms", watch.ElapsedMilliseconds);
+                --requiredCount;
+                //Console.WriteLine("Got message in {0} ms", watch.ElapsedMilliseconds);
+                //watch.Restart();
             }
 
-            Console.WriteLine("Got {0} messages in {1} ms", messages.Count, watch.ElapsedMilliseconds);
-            return messages;
+            return requiredCount;
         }
 
         private List<WatermarkOffsets> QueryWatermarkOffsets(List<Confluent.Kafka.TopicPartition> tps)
