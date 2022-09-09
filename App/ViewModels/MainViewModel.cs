@@ -6,6 +6,7 @@ using KafkaLens.App.Messages;
 using KafkaLens.Core.Services;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Serilog;
 
 namespace KafkaLens.App.ViewModels
 {
@@ -14,7 +15,7 @@ namespace KafkaLens.App.ViewModels
         // data
         public ObservableCollection<ClusterViewModel> Clusters { get; } = new();
         public ObservableCollection<OpenedClusterViewModel> OpenedClusters { get; } = new();
-        private IDictionary<string, IList<OpenedClusterViewModel>> openedClustersMap = new Dictionary<string, IList<OpenedClusterViewModel>>();
+        private readonly IDictionary<string, List<OpenedClusterViewModel>> openedClustersMap = new Dictionary<string, List<OpenedClusterViewModel>>();
 
         // services
         private readonly ISettingsService settingsService;
@@ -52,8 +53,9 @@ namespace KafkaLens.App.ViewModels
 
         private void OpenCluster(ClusterViewModel clusterViewModel)
         {
-            string newName = clusterViewModel.Name;
-            bool isOpened = openedClustersMap.TryGetValue(clusterViewModel.Id, out var alreadyOpened);
+            Log.Information("Opening cluster: {ClusterName}", clusterViewModel.Name);
+            var newName = clusterViewModel.Name;
+            var isOpened = openedClustersMap.TryGetValue(clusterViewModel.Id, out var alreadyOpened);
             if (!isOpened)
             {
                 alreadyOpened = new List<OpenedClusterViewModel>();
@@ -70,9 +72,9 @@ namespace KafkaLens.App.ViewModels
             openedCluster.LoadTopicsAsync();
         }
 
-        private string GenerateNewName(string clusterName, IList<OpenedClusterViewModel> alreadyOpened)
+        private string GenerateNewName(string clusterName, List<OpenedClusterViewModel> alreadyOpened)
         {
-            var existingNames = alreadyOpened.Select(c => c.Name).ToList();
+            var existingNames = alreadyOpened.ConvertAll(c => c.Name);
             var suffixes = existingNames.ConvertAll(n => n.Length > clusterName.Length + 1 ? n.Substring(clusterName.Length + 1) : "");
             suffixes.Remove("");
             var numbersStrings = suffixes.ConvertAll(s => s.Length > 1 ? s.Substring(1, s.Length - 2) : "");

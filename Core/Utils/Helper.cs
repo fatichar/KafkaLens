@@ -6,8 +6,8 @@ namespace KafkaLens.Core.Utils
     {
         public static int CompareTopics(Topic x, Topic y)
         {
-            int underScoresX = CountPrefix(x.Name, '_');
-            int underScoresY = CountPrefix(y.Name, '_');
+            var underScoresX = CountPrefix(x.Name, '_');
+            var underScoresY = CountPrefix(y.Name, '_');
             if (underScoresX == underScoresY)
             {
                 return x.Name.CompareTo(y.Name);
@@ -17,7 +17,7 @@ namespace KafkaLens.Core.Utils
 
         private static int CountPrefix(string s, char c)
         {
-            int i = 0;
+            var i = 0;
             while (i < s.Length && s[i] == c)
             {
                 ++i;

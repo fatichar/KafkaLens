@@ -5,12 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Windows;
+using Serilog;
 
 namespace KafkaLens.App
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
     public partial class App : Application
     {
         public IServiceProvider Services { get; }
@@ -23,9 +21,6 @@ namespace KafkaLens.App
             InitializeComponent();
         }
 
-        /// <summary>
-        /// Configures the services for the application.
-        /// </summary>
         private static IServiceProvider ConfigureServices()
         {
             var services = new ServiceCollection();
@@ -37,7 +32,18 @@ namespace KafkaLens.App
             services.AddSingleton<MainViewModel>();
             services.AddLogging();
 
+            ConfigureLogging();
+
             return services.BuildServiceProvider();
+        }
+
+        private static void ConfigureLogging()
+        {
+            using var log = new LoggerConfiguration()
+                .WriteTo.Console(outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u4}] {Message:lj}{NewLine}{Exception}")
+                .CreateLogger();
+            Log.Logger = log;
+            Log.Information("The global logger has been configured");
         }
     }
 }

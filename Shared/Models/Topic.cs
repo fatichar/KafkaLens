@@ -8,7 +8,7 @@ namespace KafkaLens.Shared.Models
         {
             Name = name;
             Partitions = new List<Partition>(partitionCount);
-            for (int i = 0; i < partitionCount; i++)
+            for (var i = 0; i < partitionCount; i++)
             {
                 Partitions.Add(new Partition(i));
             }

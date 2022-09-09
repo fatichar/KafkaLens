@@ -1,6 +1,4 @@
-﻿using Confluent.Kafka;
-
-namespace KafkaLens.Core.Services
+﻿namespace KafkaLens.Core.Services
 {
     public enum PositionType
     {
@@ -28,7 +26,7 @@ namespace KafkaLens.Core.Services
             }
         }
 
-        internal void SetOffset(Offset offset)
+        internal void SetOffset(long offset)
         {
             Type = PositionType.OFFSET;
             Offset = offset;

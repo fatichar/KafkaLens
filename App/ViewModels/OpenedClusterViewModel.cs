@@ -73,14 +73,8 @@ namespace KafkaLens.App.ViewModels
         private ITreeNode.NodeType selectedNodeType = ITreeNode.NodeType.NONE;
         public ITreeNode.NodeType SelectedNodeType
         {
-            get
-            {
-                return selectedNodeType;
-            }
-            set
-            {
-                SetProperty(ref selectedNodeType, value);
-            }
+            get => selectedNodeType;
+            set => SetProperty(ref selectedNodeType, value);
         }
 
         public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
@@ -95,19 +89,13 @@ namespace KafkaLens.App.ViewModels
         public int FontSize
         {
             get => fontSize;
-            set
-            {
-                SetProperty(ref fontSize, value, true);
-            }
+            set => SetProperty(ref fontSize, value, true);
         }
 
         public string FetchPosition
         {
             get => fetchPosition;
-            set
-            {
-                SetProperty(ref fetchPosition, value);
-            }
+            set => SetProperty(ref fetchPosition, value);
         }
 
         public OpenedClusterViewModel(
@@ -210,12 +198,12 @@ namespace KafkaLens.App.ViewModels
                     start = Core.Services.FetchPosition.START;
                     break;
                 case "Timestamp":
-                    long epochMs = (long)(StartTimestamp.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
+                    var epochMs = (long)(StartTimestamp.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
                     start = new(PositionType.TIMESTAMP, epochMs);
                     //end = new(PositionType.TIMESTAMP, DateTimeOffset.Now.ToUnixTimeSeconds());
                     break;
                 case "Offset":
-                    start = new(PositionType.OFFSET, long.TryParse(StartOffset, out long offset) ? offset : -1);
+                    start = new(PositionType.OFFSET, long.TryParse(StartOffset, out var offset) ? offset : -1);
                     break;
                 default:
                     throw new Exception("Invalid fetch position " + FetchPosition);

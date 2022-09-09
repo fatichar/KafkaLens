@@ -42,7 +42,7 @@ namespace KafkaLens.App.Formating
                     }
                 }
                 stringWriter.Close();
-                string formatted = stringWriter.ToString();
+                var formatted = stringWriter.ToString();
                 return formatted;
             }
             catch (Newtonsoft.Json.JsonException e)

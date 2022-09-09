@@ -132,7 +132,7 @@ namespace KafkaLens.App.Controls.Behaviors
                     ". Only objects of type TabControl can have TabContent.IsCached property.");
             }
 
-            bool newValue = (bool)args.NewValue;
+            var newValue = (bool)args.NewValue;
 
             if (!newValue)
             {

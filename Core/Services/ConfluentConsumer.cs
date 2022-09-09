@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Confluent.Kafka;
 using KafkaLens.Shared.Models;
+using Serilog;
 using static Confluent.Kafka.ConfigPropertyNames;
 
 namespace KafkaLens.Core.Services
@@ -10,7 +11,7 @@ namespace KafkaLens.Core.Services
     {
         private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
-        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(20);
+        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(10);
 
         public Dictionary<string, Topic> Topics { get; private set; } = new Dictionary<string, Topic>();
 
@@ -67,9 +68,10 @@ namespace KafkaLens.Core.Services
 
         private void LoadTopics()
         {
-            Console.WriteLine("Loading topics...");
+            Log.Information("Loading topics...");
             var topics = FetchTopics();
             topics.ForEach(topic => Topics.Add(topic.Name, topic));
+            Log.Information("Loaded {TopicsCount} topics", topics.Count);
         }
 
         private List<Topic> FetchTopics()
@@ -90,13 +92,12 @@ namespace KafkaLens.Core.Services
 
         public List<Message> GetMessages(string topicName, int partition, FetchOptions options)
         {
-            Console.WriteLine($"Getting messages for {topicName}:{partition}");
-            var watch = new Stopwatch();
-            watch.Start();
+            Log.Information("Fetching {MessageCount} messages for partition {Topic}:{Partition}", options.Limit, topicName, partition);
             var tp = ValidateTopicPartition(topicName, partition);
             var messages = GetMessages(new List<Confluent.Kafka.TopicPartition>(){tp}, options);
+            Log.Information("Fetched {MessageCount} messages for partition {Topic}:{Partition}", messages.Count, topicName, partition);
 
-            return messages.ToList();
+            return messages;
         }
 
         private Confluent.Kafka.TopicPartition ValidateTopicPartition(string topicName, int partition)
@@ -116,13 +117,15 @@ namespace KafkaLens.Core.Services
 
         public List<Message> GetMessages(string topicName, FetchOptions options)
         {
-            Console.WriteLine($"Getting messages for topic {topicName}");
+            Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topicName);
 
             ValidateTopic(topicName);
             var topic = Topics[topicName];
             var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id)).ToList();
 
-            return GetMessages(tps, options);
+            var messages = GetMessages(tps, options);
+            Log.Information("Fetched {MessageCount} messages for topic {Topic}", messages.Count, topicName);
+            return messages;
         }
 
         private List<Message> GetMessages(List<Confluent.Kafka.TopicPartition> tps, FetchOptions options)
@@ -132,7 +135,7 @@ namespace KafkaLens.Core.Services
             var tpos = CreateTopicPartitionOffsets(tps, watermarks, partitionOptions);
 
             var tpoLimits = new List<(TopicPartitionOffset Tpo, int Limit)>();
-            for (int i = 0; i < tpos.Count; i++)
+            for (var i = 0; i < tpos.Count; i++)
             {
                 var tpoLimit = (Tpo: tpos[i], Limit: partitionOptions[i].Limit);
                 tpoLimits.Add(tpoLimit);
@@ -167,7 +170,7 @@ namespace KafkaLens.Core.Services
         {
             var tpos = new List<Confluent.Kafka.TopicPartitionOffset>();
 
-            for (int i = 0; i < tps.Count; ++i)
+            for (var i = 0; i < tps.Count; ++i)
             {
                 UpdateForWatermarks(partitionOptions[i].Start, watermarks[i]);
                 var tpo = new TopicPartitionOffset(tps[i], partitionOptions[i].Start.Offset);
@@ -189,7 +192,7 @@ namespace KafkaLens.Core.Services
 
                     var tpos = Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout);
 
-                    for (int i = 0; i < tpos.Count; i++)
+                    for (var i = 0; i < tpos.Count; i++)
                     {
                         var limit = remaining / (tps.Count - i);
                         remaining -= limit;
@@ -198,11 +201,11 @@ namespace KafkaLens.Core.Services
                     }
                     break;
                 case PositionType.OFFSET:
-                    for (int i = 0; i < tps.Count; i++)
+                    for (var i = 0; i < tps.Count; i++)
                     {
                         var limit = remaining / (tps.Count - i);
                         remaining -= limit;
-                        long offset = options.Start.Offset;
+                        var offset = options.Start.Offset;
                         if (offset < 0)
                         {
                             offset = -1 -limit;
@@ -218,24 +221,26 @@ namespace KafkaLens.Core.Services
 
         private int FetchMessages(IConsumer<byte[], byte[]> consumer, ConcurrentBag<Message> messages, int requiredCount)
         {
-            while (requiredCount > 0)
+            lock (Consumer)
             {
-                var result = consumer.Consume(consumeTimeout);
-                if (result == null)
+                while (requiredCount > 0)
                 {
-                    Console.WriteLine("Got null message. Must be timed out.");
-                    break;
-                }
-                if (result.IsPartitionEOF)
-                {
-                    Console.WriteLine("End of partition reached.");
-                    break;
-                }
+                    var result = consumer.Consume(consumeTimeout);
+                    if (result == null)
+                    {
+                        Log.Information("Got null message. Must be timed out");
+                        break;
+                    }
 
-                messages.Add(CreateMessage(result));
-                --requiredCount;
-                //Console.WriteLine("Got message in {0} ms", watch.ElapsedMilliseconds);
-                //watch.Restart();
+                    if (result.IsPartitionEOF)
+                    {
+                        Log.Information("End of partition reached");
+                        break;
+                    }
+
+                    messages.Add(CreateMessage(result));
+                    --requiredCount;
+                }
             }
 
             return requiredCount;
@@ -245,6 +250,7 @@ namespace KafkaLens.Core.Services
         {
             lock(Consumer)
             {
+                Log.Debug("Querying watermark offsets for {TopicPartitions}", tps);
                 return tps.ConvertAll(tp => Consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout));
             }
         }
@@ -289,7 +295,7 @@ namespace KafkaLens.Core.Services
             if (tptList.Count > 0)
             {
                 var tops = Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout);
-                int i = 0;
+                var i = 0;
                 if (options.Start.Type == PositionType.TIMESTAMP)
                 {
                     options.Start.SetOffset(tops[i++].Offset);
@@ -308,15 +314,15 @@ namespace KafkaLens.Core.Services
             {
                 // if options.Start.Offset = -1 => offset = watermarks.High
                 // means no message will be returned
-                offset = watermarks.High + 1 + offset;
+                offset = watermarks.High.Value + 1 + offset;
             }
-            if (offset < watermarks.Low)
+            if (offset < watermarks.Low.Value)
             {
-                offset = watermarks.Low;
+                offset = watermarks.Low.Value;
             }
-            else if (offset > watermarks.High)
+            else if (offset > watermarks.High.Value)
             {
-                offset = watermarks.High;
+                offset = watermarks.High.Value;
             }
             position.SetOffset(offset);
         }
@@ -328,7 +334,7 @@ namespace KafkaLens.Core.Services
                 var end = options.End;
 
                 // now end has a valid offset
-                int distance = (int)(end.Offset - options.Start.Offset);
+                var distance = (int)(end.Offset - options.Start.Offset);
                 if (options.Limit == 0 || options.Limit > distance)
                 {
                     options.Limit = distance;
@@ -340,9 +346,9 @@ namespace KafkaLens.Core.Services
             }
         }
 
-        private Message CreateMessage(ConsumeResult<byte[], byte[]> result)
+        private static Message CreateMessage(ConsumeResult<byte[], byte[]> result)
         {
-            long epochMillis = result.Message.Timestamp.UnixTimestampMs;
+            var epochMillis = result.Message.Timestamp.UnixTimestampMs;
             var headers = result.Message.Headers.ToDictionary(header =>
                 header.Key, header => header.GetValueBytes());
 

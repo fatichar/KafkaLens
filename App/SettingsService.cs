@@ -8,7 +8,7 @@ namespace KafkaLens.App
         
         public string? GetValue(string key)
         {
-            settings.TryGetValue(key, out string? val);
+            settings.TryGetValue(key, out var val);
             return val;
         }
         
