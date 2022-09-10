@@ -1,9 +1,7 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using Confluent.Kafka;
+﻿using Confluent.Kafka;
 using KafkaLens.Shared.Models;
 using Serilog;
-using static Confluent.Kafka.ConfigPropertyNames;
+using TopicPartition = Confluent.Kafka.TopicPartition;
 
 namespace KafkaLens.Core.Services
 {
@@ -84,20 +82,21 @@ namespace KafkaLens.Core.Services
             return topics;
         }
 
-        public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options)
+        public MessageStream GetMessagesAsync(string topic, int partition, FetchOptions options)
         {
-            return await Task.Run(() =>
-                GetMessages(topic, partition, options));
+            var messages = new MessageStream();
+            Task.Run(() =>
+                GetMessages(topic, partition, options, messages));
+            return messages;
         }
 
-        public List<Message> GetMessages(string topicName, int partition, FetchOptions options)
+        private void GetMessages(string topicName, int partition, FetchOptions options,
+            MessageStream messages)
         {
             Log.Information("Fetching {MessageCount} messages for partition {Topic}:{Partition}", options.Limit, topicName, partition);
             var tp = ValidateTopicPartition(topicName, partition);
-            var messages = GetMessages(new List<Confluent.Kafka.TopicPartition>(){tp}, options);
-            Log.Information("Fetched {MessageCount} messages for partition {Topic}:{Partition}", messages.Count, topicName, partition);
-
-            return messages;
+            GetMessages(new List<Confluent.Kafka.TopicPartition>(){tp}, options, messages);
+            Log.Information("Fetched {MessageCount} messages for partition {Topic}:{Partition}", messages.Messages.Count, topicName, partition);
         }
 
         private Confluent.Kafka.TopicPartition ValidateTopicPartition(string topicName, int partition)
@@ -110,12 +109,14 @@ namespace KafkaLens.Core.Services
             return new Confluent.Kafka.TopicPartition(topicName, partition);
         }
 
-        public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options)
+        public MessageStream GetMessagesAsync(string topic, FetchOptions options)
         {
-            return await Task.Run(() => GetMessages(topic, options));
+            var messages = new MessageStream();
+            Task.Run(() => GetMessages(topic, options, messages));
+            return messages;
         }
 
-        public List<Message> GetMessages(string topicName, FetchOptions options)
+        public void GetMessages(string topicName, FetchOptions options, MessageStream messages)
         {
             Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topicName);
 
@@ -123,12 +124,12 @@ namespace KafkaLens.Core.Services
             var topic = Topics[topicName];
             var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id)).ToList();
 
-            var messages = GetMessages(tps, options);
-            Log.Information("Fetched {MessageCount} messages for topic {Topic}", messages.Count, topicName);
-            return messages;
+            GetMessages(tps, options, messages);
+            Log.Information("Fetched {MessageCount} messages for topic {Topic}", messages.Messages.Count, topicName);
         }
 
-        private List<Message> GetMessages(List<Confluent.Kafka.TopicPartition> tps, FetchOptions options)
+        private void GetMessages(List<TopicPartition> tps, FetchOptions options,
+            MessageStream messages)
         {
             var watermarks = QueryWatermarkOffsets(tps);
             var partitionOptions = CreateOptionsForPartition(tps, options);
@@ -140,14 +141,13 @@ namespace KafkaLens.Core.Services
                 var tpoLimit = (Tpo: tpos[i], Limit: partitionOptions[i].Limit);
                 tpoLimits.Add(tpoLimit);
             }
-            var messages = FetchMessages(tpoLimits);
-
-            return messages.ToList();
+            FetchMessages(tpoLimits, messages);
         }
 
-        private IEnumerable<Message> FetchMessages(List<(TopicPartitionOffset Tpo, int Limit)> tpoLimits)
+        private void FetchMessages(List<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
+            MessageStream messages)
         {
-            var messages = new ConcurrentBag<Message>();
+            // var messages = new ConcurrentBag<Message>();
             if (tpoLimits.Count == 1)
             {
                 Consumer.Assign(tpoLimits[0].Tpo);
@@ -163,7 +163,7 @@ namespace KafkaLens.Core.Services
                     FetchMessages(consumer, messages, tpoLimit.Limit);
                 });
             }
-            return messages;
+            // return messages;
         }
 
         private List<Confluent.Kafka.TopicPartitionOffset> CreateTopicPartitionOffsets(List<Confluent.Kafka.TopicPartition> tps, List<WatermarkOffsets> watermarks, List<FetchOptions> partitionOptions)
@@ -219,7 +219,7 @@ namespace KafkaLens.Core.Services
             return partitionOptions;
         }
 
-        private int FetchMessages(IConsumer<byte[], byte[]> consumer, ConcurrentBag<Message> messages, int requiredCount)
+        private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount)
         {
             lock (Consumer)
             {
@@ -238,10 +238,12 @@ namespace KafkaLens.Core.Services
                         break;
                     }
 
-                    messages.Add(CreateMessage(result));
+                    messages.Messages.Add(CreateMessage(result));
                     --requiredCount;
                 }
             }
+
+            messages.HasMore = false;
 
             return requiredCount;
         }

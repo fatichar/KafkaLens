@@ -16,7 +16,7 @@ namespace KafkaLens.Core.Services
         private Dictionary<string, Entities.KafkaCluster> clusters;
 
         // key = cluster id, value = kafka consumer
-        private IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
+        private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
         public LocalClusterService(
             [NotNull] ILogger<LocalClusterService> logger,
@@ -119,26 +119,24 @@ namespace KafkaLens.Core.Services
             return topics;
         }
 
-        public async Task<List<Message>> GetMessagesAsync(
+        public MessageStream GetMessagesAsync(
             string clusterId,
             string topic,
             FetchOptions options)
         {
             var consumer = GetConsumer(clusterId);
-            var messages = await consumer.GetMessagesAsync(topic, options);
-            messages.Sort((m1, m2) => (int)(m1.EpochMillis - m2.EpochMillis));
+            var messages = consumer.GetMessagesAsync(topic, options);
             return messages;
         }
 
-        public async Task<List<Message>> GetMessagesAsync(
+        public MessageStream GetMessagesAsync(
             string clusterId,
             string topic,
             int partition,
             FetchOptions options)
         {
             var consumer = GetConsumer(clusterId);
-            var messages = await consumer.GetMessagesAsync(topic, partition, options);
-            messages.Sort((m1, m2) => (int)(m1.EpochMillis - m2.EpochMillis));
+            var messages = consumer.GetMessagesAsync(topic, partition, options);
             return messages;
         }
         #endregion Read
@@ -231,7 +229,7 @@ namespace KafkaLens.Core.Services
             throw new ArgumentException("Unknown cluster", nameof(clusterId));
         }
         #endregion Validations
-        
+
         #region Mappers
         private KafkaCluster ToModel(Entities.KafkaCluster cluster)
         {

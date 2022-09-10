@@ -1,4 +1,5 @@
-﻿using KafkaLens.Shared.Models;
+﻿using System.Collections.ObjectModel;
+using KafkaLens.Shared.Models;
 using System.Diagnostics.CodeAnalysis;
 
 namespace KafkaLens.Core.Services
@@ -7,22 +8,22 @@ namespace KafkaLens.Core.Services
     {
         #region create
         Task<bool> ValidateConnectionAsync(string BootstrapServers);
-        
+
         Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster);
         #endregion create
 
         #region read
         IEnumerable<KafkaCluster> GetAllClusters();
 
-        KafkaCluster GetClusterById([DisallowNull] string clusterId);
+        KafkaCluster GetClusterById(string clusterId);
 
-        KafkaCluster GetClusterByName([DisallowNull] string name);
+        KafkaCluster GetClusterByName(string name);
 
-        Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterId);
-        
-        Task<List<Message>> GetMessagesAsync([DisallowNull] string clusterId, [DisallowNull] string topic, FetchOptions options);
-        
-        Task<List<Message>> GetMessagesAsync([DisallowNull] string clusterId, [DisallowNull] string topic, [DisallowNull] int partition, FetchOptions options);
+        Task<IList<Topic>> GetTopicsAsync(string clusterId);
+
+        MessageStream GetMessagesAsync(string clusterId, string topic, FetchOptions options);
+
+        MessageStream GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options);
         #endregion read
 
         #region update

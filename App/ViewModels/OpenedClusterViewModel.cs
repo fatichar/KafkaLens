@@ -6,7 +6,10 @@ using KafkaLens.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Threading.Tasks;
+using System.Windows.Threading;
+using Serilog;
 
 namespace KafkaLens.App.ViewModels
 {
@@ -57,7 +60,7 @@ namespace KafkaLens.App.ViewModels
 
         public ICollection<string> MessageFormats => formatters.Keys;
 
-        public IAsyncRelayCommand FetchMessagesCommand { get; }
+        public RelayCommand FetchMessagesCommand { get; }
         public IAsyncRelayCommand ChangeFormatterCommand { get; }
 
         public string Name { get; }
@@ -67,6 +70,7 @@ namespace KafkaLens.App.ViewModels
         public ObservableCollection<TopicViewModel> Topics { get; } = new();
 
         public MessagesViewModel CurrentMessages { get; } = new();
+        private List<MessageViewModel> pendingMessages = new();
 
         private ITreeNode? selectedNode;
 
@@ -109,7 +113,7 @@ namespace KafkaLens.App.ViewModels
             this.clusterViewModel = clusterViewModel;
             Name = name;
 
-            FetchMessagesCommand = new AsyncRelayCommand(FetchMessagesAsync);
+            FetchMessagesCommand = new RelayCommand(FetchMessages);
             ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
             FetchPosition = FetchPositionsForTopic[0];
@@ -148,7 +152,7 @@ namespace KafkaLens.App.ViewModels
                     FetchPositions = SelectedNodeType == ITreeNode.NodeType.PARTITION
                         ? FetchPositionsForPartition
                         : FetchPositionsForTopic;
-                    if (selectedNode != null)
+                    if (selectedNode is { Type: ITreeNode.NodeType.PARTITION } or { Type: ITreeNode.NodeType.TOPIC })
                     {
                         FetchMessagesCommand.Execute(null);
                     }
@@ -158,29 +162,79 @@ namespace KafkaLens.App.ViewModels
         }
 
         public string ClusterId => clusterViewModel.Id;
+        MessageStream? messages = null;
+        private readonly DispatcherTimer timer = new()
+        {
+            Interval = TimeSpan.FromMilliseconds(100)
+        };
 
-        private async Task FetchMessagesAsync()
+        private void FetchMessages()
         {
             if (selectedNode == null)
             {
                 return;
             }
-            List<Message>? messages = null;
+
             var fetchOptions = CreateFetchOptions();
-            if (selectedNode is TopicViewModel topic)
+
+            timer.Start();
+            timer.Tick += OnDispatcherTimer_Tick;
+            timer.Start();
+
+            messages = selectedNode switch
             {
-                messages = await clusterService.GetMessagesAsync(clusterViewModel.Id, topic.Name, fetchOptions);
-            }
-            else if (selectedNode is PartitionViewModel partition)
-            {
-                messages = await clusterService.GetMessagesAsync(clusterViewModel.Id, partition.TopicName, partition.Id, fetchOptions);
-            }
+                TopicViewModel topic => clusterService.GetMessagesAsync(clusterViewModel.Id, topic.Name,
+                    fetchOptions),
+
+                PartitionViewModel partition => clusterService.GetMessagesAsync(clusterViewModel.Id,
+                    partition.TopicName, partition.Id, fetchOptions),
+
+                _ => null
+            };
 
             if (messages != null)
             {
                 CurrentMessages.Clear();
-                // TODO: fetch messages in multiple steps
-                OnMessagesFetched((IMessageSource)selectedNode, messages);
+                messages.Messages.CollectionChanged += OnMessagesChanged;
+            }
+        }
+
+        private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            var node = (IMessageSource?)SelectedNode;
+            var formatter = node?.Formatter ?? jsonFormatter;
+            lock (pendingMessages)
+            {
+                Log.Debug("Pending messages = {Count}", pendingMessages.Count);
+                Log.Debug("Received {Count} messages", e.NewItems?.Count);
+                foreach (var msg in e.NewItems)
+                {
+                    MessageViewModel viewModel = new((Message)msg, formatter);
+                    pendingMessages.Add(viewModel);
+                }
+                Log.Debug("Pending messages = {Count}", pendingMessages.Count);
+            }
+        }
+
+        private void OnMessagesFinished()
+        {
+            timer.Tick -= OnDispatcherTimer_Tick;
+            timer.Stop();
+        }
+
+        private void OnDispatcherTimer_Tick(object? sender, EventArgs e)
+        {
+            lock (pendingMessages)
+            {
+                Log.Debug("UI: Pending messages = {Count}", pendingMessages.Count);
+                pendingMessages.ForEach(CurrentMessages.Add);
+                pendingMessages.Clear();
+            }
+
+            if (!messages?.HasMore ?? false)
+            {
+                Log.Debug("UI: No more messages");
+                OnMessagesFinished();
             }
         }
 
@@ -213,16 +267,14 @@ namespace KafkaLens.App.ViewModels
             return fetchOptions;
         }
 
-        private void OnMessagesFetched(IMessageSource node, List<Message> messages)
+        private void OnMessagesFetched(object source, List<Message> messages)
         {
-            if (node != null)
+            var node = (IMessageSource)source;
+            var formatter = node.Formatter;
+            foreach (var msg in messages)
             {
-                var formatter = node.Formatter;
-                foreach (var msg in messages)
-                {
-                    MessageViewModel viewModel = new(msg, formatter);
-                    CurrentMessages.Add(viewModel);
-                }
+                MessageViewModel viewModel = new(msg, formatter);
+                CurrentMessages.Add(viewModel);
             }
         }
     }
