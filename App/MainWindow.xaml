@@ -32,7 +32,12 @@
                     behaviors:TabContent.IsCached="true">
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Name}" MinWidth="40" TextAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Name}" MinWidth="40" TextAlignment="Center"/>
+                        <Button Content="x" VerticalContentAlignment="Center" HorizontalAlignment="Right"
+                                HorizontalContentAlignment="Center" BorderThickness="0" Background="White"
+                                Width="20" Command="{Binding CloseTabCommand}"/>
+                    </StackPanel>
                 </DataTemplate>
             </TabControl.ItemTemplate>
             <behaviors:TabContent.Template>

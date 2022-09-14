@@ -37,16 +37,36 @@ namespace KafkaLens.ViewModels
         protected override void OnActivated()
         {
             Messenger.Register<MainViewModel, OpenClusterMessage>(this, (r, m) => r.Receive(m));
+            Messenger.Register<MainViewModel, CloseTabMessage>(this, (r, m) => r.Receive(m));
         }
 
         private void AddClusterAsync()
         {
+            // var openedCluster = new OpenedClusterViewModel(settingsService, clusterService, clusterViewModel, newName);
+            // alreadyOpened.Add(openedCluster);
         }
 
         public void Receive(OpenClusterMessage message)
         {
             OpenCluster(message.ClusterViewModel);
             SelectedIndex = OpenedClusters.Count - 1;
+        }
+
+        private void Receive(CloseTabMessage message)
+        {
+            CloseTab(message.OpenedClusterViewModel);
+        }
+
+        private void CloseTab(OpenedClusterViewModel openedCluster)
+        {
+            Log.Information("Closing tab: {TabName}", openedCluster.Name);
+            var openedList = openedClustersMap[openedCluster.ClusterId];
+            openedList.Remove(openedCluster);
+            if (openedList.Count == 0)
+            {
+                openedClustersMap.Remove(openedCluster.ClusterId);
+            }
+            OpenedClusters.Remove(openedCluster);
         }
 
         private void OpenCluster(ClusterViewModel clusterViewModel)

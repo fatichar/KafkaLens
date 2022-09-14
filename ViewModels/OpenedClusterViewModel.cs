@@ -2,9 +2,11 @@
 using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
 using KafkaLens.ViewModels.Formatting;
+using KafkaLens.ViewModels.Messages;
 using Serilog;
 
 namespace KafkaLens.ViewModels
@@ -105,6 +107,7 @@ namespace KafkaLens.ViewModels
             this.clusterViewModel = clusterViewModel;
             Name = name;
 
+            CloseTabCommand = new RelayCommand(Close);
             FetchMessagesCommand = new RelayCommand(FetchMessages);
             ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
@@ -114,6 +117,11 @@ namespace KafkaLens.ViewModels
             IsExpanded = true;
 
             IsActive = true;
+        }
+
+        private void Close()
+        {
+            _ = Messenger.Send(new CloseTabMessage(this));
         }
 
         private Task UpdateFormatterAsync()
@@ -154,6 +162,8 @@ namespace KafkaLens.ViewModels
         }
 
         public string ClusterId => clusterViewModel.Id;
+        public IRelayCommand CloseTabCommand { get; }
+
         MessageStream? messages = null;
         private List<IMessageLoadListener> messageLoadListeners = new();
 
