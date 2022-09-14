@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <RootNamespace>KafkaLens.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <AssemblyName>KafkaLens</AssemblyName>
+    <LangVersion>latestmajor</LangVersion>
+    <Company>KafkaLens</Company>
+    <Product>KafkaLens</Product>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,11 +24,13 @@
   <ItemGroup>
     <Folder Include="DataAccess\" />
     <Folder Include="Themes\" />
+    <Folder Include="ViewModels" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\ViewModels\ViewModels.csproj" />
   </ItemGroup>
 
   <ItemGroup>

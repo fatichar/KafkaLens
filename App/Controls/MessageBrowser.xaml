@@ -6,9 +6,10 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800"
              xmlns:local="clr-namespace:KafkaLens.App.Controls"
-             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
+             xmlns:viewmodels="clr-namespace:KafkaLens.ViewModels"
              xmlns:dgx="clr-namespace:DataGridExtensions;assembly=DataGridExtensions"
-             d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
+             xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <UserControl.Resources>
         <ControlTemplate x:Key="MultipleChoiceFilter">
             <dgx:MultipleChoiceFilter Filter="{Binding Path=Filter, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=dgx:DataGridFilterColumnControl}}" />

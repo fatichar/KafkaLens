@@ -9,13 +9,13 @@ namespace KafkaLens.Core.Services
     {
         private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
-        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(10);
+        private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(20);
 
-        public Dictionary<string, Topic> Topics { get; private set; } = new Dictionary<string, Topic>();
+        private Dictionary<string, Topic> Topics { get; set; } = new();
 
         private IConsumer<byte[], byte[]> Consumer { get; }
 
-        public ConsumerConfig Config { get; private set; }
+        private ConsumerConfig Config { get; set; }
 
         private IAdminClient AdminClient { get; }
 
@@ -40,7 +40,9 @@ namespace KafkaLens.Core.Services
                 ClientId = "KafkaLens.Server",
                 BootstrapServers = url,
                 EnableAutoOffsetStore = false,
-                EnableAutoCommit = false
+                EnableAutoCommit = false,
+                FetchMaxBytes = 2_000_000,
+                // QueuedMaxMessagesKbytes = 100_000
             };
         }
 
@@ -144,7 +146,7 @@ namespace KafkaLens.Core.Services
             FetchMessages(tpoLimits, messages);
         }
 
-        private void FetchMessages(List<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
+        private void FetchMessages(IReadOnlyList<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
             MessageStream messages)
         {
             // var messages = new ConcurrentBag<Message>();
@@ -163,7 +165,8 @@ namespace KafkaLens.Core.Services
                     FetchMessages(consumer, messages, tpoLimit.Limit);
                 });
             }
-            // return messages;
+
+            messages.HasMore = false;
         }
 
         private List<Confluent.Kafka.TopicPartitionOffset> CreateTopicPartitionOffsets(List<Confluent.Kafka.TopicPartition> tps, List<WatermarkOffsets> watermarks, List<FetchOptions> partitionOptions)
@@ -242,8 +245,6 @@ namespace KafkaLens.Core.Services
                     --requiredCount;
                 }
             }
-
-            messages.HasMore = false;
 
             return requiredCount;
         }

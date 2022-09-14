@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace KafkaLens.App
+﻿namespace KafkaLens.ViewModels
 {
     public class SettingsService : ISettingsService
     {

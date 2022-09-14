@@ -1,17 +1,13 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using KafkaLens.App.Formating;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Threading.Tasks;
-using System.Windows.Threading;
+using KafkaLens.ViewModels.Formatting;
 using Serilog;
 
-namespace KafkaLens.App.ViewModels
+namespace KafkaLens.ViewModels
 {
     public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
     {
@@ -37,11 +33,7 @@ namespace KafkaLens.App.ViewModels
 
         public bool IsSelected { get; set; }
         public bool IsExpandable => true;
-        public bool IsExpanded
-        {
-            get;
-            set;
-        }
+        public bool IsExpanded { get; set; }
 
         static OpenedClusterViewModel()
         {
@@ -163,10 +155,7 @@ namespace KafkaLens.App.ViewModels
 
         public string ClusterId => clusterViewModel.Id;
         MessageStream? messages = null;
-        private readonly DispatcherTimer timer = new()
-        {
-            Interval = TimeSpan.FromMilliseconds(100)
-        };
+        private List<IMessageLoadListener> messageLoadListeners = new();
 
         private void FetchMessages()
         {
@@ -176,10 +165,7 @@ namespace KafkaLens.App.ViewModels
             }
 
             var fetchOptions = CreateFetchOptions();
-
-            timer.Start();
-            timer.Tick += OnDispatcherTimer_Tick;
-            timer.Start();
+            messageLoadListeners.ForEach(listener => listener.MessageLoadingStarted());
 
             messages = selectedNode switch
             {
@@ -218,22 +204,35 @@ namespace KafkaLens.App.ViewModels
 
         private void OnMessagesFinished()
         {
-            timer.Tick -= OnDispatcherTimer_Tick;
-            timer.Stop();
+            messageLoadListeners.ForEach(listener => listener.MessageLoadingFinished());
         }
 
-        private void OnDispatcherTimer_Tick(object? sender, EventArgs e)
+        public void AddMessageLoadListener(IMessageLoadListener listener)
+        {
+            messageLoadListeners.Add(listener);
+        }
+
+        public void RemoveMessageLoadListener(IMessageLoadListener listener)
+        {
+            messageLoadListeners.Remove(listener);
+        }
+
+        public void UpdateMessages()
         {
             lock (pendingMessages)
             {
                 Log.Debug("UI: Pending messages = {Count}", pendingMessages.Count);
-                pendingMessages.ForEach(CurrentMessages.Add);
-                pendingMessages.Clear();
+                if (pendingMessages.Count > 0)
+                {
+                    pendingMessages.ForEach(CurrentMessages.Add);
+                    Log.Information("UI: Loaded {Count} messages", pendingMessages.Count);
+                    pendingMessages.Clear();
+                }
             }
 
             if (!messages?.HasMore ?? false)
             {
-                Log.Debug("UI: No more messages");
+                Log.Information("UI: No more messages");
                 OnMessagesFinished();
             }
         }
@@ -245,11 +244,11 @@ namespace KafkaLens.App.ViewModels
             switch (FetchPosition)
             {
                 case "End":
-                    end = Core.Services.FetchPosition.END;
-                    start = new(PositionType.OFFSET, Core.Services.FetchPosition.END.Offset - FetchCount);
+                    end = KafkaLens.Core.Services.FetchPosition.END;
+                    start = new(PositionType.OFFSET, KafkaLens.Core.Services.FetchPosition.END.Offset - FetchCount);
                     break;
                 case "Start":
-                    start = Core.Services.FetchPosition.START;
+                    start = KafkaLens.Core.Services.FetchPosition.START;
                     break;
                 case "Timestamp":
                     var epochMs = (long)(StartTimestamp.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
@@ -265,17 +264,6 @@ namespace KafkaLens.App.ViewModels
             var fetchOptions = new FetchOptions(start, end);
             fetchOptions.Limit = FetchCount;
             return fetchOptions;
-        }
-
-        private void OnMessagesFetched(object source, List<Message> messages)
-        {
-            var node = (IMessageSource)source;
-            var formatter = node.Formatter;
-            foreach (var msg in messages)
-            {
-                MessageViewModel viewModel = new(msg, formatter);
-                CurrentMessages.Add(viewModel);
-            }
         }
     }
 }

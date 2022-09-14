@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace KafkaLens.App.Formating
+namespace KafkaLens.ViewModels.Formatting
 {
     public interface IMessageFormatter
     {

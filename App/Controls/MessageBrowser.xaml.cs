@@ -1,5 +1,5 @@
 ﻿using ICSharpCode.AvalonEdit.Highlighting;
-using KafkaLens.App.ViewModels;
+using KafkaLens.ViewModels;
 using System;
 using System.ComponentModel;
 using System.Windows;

@@ -1,10 +1,11 @@
-﻿using KafkaLens.App.ViewModels;
+﻿using KafkaLens.ViewModels;
 using KafkaLens.Core.DataAccess;
 using KafkaLens.Core.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Windows;
+using KafkaLens.ViewModels;
 using Serilog;
 
 namespace KafkaLens.App

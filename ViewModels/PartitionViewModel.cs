@@ -1,15 +1,13 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
-using System;
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
-using KafkaLens.App.Formating;
+using KafkaLens.ViewModels.Formatting;
 
-namespace KafkaLens.App.ViewModels
+namespace KafkaLens.ViewModels
 {
     public class PartitionViewModel : ObservableRecipient, IMessageSource
     {

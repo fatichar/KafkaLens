@@ -1,4 +1,4 @@
-﻿namespace KafkaLens.App.ViewModels
+﻿namespace KafkaLens.ViewModels
 {
     public interface ITreeNode
     {

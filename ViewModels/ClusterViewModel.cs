@@ -1,13 +1,12 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KafkaLens.App.Messages;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
+using KafkaLens.ViewModels.Messages;
 
-namespace KafkaLens.App.ViewModels
+namespace KafkaLens.ViewModels
 {
     public sealed class ClusterViewModel : ObservableRecipient
     {

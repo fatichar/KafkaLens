@@ -1,8 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace KafkaLens.App.ViewModels
+namespace KafkaLens.ViewModels
 {
     public sealed class MessagesViewModel : ObservableRecipient
     {

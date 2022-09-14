@@ -1,7 +1,8 @@
-﻿using KafkaLens.App.Formating;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 
-namespace KafkaLens.App.ViewModels
+using KafkaLens.ViewModels.Formatting;
+
+namespace KafkaLens.ViewModels
 {
     public interface IMessageSource : ITreeNode
     {

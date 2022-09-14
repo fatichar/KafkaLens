@@ -1,13 +1,10 @@
-﻿using Confluent.Kafka;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
 using System.Text;
-using System.Text.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace KafkaLens.App.Formating
+namespace KafkaLens.ViewModels.Formatting
 {
     public class JsonFormatter : IMessageFormatter
     {
@@ -34,7 +31,7 @@ namespace KafkaLens.App.Formating
                 {
                     using (JsonTextWriter jw = new JsonTextWriter(sw))
                     {
-                        jw.Formatting = Formatting.Indented;
+                        jw.Formatting = Newtonsoft.Json.Formatting.Indented;
                         jw.IndentChar = INDENT_CHAR;
                         jw.Indentation = INDENT_SIZE;
 

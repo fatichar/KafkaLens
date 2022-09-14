@@ -5,11 +5,12 @@
     mc:Ignorable="d" 
     d:DesignHeight="1000" d:DesignWidth="200"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels" 
+    xmlns:viewmodels="clr-namespace:KafkaLens.ViewModels" 
     xmlns:local="clr-namespace:KafkaLens.App.Controls"
-    d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
+    xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <local:Navigator x:Name="navigator"
+        <local:Navigator x:Name="Navigator"
             DockPanel.Dock="Left"
             Width="200"
             Height="Auto"
@@ -19,6 +20,6 @@
             BorderBrush="#FF558FE7">
         </local:Navigator>
 
-        <local:Browser x:Name="browser" />
+        <local:Browser x:Name="Browser" />
     </DockPanel>
 </UserControl>

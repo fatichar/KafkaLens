@@ -1,4 +1,4 @@
-﻿using KafkaLens.App.ViewModels;
+﻿using KafkaLens.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
 

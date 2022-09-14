@@ -1,10 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using KafkaLens.App.Formating;
 using KafkaLens.Shared.Models;
-using System;
-using System.Collections.Generic;
+using KafkaLens.ViewModels.Formatting;
 
-namespace KafkaLens.App.ViewModels
+namespace KafkaLens.ViewModels
 {
     public sealed class MessageViewModel : ObservableRecipient
     {

@@ -1,7 +1,6 @@
-﻿using System;
-using System.Diagnostics.Contracts;
+﻿using System.Diagnostics.Contracts;
 
-namespace KafkaLens.App
+namespace KafkaLens.ViewModels
 {
     public interface ISettingsService
     {

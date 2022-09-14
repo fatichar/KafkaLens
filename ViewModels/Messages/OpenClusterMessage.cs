@@ -1,6 +1,4 @@
-﻿using KafkaLens.App.ViewModels;
-
-namespace KafkaLens.App.Messages
+﻿namespace KafkaLens.ViewModels.Messages
 {
     public class OpenClusterMessage
     {

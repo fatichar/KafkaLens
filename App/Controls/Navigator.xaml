@@ -5,20 +5,20 @@
              mc:Ignorable="d"
              d:DesignHeight="980" d:DesignWidth="330"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
-             d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
+             xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <UserControl.Resources>
-        <HierarchicalDataTemplate DataType = "{x:Type viewmodels:OpenedClusterViewModel}"
+        <HierarchicalDataTemplate DataType = "{x:Type viewModels:OpenedClusterViewModel}"
                                 ItemsSource = "{Binding Path=Topics}">
             <TextBlock Text="{Binding Path=Name}"/>
         </HierarchicalDataTemplate>
 
-        <HierarchicalDataTemplate DataType = "{x:Type viewmodels:TopicViewModel}"
+        <HierarchicalDataTemplate DataType = "{x:Type viewModels:TopicViewModel}"
                                 ItemsSource = "{Binding Path=Partitions}">
             <TextBlock Text="{Binding Path=Name}"/>
         </HierarchicalDataTemplate>
 
-        <DataTemplate DataType = "{x:Type viewmodels:PartitionViewModel}">
+        <DataTemplate DataType = "{x:Type viewModels:PartitionViewModel}">
             <TextBlock Text="{Binding Path=Name}"/>
         </DataTemplate>
     </UserControl.Resources>

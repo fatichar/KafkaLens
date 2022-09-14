@@ -1,14 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KafkaLens.App.Messages;
 using KafkaLens.Core.Services;
-using System.Collections.ObjectModel;
-using System.Linq;
+using KafkaLens.ViewModels.Messages;
 using Serilog;
 
-namespace KafkaLens.App.ViewModels
+namespace KafkaLens.ViewModels
 {
     public class MainViewModel : ObservableRecipient
     {

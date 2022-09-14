@@ -1,10 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using KafkaLens.Shared.Models;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using KafkaLens.Core.Services;
-using System.Collections.ObjectModel;
-using KafkaLens.App.Formating;
+using KafkaLens.Shared.Models;
 
-namespace KafkaLens.App.ViewModels
+using KafkaLens.ViewModels.Formatting;
+
+namespace KafkaLens.ViewModels
 {
     public sealed class TopicViewModel : ObservableRecipient, IMessageSource
     {

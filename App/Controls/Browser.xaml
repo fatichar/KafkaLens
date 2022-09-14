@@ -5,10 +5,9 @@
              mc:Ignorable="d"
              d:DesignHeight="980" d:DesignWidth="330"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewmodels="clr-namespace:KafkaLens.App.ViewModels"
              xmlns:local="clr-namespace:KafkaLens.App.Controls"
-             xmlns:dgx="clr-namespace:DataGridExtensions;assembly=DataGridExtensions"
-             d:DataContext="{d:DesignInstance Type=viewmodels:OpenedClusterViewModel}">
+             xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <Grid>
         <ContentPresenter Content="{Binding}">
             <!-- Presentations -->
