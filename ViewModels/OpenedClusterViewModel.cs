@@ -54,11 +54,12 @@ namespace KafkaLens.ViewModels
 
         public ICollection<string> MessageFormats => formatters.Keys;
 
+        public RelayCommand ConnectCommand { get; }
         public RelayCommand FetchMessagesCommand { get; }
         public IAsyncRelayCommand ChangeFormatterCommand { get; }
 
         public string Name { get; }
-        public string Address => clusterViewModel.Address;
+        public string Address => clusterViewModel?.Address ?? "";
 
         public ObservableCollection<ITreeNode> Nodes { get; } = new();
         public ObservableCollection<TopicViewModel> Topics { get; } = new();
@@ -107,6 +108,7 @@ namespace KafkaLens.ViewModels
             this.clusterViewModel = clusterViewModel;
             Name = name;
 
+            ConnectCommand = new RelayCommand(Connect);
             CloseTabCommand = new RelayCommand(Close);
             FetchMessagesCommand = new RelayCommand(FetchMessages);
             ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
@@ -117,6 +119,11 @@ namespace KafkaLens.ViewModels
             IsExpanded = true;
 
             IsActive = true;
+        }
+
+        private async void Connect()
+        {
+            await LoadTopicsAsync();
         }
 
         private void Close()
@@ -274,6 +281,11 @@ namespace KafkaLens.ViewModels
             var fetchOptions = new FetchOptions(start, end);
             fetchOptions.Limit = FetchCount;
             return fetchOptions;
+        }
+
+        public void UpdateCluster(string name, string address)
+        {
+            
         }
     }
 }

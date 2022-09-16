@@ -42,8 +42,8 @@ namespace KafkaLens.ViewModels
 
         private void AddClusterAsync()
         {
-            // var openedCluster = new OpenedClusterViewModel(settingsService, clusterService, clusterViewModel, newName);
-            // alreadyOpened.Add(openedCluster);
+            var openedCluster = new OpenedClusterViewModel(settingsService, clusterService, null, "New Cluster");
+            OpenedClusters.Add(openedCluster);
         }
 
         public void Receive(OpenClusterMessage message)

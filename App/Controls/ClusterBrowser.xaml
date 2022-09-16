@@ -20,9 +20,9 @@
             <ColumnDefinition Width="Auto" MinWidth="500"/>
         </Grid.ColumnDefinitions>
         <Label Grid.Row="0" Grid.Column="0" Content="Cluster Name:"/>
-        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsReadOnly="True"/>
+        <TextBox x:Name="NameBox" Grid.Row="0" Grid.Column="1" Text="{Binding Name, Mode=OneWay}"/>
         <Label Grid.Row="1" Grid.Column="0" Content="Bootstrap Servers"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Address, Mode=OneWay}" IsReadOnly="True"/>
-        <!--<Button Grid.Row="2" Grid.Column="1" Content="Save" Command="{Binding SaveCommand}"/>-->
+        <TextBox x:Name="AddressBox" Grid.Row="1" Grid.Column="1" Text="{Binding Address, Mode=OneWay}"/>
+        <Button x:Name="ConnectButton" Grid.Row="2" Grid.Column="1" Content="Connect" Click="ConnectButton_OnClick"/>
     </Grid>
 </UserControl>

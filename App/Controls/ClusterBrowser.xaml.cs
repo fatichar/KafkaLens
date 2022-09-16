@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using KafkaLens.ViewModels;
 
 namespace KafkaLens.App.Controls
 {
@@ -20,9 +21,18 @@ namespace KafkaLens.App.Controls
     /// </summary>
     public partial class ClusterBrowser : UserControl
     {
+        private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
+        
         public ClusterBrowser()
         {
             InitializeComponent();
+        }
+
+        private void ConnectButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            var name = NameBox.Text;
+            var address = AddressBox.Text;
+            dataContext.UpdateCluster(name, address);
         }
     }
 }
