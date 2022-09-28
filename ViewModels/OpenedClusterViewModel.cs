@@ -4,9 +4,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Core.Services;
+using KafkaLens.Formatting;
 using KafkaLens.Shared.Models;
-using KafkaLens.ViewModels.Formatting;
-using KafkaLens.ViewModels.Messages;
+using KafkaLens.Messages;
 using Serilog;
 
 namespace KafkaLens.ViewModels
@@ -19,7 +19,7 @@ namespace KafkaLens.ViewModels
         private const int DEFAULT_FETCH_COUNT = 10;
         public static IList<string> FetchPositionsForTopic { get; } = new List<string>();
         public static IList<string> FetchPositionsForPartition { get; } = new List<string>();
-        public IList<string> fetchPositions;
+        public IList<string> fetchPositions = new List<string>();
         public IList<string> FetchPositions
         {
             get => fetchPositions;
@@ -36,21 +36,6 @@ namespace KafkaLens.ViewModels
         public bool IsSelected { get; set; }
         public bool IsExpandable => true;
         public bool IsExpanded { get; set; }
-
-        static OpenedClusterViewModel()
-        {
-            formatters.Add(textFormatter.Name, textFormatter);
-            formatters.Add(jsonFormatter.Name, jsonFormatter);
-
-            FetchPositionsForTopic.Add("End");
-            FetchPositionsForTopic.Add("Timestamp");
-            //FetchPositionsForTopic.Add("Start");
-
-            FetchPositionsForPartition.Add("End");
-            FetchPositionsForPartition.Add("Timestamp");
-            //FetchPositionsForPartition.Add("Offset");
-            //FetchPositionsForPartition.Add("Start");
-        }
 
         public ICollection<string> MessageFormats => formatters.Keys;
 
@@ -78,22 +63,43 @@ namespace KafkaLens.ViewModels
         public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
         public int FetchCount { get; set; } = 10;
         public string? StartOffset { get; set; }
-        public DateTime StartTimestamp { get; set; } = DateTime.Now.Subtract(TimeSpan.FromMinutes(1));
-        public DateTime EndTimestamp { get; set; } = DateTime.Now;
+        public DateTimeOffset StartDate
+        {
+            get => startDate;
+            set
+            {
+                startDate = value;
+            }
+        }
+        public TimeSpan StartTime { get; set; }
 
         private int fontSize = 14;
-        private string fetchPosition;
-
         public int FontSize
         {
             get => fontSize;
             set => SetProperty(ref fontSize, value, true);
         }
 
+        private string fetchPosition = FetchPositionsForTopic[0];
         public string FetchPosition
         {
             get => fetchPosition;
             set => SetProperty(ref fetchPosition, value);
+        }
+
+        static OpenedClusterViewModel()
+        {
+            formatters.Add(textFormatter.Name, textFormatter);
+            formatters.Add(jsonFormatter.Name, jsonFormatter);
+
+            FetchPositionsForTopic.Add("End");
+            FetchPositionsForTopic.Add("Timestamp");
+            //FetchPositionsForTopic.Add("Start");
+
+            FetchPositionsForPartition.Add("End");
+            FetchPositionsForPartition.Add("Timestamp");
+            //FetchPositionsForPartition.Add("Offset");
+            //FetchPositionsForPartition.Add("Start");
         }
 
         public OpenedClusterViewModel(
@@ -115,6 +121,9 @@ namespace KafkaLens.ViewModels
             Nodes.Add(this);
             IsSelected = true;
             IsExpanded = true;
+
+            StartDate = DateTime.Today;
+            StartTime = DateTimeOffset.Now - StartDate;
 
             IsActive = true;
         }
@@ -166,6 +175,7 @@ namespace KafkaLens.ViewModels
 
         MessageStream? messages = null;
         private List<IMessageLoadListener> messageLoadListeners = new();
+        private DateTimeOffset startDate;
 
         private void FetchMessages()
         {
@@ -203,7 +213,7 @@ namespace KafkaLens.ViewModels
             {
                 Log.Debug("Pending messages = {Count}", pendingMessages.Count);
                 Log.Debug("Received {Count} messages", e.NewItems?.Count);
-                foreach (var msg in e.NewItems)
+                foreach (var msg in e.NewItems ?? new List<Message>())
                 {
                     MessageViewModel viewModel = new((Message)msg, formatter);
                     pendingMessages.Add(viewModel);
@@ -261,9 +271,8 @@ namespace KafkaLens.ViewModels
                     start = KafkaLens.Core.Services.FetchPosition.START;
                     break;
                 case "Timestamp":
-                    var epochMs = (long)(StartTimestamp.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
-                    start = new(PositionType.TIMESTAMP, epochMs);
-                    //end = new(PositionType.TIMESTAMP, DateTimeOffset.Now.ToUnixTimeSeconds());
+                    var timeStamp = StartDate + StartTime;
+                    start = new(PositionType.TIMESTAMP, timeStamp.ToUnixTimeMilliseconds());
                     break;
                 case "Offset":
                     start = new(PositionType.OFFSET, long.TryParse(StartOffset, out var offset) ? offset : -1);

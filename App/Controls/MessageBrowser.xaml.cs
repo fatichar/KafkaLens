@@ -8,9 +8,6 @@ using System.Windows.Data;
 
 namespace KafkaLens.App.Controls
 {
-    /// <summary>
-    /// Interaction logic for UserControl1.xaml
-    /// </summary>
     public partial class MessageBrowser : UserControl
     {
         private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
@@ -44,7 +41,7 @@ namespace KafkaLens.App.Controls
             messageDisplayToolbar.filterBox.TextChanged += (s, e) =>
             {
                 singleMessageFilter = messageDisplayToolbar.filterBox.Text.Trim();
-                var message = dataContext.CurrentMessages.CurrentMessage;
+                var message = dataContext?.CurrentMessages?.CurrentMessage;
                 if (message != null)
                 {
                     UpdateMessageText(message);
@@ -66,13 +63,16 @@ namespace KafkaLens.App.Controls
 
         private void UpdateMessagesView()
         {
-            dataContext.CurrentMessages.PositiveFilter = messageTablePositiveFilter;
-            dataContext.CurrentMessages.NegativeFilter = messageTableNegativeFilter;
+            if (dataContext != null)
+            {
+                dataContext.CurrentMessages.PositiveFilter = messageTablePositiveFilter;
+                dataContext.CurrentMessages.NegativeFilter = messageTableNegativeFilter;
+            }
         }
 
         private void messagesGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var message = (MessageViewModel?)(messagesGrid.SelectedItem ?? messagesGrid.CurrentItem);
+            var message = (MessageViewModel?)messagesGrid.SelectedItem;
             dataContext.CurrentMessages.CurrentMessage = message;
             if (message != null)
             {
@@ -86,10 +86,9 @@ namespace KafkaLens.App.Controls
 
         private void UpdateMessageText(MessageViewModel message)
         {
-            // this will update DisplayText
-            message.ApplyFilter(singleMessageFilter);
+            //// this will update DisplayText
             messageViewer.Document.Text = message.DisplayText;
-            
+
             UpdateHighlighting();
         }
 

@@ -1,11 +1,11 @@
 ﻿using System.Text;
 
-namespace KafkaLens.ViewModels.Formatting
+namespace KafkaLens.Formatting
 {
     public class TextFormatter : IMessageFormatter
     {
         public string? Format(byte[] data)
-        {            
+        {
             return Encoding.UTF8.GetString(data);
         }
 

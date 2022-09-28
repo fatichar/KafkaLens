@@ -7,7 +7,6 @@
         mc:Ignorable="d"
         Title="KafkaLens" Height="800" Width="1600"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:viewmodels="clr-namespace:KafkaLens.ViewModels"
         xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
         d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel}" >
 

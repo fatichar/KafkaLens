@@ -1,6 +1,5 @@
 ﻿using System.Collections.ObjectModel;
-
-using KafkaLens.ViewModels.Formatting;
+using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels
 {

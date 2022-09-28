@@ -15,9 +15,11 @@
         </Grid.ColumnDefinitions>
         <ToolBar Grid.Column="0">
             <Label Content="Contains"/>
-            <TextBox x:Name="positiveFilterBox" MinWidth="300" VerticalContentAlignment="Center"/>
+            <TextBox x:Name="positiveFilterBox" MinWidth="300" VerticalContentAlignment="Center" 
+                     Text="{Binding CurrentMessages.PositiveFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
             <Label Content="But not"/>
-            <TextBox x:Name="negativeFilterBox" MinWidth="300" VerticalContentAlignment="Center"/>
+            <TextBox x:Name="negativeFilterBox" MinWidth="300" VerticalContentAlignment="Center" 
+                     Text="{Binding Path=CurrentMessages.NegativeFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
         </ToolBar>
     </Grid>
 </UserControl>

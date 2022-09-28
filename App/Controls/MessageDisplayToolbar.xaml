@@ -15,7 +15,8 @@
         </Grid.ColumnDefinitions>
             <ToolBar Grid.Column="0">
             <Label Content="Filter"/>
-            <TextBox x:Name="filterBox" MinWidth="300" VerticalContentAlignment="Center"/>
+            <TextBox x:Name="filterBox" MinWidth="300" VerticalContentAlignment="Center"
+                Text="{Binding CurrentMessages.LineFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
         </ToolBar>
         <ToolBar Grid.Column="2">
             <Label Content="Zoom"/>

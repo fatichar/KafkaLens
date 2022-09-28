@@ -1,4 +1,4 @@
-﻿namespace KafkaLens.ViewModels.Messages
+﻿namespace KafkaLens.Messages
 {
     public class CloseTabMessage
     {

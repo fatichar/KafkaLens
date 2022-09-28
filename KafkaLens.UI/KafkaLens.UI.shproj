@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>6279c845-92f8-4333-ab99-3d213163593c</ProjectGuid>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing\Microsoft.CodeSharing.Common.Default.props" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing\Microsoft.CodeSharing.Common.props" />
+  <PropertyGroup />
+  <Import Project="KafkaLens.UI.projitems" Label="Shared" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing\Microsoft.CodeSharing.CSharp.targets" />
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Styles\ColorPaletteOverride.xaml" />
+    <UpToDateCheckInput Remove="Styles\MaterialFontsOverride.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <_Globbled_Page Remove="Styles\ColorPaletteOverride.xaml" />
+    <_Globbled_Page Remove="Styles\MaterialFontsOverride.xaml" />
+  </ItemGroup>
+  <!--<ItemGroup>
+    <UpToDateCheckInput Remove="ColorPaletteOverride.xaml" />
+    <UpToDateCheckInput Remove="MaterialFontsOverride.xaml" />
+    <UpToDateCheckInput Remove="Views\Browser.xaml" />
+    <UpToDateCheckInput Remove="Views\FetchOptionsPanel.xaml" />
+    <UpToDateCheckInput Remove="Views\MainPage.xaml" />
+    <UpToDateCheckInput Remove="Views\MessageBrowser.xaml" />
+    <UpToDateCheckInput Remove="Views\MessageDisplayToolbar.xaml" />
+    <UpToDateCheckInput Remove="Views\MessagesToolbar.xaml" />
+    <UpToDateCheckInput Remove="Views\Navigator.xaml" />
+    <UpToDateCheckInput Remove="Views\OpenedClusterPanel.xaml" />
+    <UpToDateCheckInput Remove="Views\ShellControl.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <_Globbed_Compile Remove="Converters\NullToEmptyStringConverter.xaml.cs" />
+    <_Globbed_Compile Remove="Views\Browser.xaml.cs" />
+    <_Globbed_Compile Remove="Views\FetchOptionsPanel.xaml.cs" />
+    <_Globbed_Compile Remove="Views\MainPage.xaml.cs" />
+    <_Globbed_Compile Remove="Views\MessageBrowser.xaml.cs" />
+    <_Globbed_Compile Remove="Views\MessageDisplayToolbar.xaml.cs" />
+    <_Globbed_Compile Remove="Views\MessagesToolbar.xaml.cs" />
+    <_Globbed_Compile Remove="Views\Navigator.xaml.cs" />
+    <_Globbed_Compile Remove="Views\OpenedClusterPanel.xaml.cs" />
+    <_Globbed_Compile Remove="Views\SecondPage.xaml.cs" />
+    <_Globbed_Compile Remove="Views\ShellControl.xaml.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <_Globbled_Page Remove="ColorPaletteOverride.xaml" />
+    <_Globbled_Page Remove="MaterialFontsOverride.xaml" />
+    <_Globbled_Page Remove="Views\Browser.xaml" />
+    <_Globbled_Page Remove="Views\FetchOptionsPanel.xaml" />
+    <_Globbled_Page Remove="Views\MainPage.xaml" />
+    <_Globbled_Page Remove="Views\MessageBrowser.xaml" />
+    <_Globbled_Page Remove="Views\MessageDisplayToolbar.xaml" />
+    <_Globbled_Page Remove="Views\MessagesToolbar.xaml" />
+    <_Globbled_Page Remove="Views\Navigator.xaml" />
+    <_Globbled_Page Remove="Views\OpenedClusterPanel.xaml" />
+    <_Globbled_Page Remove="Views\ShellControl.xaml" />
+  </ItemGroup>-->
+</Project>

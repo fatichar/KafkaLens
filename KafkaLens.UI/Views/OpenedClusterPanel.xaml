@@ -1,0 +1,38 @@
+﻿<UserControl x:Class="KafkaLens.Views.OpenedClusterPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    mc:Ignorable="d" 
+    d:DesignHeight="1000" d:DesignWidth="200"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
+    xmlns:Interactivity="using:Microsoft.Xaml.Interactivity" 
+    xmlns:Interactions="using:Microsoft.Xaml.Interactions.Core"
+	xmlns:views="using:KafkaLens.Views"
+	xmlns:viewModels="using:KafkaLens.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
+    <UserControl.Resources>
+        <views:NullToEmptyStringConverter x:Key="NullToEmptyStringConverter"/>
+    </UserControl.Resources>
+
+    <controls:DockPanel HorizontalAlignment="Left" VerticalAlignment="Stretch">
+        <views:Navigator x:Name="Navigator"
+            controls:DockPanel.Dock="Left"
+            Width="250"
+            Height="Auto"
+            VerticalAlignment="Stretch"
+            Background="#FFDFE5EF" 
+            BorderThickness="1" 
+            BorderBrush="#FF558FE7">
+            <!--<Interactivity:Interaction.Behaviors>
+                <Interactions:DataTriggerBehavior Binding="{Binding SelectedNode, Converter={StaticResource NullToEmptyStringConverter}}" ComparisonCondition="NotEqual" Value="">
+                    <Interactions:ChangePropertyAction TargetObject="{Binding ElementName=Browser}" PropertyName="Visibility" Value="Visible"/>
+                </Interactions:DataTriggerBehavior>
+                <Interactions:DataTriggerBehavior Binding="{Binding SelectedNode, Converter={StaticResource NullToEmptyStringConverter}}" ComparisonCondition="Equal" Value="">
+                    <Interactions:ChangePropertyAction TargetObject="{Binding ElementName=Browser}" PropertyName="Visibility" Value="Collapsed"/>
+                </Interactions:DataTriggerBehavior>
+            </Interactivity:Interaction.Behaviors>-->
+        </views:Navigator>
+        <views:Browser x:Name="Browser" Visibility="{Binding SelectedNode, Converter={StaticResource NullToEmptyStringConverter}}" />
+    </controls:DockPanel>
+</UserControl>

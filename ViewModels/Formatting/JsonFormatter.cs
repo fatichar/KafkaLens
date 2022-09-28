@@ -4,7 +4,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace KafkaLens.ViewModels.Formatting
+namespace KafkaLens.Formatting
 {
     public class JsonFormatter : IMessageFormatter
     {
@@ -42,7 +42,7 @@ namespace KafkaLens.ViewModels.Formatting
                 var formatted = stringWriter.ToString();
                 return formatted;
             }
-            catch (Newtonsoft.Json.JsonException e)
+            catch (Newtonsoft.Json.JsonException)
             {
                 return null;
             }

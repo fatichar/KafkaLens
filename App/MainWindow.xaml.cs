@@ -4,9 +4,6 @@ using System.Windows;
 
 namespace KafkaLens.App
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         public MainWindow()
@@ -14,8 +11,6 @@ namespace KafkaLens.App
             InitializeComponent();
             
             DataContext = App.Current.Services.GetService<MainViewModel>();
-            
-            Context.LoadClustersCommand.Execute(null);
         }
 
         private MainViewModel Context => (MainViewModel) DataContext;

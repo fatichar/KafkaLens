@@ -15,7 +15,16 @@ namespace KafkaLens.ViewModels
         public MessageViewModel? CurrentMessage
         {
             get => currentMessage;
-            set => SetProperty(ref currentMessage, value);
+            set
+            {
+                if (SetProperty(ref currentMessage, value))
+                {
+                    if (currentMessage != null)
+                    {
+                        currentMessage.LineFilter = lineFilter;
+                    }
+                }
+            }
         }
 
         private int selectedIndex;
@@ -24,7 +33,7 @@ namespace KafkaLens.ViewModels
             get => selectedIndex;
             set => SetProperty(ref selectedIndex, value);
         }
-        
+
         private string positiveFilter = "";
         public string PositiveFilter
         {
@@ -40,7 +49,7 @@ namespace KafkaLens.ViewModels
                 ApplyFilter();
             }
         }
-        
+
         private string negativeFilter = "";
         public string NegativeFilter
         {
@@ -57,6 +66,21 @@ namespace KafkaLens.ViewModels
             }
         }
 
+        private string lineFilter = "";
+
+        public string LineFilter
+        {
+            get => lineFilter;
+            set
+            {
+                lineFilter = value;
+                if (currentMessage != null)
+                {
+                    currentMessage.LineFilter = lineFilter;
+                }
+            }
+        }
+
         public MessagesViewModel()
         {
         }
@@ -64,7 +88,7 @@ namespace KafkaLens.ViewModels
         private void ApplyFilter()
         {
             Filtered.Clear();
-            
+
             foreach (var message in Messages)
             {
                 if (FilterAccepts(message.FormattedMessage))

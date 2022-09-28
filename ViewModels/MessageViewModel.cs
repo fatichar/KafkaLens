@@ -1,6 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using KafkaLens.Formatting;
 using KafkaLens.Shared.Models;
-using KafkaLens.ViewModels.Formatting;
 
 namespace KafkaLens.ViewModels
 {
@@ -11,10 +11,17 @@ namespace KafkaLens.ViewModels
 
         public int Partition => message.Partition;
         public long Offset => message.Offset;
-        public string Key => message.KeyText;
+        public string? Key => message.KeyText;
         public string Summary { get; }
         public string FormattedMessage { get; }
-        public string DisplayText { get; set; }
+        public string DisplayText
+        {
+            get => displayText;
+            set
+            {
+                SetProperty(ref displayText, value);
+            }
+        }
         public DateTime Timestamp => DateTime.UnixEpoch.AddMilliseconds(message.EpochMillis).ToLocalTime();
 
         public string FormatterName => formatter.Name;
@@ -23,7 +30,7 @@ namespace KafkaLens.ViewModels
         {
             this.message = message;
             this.formatter = formatter;
-            FormattedMessage = formatter.Format(message.Value) ?? message.ValueText;
+            FormattedMessage = formatter.Format(message.Value ?? Array.Empty<byte>()) ?? message.ValueText;
             Summary = message.ValueText[..100].ReplaceLineEndings(" ");
 
             DisplayText = FormattedMessage;
@@ -31,24 +38,32 @@ namespace KafkaLens.ViewModels
             IsActive = true;
         }
 
-        public void ApplyFilter(string filter)
+        private string lineFilter = "";
+        private string displayText = "";
+
+        public string LineFilter
         {
-            if (filter.Length > 0)
+            get => lineFilter;
+            set
             {
-                var lines = FormattedMessage.Split(Environment.NewLine);
-                var filteredLines = new List<string>();
-                foreach (var line in lines)
+                lineFilter = value;
+                if (lineFilter.Length > 0)
                 {
-                    if (line.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                    var lines = FormattedMessage.Split(Environment.NewLine);
+                    var filteredLines = new List<string>();
+                    foreach (var line in lines)
                     {
-                        filteredLines.Add(line);
+                        if (line.Contains(lineFilter, StringComparison.OrdinalIgnoreCase))
+                        {
+                            filteredLines.Add(line);
+                        }
                     }
+                    DisplayText = string.Join(Environment.NewLine, filteredLines);
                 }
-                DisplayText = string.Join(Environment.NewLine, filteredLines);
-            }
-            else
-            {
-                DisplayText = FormattedMessage;
+                else
+                {
+                    DisplayText = FormattedMessage;
+                }
             }
         }
     }

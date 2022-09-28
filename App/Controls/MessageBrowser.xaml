@@ -35,10 +35,10 @@
             <DataGrid Name="messagesGrid" ItemsSource="{Binding CurrentMessages.Filtered}" AutoGenerateColumns="False"
                   AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6"
                       CurrentItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
-                      SelectedItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
                       SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
                       LoadingRow="messagesGrid_LoadingRow"
                       dgx:DataGridFilter.IsAutoFilterEnabled="True"
+                      HeadersVisibility="All"
                       >
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Partition" Binding="{Binding Partition, Mode=OneWay}" dgx:DataGridFilterColumn.Template="{StaticResource MultipleChoiceFilter}"/>
@@ -89,6 +89,7 @@
             FontSize="{Binding FontSize, Mode=OneWay}"
             IsReadOnly="True"
             />
+
         </DockPanel>
     </Grid>
 </UserControl>
