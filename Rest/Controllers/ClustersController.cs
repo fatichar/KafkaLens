@@ -70,7 +70,7 @@ namespace KafkaLens.Rest.Controllers
         {
             try
             {
-                IList<Topic> topics = (IList<Topic>)_clusterService.GetTopicsAsync(clusterId);
+                IList<Topic> topics = (IList<Topic>)_clusterService.GetTopics(clusterId);
                 return new JsonResult(topics);
             }
             catch (Exception ex)
@@ -80,11 +80,11 @@ namespace KafkaLens.Rest.Controllers
         }
 
         [HttpGet("{clusterId}/{topic}/messages")]
-        public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, [FromQuery] int limit)
+        public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, [FromQuery] int? limit)
         {
             try
             {
-                return await _clusterService.GetMessagesAsync(clusterId, topic, new FetchOptions() { Limit = limit });
+                return await _clusterService.GetMessagesAsync(clusterId, topic, new FetchOptions(FetchPosition.END, limit ?? 10));
             }
             catch (Exception ex)
             {
@@ -92,12 +92,12 @@ namespace KafkaLens.Rest.Controllers
             }
         }
 
-        [HttpGet("{clusterId}/{topic}/{partition}/messages")]
-        public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, int partition, [FromQuery] int limit)
+        [HttpGet("{clusterId}/{topic}/{partition:int}/messages")]
+        public async Task<ActionResult<List<Message>>> GetMessages(string clusterId, string topic, int partition, [FromQuery] int? limit)
         {
             try
             {
-                return await _clusterService.GetMessagesAsync(clusterId, topic, partition, new FetchOptions() { Limit = limit });
+                return await _clusterService.GetMessagesAsync(clusterId, topic, partition, new FetchOptions(FetchPosition.END, limit ?? 10));
             }
             catch (Exception ex)
             {

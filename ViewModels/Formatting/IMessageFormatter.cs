@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace KafkaLens.Formatting
+﻿namespace KafkaLens.Formatting
 {
     public interface IMessageFormatter
     {

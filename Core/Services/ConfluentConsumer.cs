@@ -84,12 +84,19 @@ namespace KafkaLens.Core.Services
             return topics;
         }
 
-        public MessageStream GetMessagesAsync(string topic, int partition, FetchOptions options)
+        public MessageStream GetMessageStream(string topic, int partition, FetchOptions options)
         {
             var messages = new MessageStream();
             Task.Run(() =>
                 GetMessages(topic, partition, options, messages));
             return messages;
+        }
+
+        public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options)
+        {
+            var messages = new MessageStream();
+            await Task.Run(() => GetMessages(topic, partition, options, messages));
+            return messages.Messages.ToList();
         }
 
         private void GetMessages(string topicName, int partition, FetchOptions options,
@@ -111,11 +118,18 @@ namespace KafkaLens.Core.Services
             return new Confluent.Kafka.TopicPartition(topicName, partition);
         }
 
-        public MessageStream GetMessagesAsync(string topic, FetchOptions options)
+        public MessageStream GetMessageStream(string topic, FetchOptions options)
         {
             var messages = new MessageStream();
             Task.Run(() => GetMessages(topic, options, messages));
             return messages;
+        }
+
+        public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options)
+        {
+            var messages = new MessageStream();
+            await Task.Run(() => GetMessages(topic, options, messages));
+            return messages.Messages.ToList();
         }
 
         public void GetMessages(string topicName, FetchOptions options, MessageStream messages)

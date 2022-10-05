@@ -1,6 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using KafkaLens.Shared.Models;
-using System.Diagnostics.CodeAnalysis;
+﻿using KafkaLens.Shared.Models;
 
 namespace KafkaLens.Core.Services
 {
@@ -19,11 +17,14 @@ namespace KafkaLens.Core.Services
 
         KafkaCluster GetClusterByName(string name);
 
-        Task<IList<Topic>> GetTopicsAsync(string clusterId);
+        IList<Topic> GetTopics(string clusterId);
 
-        MessageStream GetMessagesAsync(string clusterId, string topic, FetchOptions options);
+        MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options);
 
-        MessageStream GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options);
+        Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options);
+
+        MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options);
+        Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options);
         #endregion read
 
         #region update

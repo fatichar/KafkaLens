@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Windows;
-using KafkaLens.ViewModels;
 using Serilog;
 
 namespace KafkaLens.App

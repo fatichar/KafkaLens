@@ -37,7 +37,7 @@ namespace KafkaLens.ViewModels
         private async Task LoadTopicsAsync()
         {
             Topics.Clear();
-            var topics = await clusterService.GetTopicsAsync(cluster.Id);
+            var topics = clusterService.GetTopics(cluster.Id);
             foreach (var topic in topics)
             {
                 Topics.Add(topic);

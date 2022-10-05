@@ -13,7 +13,7 @@ namespace KafkaLens.Core.Services
         private readonly ConsumerFactory consumerFactory;
 
         // key = cluster id, value = kafka cluster
-        private Dictionary<string, Entities.KafkaCluster> clusters;
+        private readonly Dictionary<string, Entities.KafkaCluster> clusters;
 
         // key = cluster id, value = kafka consumer
         private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
@@ -27,10 +27,8 @@ namespace KafkaLens.Core.Services
             this.scopeFactory = scopeFactory;
             this.consumerFactory = consumerFactory;
 
-            using (var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>())
-            {
-                clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Id);
-            }
+            using var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
+            clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Id);
         }
 
         #region Create
@@ -109,7 +107,7 @@ namespace KafkaLens.Core.Services
             return ToModel(cluster);
         }
 
-        public async Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterId)
+        public IList<Topic> GetTopics([DisallowNull] string clusterId)
         {
             var consumer = GetConsumer(clusterId);
 
@@ -119,25 +117,42 @@ namespace KafkaLens.Core.Services
             return topics;
         }
 
-        public MessageStream GetMessagesAsync(
+        public MessageStream GetMessageStream(
             string clusterId,
             string topic,
             FetchOptions options)
         {
             var consumer = GetConsumer(clusterId);
-            var messages = consumer.GetMessagesAsync(topic, options);
-            return messages;
+            return consumer.GetMessageStream(topic, options);
         }
 
-        public MessageStream GetMessagesAsync(
+        public async Task<List<Message>> GetMessagesAsync(
+            string clusterId,
+            string topic,
+            FetchOptions options)
+        {
+            var consumer = GetConsumer(clusterId);
+            return await consumer.GetMessagesAsync(topic, options);
+        }
+
+        public MessageStream GetMessageStream(
             string clusterId,
             string topic,
             int partition,
             FetchOptions options)
         {
             var consumer = GetConsumer(clusterId);
-            var messages = consumer.GetMessagesAsync(topic, partition, options);
-            return messages;
+            return consumer.GetMessageStream(topic, partition, options);
+        }
+
+        public async Task<List<Message>> GetMessagesAsync(
+            string clusterId,
+            string topic,
+            int partition,
+            FetchOptions options)
+        {
+            var consumer = GetConsumer(clusterId);
+            return await consumer.GetMessagesAsync(topic, partition, options);
         }
         #endregion Read
 

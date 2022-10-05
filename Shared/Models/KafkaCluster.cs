@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace KafkaLens.Shared.Models
+﻿namespace KafkaLens.Shared.Models
 {
     public class KafkaCluster
     {

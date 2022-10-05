@@ -189,10 +189,10 @@ namespace KafkaLens.ViewModels
 
             messages = selectedNode switch
             {
-                TopicViewModel topic => clusterService.GetMessagesAsync(clusterViewModel.Id, topic.Name,
+                TopicViewModel topic => clusterService.GetMessageStream(clusterViewModel.Id, topic.Name,
                     fetchOptions),
 
-                PartitionViewModel partition => clusterService.GetMessagesAsync(clusterViewModel.Id,
+                PartitionViewModel partition => clusterService.GetMessageStream(clusterViewModel.Id,
                     partition.TopicName, partition.Id, fetchOptions),
 
                 _ => null

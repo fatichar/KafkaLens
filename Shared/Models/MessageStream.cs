@@ -1,9 +1,8 @@
-using System;
 using System.Collections.ObjectModel;
 
 namespace KafkaLens.Shared.Models
 {
-    public class MessageStream
+    public sealed class MessageStream
     {
         private bool hasMore = true;
         public ObservableCollection<Message> Messages { get; set; } = new ObservableCollection<Message>();
@@ -23,6 +22,6 @@ namespace KafkaLens.Shared.Models
 
         public delegate void FinishedEventHandler();
 
-        public virtual event FinishedEventHandler? Finished;
+        public event FinishedEventHandler? Finished;
     }
 }
