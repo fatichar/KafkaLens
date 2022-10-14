@@ -63,7 +63,7 @@ namespace KafkaLens.ViewModels
         public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
         public int FetchCount { get; set; } = 10;
         public string? StartOffset { get; set; }
-        public DateTimeOffset StartDate
+        public DateTime StartDate
         {
             get => startDate;
             set
@@ -71,7 +71,7 @@ namespace KafkaLens.ViewModels
                 startDate = value;
             }
         }
-        public TimeSpan StartTime { get; set; }
+        public DateTime StartTime { get; set; }
 
         private int fontSize = 14;
         public int FontSize
@@ -123,7 +123,7 @@ namespace KafkaLens.ViewModels
             IsExpanded = true;
 
             StartDate = DateTime.Today;
-            StartTime = DateTimeOffset.Now - StartDate;
+            StartTime = DateTime.Now;
 
             IsActive = true;
         }
@@ -175,7 +175,7 @@ namespace KafkaLens.ViewModels
 
         MessageStream? messages = null;
         private List<IMessageLoadListener> messageLoadListeners = new();
-        private DateTimeOffset startDate;
+        private DateTime startDate;
 
         private void FetchMessages()
         {
@@ -271,8 +271,9 @@ namespace KafkaLens.ViewModels
                     start = KafkaLens.Core.Services.FetchPosition.START;
                     break;
                 case "Timestamp":
-                    var timeStamp = StartDate + StartTime;
-                    start = new(PositionType.TIMESTAMP, timeStamp.ToUnixTimeMilliseconds());
+                    var timeStamp = StartDate + StartTime.TimeOfDay;
+                    var epochMs = (long)(timeStamp.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
+                    start = new(PositionType.TIMESTAMP, epochMs);
                     break;
                 case "Offset":
                     start = new(PositionType.OFFSET, long.TryParse(StartOffset, out var offset) ? offset : -1);

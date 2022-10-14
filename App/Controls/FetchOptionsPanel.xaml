@@ -16,6 +16,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" MinWidth="80" />
@@ -28,17 +29,25 @@
                       SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
             </ComboBox>
 
-            <StackPanel Grid.Row="1" Grid.Column="1">
+            <StackPanel Grid.Row="1" Grid.Column="1" Grid.RowSpan="2">
                 <ContentPresenter Content="{Binding}">
                     <!-- Presentations -->
                     <ContentPresenter.Resources>
-                        <DataTemplate x:Key="TimestampPresenter">
-                            <xceed:DateTimePicker x:Name="startTimestampPicker" Margin="5"
-                            Value="{Binding StartTimestamp}" />
+                        <DataTemplate x:Key="StartDateTimePresenter">
+                            <StackPanel Orientation="Vertical">
+                                <DatePicker x:Name="startDatePicker" Margin="5"
+                                            SelectedDate="{Binding StartDate}" />
+                                <xceed:TimePicker x:Name="startTimePicker" Margin="5"
+                                                  Value="{Binding StartTime, Mode=OneWayToSource}" />
+                            </StackPanel>
                         </DataTemplate>
                         <DataTemplate x:Key="NoPresenter">
-                            <xceed:DateTimePicker x:Name="startTimestampPicker" Margin="5"
-                            Value="{Binding StartTimestamp}" IsEnabled="False"/>
+                            <StackPanel Orientation="Vertical" IsEnabled="False">
+                                <DatePicker x:Name="startDatePicker" Margin="5"
+                                            SelectedDate="{Binding StartDate}" />
+                                <xceed:TimePicker x:Name="startTimePicker" Margin="5"
+                                                  Value="{Binding StartTime}" />
+                            </StackPanel>
                         </DataTemplate>
                     </ContentPresenter.Resources>
 
@@ -47,7 +56,7 @@
                         <Style TargetType="{x:Type ContentPresenter}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding FetchPosition}" Value="Timestamp">
-                                    <Setter Property="ContentTemplate" Value="{StaticResource TimestampPresenter}" />
+                                    <Setter Property="ContentTemplate" Value="{StaticResource StartDateTimePresenter}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding FetchPosition}" Value="End">
                                     <Setter Property="ContentTemplate" Value="{StaticResource NoPresenter}" />
@@ -57,8 +66,8 @@
                     </ContentPresenter.Style>
                 </ContentPresenter>
             </StackPanel>
-            <Label Grid.Row="2" Grid.Column="0" Margin="5">Count</Label>
-            <ComboBox x:Name="fetchCountBox" Grid.Row="2" Grid.Column="1" SelectedIndex="0" IsEditable="True"
+            <Label Grid.Row="3" Grid.Column="0" Margin="5">Count</Label>
+            <ComboBox x:Name="fetchCountBox" Grid.Row="3" Grid.Column="1" SelectedIndex="0" IsEditable="True"
                       ItemsSource="{Binding FetchCounts}" Margin="5" HorizontalContentAlignment="Right"
                       Text="{Binding FetchCount, Mode=TwoWay}">
             </ComboBox>
