@@ -1,9 +1,8 @@
-﻿namespace KafkaLens.Formatting
-{
-    public interface IMessageFormatter
-    {
-        public string Name { get; }
+﻿namespace KafkaLens.Formatting;
 
-        public string? Format(byte[] data);
-    }
+public interface IMessageFormatter
+{
+    public string Name { get; }
+
+    public string? Format(byte[] data);
 }

@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace KafkaLens.Client.DataAccess
+namespace KafkaLens.Client.DataAccess;
+
+public class TabManager
 {
-    public class TabManager
-    {
-    }
 }

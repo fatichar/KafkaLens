@@ -5,25 +5,24 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace KafkaLens.Client.Components
-{
-    public partial class MessageView : ComponentBase
-    {
-        #region Data
-        [Parameter]
-        public Message Message { get; set; }
+namespace KafkaLens.Client.Components;
 
-        private string Text
+public partial class MessageView : ComponentBase
+{
+    #region Data
+    [Parameter]
+    public Message Message { get; set; }
+
+    private string Text
+    {
+        get
         {
-            get
+            if (Message == null)
             {
-                if (Message == null)
-                {
-                    return "No message selected";
-                }
-                return Message.FormattedBody ?? Message.Body ?? "";
+                return "No message selected";
             }
+            return Message.FormattedBody ?? Message.Body ?? "";
         }
-        #endregion Data
     }
+    #endregion Data
 }

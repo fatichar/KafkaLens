@@ -1,6 +1,5 @@
-﻿namespace KafkaLens.Core.Validators
+﻿namespace KafkaLens.Core.Validators;
+
+public class Validator
 {
-    public class Validator
-    {
-    }
 }

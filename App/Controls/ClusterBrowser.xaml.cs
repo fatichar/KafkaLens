@@ -1,15 +1,14 @@
 ﻿using System.Windows.Controls;
 
-namespace KafkaLens.App.Controls
+namespace KafkaLens.App.Controls;
+
+/// <summary>
+/// Interaction logic for ClusterBrowser.xaml
+/// </summary>
+public partial class ClusterBrowser : UserControl
 {
-    /// <summary>
-    /// Interaction logic for ClusterBrowser.xaml
-    /// </summary>
-    public partial class ClusterBrowser : UserControl
+    public ClusterBrowser()
     {
-        public ClusterBrowser()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

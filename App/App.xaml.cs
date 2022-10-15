@@ -7,43 +7,42 @@ using System;
 using System.Windows;
 using Serilog;
 
-namespace KafkaLens.App
+namespace KafkaLens.App;
+
+public partial class App : Application
 {
-    public partial class App : Application
+    public IServiceProvider Services { get; }
+    public new static App Current => (App)Application.Current;
+
+    public App()
     {
-        public IServiceProvider Services { get; }
-        public new static App Current => (App)Application.Current;
+        Services = ConfigureServices();
 
-        public App()
-        {
-            Services = ConfigureServices();
+        InitializeComponent();
+    }
 
-            InitializeComponent();
-        }
+    private static IServiceProvider ConfigureServices()
+    {
+        var services = new ServiceCollection();
 
-        private static IServiceProvider ConfigureServices()
-        {
-            var services = new ServiceCollection();
+        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddDbContext<KafkaContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
+        services.AddSingleton<IClusterService, LocalClusterService>();
+        services.AddSingleton<ConsumerFactory>();
+        services.AddSingleton<MainViewModel>();
+        services.AddLogging();
 
-            services.AddSingleton<ISettingsService, SettingsService>();
-            services.AddDbContext<KafkaContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
-            services.AddSingleton<IClusterService, LocalClusterService>();
-            services.AddSingleton<ConsumerFactory>();
-            services.AddSingleton<MainViewModel>();
-            services.AddLogging();
+        ConfigureLogging();
 
-            ConfigureLogging();
+        return services.BuildServiceProvider();
+    }
 
-            return services.BuildServiceProvider();
-        }
-
-        private static void ConfigureLogging()
-        {
-            using var log = new LoggerConfiguration()
-                .WriteTo.Console(outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u4}] {Message:lj}{NewLine}{Exception}")
-                .CreateLogger();
-            Log.Logger = log;
-            Log.Information("The global logger has been configured");
-        }
+    private static void ConfigureLogging()
+    {
+        using var log = new LoggerConfiguration()
+            .WriteTo.Console(outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u4}] {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+        Log.Logger = log;
+        Log.Information("The global logger has been configured");
     }
 }

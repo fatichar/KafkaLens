@@ -1,11 +1,10 @@
-﻿namespace KafkaLens.Messages
+﻿namespace KafkaLens.Messages;
+
+public class OpenClusterMessage
 {
-    public class OpenClusterMessage
+    public ClusterViewModel ClusterViewModel { get; }
+    public OpenClusterMessage(ClusterViewModel clusterViewModel)
     {
-        public ClusterViewModel ClusterViewModel { get; }
-        public OpenClusterMessage(ClusterViewModel clusterViewModel)
-        {
-            ClusterViewModel = clusterViewModel;
-        }
+        ClusterViewModel = clusterViewModel;
     }
 }

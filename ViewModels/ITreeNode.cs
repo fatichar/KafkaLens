@@ -1,16 +1,15 @@
-﻿namespace KafkaLens.ViewModels
+﻿namespace KafkaLens.ViewModels;
+
+public interface ITreeNode
 {
-    public interface ITreeNode
+    enum NodeType
     {
-        enum NodeType
-        {
-            CLUSTER,
-            TOPIC,
-            PARTITION,
-            NONE
-        }
-        bool IsSelected { get; set; }
-        string Name { get; }
-        NodeType Type { get; }
+        CLUSTER,
+        TOPIC,
+        PARTITION,
+        NONE
     }
+    bool IsSelected { get; set; }
+    string Name { get; }
+    NodeType Type { get; }
 }

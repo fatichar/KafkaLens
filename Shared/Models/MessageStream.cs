@@ -1,27 +1,26 @@
 using System.Collections.ObjectModel;
 
-namespace KafkaLens.Shared.Models
-{
-    public sealed class MessageStream
-    {
-        private bool hasMore = true;
-        public ObservableCollection<Message> Messages { get; set; } = new ObservableCollection<Message>();
+namespace KafkaLens.Shared.Models;
 
-        public bool HasMore
+public sealed class MessageStream
+{
+    private bool hasMore = true;
+    public ObservableCollection<Message> Messages { get; set; } = new ObservableCollection<Message>();
+
+    public bool HasMore
+    {
+        get => hasMore;
+        set
         {
-            get => hasMore;
-            set
+            hasMore = value;
+            if (!hasMore)
             {
-                hasMore = value;
-                if (!hasMore)
-                {
-                    Finished?.Invoke();
-                }
+                Finished?.Invoke();
             }
         }
-
-        public delegate void FinishedEventHandler();
-
-        public event FinishedEventHandler? Finished;
     }
+
+    public delegate void FinishedEventHandler();
+
+    public event FinishedEventHandler? Finished;
 }

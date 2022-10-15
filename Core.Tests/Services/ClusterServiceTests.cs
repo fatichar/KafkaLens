@@ -12,60 +12,59 @@ using NSubstitute;
 using AutoFixture;
 using Microsoft.EntityFrameworkCore;
 
-namespace KafkaLens.Core.Services
+namespace KafkaLens.Core.Services;
+
+public class LocalClusterServiceTests
 {
-    public class LocalClusterServiceTests
+    ILogger<LocalClusterService> logger = Substitute.For<ILogger<LocalClusterService>>();
+    public LocalClusterService ClusterService { get; private set; }
+    public KafkaContext DbContext { get; private set; }
+
+    public LocalClusterServiceTests()
     {
-        ILogger<LocalClusterService> logger = Substitute.For<ILogger<LocalClusterService>>();
-        public LocalClusterService ClusterService { get; private set; }
-        public KafkaContext DbContext { get; private set; }
+        Fixture fixture = new();
+        fixture.Register(() => Substitute.For<ILogger<LocalClusterService>>());
 
-        public LocalClusterServiceTests()
-        {
-            Fixture fixture = new();
-            fixture.Register(() => Substitute.For<ILogger<LocalClusterService>>());
-
-            var builder = new DbContextOptionsBuilder<KafkaContext>();
-            builder.UseSqlite("Data Source = KafkaLens.Core.UnitTest.db");
-            DbContext = new KafkaContext(builder.Options);
-            DbContext.Database.EnsureDeleted();
-            DbContext.Database.EnsureCreated();
-            fixture.Register(() => DbContext);
-            ClusterService = fixture.Create<LocalClusterService>();
-        }
+        var builder = new DbContextOptionsBuilder<KafkaContext>();
+        builder.UseSqlite("Data Source = KafkaLens.Core.UnitTest.db");
+        DbContext = new KafkaContext(builder.Options);
+        DbContext.Database.EnsureDeleted();
+        DbContext.Database.EnsureCreated();
+        fixture.Register(() => DbContext);
+        ClusterService = fixture.Create<LocalClusterService>();
+    }
 
 
-        [Fact()]
-        public async void AddAsync_validCluster_added()
-        {
-            // arrange
-            var oldCount = ClusterService.GetAllClusters().Count();
+    [Fact()]
+    public async void AddAsync_validCluster_added()
+    {
+        // arrange
+        var oldCount = ClusterService.GetAllClusters().Count();
             
-            // act
-            var addedCluster = await ClusterService.AddAsync(new NewKafkaCluster("Dev", "localhost:9092"));
+        // act
+        var addedCluster = await ClusterService.AddAsync(new NewKafkaCluster("Dev", "localhost:9092"));
 
-            // assert
-            var clusters = ClusterService.GetAllClusters();
-            Assert.Equal(oldCount + 1, clusters.Count());
-            Assert.Equal(addedCluster, clusters.Last());
-        }
+        // assert
+        var clusters = ClusterService.GetAllClusters();
+        Assert.Equal(oldCount + 1, clusters.Count());
+        Assert.Equal(addedCluster, clusters.Last());
+    }
 
-        [Fact()]
-        public void GetTopicsAsync__success()
-        {
-            Assert.True(false, "This test needs an implementation");
-        }
+    [Fact()]
+    public void GetTopicsAsync__success()
+    {
+        Assert.True(false, "This test needs an implementation");
+    }
 
-        [Fact()]
-        public void GetMessagesAsync__success()
-        {
-            Assert.True(false, "This test needs an implementation");
-        }
+    [Fact()]
+    public void GetMessagesAsync__success()
+    {
+        Assert.True(false, "This test needs an implementation");
+    }
 
-        [Fact()]
-        public void GetMessagesAsync__success1()
-        {
-            Assert.True(false, "This test needs an implementation");
-        }
+    [Fact()]
+    public void GetMessagesAsync__success1()
+    {
+        Assert.True(false, "This test needs an implementation");
     }
 }

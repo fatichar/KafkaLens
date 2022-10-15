@@ -1,10 +1,9 @@
-﻿namespace KafkaLens.Core.Services
+﻿namespace KafkaLens.Core.Services;
+
+public class ConsumerFactory
 {
-    public class ConsumerFactory
+    public IKafkaConsumer CreateNew(string url)
     {
-        public IKafkaConsumer CreateNew(string url)
-        {
-            return new ConfluentConsumer(url);
-        }
+        return new ConfluentConsumer(url);
     }
 }

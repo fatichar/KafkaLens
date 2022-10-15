@@ -1,18 +1,17 @@
-﻿namespace KafkaLens.ViewModels
+﻿namespace KafkaLens.ViewModels;
+
+public class SettingsService : ISettingsService
 {
-    public class SettingsService : ISettingsService
+    private readonly Dictionary<string, string> settings = new();
+
+    public string? GetValue(string key)
     {
-        private readonly Dictionary<string, string> settings = new();
+        settings.TryGetValue(key, out var val);
+        return val;
+    }
 
-        public string? GetValue(string key)
-        {
-            settings.TryGetValue(key, out var val);
-            return val;
-        }
-
-        public void SetValue(string key, string value)
-        {
-            settings[key] = value;
-        }
+    public void SetValue(string key, string value)
+    {
+        settings[key] = value;
     }
 }

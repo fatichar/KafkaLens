@@ -1,11 +1,10 @@
-﻿namespace KafkaLens.Messages
+﻿namespace KafkaLens.Messages;
+
+public class CloseTabMessage
 {
-    public class CloseTabMessage
+    public OpenedClusterViewModel OpenedClusterViewModel { get; }
+    public CloseTabMessage(OpenedClusterViewModel openedClusterViewModel)
     {
-        public OpenedClusterViewModel OpenedClusterViewModel { get; }
-        public CloseTabMessage(OpenedClusterViewModel openedClusterViewModel)
-        {
-            OpenedClusterViewModel = openedClusterViewModel;
-        }
+        OpenedClusterViewModel = openedClusterViewModel;
     }
 }

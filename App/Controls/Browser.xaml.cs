@@ -1,12 +1,11 @@
 ﻿using System.Windows.Controls;
 
-namespace KafkaLens.App.Controls
+namespace KafkaLens.App.Controls;
+
+public partial class Browser : UserControl
 {
-    public partial class Browser : UserControl
+    public Browser()
     {
-        public Browser()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

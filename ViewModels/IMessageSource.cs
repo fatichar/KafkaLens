@@ -1,11 +1,10 @@
 ﻿using System.Collections.ObjectModel;
 using KafkaLens.Formatting;
 
-namespace KafkaLens.ViewModels
+namespace KafkaLens.ViewModels;
+
+public interface IMessageSource : ITreeNode
 {
-    public interface IMessageSource : ITreeNode
-    {
-        ObservableCollection<MessageViewModel> Messages { get; }
-        IMessageFormatter Formatter { get; }
-    }
+    ObservableCollection<MessageViewModel> Messages { get; }
+    IMessageFormatter Formatter { get; }
 }

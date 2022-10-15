@@ -2,17 +2,16 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
 
-namespace KafkaLens.App
-{
-    public partial class MainWindow : Window
-    {
-        public MainWindow()
-        {
-            InitializeComponent();
-            
-            DataContext = App.Current.Services.GetService<MainViewModel>();
-        }
+namespace KafkaLens.App;
 
-        private MainViewModel Context => (MainViewModel) DataContext;
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+            
+        DataContext = App.Current.Services.GetService<MainViewModel>();
     }
+
+    private MainViewModel Context => (MainViewModel) DataContext;
 }

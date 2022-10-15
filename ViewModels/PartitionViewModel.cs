@@ -7,50 +7,49 @@ using KafkaLens.Core.Services;
 using KafkaLens.Formatting;
 using KafkaLens.Shared.Models;
 
-namespace KafkaLens.ViewModels
+namespace KafkaLens.ViewModels;
+
+public class PartitionViewModel : ObservableRecipient, IMessageSource
 {
-    public class PartitionViewModel : ObservableRecipient, IMessageSource
+    private readonly IClusterService clusterService;
+    private readonly Partition partition;
+    public int Id => partition.Id;
+    public string Name => partition.Name;
+    private readonly TopicViewModel topic;
+    public string TopicName => topic.Name;
+    public bool IsExpandable => false;
+    public bool IsExpanded { get; set; }
+    public bool IsSelected { get; set; }
+
+    public ITreeNode.NodeType Type => ITreeNode.NodeType.PARTITION;
+
+    public PartitionViewModel(IClusterService clusterService, TopicViewModel topic, Partition partition)
     {
-        private readonly IClusterService clusterService;
-        private readonly Partition partition;
-        public int Id => partition.Id;
-        public string Name => partition.Name;
-        private readonly TopicViewModel topic;
-        public string TopicName => topic.Name;
-        public bool IsExpandable => false;
-        public bool IsExpanded { get; set; }
-        public bool IsSelected { get; set; }
+        LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
+        this.clusterService = clusterService;
+        this.partition = partition;
+        this.topic = topic;
 
-        public ITreeNode.NodeType Type => ITreeNode.NodeType.PARTITION;
+        IsActive = true;
+    }
 
-        public PartitionViewModel(IClusterService clusterService, TopicViewModel topic, Partition partition)
-        {
-            LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
-            this.clusterService = clusterService;
-            this.partition = partition;
-            this.topic = topic;
+    protected override void OnActivated()
+    {
+        // We use a method group here, but a lambda expression is also valid
+        Messenger.Register<PartitionViewModel, PropertyChangedMessage<TopicPartition>>(this, (r, m) => r.Receive(m));
+    }
 
-            IsActive = true;
-        }
+    public IAsyncRelayCommand LoadMessagesCommand { get; }
+    public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
-        protected override void OnActivated()
-        {
-            // We use a method group here, but a lambda expression is also valid
-            Messenger.Register<PartitionViewModel, PropertyChangedMessage<TopicPartition>>(this, (r, m) => r.Receive(m));
-        }
+    public IMessageFormatter Formatter => topic.Formatter;
 
-        public IAsyncRelayCommand LoadMessagesCommand { get; }
-        public ObservableCollection<MessageViewModel> Messages { get; } = new();
+    private Task LoadMessagesAsync()
+    {
+        throw new NotImplementedException();
+    }
 
-        public IMessageFormatter Formatter => topic.Formatter;
-
-        private Task LoadMessagesAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Receive(PropertyChangedMessage<TopicPartition> message)
-        {
-        }
+    public void Receive(PropertyChangedMessage<TopicPartition> message)
+    {
     }
 }
