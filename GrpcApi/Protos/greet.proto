@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option csharp_namespace = "KaflaLens";
+
+package greet;
+
+
+service ClusterService {
+  rpc GetAllClusters (GetAllClustersRequest) returns (GetClustersResponse);
+  rpc GetClusters (GetClustersRequest) returns (GetClustersResponse);
+  rpc GetCluster (GetClusterRequest) returns (GetClusterResponse);
+}
+
+message GetAllClustersRequest {
+}
+
+message GetClusterRequest {
+  string id = 1;
+}
+
+message GetClustersRequest {
+  repeated string ids = 1;
+}
+
+message GetClustersResponse {
+  repeated Cluster clusters = 1;
+}
+
+message GetClusterResponse {
+  string id = 1;
+  string name = 2;
+  string bootstrap_servers = 3;
+}
+
+message Topic {
+  string name = 1;
+  uint32 partition_count = 2;
+}
