@@ -7,6 +7,7 @@ using KafkaLens.Core.Services;
 using KafkaLens.Formatting;
 using KafkaLens.Shared.Models;
 using KafkaLens.Messages;
+using KafkaLens.Shared;
 using Serilog;
 
 namespace KafkaLens.ViewModels;
@@ -14,8 +15,8 @@ namespace KafkaLens.ViewModels;
 public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 {
     private readonly ISettingsService settingsService;
-    private readonly IClusterService clusterService;
     private readonly ClusterViewModel clusterViewModel;
+    private IKafkaLensClient KafkaLensClient => clusterViewModel.KafkaLensClient;
     private const int DEFAULT_FETCH_COUNT = 10;
     public static IList<string> FetchPositionsForTopic { get; } = new List<string>();
     public static IList<string> FetchPositionsForPartition { get; } = new List<string>();
@@ -104,12 +105,10 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 
     public OpenedClusterViewModel(
         ISettingsService settingsService,
-        IClusterService clusterService,
         ClusterViewModel clusterViewModel,
         string name)
     {
         this.settingsService = settingsService;
-        this.clusterService = clusterService;
         this.clusterViewModel = clusterViewModel;
         Name = name;
 
@@ -147,7 +146,7 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         Topics.Clear();
         foreach (var topic in clusterViewModel.Topics)
         {
-            Topics.Add(new TopicViewModel(clusterService, topic, jsonFormatter));
+            Topics.Add(new TopicViewModel(KafkaLensClient, topic, jsonFormatter));
         }
     }
 
@@ -189,10 +188,10 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 
         messages = selectedNode switch
         {
-            TopicViewModel topic => clusterService.GetMessageStream(clusterViewModel.Id, topic.Name,
+            TopicViewModel topic => KafkaLensClient.GetMessageStream(clusterViewModel.Id, topic.Name,
                 fetchOptions),
 
-            PartitionViewModel partition => clusterService.GetMessageStream(clusterViewModel.Id,
+            PartitionViewModel partition => KafkaLensClient.GetMessageStream(clusterViewModel.Id,
                 partition.TopicName, partition.Id, fetchOptions),
 
             _ => null
@@ -264,11 +263,11 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         switch (FetchPosition)
         {
             case "End":
-                end = KafkaLens.Core.Services.FetchPosition.END;
-                start = new(PositionType.OFFSET, KafkaLens.Core.Services.FetchPosition.END.Offset - FetchCount);
+                end = Shared.Models.FetchPosition.END;
+                start = new(PositionType.OFFSET, Shared.Models.FetchPosition.END.Offset - FetchCount);
                 break;
             case "Start":
-                start = KafkaLens.Core.Services.FetchPosition.START;
+                start = Shared.Models.FetchPosition.START;
                 break;
             case "Timestamp":
                 var timeStamp = StartDate + StartTime.TimeOfDay;

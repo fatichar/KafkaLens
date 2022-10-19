@@ -1,23 +1,25 @@
-﻿using KafkaLens.Shared.Models;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using KafkaLens.Shared.Models;
 
-namespace KafkaLens.Core.Services;
+namespace KafkaLens.Shared;
 
-public interface IClusterService
+public interface IKafkaLensClient
 {
     #region create
-    Task<bool> ValidateConnectionAsync(string BootstrapServers);
+    Task<bool> ValidateConnectionAsync(string bootstrapServers);
 
     Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster);
     #endregion create
 
     #region read
-    IEnumerable<KafkaCluster> GetAllClusters();
+    Task<IEnumerable<KafkaCluster>> GetAllClustersAsync();
 
-    KafkaCluster GetClusterById(string clusterId);
+    Task<KafkaCluster> GetClusterByIdAsync(string clusterId);
 
-    KafkaCluster GetClusterByName(string name);
+    Task<KafkaCluster> GetClusterByNameAsync(string name);
 
-    IList<Topic> GetTopics(string clusterId);
+    Task<IList<Topic>> GetTopicsAsync(string clusterId);
 
     MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options);
 
@@ -28,7 +30,7 @@ public interface IClusterService
     #endregion read
 
     #region update
-    KafkaCluster UpdateCluster(string clusterId, KafkaClusterUpdate update);
+    Task<KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update);
     #endregion update
 
     #region delete

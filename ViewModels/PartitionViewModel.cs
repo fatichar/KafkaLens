@@ -5,13 +5,14 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using KafkaLens.Core.Services;
 using KafkaLens.Formatting;
+using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels;
 
 public class PartitionViewModel : ObservableRecipient, IMessageSource
 {
-    private readonly IClusterService clusterService;
+    private readonly IKafkaLensClient kafkaLensClient;
     private readonly Partition partition;
     public int Id => partition.Id;
     public string Name => partition.Name;
@@ -23,10 +24,10 @@ public class PartitionViewModel : ObservableRecipient, IMessageSource
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.PARTITION;
 
-    public PartitionViewModel(IClusterService clusterService, TopicViewModel topic, Partition partition)
+    public PartitionViewModel(IKafkaLensClient kafkaLensClient, TopicViewModel topic, Partition partition)
     {
         LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
-        this.clusterService = clusterService;
+        this.kafkaLensClient = kafkaLensClient;
         this.partition = partition;
         this.topic = topic;
 

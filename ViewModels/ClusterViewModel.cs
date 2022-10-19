@@ -2,15 +2,15 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
 using KafkaLens.Messages;
+using KafkaLens.Shared;
 
 namespace KafkaLens.ViewModels;
 
 public sealed class ClusterViewModel : ObservableRecipient
 {
-    private readonly IClusterService clusterService;
+    public IKafkaLensClient KafkaLensClient { get; }
     public IRelayCommand OpenClusterCommand { get; }
     public IAsyncRelayCommand LoadTopicsCommand { get; }
     private readonly KafkaCluster cluster;
@@ -20,16 +20,16 @@ public sealed class ClusterViewModel : ObservableRecipient
     public string Name => cluster.Name;
     public string Address => cluster.BootstrapServers;
 
-    public ClusterViewModel(KafkaCluster cluster, IClusterService clusterService)
+    public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient kafkaLensClient)
     {
-        this.clusterService = clusterService;
+        this.KafkaLensClient = kafkaLensClient;
         this.cluster = cluster;
 
-        OpenClusterCommand = new RelayCommand(OpenClusterAsync);
+        OpenClusterCommand = new RelayCommand(OpenCluster);
         LoadTopicsCommand = new AsyncRelayCommand(LoadTopicsAsync);
     }
 
-    private async void OpenClusterAsync()
+    private void OpenCluster()
     {
         _ = Messenger.Send(new OpenClusterMessage(this));
     }
@@ -37,7 +37,7 @@ public sealed class ClusterViewModel : ObservableRecipient
     private async Task LoadTopicsAsync()
     {
         Topics.Clear();
-        var topics = clusterService.GetTopics(cluster.Id);
+        var topics = await KafkaLensClient.GetTopicsAsync(cluster.Id);
         foreach (var topic in topics)
         {
             Topics.Add(topic);

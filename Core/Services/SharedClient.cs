@@ -1,14 +1,15 @@
-﻿using KafkaLens.Core.DataAccess;
+﻿using System.Diagnostics.CodeAnalysis;
+using KafkaLens.Core.DataAccess;
 using KafkaLens.Core.Utils;
+using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
 using Serilog;
-using System.Diagnostics.CodeAnalysis;
 
 namespace KafkaLens.Core.Services;
 
-public class LocalClusterService : IClusterService
+public class SharedClient : IKafkaLensClient
 {
-    private readonly ILogger<LocalClusterService> logger;
+    private readonly ILogger<SharedClient> logger;
     private readonly IServiceScopeFactory scopeFactory;
     private readonly ConsumerFactory consumerFactory;
 
@@ -18,8 +19,8 @@ public class LocalClusterService : IClusterService
     // key = cluster id, value = kafka consumer
     private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
-    public LocalClusterService(
-        [NotNull] ILogger<LocalClusterService> logger,
+    public SharedClient(
+        [NotNull] ILogger<SharedClient> logger,
         [NotNull] IServiceScopeFactory scopeFactory,
         [NotNull] ConsumerFactory consumerFactory)
     {
@@ -27,14 +28,14 @@ public class LocalClusterService : IClusterService
         this.scopeFactory = scopeFactory;
         this.consumerFactory = consumerFactory;
 
-        using var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
+        using var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>();
         clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Id);
     }
 
     #region Create
-    public async Task<bool> ValidateConnectionAsync(string BootstrapServers)
+    public Task<bool> ValidateConnectionAsync(string BootstrapServers)
     {
-        return false;
+        return Task.FromResult(false);
     }
 
     public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
@@ -45,7 +46,7 @@ public class LocalClusterService : IClusterService
         clusters.Add(cluster.Id, cluster);
         try
         {
-            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
+            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>();
             dbContext.KafkaClusters.Add(cluster);
             await dbContext.SaveChangesAsync();
         }
@@ -74,7 +75,7 @@ public class LocalClusterService : IClusterService
         }
     }
 
-    public static Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
+    private static Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
     {
         return new Entities.KafkaCluster(
             Guid.NewGuid().ToString(),
@@ -89,32 +90,34 @@ public class LocalClusterService : IClusterService
     #endregion Create
 
     #region Read
-    public IEnumerable<KafkaCluster> GetAllClusters()
+    public Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
         Log.Information("Get all clusters");
-        return clusters.Values.Select(ToModel);
+        return Task.FromResult(clusters.Values.Select(ToModel));
     }
 
-    public KafkaCluster GetClusterById(string clusterId)
+    public Task<KafkaCluster> GetClusterByIdAsync(string clusterId)
     {
         var cluster = ValidateClusterId(clusterId);
-        return ToModel(cluster);
+        return Task.FromResult(ToModel(cluster));
     }
 
-    KafkaCluster IClusterService.GetClusterByName(string name)
+    Task<KafkaCluster> IKafkaLensClient.GetClusterByNameAsync(string name)
     {
         var cluster = ValidateClusterId(name);
-        return ToModel(cluster);
+        return Task.FromResult(ToModel(cluster));
     }
 
-    public IList<Topic> GetTopics([DisallowNull] string clusterId)
+    public Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterId)
     {
         var consumer = GetConsumer(clusterId);
 
-        var topics = consumer.GetTopics();
-        topics.Sort(Helper.CompareTopics);
-
-        return topics;
+        return Task.Run(() =>
+        {
+            var topics = consumer.GetTopics();
+            topics.Sort(Helper.CompareTopics);
+            return (IList<Topic>) topics;
+        });
     }
 
     public MessageStream GetMessageStream(
@@ -157,20 +160,20 @@ public class LocalClusterService : IClusterService
     #endregion Read
 
     #region update
-    public KafkaCluster UpdateCluster(string clusterId, KafkaClusterUpdate update)
+    public async Task<KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
         ValidateClusterId(clusterId);
 
-        using (var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>())
+        await using (var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>())
         {
-            Entities.KafkaCluster? existing = dbContext.KafkaClusters.Find(clusterId);
+            Entities.KafkaCluster? existing = await dbContext.KafkaClusters.FindAsync(clusterId);
             if (existing != null)
             {
                 existing.Name = update.Name;
                 existing.BootstrapServers = update.BootstrapServers;
             }
         }
-        return GetClusterById(clusterId);
+        return await GetClusterByIdAsync(clusterId);
     }
     #endregion update
 
@@ -179,7 +182,7 @@ public class LocalClusterService : IClusterService
     {
         if (clusters.ContainsKey(clusterId))
         {
-            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaContext>();
+            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>();
             var cluster = dbContext.KafkaClusters.Find(clusterId);
             if (cluster != null)
             {
@@ -221,8 +224,7 @@ public class LocalClusterService : IClusterService
     private Entities.KafkaCluster validateClusterName(string name)
     {
         var cluster = clusters.Values
-            .Where(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))
-            .FirstOrDefault();
+            .FirstOrDefault(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
         if (cluster == null)
         {
             throw new ArgumentException($"Cluster with name {name} does not exist", nameof(name));

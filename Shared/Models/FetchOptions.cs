@@ -1,4 +1,4 @@
-﻿namespace KafkaLens.Core.Services;
+﻿namespace KafkaLens.Shared.Models;
 
 public class FetchOptions
 {

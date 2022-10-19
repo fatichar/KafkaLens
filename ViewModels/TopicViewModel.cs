@@ -2,13 +2,14 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using KafkaLens.Core.Services;
 using KafkaLens.Formatting;
+using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels;
 
 public sealed class TopicViewModel : ObservableRecipient, IMessageSource
 {
-    private readonly IClusterService clusterService;
+    private readonly IKafkaLensClient kafkaLensClient;
     private readonly Topic topic;
     public ObservableCollection<PartitionViewModel> Partitions { get; } = new();
 
@@ -22,14 +23,14 @@ public sealed class TopicViewModel : ObservableRecipient, IMessageSource
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.TOPIC;
 
-    public TopicViewModel(IClusterService clusterService, Topic topic, IMessageFormatter formatter)
+    public TopicViewModel(IKafkaLensClient kafkaLensClient, Topic topic, IMessageFormatter formatter)
     {
-        this.clusterService = clusterService;
+        this.kafkaLensClient = kafkaLensClient;
         this.topic = topic;
         Formatter = formatter;
         foreach (var parittion in topic.Partitions)
         {
-            Partitions.Add(new PartitionViewModel(clusterService, this, parittion));
+            Partitions.Add(new PartitionViewModel(kafkaLensClient, this, parittion));
         }
 
         IsActive = true;

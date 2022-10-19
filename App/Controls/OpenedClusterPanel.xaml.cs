@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using KafkaLens.ViewModels;
+using Serilog;
 
 namespace KafkaLens.App.Controls;
 
@@ -41,6 +42,7 @@ public partial class OpenedClusterPanel : UserControl, IMessageLoadListener
 
     public void MessageLoadingStarted()
     {
+        Log.Information("UI: Started loading messages");
         messageRefreshTimer.Start();
     }
 

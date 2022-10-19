@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KafkaLens.Core.DataAccess;
 
-public class KafkaContext : DbContext
+public class KlServerContext : DbContext
 {
-    public KafkaContext(DbContextOptions<KafkaContext> options)
+    public KlServerContext(DbContextOptions<KlServerContext> options)
         : base(options)
     {
     }

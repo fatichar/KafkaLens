@@ -2,6 +2,9 @@
 
 namespace KafkaLens.Core.Services;
 
+/// <summary>
+/// Consumer for a kafka cluster.
+/// </summary>
 public interface IKafkaConsumer
 {
     List<Topic> GetTopics();

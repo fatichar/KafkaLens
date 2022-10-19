@@ -31,7 +31,8 @@ public sealed class MessageViewModel : ObservableRecipient
         this.message = message;
         this.formatter = formatter;
         FormattedMessage = formatter.Format(message.Value ?? Array.Empty<byte>()) ?? message.ValueText;
-        Summary = message.ValueText[..100].ReplaceLineEndings(" ");
+        int limit = Math.Min(100, message.ValueText.Length);
+        Summary = message.ValueText[..limit].ReplaceLineEndings(" ");
 
         DisplayText = FormattedMessage;
 

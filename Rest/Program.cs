@@ -1,6 +1,9 @@
 using KafkaLens.Core.DataAccess;
 using KafkaLens.Core.Services;
+using KafkaLens.Shared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,20 +13,23 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddRazorPages();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1",
-        new Microsoft.OpenApi.Models.OpenApiInfo
+        new OpenApiInfo
         {
             Title = "KafkaLens Api",
             Version = "v1"
         });
+    // c.DocumentFilter<BasePathFilter>();
+    // use action name as operation id
+    c.CustomOperationIds(e => $"{e.ActionDescriptor.RouteValues["action"]}");
 });
 
 builder.Services.AddDbContext<KafkaContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
+
 // TODO replace with SharedClusterService
-builder.Services.AddSingleton<IClusterService, LocalClusterService>();
+builder.Services.AddSingleton<IKafkaLensClient, LocalClient>();
 builder.Services.AddSingleton<ConsumerFactory>();
 builder.Services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
@@ -36,6 +42,7 @@ app.UseCors(x => x
     .AllowCredentials());               // allow credentials 
 
 app.UseSwagger();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

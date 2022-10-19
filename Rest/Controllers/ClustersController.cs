@@ -1,4 +1,5 @@
 ﻿using KafkaLens.Core.Services;
+using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,21 +10,21 @@ namespace KafkaLens.RestApi.Controllers;
 public class ClustersController : ControllerBase
 {
     private readonly ILogger<ClustersController> logger;
-    private readonly IClusterService clusterService;
+    private readonly IKafkaLensClient kafkaLensClient;
 
-    public ClustersController(ILogger<ClustersController> logger, IClusterService clusterService)
+    public ClustersController(ILogger<ClustersController> logger, IKafkaLensClient kafkaLensClient)
     {
         this.logger = logger;
-        this.clusterService = clusterService;
+        this.kafkaLensClient = kafkaLensClient;
     }
 
     [HttpPost]
-    public async Task<ActionResult<KafkaCluster>> Add(NewKafkaCluster newCluster)
+    public async Task<ActionResult<KafkaCluster>> AddCluster(NewKafkaCluster newCluster)
     {
         try
         {
-            var cluster = await clusterService.AddAsync(newCluster);
-            return base.CreatedAtAction(nameof(GetById), cluster.Name, cluster);
+            var cluster = await kafkaLensClient.AddAsync(newCluster);
+            return base.CreatedAtAction(nameof(GetClusterById), cluster.Name, cluster);
         }
         catch (Exception ex)
         {
@@ -32,17 +33,17 @@ public class ClustersController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<KafkaCluster>> GetAll()
+    public ActionResult<IEnumerable<KafkaCluster>> GetAllClusters()
     {
-        return new JsonResult(clusterService.GetAllClusters());
+        return new JsonResult(kafkaLensClient.GetAllClustersAsync());
     }
 
     [HttpGet("{clusterId}")]
-    public ActionResult<KafkaCluster> GetById(string clusterId)
+    public ActionResult<KafkaCluster> GetClusterById(string clusterId)
     {
         try
         {
-            return clusterService.GetClusterById(clusterId);
+            return kafkaLensClient.GetClusterByIdAsync(clusterId);
         }
         catch (Exception ex)
         {
@@ -51,11 +52,11 @@ public class ClustersController : ControllerBase
     }
 
     [HttpDelete("{clusterId}")]
-    public async Task<ActionResult<KafkaCluster>> DeleteById(string clusterId)
+    public async Task<ActionResult<KafkaCluster>> DeleteClusterById(string clusterId)
     {
         try
         {
-            return await clusterService.RemoveClusterByIdAsync(clusterId);
+            return await kafkaLensClient.RemoveClusterByIdAsync(clusterId);
         }
         catch (Exception ex)
         {
@@ -68,7 +69,7 @@ public class ClustersController : ControllerBase
     {
         try
         {
-            IList<Topic> topics = (IList<Topic>)clusterService.GetTopics(clusterId);
+            IList<Topic> topics = (IList<Topic>)kafkaLensClient.GetTopicsAsync(clusterId);
             return new JsonResult(topics);
         }
         catch (Exception ex)
@@ -82,7 +83,7 @@ public class ClustersController : ControllerBase
     {
         try
         {
-            return await clusterService.GetMessagesAsync(clusterId, topic, new FetchOptions(FetchPosition.END, limit ?? 10));
+            return await kafkaLensClient.GetMessagesAsync(clusterId, topic, new FetchOptions(FetchPosition.END, limit ?? 10));
         }
         catch (Exception ex)
         {
@@ -95,7 +96,7 @@ public class ClustersController : ControllerBase
     {
         try
         {
-            return await clusterService.GetMessagesAsync(clusterId, topic, partition, new FetchOptions(FetchPosition.END, limit ?? 10));
+            return await kafkaLensClient.GetMessagesAsync(clusterId, topic, partition, new FetchOptions(FetchPosition.END, limit ?? 10));
         }
         catch (Exception ex)
         {

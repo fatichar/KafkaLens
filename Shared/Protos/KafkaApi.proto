@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "KafkaLens.Grpc";
+
+package KafkaLens.Grpc;
+
+
+service KafkaApi {
+  rpc GetAllClusters (google.protobuf.Empty) returns (GetClustersResponse);
+  rpc GetTopics (GetTopicsRequest) returns (GetTopicsResponse) {}
+  rpc GetTopicMessages (GetTopicMessagesRequest) returns (stream Message) {}
+  rpc GetPartitionMessages (GetPartitionMessagesRequest) returns (GetPartitionMessagesResponse) {}
+}
+
+message GetAllClustersRequest {
+}
+
+message GetClusterRequest {
+  string id = 1;
+}
+
+message GetClustersResponse {
+  repeated Cluster clusters = 1;
+}
+
+message Cluster {
+  string id = 1;
+  string name = 2;
+  string bootstrap_servers = 3;
+}
+
+message GetTopicsRequest {
+  string cluster_id = 1;
+}
+
+message GetTopicsResponse {
+  repeated Topic topics = 1;
+}
+
+message Topic {
+  string name = 1;
+  uint32 partition_count = 2;
+}
+
+message GetTopicMessagesRequest {
+  string cluster_id = 1;
+  string topic_name = 2;
+  FetchOptions fetch_options = 3;
+}
+
+message GetPartitionMessagesRequest {
+  string cluster_id = 1;
+  string topic_name = 2;
+  uint32 partition = 3;
+  FetchOptions fetch_options = 4;
+}
+
+message FetchOptions {
+  uint32 max_count = 1;
+  FetchPosition start = 2;
+  FetchPosition end = 3;
+}
+
+message FetchPosition {
+  oneof position {
+    uint64 offset = 1;
+    google.protobuf.Timestamp timestamp = 2;
+  }
+}
+
+message GetTopicMessagesResponse {
+  repeated Message messages = 1;
+}
+
+message GetPartitionMessagesResponse {
+  repeated Message messages = 1;
+}
+
+message Message {
+  uint64 offset = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  bytes key = 3;
+  bytes value = 4;
+}

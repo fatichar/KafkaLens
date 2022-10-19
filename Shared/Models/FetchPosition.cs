@@ -1,4 +1,4 @@
-﻿namespace KafkaLens.Core.Services;
+﻿namespace KafkaLens.Shared.Models;
 
 public enum PositionType
 {
@@ -26,7 +26,7 @@ public class FetchPosition
         }
     }
 
-    internal void SetOffset(long offset)
+    public void SetOffset(long offset)
     {
         Type = PositionType.OFFSET;
         Offset = offset;
