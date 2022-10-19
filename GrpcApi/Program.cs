@@ -1,10 +1,30 @@
+using Confluent.Kafka;
+using GrpcApi.Config;
 using GrpcApi.Services;
 using KafkaLens.Core.DataAccess;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared;
+using Microsoft.AspNetCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System.Net;
+
+var configuration = new ConfigurationBuilder()
+    .AddEnvironmentVariables()
+    .AddCommandLine(args)
+    .AddJsonFile("appsettings.json")
+    .Build();
+
+var config = new ServiceConfig();
+configuration.Bind(config);
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Listen(IPAddress.Loopback, config.Kestrel.EndpointDefaults.HttpsPort, configure => configure.UseHttps());
+        options.Listen(IPAddress.Loopback, config.Kestrel.EndpointDefaults.HttpPort);
+    });
 
 // Additional configuration is required to successfully run gRPC on macOS.
 // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
@@ -13,7 +33,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddGrpc();
 builder.Services.AddSingleton<IKafkaLensClient, SharedClient>();
 builder.Services.AddSingleton<ConsumerFactory>();
-builder.Services.AddDbContext<KlServerContext>(opt => 
+builder.Services.AddDbContext<KlServerContext>(opt =>
     opt.UseSqlite("Data Source=KafkaLensGrpcServer.db;", b => b.MigrationsAssembly("GrpcApi")));
 
 
