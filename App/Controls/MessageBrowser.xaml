@@ -34,7 +34,6 @@
             </local:MessagesToolbar>
             <DataGrid Name="messagesGrid" ItemsSource="{Binding CurrentMessages.Filtered}" AutoGenerateColumns="False"
                   AlternatingRowBackground="#FFECF4FF" HorizontalGridLinesBrush="#FFC6C6C6"
-                      CurrentItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
                       SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
                       LoadingRow="messagesGrid_LoadingRow"
                       dgx:DataGridFilter.IsAutoFilterEnabled="True"

@@ -37,10 +37,7 @@ public sealed class MessagesViewModel : ObservableRecipient
     private string positiveFilter = "";
     public string PositiveFilter
     {
-        get
-        {
-            return positiveFilter;
-        }
+        get => positiveFilter;
         set
         {
             if (positiveFilter == value)
@@ -53,10 +50,7 @@ public sealed class MessagesViewModel : ObservableRecipient
     private string negativeFilter = "";
     public string NegativeFilter
     {
-        get
-        {
-            return negativeFilter;
-        }
+        get => negativeFilter;
         set
         {
             if (negativeFilter == value)
