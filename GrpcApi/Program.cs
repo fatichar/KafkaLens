@@ -5,6 +5,7 @@ using KafkaLens.Core.DataAccess;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Net;
@@ -22,8 +23,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(options =>
     {
-        options.Listen(IPAddress.Loopback, config.Kestrel.EndpointDefaults.HttpsPort, configure => configure.UseHttps());
-        options.Listen(IPAddress.Loopback, config.Kestrel.EndpointDefaults.HttpPort);
+        options.Listen(IPAddress.Any,
+            config.Kestrel.EndpointDefaults.HttpPort,
+            listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
     });
 
 // Additional configuration is required to successfully run gRPC on macOS.

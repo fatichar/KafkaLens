@@ -9,10 +9,16 @@ package KafkaLens.Grpc;
 
 
 service KafkaApi {
+  rpc AddCluster(AddClusterRequest) returns (Cluster);
   rpc GetAllClusters (google.protobuf.Empty) returns (GetClustersResponse);
   rpc GetTopics (GetTopicsRequest) returns (GetTopicsResponse) {}
   rpc GetTopicMessages (GetTopicMessagesRequest) returns (stream Message) {}
   rpc GetPartitionMessages (GetPartitionMessagesRequest) returns (GetPartitionMessagesResponse) {}
+}
+
+message AddClusterRequest {
+  string name = 1;
+  string bootstrapServers = 2;
 }
 
 message GetAllClustersRequest {

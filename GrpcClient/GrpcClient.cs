@@ -12,9 +12,14 @@ namespace KafkaLens.Clients;
 
 public class GrpcClient : IKafkaLensClient
 {
+    #region fields
+    
     private readonly KafkaApi.KafkaApiClient client;
     private string url;
+    
+    #endregion
 
+    #region Constructor
     public GrpcClient(string url)
     {
         this.url = url;
@@ -26,12 +31,22 @@ public class GrpcClient : IKafkaLensClient
     {
         throw new NotImplementedException();
     }
+    #endregion Constructor
 
-    public Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
+    #region  Create
+    public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
     {
-        throw new NotImplementedException();
-    }
+        var response = await client.AddClusterAsync(new AddClusterRequest
+        {
+            Name = newCluster.Name,
+            BootstrapServers = newCluster.BootstrapServers
+        });
 
+        return ToClusterModel(response);
+    }
+    #endregion Create
+
+    #region Read
     public async Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
         var response = await client.GetAllClustersAsync(new Empty()).ResponseAsync;
@@ -100,16 +115,21 @@ public class GrpcClient : IKafkaLensClient
         
         return response.Messages.Select(ToMessageModel).ToList();
     }
-
+    #endregion Read
+    
+    #region Update
     public Task<KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
         throw new NotImplementedException();
     }
-
+    #endregion Update
+    
+    #region Delete
     public Task<KafkaCluster> RemoveClusterByIdAsync(string clusterId)
     {
         throw new NotImplementedException();
     }
+    #endregion Delete
 
     #region Convertors
     private static KafkaCluster ToClusterModel(Cluster cluster)

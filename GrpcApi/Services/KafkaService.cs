@@ -12,15 +12,30 @@ namespace GrpcApi.Services;
 
 public class KafkaService : KafkaApi.KafkaApiBase
 {
+    #region fields
+
     private readonly ILogger<KafkaService> _logger;
     private readonly IKafkaLensClient kafkaLensClient;
+    
+    #endregion
 
+    #region Constructor
     public KafkaService(ILogger<KafkaService> logger, IKafkaLensClient kafkaLensClient)
     {
         _logger = logger;
         this.kafkaLensClient = kafkaLensClient;
     }
+    #endregion Constructor
 
+    #region  Create
+    public override async Task<Cluster> AddCluster(AddClusterRequest request, ServerCallContext context)
+    {
+        var cluster = await kafkaLensClient.AddAsync(new Models.NewKafkaCluster(request.Name, request.BootstrapServers));
+        return ToClusterResponse(cluster);
+    }
+    #endregion Create
+
+    #region Read
     public override async Task<GetClustersResponse> GetAllClusters(Empty request, ServerCallContext context)
     {
         var allClusters = await kafkaLensClient.GetAllClustersAsync();
@@ -35,12 +50,12 @@ public class KafkaService : KafkaApi.KafkaApiBase
         var topics = await kafkaLensClient.GetTopicsAsync(request.ClusterId);
         var response = new GetTopicsResponse();
         response.Topics.AddRange(topics.Select(ToTopicResponse));
-        
+
         return response;
     }
 
     public override async Task GetTopicMessages(
-        GetTopicMessagesRequest request, 
+        GetTopicMessagesRequest request,
         IServerStreamWriter<Message> responseStream,
         ServerCallContext context)
     {
@@ -58,7 +73,7 @@ public class KafkaService : KafkaApi.KafkaApiBase
         }
     }
 
-    private static async Task<int> WriteMessagesAsync(IServerStreamWriter<Message> responseStream, 
+    private static async Task<int> WriteMessagesAsync(IServerStreamWriter<Message> responseStream,
         Models.MessageStream messagesStream,
         int writtenCount)
     {
@@ -75,10 +90,17 @@ public class KafkaService : KafkaApi.KafkaApiBase
         var messages = await kafkaLensClient.GetMessagesAsync(request.ClusterId, request.TopicName, (int)request.Partition, ToFetchOptions(request.FetchOptions));
         var response = new GetPartitionMessagesResponse();
         response.Messages.AddRange(messages.Select(ToMessageResponse));
-        
+
         return response;
     }
-
+    #endregion Read
+    
+    #region Update
+    #endregion Update
+    
+    #region Delete
+    #endregion Delete
+    
     #region Convertors
 
     private static Cluster ToClusterResponse(Models.KafkaCluster cluster)
@@ -99,7 +121,7 @@ public class KafkaService : KafkaApi.KafkaApiBase
             PartitionCount = (uint)topic.PartitionCount
         };
     }
-    
+
     private static Message ToMessageResponse(Models.Message message)
     {
         return new Message
@@ -115,7 +137,7 @@ public class KafkaService : KafkaApi.KafkaApiBase
     {
         return new Timestamp
         {
-            Seconds = milliseconds / 1000, 
+            Seconds = milliseconds / 1000,
             Nanos = (int)((milliseconds % 1000) * 1000000)
         };
     }
