@@ -18,10 +18,10 @@ public partial class MainViewModel : ObservableRecipient
 {
     // data
     private string? Title { get; }
-    
+
     public ObservableCollection<ClusterViewModel> Clusters { get; } = new();
     public ObservableCollection<IKafkaLensClient> Clients { get; } = new();
-    
+
     public ObservableCollection<OpenedClusterViewModel> OpenedClusters { get; } = new();
     private readonly IDictionary<string, List<OpenedClusterViewModel>> openedClustersMap = new Dictionary<string, List<OpenedClusterViewModel>>();
 
@@ -33,6 +33,10 @@ public partial class MainViewModel : ObservableRecipient
     // commands
     public IRelayCommand AddClusterCommand { get; }
     public IRelayCommand LoadClustersCommand { get; }
+
+    private int selectedIndex = -1;
+
+    public int SelectedIndex { get => selectedIndex; set => SetProperty(ref selectedIndex, value); }
 
     public MainViewModel(IOptions<AppConfig> appInfo, KafkaClientContext dbContext, ISettingsService settingsService, IKafkaLensClient localClient)
     {
@@ -132,17 +136,16 @@ public partial class MainViewModel : ObservableRecipient
         Clients.Clear();
         Clusters.Clear();
         await LoadClients();
-        
+
         foreach (var client in Clients)
         {
             await LoadClusters(client);
         }
-        selectedIndex = 0;
 
         if (Clusters.Count > 0)
         {
             OpenCluster(Clusters.First());
-            selectedIndex = 0;
+            SelectedIndex = 0;
         }
     }
 
@@ -176,8 +179,4 @@ public partial class MainViewModel : ObservableRecipient
                 throw new ArgumentException($"Protocol {clientInfo.Protocol} is not supported");
         }
     }
-
-    private int selectedIndex = -1;
-
-    public int SelectedIndex { get => selectedIndex; set => SetProperty(ref selectedIndex, value); }
 }
