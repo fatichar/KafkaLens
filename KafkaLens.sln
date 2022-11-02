@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "Core\Core.csproj", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core.Tests", "Core.Tests\Core.Tests.csproj", "{3D13E0E1-D31B-43BF-9D84-F50A1EEA2B54}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestApi", "Rest\RestApi.csproj", "{992F55F1-A5C6-45CA-AB31-3C7B620EB771}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestApi", "RestApi\RestApi.csproj", "{992F55F1-A5C6-45CA-AB31-3C7B620EB771}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Client", "Client\Client.csproj", "{4303F9AB-F8EA-4792-8AF8-0F3C6EC903C8}"
 	ProjectSection(ProjectDependencies) = postProject
