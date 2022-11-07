@@ -85,22 +85,33 @@ public class KafkaService : KafkaApi.KafkaApiBase
         return writtenCount;
     }
 
-    public override async Task<GetPartitionMessagesResponse> GetPartitionMessages(GetPartitionMessagesRequest request, ServerCallContext context)
+    public override async Task GetPartitionMessages(
+        GetPartitionMessagesRequest request,
+        IServerStreamWriter<Message> responseStream,
+        ServerCallContext context)
     {
-        var messages = await kafkaLensClient.GetMessagesAsync(request.ClusterId, request.TopicName, (int)request.Partition, ToFetchOptions(request.FetchOptions));
-        var response = new GetPartitionMessagesResponse();
-        response.Messages.AddRange(messages.Select(ToMessageResponse));
+        var messagesStream = kafkaLensClient.GetMessageStream(request.ClusterId, request.TopicName, (int) request.Partition, ToFetchOptions(request.FetchOptions));
 
-        return response;
+        var writtenCount = 0;
+        while (messagesStream.HasMore)
+        {
+            writtenCount = await WriteMessagesAsync(responseStream, messagesStream, writtenCount);
+            await Task.Delay(100);
+        }
+        if (writtenCount < messagesStream.Messages.Count)
+        {
+            await WriteMessagesAsync(responseStream, messagesStream, writtenCount);
+        }
     }
+
     #endregion Read
-    
+
     #region Update
     #endregion Update
-    
+
     #region Delete
     #endregion Delete
-    
+
     #region Convertors
 
     private static Cluster ToClusterResponse(Models.KafkaCluster cluster)

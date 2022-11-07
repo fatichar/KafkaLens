@@ -13,7 +13,7 @@ service KafkaApi {
   rpc GetAllClusters (google.protobuf.Empty) returns (GetClustersResponse);
   rpc GetTopics (GetTopicsRequest) returns (GetTopicsResponse) {}
   rpc GetTopicMessages (GetTopicMessagesRequest) returns (stream Message) {}
-  rpc GetPartitionMessages (GetPartitionMessagesRequest) returns (GetPartitionMessagesResponse) {}
+  rpc GetPartitionMessages (GetPartitionMessagesRequest) returns (stream Message) {}
 }
 
 message AddClusterRequest {
