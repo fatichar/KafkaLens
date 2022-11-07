@@ -13,10 +13,10 @@ namespace KafkaLens.Clients;
 public class GrpcClient : IKafkaLensClient
 {
     #region fields
-    
+
     private readonly KafkaApi.KafkaApiClient client;
     private string url;
-    
+
     #endregion
 
     #region Constructor
@@ -26,7 +26,7 @@ public class GrpcClient : IKafkaLensClient
         var channel = GrpcChannel.ForAddress(url);
         client = new KafkaApi.KafkaApiClient(channel);
     }
-    
+
     public Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {
         throw new NotImplementedException();
@@ -71,14 +71,37 @@ public class GrpcClient : IKafkaLensClient
 
     public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options)
     {
-        GetTopicMessagesRequest request = new GetTopicMessagesRequest
+        var request = new GetTopicMessagesRequest
         {
             ClusterId = clusterId,
             TopicName = topic,
             FetchOptions = ToGrpcFetchOptions(options)
         };
         var response = client.GetTopicMessages(request);
-        
+
+        return ToStream(response);
+    }
+
+    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options)
+    {
+        throw new NotImplementedException();
+    }
+
+    public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options)
+    {
+        var request = new GetPartitionMessagesRequest
+        {
+            ClusterId = clusterId,
+            TopicName = topic,
+            Partition = (uint)partition,
+            FetchOptions = ToGrpcFetchOptions(options)
+        };
+        var response = client.GetPartitionMessages(request);
+        return ToStream(response);
+    }
+
+    private static MessageStream ToStream(global::Grpc.Core.AsyncServerStreamingCall<Grpc.Message> response)
+    {
         var stream = new MessageStream();
         Task.Run(() =>
         {
@@ -93,37 +116,19 @@ public class GrpcClient : IKafkaLensClient
         return stream;
     }
 
-    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options)
+    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options)
     {
         throw new NotImplementedException();
-    }
-
-    public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options)
-    {
-        var response = await client.GetPartitionMessagesAsync(new GetPartitionMessagesRequest()
-        {
-            ClusterId = clusterId,
-            TopicName = topic,
-            Partition = (uint) partition,
-            FetchOptions = ToGrpcFetchOptions(options)
-        }).ResponseAsync;
-        
-        return response.Messages.Select(ToMessageModel).ToList();
     }
     #endregion Read
-    
+
     #region Update
     public Task<KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
         throw new NotImplementedException();
     }
     #endregion Update
-    
+
     #region Delete
     public Task<KafkaCluster> RemoveClusterByIdAsync(string clusterId)
     {
@@ -136,17 +141,17 @@ public class GrpcClient : IKafkaLensClient
     {
         return new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
     }
-    
+
     private static Topic ToTopicModel(Grpc.Topic topic)
     {
         return new Topic(topic.Name, (int)topic.PartitionCount);
     }
-    
+
     private static Message ToMessageModel(Grpc.Message message)
     {
-        return new Message(message.Timestamp.ToDateTimeOffset().ToUnixTimeMilliseconds(), 
+        return new Message(message.Timestamp.ToDateTimeOffset().ToUnixTimeMilliseconds(),
             new Dictionary<string, byte[]>(),
-            message.Key.ToByteArray(), 
+            message.Key.ToByteArray(),
             message.Value.ToByteArray())
         {
             Offset = (long)message.Offset
@@ -184,7 +189,7 @@ public class GrpcClient : IKafkaLensClient
     {
         return new Timestamp
         {
-            Seconds = milliseconds / 1000, 
+            Seconds = milliseconds / 1000,
             Nanos = (int)((milliseconds % 1000) * 1000000)
         };
     }

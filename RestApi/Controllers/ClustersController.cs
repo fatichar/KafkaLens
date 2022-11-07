@@ -39,11 +39,11 @@ public class ClustersController : ControllerBase
     }
 
     [HttpGet("{clusterId}")]
-    public ActionResult<KafkaCluster> GetClusterById(string clusterId)
+    public async Task<ActionResult<KafkaCluster>> GetClusterById(string clusterId)
     {
         try
         {
-            return kafkaLensClient.GetClusterByIdAsync(clusterId);
+            return await kafkaLensClient.GetClusterByIdAsync(clusterId);
         }
         catch (Exception ex)
         {

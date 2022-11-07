@@ -26,10 +26,10 @@ builder.Services.AddSwaggerGen(c =>
     c.CustomOperationIds(e => $"{e.ActionDescriptor.RouteValues["action"]}");
 });
 
-builder.Services.AddDbContext<KafkaContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
+builder.Services.AddDbContext<KlServerContext>(opt => opt.UseSqlite("Data Source=KafkaDB.db;"));
 
 // TODO replace with SharedClusterService
-builder.Services.AddSingleton<IKafkaLensClient, LocalClient>();
+builder.Services.AddSingleton<IKafkaLensClient, SharedClient>();
 builder.Services.AddSingleton<ConsumerFactory>();
 builder.Services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
