@@ -15,7 +15,7 @@ public class JsonFormatter : IMessageFormatter
         return FormatUsingNewtonSoft(data);
     }
 
-    private string? FormatUsingNewtonSoft(byte[] data)
+    private static string? FormatUsingNewtonSoft(byte[] data)
     {
         var text = Encoding.UTF8.GetString(data);
         if (text.Length < data.Length)

@@ -9,11 +9,20 @@ package KafkaLens.Grpc;
 
 
 service KafkaApi {
+  // Create
   rpc AddCluster(AddClusterRequest) returns (Cluster);
+  
+  // Read
   rpc GetAllClusters (google.protobuf.Empty) returns (GetClustersResponse);
   rpc GetTopics (GetTopicsRequest) returns (GetTopicsResponse) {}
   rpc GetTopicMessages (GetTopicMessagesRequest) returns (stream Message) {}
   rpc GetPartitionMessages (GetPartitionMessagesRequest) returns (GetPartitionMessagesResponse) {}
+  
+  // Update
+  rpc UpdateCluster(UpdateClusterRequest) returns (Cluster);
+  
+  // Delete
+  rpc DeleteCluster(RemoveClusterRequest) returns (google.protobuf.Empty);
 }
 
 message AddClusterRequest {
@@ -90,4 +99,14 @@ message Message {
   google.protobuf.Timestamp timestamp = 2;
   bytes key = 3;
   bytes value = 4;
+}
+
+message UpdateClusterRequest {
+  string id = 1;
+  string name = 2;
+  string bootstrap_servers = 3;
+}
+
+message RemoveClusterRequest {
+  string id = 1;
 }
