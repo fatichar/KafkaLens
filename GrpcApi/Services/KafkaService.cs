@@ -16,7 +16,7 @@ public class KafkaService : KafkaApi.KafkaApiBase
 
     private readonly ILogger<KafkaService> _logger;
     private readonly IKafkaLensClient kafkaLensClient;
-    
+
     #endregion
 
     #region Constructor
@@ -139,7 +139,7 @@ public class KafkaService : KafkaApi.KafkaApiBase
         {
             Key = message.Key == null ? ByteString.Empty : ByteString.CopyFrom(message.Key),
             Value = message.Value == null ? ByteString.Empty : ByteString.CopyFrom(message.Value),
-            Offset = (ulong)message.Offset,
+            Offset = message.Offset,
             Timestamp = ToGrpcTimestamp(message.EpochMillis)
         };
     }

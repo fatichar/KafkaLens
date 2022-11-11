@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType Condition="'$(Configuration)'=='Release'">WinExe</OutputType>
+		<OutputType Condition="'$(Configuration)'=='Debug'">Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<DefineConstants>$(DefinedConstants);WINUI</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup Condition="exists('..\KafkaLens.Windows')">
+		<EmbeddedResource Include="..\KafkaLens.Windows\Package.appxmanifest" LogicalName="Package.appxmanifest" />
+		<Content Include="..\KafkaLens.Windows\Images\StoreLogo.png" Link="Assets\StoreLogo.png" />
+	</ItemGroup>
+	<ItemGroup>
+		<UpToDateCheckInput Include="..\KafkaLens.UI\**\*.xaml" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="Assets\Fonts\uno-fluentui-assets.ttf" />
+		<Content Include="Assets\Fonts\Roboto-Light.ttf" />
+		<Content Include="Assets\Fonts\Roboto-Medium.ttf" />
+		<Content Include="Assets\Fonts\Roboto-Regular.ttf" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Uno.CommunityToolkit.WinUI.UI.Controls" Version="7.1.100-dev.15.g12261e2626" />
+		<PackageReference Include="Uno.WinUI.Skia.Gtk" Version="4.4.13" />
+		<PackageReference Include="Uno.WinUI.RemoteControl" Version="4.4.13" Condition="'$(Configuration)'=='Debug'" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\KafkaLens\KafkaLens.csproj" />
+	</ItemGroup>
+	<Import Project="..\Extensions.props" />
+	<Import Project="..\KafkaLens.UI\KafkaLens.UI.projitems" Label="Shared" />
+</Project>

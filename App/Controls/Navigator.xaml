@@ -8,6 +8,17 @@
              xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
              d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <UserControl.Resources>
+        <!--<StaticResource ResourceKey="formats" >
+            
+        </StaticResource>-->
+        <ContextMenu x:Key="contextMenu" 
+                     ItemsSource="{Binding Path=DataContext.MessageFormats, RelativeSource={RelativeSource AncestorType={x:Type TreeView}, AncestorLevel=1}}">
+            <ContextMenu.ItemTemplate>
+                <DataTemplate>
+                    <MenuItem Header="{Binding}" Command="{Binding ChangeFormatterCommand}" />
+                </DataTemplate>
+            </ContextMenu.ItemTemplate>
+        </ContextMenu>
         <HierarchicalDataTemplate DataType = "{x:Type viewModels:OpenedClusterViewModel}"
                                 ItemsSource = "{Binding Path=Topics}">
             <TextBlock Text="{Binding Path=Name}"/>
@@ -15,7 +26,8 @@
 
         <HierarchicalDataTemplate DataType = "{x:Type viewModels:TopicViewModel}"
                                 ItemsSource = "{Binding Path=Partitions}">
-            <TextBlock Text="{Binding Path=Name}"/>
+            <TextBlock Text="{Binding Path=Name}" ContextMenu="{StaticResource contextMenu}">
+            </TextBlock>
         </HierarchicalDataTemplate>
 
         <DataTemplate DataType = "{x:Type viewModels:PartitionViewModel}">
@@ -31,22 +43,17 @@
                   Height="Auto"
                   VerticalAlignment="Stretch"
                   >
-            <!--<TreeView.Resources>
-                <ContextMenu x:Key="contextMenu" ItemsSource="{Binding MessageFormats}">
-                    <MenuItem Header="Message format" IsHitTestVisible="False" Focusable="False"/>
-                    <Separator/>
-                </ContextMenu>
+            <TreeView.Resources>
+                <!--<Style TargetType="MenuItem">
+                    <Setter Property="Header" Value="{Binding Path=Model}" />
+                    <Setter Property="Command" Value="{Binding ChangeFormatterCommand}" />
+                </Style>-->
             </TreeView.Resources>
-            <Style TargetType="MenuItem">
-                <Setter Property="Header" Value="{Binding Path=Model}" />
-                <Setter Property="Command" Value="{Binding ChangeFormatterCommand}" />
-            </Style>-->
             <TreeView.ItemContainerStyle>
                 <Style TargetType="{x:Type TreeViewItem}">
                     <Setter Property="IsSelected" Value="{Binding IsSelected}" />
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     <Setter Property="Padding" Value="3" />
-                    <!--<Setter Property="ContextMenu" Value="{StaticResource contextMenu}" />-->
                 </Style>
             </TreeView.ItemContainerStyle>
         </TreeView>
