@@ -10,6 +10,7 @@ public class ServiceConfig
 {
 
     public KestrelConfig Kestrel { get; set; } = new();
+    public string DatabasePath { get; set; } = "";
 }
 
 public class KestrelConfig

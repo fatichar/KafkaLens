@@ -1,12 +1,14 @@
-﻿using KafkaLens.ViewModels;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Windows;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared;
+using KafkaLens.ViewModels;
 using KafkaLens.ViewModels.DataAccess;
+using Microsoft.Extensions.Configuration;
 using Serilog;
+using AppConfig = KafkaLens.App.Config.AppConfig;
 
 namespace KafkaLens.App;
 
@@ -24,11 +26,19 @@ public partial class App : Application
 
     private static IServiceProvider ConfigureServices()
     {
+        var configuration = new ConfigurationBuilder()
+            .AddEnvironmentVariables()
+            .AddJsonFile("appsettings.json")
+            .Build();
+
+        var config = new AppConfig();
+        configuration.Bind(config);
+
         var services = new ServiceCollection();
 
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddDbContext<KafkaClientContext>(opt => 
-            opt.UseSqlite("Data Source=KafkaLensApp.db;",
+            opt.UseSqlite($"Data Source={config.DatabasePath};",
                 b => b.MigrationsAssembly("ViewModels")));
         services.AddSingleton<IKafkaLensClient, LocalClient>();
         services.AddSingleton<ConsumerFactory>();

@@ -36,7 +36,7 @@ builder.Services.AddGrpc();
 builder.Services.AddSingleton<IKafkaLensClient, SharedClient>();
 builder.Services.AddSingleton<ConsumerFactory>();
 builder.Services.AddDbContext<KlServerContext>(opt =>
-    opt.UseSqlite("Data Source=KafkaLensGrpcServer.db;", b => b.MigrationsAssembly("GrpcApi")));
+    opt.UseSqlite($"Data Source={config.DatabasePath};", b => b.MigrationsAssembly("GrpcApi")));
 
 
 var app = builder.Build();

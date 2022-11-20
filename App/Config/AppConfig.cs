@@ -8,4 +8,5 @@ namespace KafkaLens.App.Config;
 
 public class AppConfig
 {
+    public string DatabasePath { get; set; } = "";
 }

@@ -35,7 +35,6 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
     public ITreeNode.NodeType Type => ITreeNode.NodeType.CLUSTER;
 
     public bool IsSelected { get; set; }
-    public bool IsExpandable => true;
     public bool IsExpanded { get; set; }
 
     public ICollection<string> MessageFormats => formatters.Keys;
@@ -50,7 +49,7 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
     public ObservableCollection<TopicViewModel> Topics { get; } = new();
 
     public MessagesViewModel CurrentMessages { get; } = new();
-    private List<MessageViewModel> pendingMessages = new();
+    private readonly List<MessageViewModel> pendingMessages = new();
 
     private ITreeNode? selectedNode;
 
@@ -63,7 +62,7 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 
     public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
     public int FetchCount { get; set; } = 10;
-    public string? StartOffset { get; set; }
+    public string? StartOffset { get; }
     public DateTime StartDate
     {
         get => startDate;

@@ -7,6 +7,8 @@
         <LangVersion>latestmajor</LangVersion>
         <UserSecretsId>d217b61d-d512-4cb2-b754-0dbff70136a1</UserSecretsId>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <AssemblyName>KafkaLens.GrpcApi</AssemblyName>
+        <RootNamespace>KafkaLens.GrpcApi</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

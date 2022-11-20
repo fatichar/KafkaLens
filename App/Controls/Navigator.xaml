@@ -5,7 +5,7 @@
              mc:Ignorable="d"
              d:DesignHeight="980" d:DesignWidth="330"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
+             xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <UserControl.Resources>
         <!--<StaticResource ResourceKey="formats" >

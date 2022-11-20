@@ -151,10 +151,17 @@ public partial class MainViewModel : ObservableRecipient
 
     private async Task LoadClusters(IKafkaLensClient client)
     {
-        var clusters = await client.GetAllClustersAsync();
-        foreach (var cluster in clusters)
+        try
         {
-            Clusters.Add(new ClusterViewModel(cluster, client));
+            var clusters = await client.GetAllClustersAsync();
+            foreach (var cluster in clusters)
+            {
+                Clusters.Add(new ClusterViewModel(cluster, client));
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Error loading clusters");
         }
     }
 
@@ -164,8 +171,16 @@ public partial class MainViewModel : ObservableRecipient
         var clientInfos = await dbContext.Clients.ToDictionaryAsync(client => client.Id);
         foreach (var clientInfo in clientInfos.Values)
         {
-            var client = CreateClient(clientInfo);
-            Clients.Add(client);
+            try
+            {
+                var client = CreateClient(clientInfo);
+                Clients.Add(client);
+            }
+            catch (Exception e)
+            {
+                Log.Error("Failed to load client {}", clientInfo.Name);
+                throw;
+            }
         }
     }
 

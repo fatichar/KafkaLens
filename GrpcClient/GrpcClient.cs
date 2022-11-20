@@ -15,7 +15,7 @@ public class GrpcClient : IKafkaLensClient
     #region fields
 
     private readonly KafkaApi.KafkaApiClient client;
-    private string url;
+    private readonly string url;
 
     #endregion
 
@@ -49,7 +49,13 @@ public class GrpcClient : IKafkaLensClient
     #region Read
     public async Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
-        var response = await client.GetAllClustersAsync(new Empty()).ResponseAsync;
+        var responseTask = client.GetAllClustersAsync(new Empty());
+        var response = await responseTask.ResponseAsync;
+        var headers = await responseTask.ResponseHeadersAsync;
+        if (response == null)
+        {
+            throw new Exception("Failed to connect to grpc server: " + url);
+        }
         return response.Clusters.Select(ToClusterModel);
     }
 

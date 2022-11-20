@@ -9,7 +9,8 @@ public interface ITreeNode
         PARTITION,
         NONE
     }
-    bool IsSelected { get; set; }
     string Name { get; }
     NodeType Type { get; }
+    public bool IsExpanded { get; }
+    bool IsSelected { get; set; }
 }

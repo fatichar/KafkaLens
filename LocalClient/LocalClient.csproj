@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>KafkaLens.Clients</RootNamespace>
+        <AssemblyName>KafkaLens.LocalClient</AssemblyName>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Serilog" Version="2.11.0" />
