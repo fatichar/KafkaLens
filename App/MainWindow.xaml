@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="KafkaLens" Height="800" Width="1600"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
+        xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
         d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel}" >
 
     <DockPanel x:Name="mainDockPanel" LastChildFill="True">

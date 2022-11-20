@@ -5,39 +5,39 @@ using System.Windows.Controls;
 
 namespace KafkaLens.App.Controls;
 
-public partial class MessageBrowser : UserControl
+public partial class TopicPartitionBrowser : UserControl
 {
     private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
     private string singleMessageFilter = "";
     private string messageTablePositiveFilter = "";
     private string messageTableNegativeFilter = "";
 
-    public MessageBrowser()
+    public TopicPartitionBrowser()
     {
         InitializeComponent();
 
         DataContextChanged += OnDataContextChanged;
 
-        messageDisplayToolbar.fontSizeSlider.ValueChanged += (s, e) =>
+        MessageDisplayToolbar.fontSizeSlider.ValueChanged += (s, e) =>
         {
-            messageViewer.FontSize = (int)e.NewValue;
+            MessageViewer.FontSize = (int)e.NewValue;
         };
             
-        messagesToolbar.positiveFilterBox.TextChanged += (s, e) =>
+        MessagesPanel.MessagesToolbar.positiveFilterBox.TextChanged += (s, e) =>
         {
-            messageTablePositiveFilter = messagesToolbar.positiveFilterBox.Text.Trim();
+            messageTablePositiveFilter = MessagesPanel.MessagesToolbar.positiveFilterBox.Text.Trim();
             UpdateMessagesView();
         };
 
-        messagesToolbar.negativeFilterBox.TextChanged += (s, e) =>
+        MessagesPanel.MessagesToolbar.negativeFilterBox.TextChanged += (s, e) =>
         {
-            messageTableNegativeFilter = messagesToolbar.negativeFilterBox.Text.Trim();
+            messageTableNegativeFilter = MessagesPanel.MessagesToolbar.negativeFilterBox.Text.Trim();
             UpdateMessagesView();
         };
 
-        messageDisplayToolbar.filterBox.TextChanged += (s, e) =>
+        MessageDisplayToolbar.filterBox.TextChanged += (s, e) =>
         {
-            singleMessageFilter = messageDisplayToolbar.filterBox.Text.Trim();
+            singleMessageFilter = MessageDisplayToolbar.filterBox.Text.Trim();
             var message = dataContext?.CurrentMessages?.CurrentMessage;
             if (message != null)
             {
@@ -50,11 +50,11 @@ public partial class MessageBrowser : UserControl
     {
         if (e.OldValue == null)
         {
-            messagesGrid.SelectionChanged += messagesGrid_OnSelectionChanged;
+            MessagesPanel.MessagesGrid.SelectionChanged += messagesGrid_OnSelectionChanged;
         } 
         else if (e.NewValue == null)
         {
-            messagesGrid.SelectionChanged -= messagesGrid_OnSelectionChanged;
+            MessagesPanel.MessagesGrid.SelectionChanged -= messagesGrid_OnSelectionChanged;
         }
     }
 
@@ -69,7 +69,7 @@ public partial class MessageBrowser : UserControl
 
     private void messagesGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        var message = (MessageViewModel?)messagesGrid.SelectedItem;
+        var message = (MessageViewModel?)MessagesPanel.MessagesGrid.SelectedItem;
         dataContext.CurrentMessages.CurrentMessage = message;
         if (message != null)
         {
@@ -77,14 +77,14 @@ public partial class MessageBrowser : UserControl
         }
         else
         {
-            messageViewer.Document.Text = "";
+            MessageViewer.Document.Text = "";
         }
     }
 
     private void UpdateMessageText(MessageViewModel message)
     {
         //// this will update DisplayText
-        messageViewer.Document.Text = message.DisplayText;
+        MessageViewer.Document.Text = message.DisplayText;
 
         UpdateHighlighting();
     }
@@ -94,11 +94,11 @@ public partial class MessageBrowser : UserControl
         if (string.IsNullOrEmpty(singleMessageFilter))
         {
             var messageSource = (IMessageSource?)dataContext?.SelectedNode;
-            messageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(messageSource?.Formatter?.Name ?? "Json");
+            MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(messageSource?.Formatter?.Name ?? "Json");
         }
         else
         {
-            messageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Text");
+            MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Text");
         }
     }
 

@@ -7,7 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:viewmodels="clr-namespace:KafkaLens.ViewModels" 
     xmlns:local="clr-namespace:KafkaLens.App.Controls"
-    xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=ViewModels"
+    xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
     d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <local:Navigator x:Name="Navigator"
