@@ -131,9 +131,9 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         _ = Messenger.Send(new CloseTabMessage(this));
     }
 
-    private Task UpdateFormatterAsync()
+    private async Task UpdateFormatterAsync()
     {
-        throw new NotImplementedException();
+        // SelectedNode.Formatter =
     }
 
     internal async Task LoadTopicsAsync()

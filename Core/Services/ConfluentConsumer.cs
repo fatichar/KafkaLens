@@ -42,7 +42,7 @@ class ConfluentConsumer : IKafkaConsumer, IDisposable
             EnableAutoOffsetStore = false,
             EnableAutoCommit = false,
             FetchMaxBytes = 2_000_000,
-            // QueuedMaxMessagesKbytes = 100_000
+            StatisticsIntervalMs = 30_000
         };
     }
 
@@ -80,6 +80,12 @@ class ConfluentConsumer : IKafkaConsumer, IDisposable
 
         var topics = metadata.Topics
             .ConvertAll(topic => new Topic(topic.Topic, topic.Partitions.Count));
+        
+        // var topicPartitions = topics
+        //     .SelectMany(topic => topic.Partitions.Select(partition => new TopicPartition(topic.Name, partition.Id)))
+        //     .ToList();
+        //
+        // QueryWatermarkOffsets(topicPartitions);
 
         return topics;
     }

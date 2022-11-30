@@ -179,12 +179,11 @@ public partial class MainViewModel : ObservableRecipient
             catch (Exception e)
             {
                 Log.Error("Failed to load client {}", clientInfo.Name);
-                throw;
             }
         }
     }
 
-    private IKafkaLensClient CreateClient(KafkaLensClient clientInfo)
+    private static IKafkaLensClient CreateClient(KafkaLensClient clientInfo)
     {
         switch (clientInfo.Protocol)
         {

@@ -15,10 +15,10 @@
                 <DataTemplate x:Key="ClusterPresenter">
                 </DataTemplate>
                 <DataTemplate x:Key="TopicPresenter">
-                    <local:TopicInfoPanel DataContext="{Binding SelectedNode}"></local:TopicInfoPanel>
+                    <local:TopicInfoPanel DataContext="{Binding SelectedNode}"/>
                 </DataTemplate>
                 <DataTemplate x:Key="PartitionPresenter">
-                    <local:PartitionInfoPanel DataContext="{Binding SelectedNode}"></local:PartitionInfoPanel>
+                    <local:PartitionInfoPanel DataContext="{Binding SelectedNode}"/>
                 </DataTemplate>
             </ContentPresenter.Resources>
 

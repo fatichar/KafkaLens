@@ -8,20 +8,39 @@
              d:DesignHeight="300" d:DesignWidth="300"
              xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              d:DataContext="{d:DesignInstance Type=viewModels:TopicViewModel}">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition></ColumnDefinition>
-            <ColumnDefinition></ColumnDefinition>
-        </Grid.ColumnDefinitions>
-        <Label Grid.ColumnSpan="2" HorizontalAlignment="Center" 
-               Content="{Binding Name, StringFormat=Topic: ${0}}"/>
-        <Label Grid.Column="0" Grid.Row="1" Content="Partitions:"/>
-        <Label Grid.Column="1" Grid.Row="1" 
-               Content="{Binding Partitions.Count}"/>
-    </Grid>
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" HorizontalAlignment="Center" FontSize="20"
+               Text="{Binding Name, StringFormat=Topic: {0}}"/>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30" />
+                <RowDefinition Height="30" />
+                <RowDefinition Height="30" />
+                <RowDefinition Height="30" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Grid.Row="0" Content="Partitions:"/>
+            <Label Grid.Column="1" Grid.Row="0" 
+                   Content="{Binding Partitions.Count}"/>
+            <Label Grid.Column="0" Grid.Row="1" Content="Message Key Format"/>
+            <ComboBox Grid.Column="1" Grid.Row="1">
+                <ComboBoxItem Content="String"/>
+                <ComboBoxItem Content="Integer"/>
+                <ComboBoxItem Content="Unsigned Integer"/>
+            </ComboBox>
+            <Label Grid.Column="0" Grid.Row="2" Content="Message Body Format"/>
+            <ComboBox Grid.Column="1" Grid.Row="2"
+                      ItemsSource="{Binding Parent.DataContext.MessageFormats, 
+                            RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:TopicPartitionInfoPanel}}}"/>
+            
+            <Label Grid.Column="0" Grid.Row="3" Content="Parent"/>
+            <Label Grid.Column="1" Grid.Row="3" 
+                   Content="{Binding Parent.DataContext.Name, 
+                        RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:TopicPartitionInfoPanel}}}"/>
+        </Grid>
+    </DockPanel>
 </UserControl>
+

@@ -7,7 +7,6 @@ EXPOSE 8888
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY ["NuGet.config", "."]
 COPY ["GrpcApi/GrpcApi.csproj", "GrpcApi/"]
 COPY ["GrpcApi/KafkaLensGrpcServer.db", "GrpcApi/"]
 COPY ["Core/Core.csproj", "Core/"]
@@ -25,4 +24,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 COPY --from=publish /root/.dotnet/corefx/cryptography/x509stores/my/* /root/.dotnet/corefx/cryptography/x509stores/my/
-ENTRYPOINT ["bash", "GrpcApi"]
+ENTRYPOINT ["dotnet", "KafkaLens.GrpcApi.dll"]

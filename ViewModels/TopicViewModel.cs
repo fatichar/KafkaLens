@@ -28,9 +28,9 @@ public sealed class TopicViewModel : ObservableRecipient, IMessageSource
         this.kafkaLensClient = kafkaLensClient;
         this.topic = topic;
         Formatter = formatter;
-        foreach (var parittion in topic.Partitions)
+        foreach (var partition in topic.Partitions)
         {
-            Partitions.Add(new PartitionViewModel(kafkaLensClient, this, parittion));
+            Partitions.Add(new PartitionViewModel(kafkaLensClient, this, partition));
         }
 
         IsActive = true;

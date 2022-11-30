@@ -8,8 +8,8 @@
              d:DesignHeight="300" d:DesignWidth="300"
              xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              d:DataContext="{d:DesignInstance Type=viewModels:PartitionViewModel}">
-    <Grid>
-        <Label HorizontalAlignment="Center" 
-               Content="{Binding Name, StringFormat=Partition: ${0}}"/>
-    </Grid>
+    <DockPanel>
+        <TextBlock HorizontalAlignment="Center" FontSize="20"
+                   Text="{Binding Name, StringFormat=Partition: ${0}}"/>
+    </DockPanel>
 </UserControl>
