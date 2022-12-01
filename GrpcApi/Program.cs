@@ -36,10 +36,24 @@ builder.Services.AddGrpc();
 builder.Services.AddSingleton<IKafkaLensClient, SharedClient>();
 builder.Services.AddSingleton<ConsumerFactory>();
 builder.Services.AddDbContext<KlServerContext>(opt =>
-    opt.UseSqlite($"Data Source={config.DatabasePath};", b => b.MigrationsAssembly("GrpcApi")));
+    opt.UseSqlite($"Data Source={config.DatabasePath};", b => b.MigrationsAssembly("KafkaLens.GrpcApi")));
 
 
 var app = builder.Build();
+
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+var logger = services.GetRequiredService<ILogger<Program>>();
+
+try
+{
+    var context = services.GetRequiredService<KlServerContext>();
+    context.Database.Migrate();
+}
+catch (Exception ex)
+{
+    logger.LogError(ex, "An error occurred migrating the DB");
+}
 
 // Configure the HTTP request pipeline.
 app.MapGrpcService<KafkaService>();
