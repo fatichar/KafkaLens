@@ -34,6 +34,6 @@ public interface IKafkaLensClient
     #endregion update
 
     #region delete
-    Task<KafkaCluster> RemoveClusterByIdAsync(string clusterId);
+    Task RemoveClusterByIdAsync(string clusterId);
     #endregion delete
 }

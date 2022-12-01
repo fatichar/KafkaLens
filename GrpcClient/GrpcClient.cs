@@ -135,9 +135,9 @@ public class GrpcClient : IKafkaLensClient
     #endregion Update
 
     #region Delete
-    public Task<KafkaCluster> RemoveClusterByIdAsync(string clusterId)
+    public async Task RemoveClusterByIdAsync(string clusterId)
     {
-        throw new NotImplementedException();
+        var response = await client.RemoveClusterAsync(new RemoveClusterRequest { ClusterId = clusterId }).ResponseAsync;
     }
     #endregion Delete
 

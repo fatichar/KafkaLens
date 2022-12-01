@@ -22,7 +22,7 @@ service KafkaApi {
   rpc UpdateCluster(UpdateClusterRequest) returns (Cluster);
 
   // Delete
-  rpc DeleteCluster(RemoveClusterRequest) returns (google.protobuf.Empty);
+  rpc RemoveCluster(RemoveClusterRequest) returns (google.protobuf.Empty);
 }
 
 message AddClusterRequest {
@@ -34,7 +34,7 @@ message GetAllClustersRequest {
 }
 
 message GetClusterRequest {
-  string id = 1;
+  string cluster_id = 1;
 }
 
 message GetClustersResponse {
@@ -103,11 +103,11 @@ message Message {
 }
 
 message UpdateClusterRequest {
-  string id = 1;
+  string cluster_id = 1;
   string name = 2;
   string bootstrap_servers = 3;
 }
 
 message RemoveClusterRequest {
-  string id = 1;
+  string cluster_id = 1;
 }

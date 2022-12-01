@@ -103,13 +103,17 @@ public class KafkaService : KafkaApi.KafkaApiBase
             await WriteMessagesAsync(responseStream, messagesStream, writtenCount);
         }
     }
-
     #endregion Read
 
     #region Update
     #endregion Update
 
     #region Delete
+    public override async Task<Empty> RemoveCluster(RemoveClusterRequest request, ServerCallContext context)
+    {
+        await kafkaLensClient.RemoveClusterByIdAsync(request.ClusterId);
+        return new Empty();
+    }
     #endregion Delete
 
     #region Convertors

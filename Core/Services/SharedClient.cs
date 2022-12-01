@@ -178,22 +178,20 @@ public class SharedClient : IKafkaLensClient
     #endregion update
 
     #region Delete
-    public async Task<KafkaCluster> RemoveClusterByIdAsync(string clusterId)
+    public async Task RemoveClusterByIdAsync(string clusterId)
     {
-        if (clusters.ContainsKey(clusterId))
+        if (!clusters.ContainsKey(clusterId))
         {
-            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>();
-            var cluster = dbContext.KafkaClusters.Find(clusterId);
-            if (cluster != null)
-            {
-                dbContext.KafkaClusters.Remove(cluster);
-                await dbContext.SaveChangesAsync();
-            }
-            cluster = clusters[clusterId];
-            clusters.Remove(clusterId);
-            return ToModel(cluster);
+            throw new KeyNotFoundException($"Cluster with id {clusterId} not found");
         }
-        throw new KeyNotFoundException($"Cluster with id {clusterId} not found");
+        var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>();
+        var cluster = dbContext.KafkaClusters.Find(clusterId);
+        if (cluster != null)
+        {
+            dbContext.KafkaClusters.Remove(cluster);
+            await dbContext.SaveChangesAsync();
+        }
+        clusters.Remove(clusterId);
     }
     #endregion
 
