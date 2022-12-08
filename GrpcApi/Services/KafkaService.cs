@@ -144,6 +144,7 @@ public class KafkaService : KafkaApi.KafkaApiBase
             Key = message.Key == null ? ByteString.Empty : ByteString.CopyFrom(message.Key),
             Value = message.Value == null ? ByteString.Empty : ByteString.CopyFrom(message.Value),
             Offset = message.Offset,
+            Partition = message.Partition,
             Timestamp = ToGrpcTimestamp(message.EpochMillis)
         };
     }

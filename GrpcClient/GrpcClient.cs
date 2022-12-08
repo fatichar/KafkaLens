@@ -159,7 +159,8 @@ public class GrpcClient : IKafkaLensClient
             message.Key.ToByteArray(),
             message.Value.ToByteArray())
         {
-            Offset = (long)message.Offset
+            Offset = message.Offset,
+            Partition = message.Partition
         };
     }
 
