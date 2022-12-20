@@ -35,9 +35,9 @@ public partial class App : Application
         configuration.Bind(config);
 
         var services = new ServiceCollection();
-
         services.AddSingleton<ISettingsService, SettingsService>();
-        services.AddDbContext<KafkaClientContext>(opt => 
+
+        services.AddDbContext<KafkaClientContext>(opt =>
             opt.UseSqlite($"Data Source={config.DatabasePath};",
                 b => b.MigrationsAssembly("ViewModels")));
         services.AddSingleton<IKafkaLensClient, LocalClient>();

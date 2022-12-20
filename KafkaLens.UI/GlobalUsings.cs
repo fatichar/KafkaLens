@@ -6,7 +6,7 @@ global using Microsoft.UI.Xaml;
 global using Microsoft.UI.Xaml.Controls;
 global using Microsoft.UI.Xaml.Media;
 global using Microsoft.UI.Xaml.Navigation;
-global using KafkaLens.Business.Models;
+global using KafkaLens.Shared.Models;
 global using KafkaLens.ViewModels;
 global using KafkaLens.Views;
 global using Uno.Extensions;

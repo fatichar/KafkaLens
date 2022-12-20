@@ -15,6 +15,9 @@
     <UpToDateCheckInput Remove="Styles\MaterialFontsOverride.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <_Globbed_Compile Remove="LocalClient.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <_Globbled_Page Remove="Styles\ColorPaletteOverride.xaml" />
     <_Globbled_Page Remove="Styles\MaterialFontsOverride.xaml" />
   </ItemGroup>

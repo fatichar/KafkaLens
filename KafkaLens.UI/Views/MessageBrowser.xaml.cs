@@ -25,34 +25,34 @@ namespace KafkaLens.Views
         void OnMessagesGridSort(object sender, DataGridColumnEventArgs e)
         {
             //Use the Tag property to pass the bound column name for the sorting implementation 
-            if (e.Column.Header.ToString() == "Offset")
-            {
-                //Implement sort on the column "Range" using LINQ
-                if (e.Column.SortDirection == null || e.Column.SortDirection == DataGridSortDirection.Descending)
-                {
-                    messagesGrid.ItemsSource = new ObservableCollection<MessageViewModel>(from item in dataContext.CurrentMessages.Filtered
-                                                                                          orderby item.Offset ascending
-                                                                        select item);
-                    e.Column.SortDirection = DataGridSortDirection.Ascending;
-                }
-                else
-                {
-                    messagesGrid.ItemsSource = new ObservableCollection<MessageViewModel>(from item in dataContext.CurrentMessages.Filtered
-                                                                                          orderby item.Offset descending
-                                                                        select item);
-                    e.Column.SortDirection = DataGridSortDirection.Descending;
-                }
-            }
-            // add code to handle sorting by other columns as required
+            //if (e.Column.Header.ToString() == "Offset")
+            //{
+            //    //Implement sort on the column "Range" using LINQ
+            //    if (e.Column.SortDirection == null || e.Column.SortDirection == DataGridSortDirection.Descending)
+            //    {
+            //        messagesGrid.ItemsSource = new ObservableCollection<MessageViewModel>(from item in dataContext.CurrentMessages.Filtered
+            //                                                                              orderby item.Offset ascending
+            //                                                            select item);
+            //        e.Column.SortDirection = DataGridSortDirection.Ascending;
+            //    }
+            //    else
+            //    {
+            //        messagesGrid.ItemsSource = new ObservableCollection<MessageViewModel>(from item in dataContext.CurrentMessages.Filtered
+            //                                                                              orderby item.Offset descending
+            //                                                            select item);
+            //        e.Column.SortDirection = DataGridSortDirection.Descending;
+            //    }
+            //}
+            //// add code to handle sorting by other columns as required
 
-            // Remove sorting indicators from other columns
-            foreach (var column in messagesGrid.Columns)
-            {
-                if (column.Header.ToString() != e.Column.Header.ToString())
-                {
-                    column.SortDirection = null;
-                }
-            }
+            //// Remove sorting indicators from other columns
+            //foreach (var column in messagesGrid.Columns)
+            //{
+            //    if (column.Header.ToString() != e.Column.Header.ToString())
+            //    {
+            //        column.SortDirection = null;
+            //    }
+            //}
         }
 
             //private void OnDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs e)

@@ -57,7 +57,7 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<ProjectReference Include="..\KafkaLens\KafkaLens.csproj" />
+		<ProjectReference Include="..\ViewModels\ViewModels.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<!--
@@ -74,4 +74,7 @@
 	</ItemGroup>
 	<Import Project="..\Extensions.props" />
 	<Import Project="..\KafkaLens.UI\KafkaLens.UI.projitems" Label="Shared" />
+	<ItemGroup>
+	  <EmbeddedResource Remove="appsettings.json" />
+	</ItemGroup>
 </Project>
