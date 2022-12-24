@@ -33,7 +33,7 @@
             </MenuBarItem>
         </MenuBar>
 		<TabView Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-		         TabItemsSource="{Binding OpenedClusters, Mode=OneWay}" >
+		         TabItemsSource="{Binding OpenedClusters, Mode=OneWay}" SelectedIndex="{Binding SelectedIndex}">
             <TabView.TabItemTemplate>
                 <DataTemplate x:DataType="viewModels:OpenedClusterViewModel">
                     <TabViewItem Header="{x:Bind Name}" >

@@ -36,7 +36,11 @@ public partial class MainViewModel : ObservableRecipient
 
     private int selectedIndex = -1;
 
-    public int SelectedIndex { get => selectedIndex; set => SetProperty(ref selectedIndex, value); }
+    public int SelectedIndex 
+    { 
+        get => selectedIndex; 
+        set => SetProperty(ref selectedIndex, value); 
+    }
 
     public MainViewModel(IOptions<AppConfig> appInfo, KafkaClientContext dbContext, ISettingsService settingsService, IKafkaLensClient localClient)
     {

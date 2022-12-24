@@ -5,7 +5,12 @@ using KafkaLens.Core.Services;
 using KafkaLens.Shared;
 using KafkaLens.UI;
 using KafkaLens.ViewModels.DataAccess;
+
+#if __WIN64__
 using KafkaLens.Windows;
+#elif __WASM__
+using KafkaLens.Wasm;
+#endif
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

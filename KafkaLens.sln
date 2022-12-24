@@ -38,6 +38,8 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "KafkaLens.UI", "KafkaLens.U
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KafkaLens.Windows", "KafkaLens.Windows\KafkaLens.Windows.csproj", "{0432B51E-99B2-49CF-8878-372FAC8F39B5}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KafkaLens.Wasm", "KafkaLens.Wasm\KafkaLens.Wasm.csproj", "{8F89B1C3-4309-4583-9A59-308EEAABA4CF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -232,6 +234,22 @@ Global
 		{0432B51E-99B2-49CF-8878-372FAC8F39B5}.Release|x86.ActiveCfg = Release|x86
 		{0432B51E-99B2-49CF-8878-372FAC8F39B5}.Release|x86.Build.0 = Release|x86
 		{0432B51E-99B2-49CF-8878-372FAC8F39B5}.Release|x86.Deploy.0 = Release|x86
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Debug|arm64.ActiveCfg = Debug|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Debug|arm64.Build.0 = Debug|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Debug|x64.Build.0 = Debug|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Debug|x86.Build.0 = Debug|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Release|arm64.ActiveCfg = Release|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Release|arm64.Build.0 = Release|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Release|x64.ActiveCfg = Release|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Release|x64.Build.0 = Release|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Release|x86.ActiveCfg = Release|Any CPU
+		{8F89B1C3-4309-4583-9A59-308EEAABA4CF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -242,5 +260,6 @@ Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		KafkaLens.UI\KafkaLens.UI.projitems*{0432b51e-99b2-49cf-8878-372fac8f39b5}*SharedItemsImports = 5
 		KafkaLens.UI\KafkaLens.UI.projitems*{6279c845-92f8-4333-ab99-3d213163593c}*SharedItemsImports = 13
+		KafkaLens.UI\KafkaLens.UI.projitems*{8f89b1c3-4309-4583-9a59-308eeaaba4cf}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

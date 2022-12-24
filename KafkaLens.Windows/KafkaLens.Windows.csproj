@@ -20,6 +20,30 @@
 		<DefaultLanguage>en</DefaultLanguage>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+	  <DefineConstants>__WIN64__</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+	  <DefineConstants>__WIN64__</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+	  <DefineConstants>__WIN64__</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+	  <DefineConstants>__WIN64__</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|arm64'">
+	  <DefineConstants>__WIN64__</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|arm64'">
+	  <DefineConstants>__WIN64__</DefineConstants>
+	</PropertyGroup>
+
 	<ItemGroup>
 	  <Content Include="Images\LockScreenLogo.scale-200.png" />
 	  <Content Include="Images\SplashScreen.scale-100.png" />
