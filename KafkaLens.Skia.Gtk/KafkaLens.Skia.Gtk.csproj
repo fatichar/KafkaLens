@@ -5,6 +5,7 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<DefineConstants>$(DefinedConstants);WINUI</DefineConstants>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 	<ItemGroup Condition="exists('..\KafkaLens.Windows')">
 		<EmbeddedResource Include="..\KafkaLens.Windows\Package.appxmanifest" LogicalName="Package.appxmanifest" />

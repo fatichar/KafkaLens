@@ -6,8 +6,8 @@ namespace KafkaLens.Views
 {
     public partial class OpenedClusterPanel : UserControl, IMessageLoadListener
     {
-        private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
-        
+        // private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
+
         private readonly DispatcherTimer messageRefreshTimer = new()
         {
             Interval = TimeSpan.FromMilliseconds(1000)
@@ -26,13 +26,13 @@ namespace KafkaLens.Views
         {
             if (e.NewValue != null)
             {
-                dataContext.AddMessageLoadListener(this);
+                // dataContext.AddMessageLoadListener(this);
             }
         }
 
         private void OnMessageRefreshTimerTick(object? sender, object e)
         {
-            dataContext.UpdateMessages();
+            // dataContext.UpdateMessages();
         }
 
         public void MessageLoadingStarted()

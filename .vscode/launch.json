@@ -1,14 +1,15 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": ".NET Core Launch (console)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/App/bin/Debug/net6.0-windows/App.exe",
+            // "preLaunchTask": "build",
+            "program": "${workspaceFolder}/KafkaLens.Skia.Gtk/bin/Debug/net6.0/KafkaLens.Skia.Gtk.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/App",
+            "cwd": "${workspaceFolder}/KafkaLens.Skia.Gtk/bin/Debug/net6.0/",
             "stopAtEntry": false,
             "console": "internalConsole"
         }
