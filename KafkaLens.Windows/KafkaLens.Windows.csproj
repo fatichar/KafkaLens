@@ -10,6 +10,7 @@
 		<PublishProfile>win10-$(Platform).pubxml</PublishProfile>
 		<UseWinUI>true</UseWinUI>
 		<EnablePreviewMsixTooling>true</EnablePreviewMsixTooling>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -57,7 +58,7 @@
 	  <Content Include="Images\StoreLogo.png" />
 	  <Content Include="Images\Wide310x150Logo.scale-200.png" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<Manifest Include="$(ApplicationManifest)" />
 	</ItemGroup>
@@ -79,14 +80,14 @@
 	<ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnablePreviewMsixTooling)'=='true'">
 		<ProjectCapability Include="Msix" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<ProjectReference Include="..\ViewModels\ViewModels.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<!--
 		If you encounter this error message:
-		
+
 			error NETSDK1148: A referenced assembly was compiled using a newer version of Microsoft.Windows.SDK.NET.dll. Please update to a newer .NET SDK in order to reference this assembly.
 
 		This means that the two packages below must be aligned with the "build" version number of

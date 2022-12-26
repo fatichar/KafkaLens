@@ -17,8 +17,6 @@
                 <DataTemplate x:DataType="viewModels:ClusterViewModel">
                     <Grid Margin="-17,0">
                         <NavigationViewItem Content="{x:Bind Name}" >
-                            <NavigationViewItem.Icon>
-                            </NavigationViewItem.Icon>
                         </NavigationViewItem>
                     </Grid>
                 </DataTemplate>
@@ -28,7 +26,7 @@
             <MenuBarItem x:Name="ClustersMenu" Title="Clusters">
                 <MenuFlyoutItem x:Name="NewMenu" Text="Add Cluster"/>
                 <MenuFlyoutSubItem x:Name="OpenMenu" Text="Open Cluster">
-                    
+
                 </MenuFlyoutSubItem>
             </MenuBarItem>
         </MenuBar>
