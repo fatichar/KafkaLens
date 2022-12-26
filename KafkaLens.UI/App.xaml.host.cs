@@ -10,6 +10,8 @@ using KafkaLens.ViewModels.DataAccess;
 using KafkaLens.Windows;
 #elif __WASM__
 using KafkaLens.Wasm;
+#else
+using KafkaLens.Skia.Gtk;
 #endif
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -60,6 +62,9 @@ public sealed partial class App1 : Application
 					string kafkaLensDataDir = Path.Combine(appDataDir, "KafkaLens");
 					string dbPath = Path.Combine(kafkaLensDataDir, config.DatabasePath);
                     services.AddSingleton<ISettingsService, SettingsService>();
+
+										Console.WriteLine("Using database: " + dbPath);
+
 					services.AddDbContext<KafkaClientContext>(opt =>
                         opt.UseSqlite($"Data Source={dbPath};",
                             b => b.MigrationsAssembly("ViewModels")));
