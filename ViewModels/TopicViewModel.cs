@@ -1,6 +1,5 @@
 ﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using KafkaLens.Core.Services;
 using KafkaLens.Formatting;
 using KafkaLens.Shared;
 using KafkaLens.Shared.Models;

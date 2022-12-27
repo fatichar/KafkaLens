@@ -3,7 +3,6 @@ using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KafkaLens.Core.Services;
 using KafkaLens.Formatting;
 using KafkaLens.Shared.Models;
 using KafkaLens.Messages;
