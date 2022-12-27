@@ -3,7 +3,9 @@ namespace KafkaLens.Views;
 
 public sealed partial class MainPage : Page
 {
-	public MainPage()
+    private MainViewModel dataContext => (MainViewModel)DataContext;
+
+    public MainPage()
 	{
 		this.InitializeComponent();
 	}
