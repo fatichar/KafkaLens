@@ -175,8 +175,9 @@ public partial class MainViewModel : ObservableRecipient
         var clientInfos = await dbContext.Clients.ToDictionaryAsync(client => client.Id);
         foreach (var clientInfo in clientInfos.Values)
         {
-            // Comment out for local testing
+            // Uncomment for local testing
             // break;
+            //
             try
             {
                 var client = CreateClient(clientInfo);
