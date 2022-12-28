@@ -34,27 +34,27 @@ public sealed partial class App1 : Application
 #else
         _window = Microsoft.UI.Xaml.Window.Current;
 #endif
-        // Frame rootFrame = _window.Content as Frame;
+        Frame rootFrame = _window.Content as Frame;
 
-        // if (rootFrame == null)
-        // {
-        //     // Create a Frame to act as the navigation context and navigate to the first page
-        //     rootFrame = new Frame();
+        if (rootFrame == null)
+        {
+            // Create a Frame to act as the navigation context and navigate to the first page
+            rootFrame = new Frame();
 
-        //     rootFrame.NavigationFailed += OnNavigationFailed;
+            rootFrame.NavigationFailed += OnNavigationFailed;
 
-        //     // Place the frame in the current Window
-        //     _window.Content = rootFrame;
-        // }
-        // if (rootFrame.Content == null)
-        // {
-        //     // When the navigation stack isn't restored navigate to the first page,
-        //     // configuring the new page by passing required information as a navigation
-        //     // parameter
-        //     rootFrame.Navigate(typeof(MainPage), e.Arguments);
-        // }
+            // Place the frame in the current Window
+            _window.Content = rootFrame;
+        }
+        if (rootFrame.Content == null)
+        {
+            // When the navigation stack isn't restored navigate to the first page,
+            // configuring the new page by passing required information as a navigation
+            // parameter
+            rootFrame.Navigate(typeof(MainPage), e.Arguments);
+        }
 
-        _window.AttachNavigation(Host.Services);
+        //_window.AttachNavigation(Host.Services);
         _window.Activate();
 
         await Task.Run(() => Host.StartAsync());
