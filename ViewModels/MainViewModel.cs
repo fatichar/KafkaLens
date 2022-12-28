@@ -43,6 +43,7 @@ public partial class MainViewModel : ObservableRecipient
 
     public MainViewModel(IOptions<AppConfig> appInfo, KafkaClientContext dbContext, ISettingsService settingsService, IKafkaLensClient localClient)
     {
+        Log.Information("Creating MainViewModel");
         this.dbContext = dbContext;
         this.settingsService = settingsService;
         this.localClient = localClient;

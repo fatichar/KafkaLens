@@ -20,7 +20,7 @@ namespace KafkaLens;
 
 public sealed partial class App1 : Application
 {
-    private IHost Host { get; } = BuildAppHost();
+    public IHost Host { get; } = BuildAppHost();
 
     private static IHost BuildAppHost()
     {
