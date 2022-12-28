@@ -1,6 +1,3 @@
-
-using Confluent.Kafka;
-using KafkaLens.Core.DataAccess;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared;
 using KafkaLens.UI;
@@ -25,29 +22,29 @@ public sealed partial class App1 : Application
 {
     private IHost Host { get; } = BuildAppHost();
 
-	private static IHost BuildAppHost()
-	{
-		var host = UnoHost
-				.CreateDefaultBuilder()
+    private static IHost BuildAppHost()
+    {
+        var host = UnoHost
+                .CreateDefaultBuilder()
 #if DEBUG
-				// Switch to Development environment when running in DEBUG
-				.UseEnvironment(Environments.Development)
+                // Switch to Development environment when running in DEBUG
+                .UseEnvironment(Environments.Development)
 #endif
 
-				.UseConfiguration(configure: configBuilder =>
-					configBuilder
-						.EmbeddedSource<App1>()
-						.Section<AppConfig>()
-				)
+                .UseConfiguration(configure: configBuilder =>
+                    configBuilder
+                        .EmbeddedSource<App1>()
+                        .Section<AppConfig>()
+                )
 
-				// Enable localization (see appsettings.json for supported languages)
-				.UseLocalization()
+                // Enable localization (see appsettings.json for supported languages)
+                .UseLocalization()
 
-				// Register Json serializers (ISerializer and ISerializer)
-				.UseSerialization()
+                // Register Json serializers (ISerializer and ISerializer)
+                .UseSerialization()
 
-				// Register services for the application
-				.ConfigureServices(services =>
+                // Register services for the application
+                .ConfigureServices(services =>
                 {
                     var configuration = new ConfigurationBuilder()
                         .AddEnvironmentVariables()
@@ -59,33 +56,33 @@ public sealed partial class App1 : Application
 
                     string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                     string appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-					string kafkaLensDataDir = Path.Combine(appDataDir, "KafkaLens");
-					string dbPath = Path.Combine(kafkaLensDataDir, config.DatabasePath);
+                    string kafkaLensDataDir = Path.Combine(appDataDir, "KafkaLens");
+                    string dbPath = Path.Combine(kafkaLensDataDir, config.DatabasePath);
                     services.AddSingleton<ISettingsService, SettingsService>();
 
-										Console.WriteLine("Using database: " + dbPath);
+                    Console.WriteLine("Using database: " + dbPath);
 
-					services.AddDbContext<KafkaClientContext>(opt =>
+                    services.AddDbContext<KafkaClientContext>(opt =>
                         opt.UseSqlite($"Data Source={dbPath};",
                             b => b.MigrationsAssembly("ViewModels")));
                     services.AddSingleton<IKafkaLensClient, LocalClient>();
-					services.AddSingleton<ConsumerFactory>();
+                    services.AddSingleton<ConsumerFactory>();
                     services.AddSingleton<MainViewModel>();
                     services.AddLogging();
                 })
 
 
-				// Enable navigation, including registering views and viewmodels
-				.UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
+                // Enable navigation, including registering views and viewmodels
+                .UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
 
-				// Add navigation support for toolkit controls such as TabBar and NavigationView
-				.UseToolkitNavigation()
+                // Add navigation support for toolkit controls such as TabBar and NavigationView
+                //.UseToolkitNavigation()
 
-				.Build(enableUnoLogging: true);
+                .Build(enableUnoLogging: true);
 
         ConfigureLogging();
 
-		return host;
+        return host;
     }
 
     private static void ConfigureLogging()
@@ -98,18 +95,18 @@ public sealed partial class App1 : Application
     }
 
     private static void RegisterRoutes(IViewRegistry views, IRouteRegistry routes)
-	{
-		views.Register(
-			new ViewMap<ShellControl, ShellViewModel>(),
-			new ViewMap<MainPage, MainViewModel>()
-			);
+    {
+        views.Register(
+            new ViewMap<ShellControl, ShellViewModel>(),
+            new ViewMap<MainPage, MainViewModel>()
+            );
 
-		routes
-			.Register(
-				new RouteMap("", View: views.FindByViewModel<ShellViewModel>(),
-						Nested: new RouteMap[]
-						{
-										new RouteMap("Main", View: views.FindByViewModel<MainViewModel>())
-						}));
-	}
+        routes
+            .Register(
+                new RouteMap("", View: views.FindByViewModel<ShellViewModel>(),
+                        Nested: new RouteMap[]
+                        {
+                                        new RouteMap("Main", View: views.FindByViewModel<MainViewModel>())
+                        }));
+    }
 }

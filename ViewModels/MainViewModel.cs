@@ -53,14 +53,14 @@ public partial class MainViewModel : ObservableRecipient
         Title = $"Main - {appInfo?.Value?.Title}";
 
         IsActive = true;
-
-        LoadClustersCommand.Execute(null);
     }
 
     protected override void OnActivated()
     {
         Messenger.Register<MainViewModel, OpenClusterMessage>(this, (r, m) => r.Receive(m));
         Messenger.Register<MainViewModel, CloseTabMessage>(this, (r, m) => r.Receive(m));
+
+        LoadClustersCommand.Execute(null);
     }
 
     private void AddClusterAsync()
