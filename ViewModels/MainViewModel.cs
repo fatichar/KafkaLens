@@ -176,7 +176,7 @@ public partial class MainViewModel : ObservableRecipient
         foreach (var clientInfo in clientInfos.Values)
         {
             // Uncomment for local testing
-             break;
+            break;
             //
             try
             {

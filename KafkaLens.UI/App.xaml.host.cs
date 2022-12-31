@@ -71,13 +71,6 @@ public sealed partial class App1 : Application
                     services.AddLogging();
                 })
 
-
-                // Enable navigation, including registering views and viewmodels
-                //.UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
-
-                // Add navigation support for toolkit controls such as TabBar and NavigationView
-                //.UseToolkitNavigation()
-
                 .Build(enableUnoLogging: true);
 
         ConfigureLogging();
@@ -92,21 +85,5 @@ public sealed partial class App1 : Application
             .CreateLogger();
         Log.Logger = log;
         Log.Information("The global logger has been configured");
-    }
-
-    private static void RegisterRoutes(IViewRegistry views, IRouteRegistry routes)
-    {
-        views.Register(
-            new ViewMap<ShellControl, ShellViewModel>(),
-            new ViewMap<MainPage, MainViewModel>()
-            );
-
-        routes
-            .Register(
-                new RouteMap("", View: views.FindByViewModel<ShellViewModel>(),
-                        Nested: new RouteMap[]
-                        {
-                                        new RouteMap("Main", View: views.FindByViewModel<MainViewModel>())
-                        }));
     }
 }

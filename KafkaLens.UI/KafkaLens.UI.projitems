@@ -24,7 +24,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Converters\NullToEmptyStringConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)LocalClient.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ShellViewModel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Views\Browser.xaml.cs">
       <DependentUpon>Browser.xaml</DependentUpon>
     </Compile>
@@ -48,9 +47,6 @@
     </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)Views\OpenedClusterPanel.xaml.cs">
       <DependentUpon>OpenedClusterPanel.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="$(MSBuildThisFileDirectory)Views\ShellControl.xaml.cs">
-      <DependentUpon>ShellControl.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -99,10 +95,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="$(MSBuildThisFileDirectory)Views\OpenedClusterPanel.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="$(MSBuildThisFileDirectory)Views\ShellControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
