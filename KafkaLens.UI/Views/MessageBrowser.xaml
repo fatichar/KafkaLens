@@ -77,16 +77,16 @@
                                         >
             </views:MessageDisplayToolbar>
             <ScrollViewer>
-                <TextBox
+                <TextBlock
                     x:Name="messageViewer"
                     FontFamily="Consolas"
                     FontSize="{Binding FontSize, Mode=OneWay}"
                     IsReadOnly="True"
                     TextWrapping="Wrap"
                     Background="White"
-                    Text="{Binding CurrentMessages.CurrentMessage.DisplayText}"
+                    Text="{x:Bind dataContext.CurrentMessages.CurrentMessage.DisplayText, Mode=OneWay}"
                     >
-                </TextBox>
+                </TextBlock>
             </ScrollViewer>
         </controls:DockPanel>
     </Grid>

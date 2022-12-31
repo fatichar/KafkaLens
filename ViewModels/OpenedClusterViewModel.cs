@@ -79,8 +79,8 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         set => SetProperty(ref fontSize, value, true);
     }
 
-    private string fetchPosition = FetchPositionsForTopic[0];
-    public string FetchPosition
+    private string? fetchPosition = null;
+    public string? FetchPosition
     {
         get => fetchPosition;
         set => SetProperty(ref fetchPosition, value);
@@ -114,13 +114,15 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         FetchMessagesCommand = new RelayCommand(FetchMessages);
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
-        FetchPosition = FetchPositionsForTopic[0];
         Nodes.Add(this);
         IsSelected = true;
         IsExpanded = true;
 
         StartDate = DateTime.Today;
         StartTime = DateTime.Now;
+
+        FetchPositions = FetchPositionsForTopic;
+        FetchPosition = FetchPositions[0];
 
         IsActive = true;
     }
@@ -155,14 +157,17 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         {
             if (SetProperty(ref selectedNode, value))
             {
-                FetchPositions = SelectedNodeType == ITreeNode.NodeType.PARTITION
-                    ? FetchPositionsForPartition
-                    : FetchPositionsForTopic;
+                SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.NONE;
+                
+                // FetchPositions = SelectedNodeType == ITreeNode.NodeType.PARTITION
+                //     ? FetchPositionsForPartition
+                //     : FetchPositionsForTopic;
+                // FetchPosition = null;
+                // FetchPosition = FetchPositions[0];
                 if (selectedNode is { Type: ITreeNode.NodeType.PARTITION } or { Type: ITreeNode.NodeType.TOPIC })
                 {
                     FetchMessagesCommand.Execute(null);
                 }
-                SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.NONE;
             }
         }
     }

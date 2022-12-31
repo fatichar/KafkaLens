@@ -25,7 +25,14 @@ namespace KafkaLens.Views
         {
             if (e.NewValue != null)
             {
-                 dataContext.AddMessageLoadListener(this);
+                if (e.NewValue is MainViewModel)
+                {
+                    DataContextChanged -= OnDataContextChanged;
+                    var mainViewModel = (e.NewValue as MainViewModel);
+                    DataContext = mainViewModel.OpenedClusters[mainViewModel.SelectedIndex];
+                    DataContextChanged += OnDataContextChanged;
+                }
+                dataContext.AddMessageLoadListener(this);
             }
         }
 
