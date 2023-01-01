@@ -81,9 +81,7 @@
                     x:Name="messageViewer"
                     FontFamily="Consolas"
                     FontSize="{Binding FontSize, Mode=OneWay}"
-                    IsReadOnly="True"
                     TextWrapping="Wrap"
-                    Background="White"
                     Text="{x:Bind dataContext.CurrentMessages.CurrentMessage.DisplayText, Mode=OneWay}"
                     >
                 </TextBlock>
