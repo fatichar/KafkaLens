@@ -22,7 +22,15 @@ public sealed class MessageViewModel : ObservableRecipient
             SetProperty(ref displayText, value);
         }
     }
-    public DateTime Timestamp => DateTime.UnixEpoch.AddMilliseconds(message.EpochMillis).ToLocalTime();
+    public string Timestamp
+    {
+        get
+        {
+            var localTime = DateTime.UnixEpoch.AddMilliseconds(message.EpochMillis)
+                .ToLocalTime();
+            return localTime.ToShortDateString() + " " + localTime.ToLongTimeString();
+        }
+    }
 
     public string FormatterName => formatter.Name;
 

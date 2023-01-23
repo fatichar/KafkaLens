@@ -59,7 +59,7 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         set => SetProperty(ref selectedNodeType, value);
     }
 
-    public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000 };
+    public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
     public int FetchCount { get; set; } = 10;
     public string? StartOffset { get; }
     public DateTime StartDate

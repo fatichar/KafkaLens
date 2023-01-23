@@ -12,16 +12,6 @@
 	  d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel}">
 
 	<controls:DockPanel Height="Auto" VerticalAlignment="Stretch">
-        <NavigationView MenuItemsSource="{x:Bind dataContext.Clusters}">
-            <NavigationView.MenuItemTemplate>
-                <DataTemplate x:DataType="viewModels:ClusterViewModel">
-                    <Grid Margin="-17,0">
-                        <NavigationViewItem Content="{x:Bind Name}" >
-                        </NavigationViewItem>
-                    </Grid>
-                </DataTemplate>
-            </NavigationView.MenuItemTemplate>
-        </NavigationView>
         <MenuBar x:Name="MenuBar" controls:DockPanel.Dock="Top">
             <MenuBarItem x:Name="ClustersMenu" Title="Clusters">
                 <MenuFlyoutItem x:Name="NewMenu" Text="Add Cluster"/>
@@ -31,7 +21,8 @@
             </MenuBarItem>
         </MenuBar>
 		<TabView Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-		         TabItemsSource="{x:Bind dataContext.OpenedClusters, Mode=OneWay}" SelectedIndex="{x:Bind dataContext.SelectedIndex, Mode=TwoWay}">
+		        TabItemsSource="{x:Bind dataContext.OpenedClusters, Mode=OneWay}"
+                SelectedIndex="{x:Bind dataContext.SelectedIndex, Mode=TwoWay}">
             <TabView.TabItemTemplate>
                 <DataTemplate x:DataType="viewModels:OpenedClusterViewModel">
                     <TabViewItem Header="{x:Bind Name}" >

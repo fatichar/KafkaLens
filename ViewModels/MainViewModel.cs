@@ -15,6 +15,8 @@ namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel : ObservableRecipient
 {
+    private const string HTTP_PROTOCOL_PREFIX = "http://";
+
     // data
     private string? Title { get; }
 
@@ -145,12 +147,6 @@ public partial class MainViewModel : ObservableRecipient
         {
             await LoadClusters(client);
         }
-
-        if (Clusters.Count > 0)
-        {
-            OpenCluster(Clusters.First());
-            SelectedIndex = 0;
-        }
     }
 
     private async Task LoadClusters(IKafkaLensClient client)
@@ -176,7 +172,7 @@ public partial class MainViewModel : ObservableRecipient
         foreach (var clientInfo in clientInfos.Values)
         {
             // Uncomment for local testing
-            break;
+            // break;
             //
             try
             {
@@ -192,6 +188,10 @@ public partial class MainViewModel : ObservableRecipient
 
     private static IKafkaLensClient CreateClient(KafkaLensClient clientInfo)
     {
+        if (!clientInfo.ServerUrl.StartsWith(HTTP_PROTOCOL_PREFIX))
+        {
+            clientInfo.ServerUrl = HTTP_PROTOCOL_PREFIX + clientInfo.ServerUrl;
+        }
         switch (clientInfo.Protocol)
         {
             case "grpc":
