@@ -70,6 +70,22 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
             startDate = value;
         }
     }
+
+    public string StartTimeText
+    {
+        get => StartTime.ToShortDateString() + " " + StartTime.ToLongTimeString();
+        set
+        {
+            if (SetProperty(ref startTimeText, value))
+            {
+                if (DateTime.TryParse(startTimeText, out DateTime time))
+                {
+                    StartTime = time;
+                }
+            }
+        }
+    }
+
     public DateTime StartTime { get; set; }
 
     private int fontSize = 14;
@@ -178,6 +194,7 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
     MessageStream? messages = null;
     private List<IMessageLoadListener> messageLoadListeners = new();
     private DateTime startDate;
+    private string startTimeText;
 
     private void FetchMessages()
     {
@@ -273,7 +290,7 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
                 start = Shared.Models.FetchPosition.START;
                 break;
             case "Timestamp":
-                var timeStamp = StartDate + StartTime.TimeOfDay;
+                var timeStamp = StartTime;
                 var epochMs = (long)(timeStamp.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
                 start = new(PositionType.TIMESTAMP, epochMs);
                 break;

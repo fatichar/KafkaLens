@@ -34,6 +34,22 @@
                       HeadersVisibility="All" CanUserSortColumns="True" Sorting="OnMessagesGridSort"
                       RowHeaderWidth="50"
                       >
+                <controls:DataGrid.RowStyle>
+                    <Style TargetType="controls:DataGridRow">
+                        <Setter Property="controls:DataGridRow.ContextFlyout">
+                            <Setter.Value>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem x:Name="SaveMenuItem"
+                                                    Click="SaveMenuItem_Click"
+                                                    Text="Save Selected" />
+                                    <MenuFlyoutItem x:Name="SaveAllMenuItem"
+                                                    Click="SaveAllMenuItem_Click"
+                                                    Text="Save All Messages" />
+                                </MenuFlyout>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </controls:DataGrid.RowStyle>
                 <controls:DataGrid.Columns>
                     <controls:DataGridTextColumn Header="Partition" Binding="{Binding Partition, Mode=OneWay}" CanUserSort="True" />
                     <controls:DataGridTextColumn Header="Offset" Binding="{Binding Offset, Mode=OneWay}" CanUserSort="True">

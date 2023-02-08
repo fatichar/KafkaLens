@@ -13,6 +13,7 @@ public sealed partial class MainPage : Page
         this.InitializeComponent();
 
          DataContext = (Application.Current as App1).Host.Services.GetRequiredService<MainViewModel>();
+         UpdateClusterNames(null, null);
          dataContext.Clusters.CollectionChanged += UpdateClusterNames;
     }
 

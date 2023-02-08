@@ -2,9 +2,13 @@
 using KafkaLens.ViewModels;
 using Microsoft.UI.Xaml.Documents;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
+using CommunityToolkit.WinUI.UI.Controls.TextToolbarSymbols;
+using Uno.Extensions.Specialized;
 
 namespace KafkaLens.Views
 {
@@ -22,9 +26,40 @@ namespace KafkaLens.Views
             messagesGrid.LoadingRow += OnLoadingRow;
         }
 
+        public void SaveMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            SaveMessages(messagesGrid.SelectedItems);
+        }
+
+        public void SaveAllMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            SaveMessages(messagesGrid.ItemsSource);
+        }
+
+        private void SaveMessages(IEnumerable items)
+        {
+            var messages = new List<MessageViewModel>();
+            foreach (var item in items)
+            {
+                messages.Add((MessageViewModel)item);
+            }
+
+            Save(messages);
+        }
+
+        private void Save(List<MessageViewModel> messages)
+        {
+            messages.ForEach(Save);
+        }
+
+        private void Save(MessageViewModel message)
+        {
+            
+        }
+
         void OnMessagesGridSort(object sender, DataGridColumnEventArgs e)
         {
-            //Use the Tag property to pass the bound column name for the sorting implementation 
+            //Use the Tag property to pass the bound column name for the sorting implementation
             //if (e.Column.Header.ToString() == "Offset")
             //{
             //    //Implement sort on the column "Range" using LINQ

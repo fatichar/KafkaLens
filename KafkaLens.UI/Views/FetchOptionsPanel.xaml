@@ -38,11 +38,10 @@
             </ComboBox>
             
             <StackPanel x:Name="StartTimestampPanel" Grid.Row="1" Grid.Column="1" Grid.RowSpan="2">
-                <DatePicker x:Name="startDatePicker" Margin="5" YearVisible="False"
-                            SelectedDate="{Binding StartDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <TimePicker x:Name="startTimePicker" Margin="5"
+
+                <TextBox x:Name="startTimePicker" Margin="5"
                       MaxHeight="30" MinHeight="30"
-                            SelectedTime="{Binding StartTime, Mode=TwoWay}" />
+                            Text="{Binding StartTimeText, Mode=TwoWay}" />
             </StackPanel>
 
             <TextBlock Grid.Row="3" Grid.Column="0" Margin="5" VerticalAlignment="Center">Count</TextBlock>
