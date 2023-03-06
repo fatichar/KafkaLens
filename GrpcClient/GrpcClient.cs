@@ -27,6 +27,8 @@ public class GrpcClient : IKafkaLensClient
         client = new KafkaApi.KafkaApiClient(channel);
     }
 
+    public string Name => "gRPC";
+
     public Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {
         throw new NotImplementedException();

@@ -6,6 +6,8 @@ namespace KafkaLens.Shared;
 
 public interface IKafkaLensClient
 {
+    public string Name { get; }
+    
     #region create
     Task<bool> ValidateConnectionAsync(string bootstrapServers);
 

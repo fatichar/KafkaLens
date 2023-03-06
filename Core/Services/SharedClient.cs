@@ -33,6 +33,9 @@ public class SharedClient : IKafkaLensClient
     }
 
     #region Create
+
+    public string Name => "Shared";
+
     public Task<bool> ValidateConnectionAsync(string BootstrapServers)
     {
         return Task.FromResult(false);

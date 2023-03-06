@@ -153,9 +153,11 @@ public partial class MainViewModel : ObservableRecipient
     {
         try
         {
+            Log.Information("Loading clusters for client: {ClientName}", client.Name);
             var clusters = await client.GetAllClustersAsync();
             foreach (var cluster in clusters)
             {
+                Log.Information("Found cluster: {ClusterName}", cluster.Name);
                 Clusters.Add(new ClusterViewModel(cluster, client));
             }
         }
@@ -169,11 +171,16 @@ public partial class MainViewModel : ObservableRecipient
     {
         Clients.Add(localClient);
         var clientInfos = await dbContext.Clients.ToDictionaryAsync(client => client.Id);
+        foreach (var clientInfosKey in clientInfos.Values)
+        {
+            Log.Information("Found client: {ClientName} in database", clientInfosKey.Name);
+        }
         foreach (var clientInfo in clientInfos.Values)
         {
             // Uncomment for local testing
             // break;
             //
+            Log.Information("Loading client: {ClientName}", clientInfo.Name);
             try
             {
                 var client = CreateClient(clientInfo);
