@@ -8,6 +8,8 @@ using KafkaLens.Shared;
 using KafkaLens.ViewModels.DataAccess;
 using KafkaLens.ViewModels.Entities;
 using KafkaLens.Clients;
+using KafkaLens.Formatting;
+using KafkaLens.TaranaFormatters;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -30,6 +32,7 @@ public partial class MainViewModel : ObservableRecipient
     private readonly KafkaClientContext dbContext;
     private readonly ISettingsService settingsService;
     private readonly IKafkaLensClient localClient;
+    private readonly FormatterFactory formatterFactory;
 
     // commands
     public IRelayCommand AddClusterCommand { get; }
@@ -43,12 +46,27 @@ public partial class MainViewModel : ObservableRecipient
         set => SetProperty(ref selectedIndex, value);
     }
 
-    public MainViewModel(IOptions<AppConfig> appInfo, KafkaClientContext dbContext, ISettingsService settingsService, IKafkaLensClient localClient)
+    public MainViewModel(
+        IOptions<AppConfig> appInfo, 
+        KafkaClientContext dbContext, 
+        ISettingsService settingsService, 
+        IKafkaLensClient localClient,
+        FormatterFactory formatterFactory)
     {
         Log.Information("Creating MainViewModel");
         this.dbContext = dbContext;
         this.settingsService = settingsService;
         this.localClient = localClient;
+        this.formatterFactory = formatterFactory;
+        try
+        {
+            formatterFactory.AddFormatter(new GnmiFormatter());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Failed to add Gnmi formatter: " + e);
+        }
+        OpenedClusterViewModel.FormatterFactory = formatterFactory;
 
         AddClusterCommand = new RelayCommand(AddClusterAsync);
         LoadClustersCommand = new RelayCommand(LoadClustersAsync);
@@ -178,7 +196,7 @@ public partial class MainViewModel : ObservableRecipient
         foreach (var clientInfo in clientInfos.Values)
         {
             // Uncomment for local testing
-            // break;
+            break;
             //
             Log.Information("Loading client: {ClientName}", clientInfo.Name);
             try

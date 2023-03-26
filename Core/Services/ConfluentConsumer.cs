@@ -1,4 +1,5 @@
-﻿using Confluent.Kafka;
+﻿using System.Net.NetworkInformation;
+using Confluent.Kafka;
 using KafkaLens.Shared.Models;
 using Serilog;
 using TopicPartition = Confluent.Kafka.TopicPartition;
@@ -9,7 +10,7 @@ class ConfluentConsumer : IKafkaConsumer, IDisposable
 {
     private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(5);
     private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
-    private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(20);
+    private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(5);
 
     private Dictionary<string, Topic> Topics { get; set; } = new();
 
@@ -61,7 +62,15 @@ class ConfluentConsumer : IKafkaConsumer, IDisposable
     {
         if (Topics.Count == 0)
         {
-            LoadTopics();
+            try
+            {
+                LoadTopics();
+            }
+            catch (KafkaException e)
+            {
+                Console.WriteLine(e);
+                throw new Exception("Failed to load topics", e);
+            }
         }
         return Topics.Values.ToList();
     }

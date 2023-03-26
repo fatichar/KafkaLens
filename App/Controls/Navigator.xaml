@@ -11,13 +11,20 @@
         <!--<StaticResource ResourceKey="formats" >
             
         </StaticResource>-->
-        <ContextMenu x:Key="contextMenu" 
-                     ItemsSource="{Binding Path=DataContext.MessageFormats, RelativeSource={RelativeSource AncestorType={x:Type TreeView}, AncestorLevel=1}}">
+        <ContextMenu x:Key="ContextMenu" 
+                     ItemsSource="{Binding Formatters}">
             <ContextMenu.ItemTemplate>
                 <DataTemplate>
-                    <MenuItem Header="{Binding}" Command="{Binding ChangeFormatterCommand}" />
+                    <TextBlock Text="{Binding Name}"></TextBlock >
                 </DataTemplate>
             </ContextMenu.ItemTemplate>
+            <!-- <ContextMenu.ItemTemplate> -->
+            <!--     <DataTemplate> -->
+            <!--         <MenuItem Header="{Binding Name}"  -->
+            <!--                   Command="{Binding ChangeFormatterCommand}"  -->
+            <!--                   /> -->
+            <!--     </DataTemplate> -->
+            <!-- </ContextMenu.ItemTemplate> -->
         </ContextMenu>
         <HierarchicalDataTemplate DataType = "{x:Type viewModels:OpenedClusterViewModel}"
                                 ItemsSource = "{Binding Path=Topics}">
@@ -26,7 +33,7 @@
 
         <HierarchicalDataTemplate DataType = "{x:Type viewModels:TopicViewModel}"
                                 ItemsSource = "{Binding Path=Partitions}">
-            <TextBlock Text="{Binding Path=Name}" ContextMenu="{StaticResource contextMenu}">
+            <TextBlock Text="{Binding Path=Name}" ContextMenu="{StaticResource ContextMenu}">
             </TextBlock>
         </HierarchicalDataTemplate>
 

@@ -6,6 +6,7 @@ using KafkaLens.Core.Services;
 using KafkaLens.Shared;
 using KafkaLens.ViewModels;
 using KafkaLens.ViewModels.DataAccess;
+using KafkaLens.Formatting;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using AppConfig = KafkaLens.App.Config.AppConfig;
@@ -43,6 +44,7 @@ public partial class App : Application
         services.AddSingleton<IKafkaLensClient, LocalClient>();
         services.AddSingleton<ConsumerFactory>();
         services.AddSingleton<MainViewModel>();
+        services.AddSingleton<FormatterFactory>();
         services.AddLogging();
 
         ConfigureLogging();

@@ -1,8 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using KafkaLens.Formatting;
 using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
+using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
@@ -16,17 +16,17 @@ public sealed class TopicViewModel : ObservableRecipient, IMessageSource
     public bool IsExpandable => true;
     public bool IsExpanded { get; set; }
     public bool IsSelected { get; set; }
-    public IMessageFormatter Formatter { get; set; }
+    public string FormatterName { get; set; }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.TOPIC;
 
-    public TopicViewModel(IKafkaLensClient kafkaLensClient, Topic topic, IMessageFormatter formatter)
+    public TopicViewModel(IKafkaLensClient kafkaLensClient, Topic topic, string formatterName)
     {
         this.kafkaLensClient = kafkaLensClient;
         this.topic = topic;
-        Formatter = formatter;
+        FormatterName = formatterName;
         foreach (var partition in topic.Partitions)
         {
             Partitions.Add(new PartitionViewModel(kafkaLensClient, this, partition));

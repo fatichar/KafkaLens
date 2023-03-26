@@ -44,6 +44,15 @@ public partial class TopicPartitionBrowser : UserControl
                 UpdateMessageText(message);
             }
         };
+        
+        MessageDisplayToolbar.FormatterCombo.SelectionChanged += (s, e) =>
+        {
+            var message = dataContext?.CurrentMessages?.CurrentMessage;
+            if (message != null)
+            {
+                UpdateMessageText(message);
+            }
+        };
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -84,7 +93,7 @@ public partial class TopicPartitionBrowser : UserControl
     private void UpdateMessageText(MessageViewModel message)
     {
         //// this will update DisplayText
-        MessageViewer.Document.Text = message.DisplayText;
+        MessageViewer.Document.Text = message.DisplayText ?? "";
 
         UpdateHighlighting();
     }
@@ -94,7 +103,7 @@ public partial class TopicPartitionBrowser : UserControl
         if (string.IsNullOrEmpty(singleMessageFilter))
         {
             var messageSource = (IMessageSource?)dataContext?.SelectedNode;
-            MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(messageSource?.Formatter?.Name ?? "Json");
+            MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(messageSource?.FormatterName ?? "Json");
         }
         else
         {

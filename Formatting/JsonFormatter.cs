@@ -1,7 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.IO;
-using System.Text;
 
 namespace KafkaLens.Formatting;
 

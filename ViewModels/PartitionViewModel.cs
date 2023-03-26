@@ -3,9 +3,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using KafkaLens.Formatting;
 using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
+using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
@@ -42,7 +42,7 @@ public class PartitionViewModel : ObservableRecipient, IMessageSource
     public IAsyncRelayCommand LoadMessagesCommand { get; }
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
-    public IMessageFormatter Formatter => topic.Formatter;
+    public string FormatterName => topic.FormatterName;
 
     private Task LoadMessagesAsync()
     {

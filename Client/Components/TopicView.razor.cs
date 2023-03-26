@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using KafkaLens.Client.Formatters;
+using KafkaLens.Formatting;
 
 namespace KafkaLens.Client.Components;
 

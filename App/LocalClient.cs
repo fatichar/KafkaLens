@@ -41,6 +41,9 @@ public class LocalClient : IKafkaLensClient
     }
 
     #region Create
+
+    public string Name => "Local";
+
     public Task<bool> ValidateConnectionAsync(string BootstrapServers)
     {
         return Task.FromResult(false);

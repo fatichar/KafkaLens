@@ -22,7 +22,8 @@
         <ToolBar Grid.Column="2">
             <Label Content="Format"/>
             <ComboBox x:Name="FormatterCombo" Margin="5" Width="200"
-                      ItemsSource="{Binding MessageFormats}"
+                      ItemsSource="{Binding FormatterNames}"
+                      SelectedValue="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=TwoWay}"
                       />
         </ToolBar>
         <ToolBar Grid.Column="3">

@@ -3,15 +3,15 @@ using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KafkaLens.Formatting;
 using KafkaLens.Shared.Models;
 using KafkaLens.Messages;
 using KafkaLens.Shared;
+using KafkaLens.Formatting;
 using Serilog;
 
 namespace KafkaLens.ViewModels;
 
-public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
+public partial class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 {
     private readonly ISettingsService settingsService;
     private readonly ClusterViewModel clusterViewModel;
@@ -26,17 +26,15 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         set => SetProperty(ref fetchPositions, value);
     }
 
-    private static IDictionary<string, IMessageFormatter?> formatters = new Dictionary<string, IMessageFormatter?>();
-
-    private static IMessageFormatter jsonFormatter = new JsonFormatter();
-    private static IMessageFormatter textFormatter = new TextFormatter();
-
     public ITreeNode.NodeType Type => ITreeNode.NodeType.CLUSTER;
 
     public bool IsSelected { get; set; }
     public bool IsExpanded { get; set; }
 
-    public ICollection<string> MessageFormats => formatters.Keys;
+    [ObservableProperty] public List<IMessageFormatter> formatters;
+
+
+    [ObservableProperty] public ICollection<string> formatterNames;
 
     public RelayCommand FetchMessagesCommand { get; }
     public IAsyncRelayCommand ChangeFormatterCommand { get; }
@@ -104,9 +102,6 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 
     static OpenedClusterViewModel()
     {
-        formatters.Add(textFormatter.Name, textFormatter);
-        formatters.Add(jsonFormatter.Name, jsonFormatter);
-
         FetchPositionsForTopic.Add("End");
         FetchPositionsForTopic.Add("Timestamp");
         //FetchPositionsForTopic.Add("Start");
@@ -139,6 +134,10 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 
         FetchPositions = FetchPositionsForTopic;
         FetchPosition = FetchPositions[0];
+        
+        formatters = FormatterFactory.GetFormatters();
+        FormatterNames = formatters.ConvertAll(f => f.Name);
+        DefaultFormatter = Formatters.FirstOrDefault();
 
         IsActive = true;
     }
@@ -162,9 +161,11 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         Topics.Clear();
         foreach (var topic in clusterViewModel.Topics)
         {
-            Topics.Add(new TopicViewModel(KafkaLensClient, topic, jsonFormatter));
+            Topics.Add(new TopicViewModel(KafkaLensClient, topic, DefaultFormatter.Name));
         }
     }
+
+    private IMessageFormatter DefaultFormatter { get; set; }
 
     public ITreeNode? SelectedNode
     {
@@ -190,6 +191,7 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 
     public string ClusterId => clusterViewModel.Id;
     public IRelayCommand CloseTabCommand { get; }
+    public static FormatterFactory FormatterFactory { get; set; }
 
     MessageStream? messages = null;
     private List<IMessageLoadListener> messageLoadListeners = new();
@@ -227,7 +229,7 @@ public sealed class OpenedClusterViewModel : ObservableRecipient, ITreeNode
     private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         var node = (IMessageSource?)SelectedNode;
-        var formatter = node?.Formatter ?? jsonFormatter;
+        var formatter = node?.FormatterName ?? DefaultFormatter.Name;
         lock (pendingMessages)
         {
             Log.Debug("Pending messages = {Count}", pendingMessages.Count);
