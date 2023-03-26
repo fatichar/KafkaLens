@@ -38,6 +38,7 @@ public partial class MainViewModel : ObservableRecipient
     public IRelayCommand AddClusterCommand { get; }
     public IRelayCommand LoadClustersCommand { get; }
 
+    [ObservableProperty]
     private int selectedIndex = -1;
 
     public int SelectedIndex
@@ -47,9 +48,9 @@ public partial class MainViewModel : ObservableRecipient
     }
 
     public MainViewModel(
-        IOptions<AppConfig> appInfo, 
-        KafkaClientContext dbContext, 
-        ISettingsService settingsService, 
+        IOptions<AppConfig> appInfo,
+        KafkaClientContext dbContext,
+        ISettingsService settingsService,
         IKafkaLensClient localClient,
         FormatterFactory formatterFactory)
     {

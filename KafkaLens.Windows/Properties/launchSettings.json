@@ -1,7 +1,0 @@
-{
-  "profiles": {
-	"KafkaLens.Windows (Package)": {
-	  "commandName": "MsixPackage"
-	}
-  }
-}
