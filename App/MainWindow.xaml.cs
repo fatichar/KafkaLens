@@ -11,6 +11,8 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         DataContext = App.Current.Services.GetService<MainViewModel>();
+        
+        WindowState = WindowState.Maximized;
     }
 
     private MainViewModel Context => (MainViewModel) DataContext;

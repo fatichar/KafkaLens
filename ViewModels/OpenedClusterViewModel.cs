@@ -86,7 +86,7 @@ public partial class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         }
     }
 
-    public DateTime StartTime { get; set; }
+    [ObservableProperty] public DateTime startTime;
 
     private int fontSize = 14;
     public int FontSize
@@ -261,7 +261,7 @@ public partial class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         IMessageFormatter best = null;
         int maxLength = 0;
         foreach (var formatter in Formatters) {
-            var text = formatter.Format(message.Value);
+            var text = formatter.Format(message.Value, true);
             if (text == null) continue;
             if (text.Length > maxLength) {
                 maxLength = text.Length;

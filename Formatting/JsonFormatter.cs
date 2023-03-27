@@ -9,18 +9,19 @@ public class JsonFormatter : IMessageFormatter
     const char INDENT_CHAR = ' ';
     const int INDENT_SIZE = 4;
 
-    public string? Format(byte[] data)
+    public string? Format(byte[] data, string searchText)
     {
-        return FormatUsingNewtonSoft(data);
-    }
-
-    private static string? FormatUsingNewtonSoft(byte[] data)
-    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return Format(data, true);
+        }
         var text = Encoding.UTF8.GetString(data);
         if (text.Length < data.Length)
         {
             return null;
         }
+        searchText = searchText.ToLowerInvariant();
+
         try
         {
             var jObject = JObject.Parse(text);
@@ -33,14 +34,132 @@ public class JsonFormatter : IMessageFormatter
                     jw.IndentChar = INDENT_CHAR;
                     jw.Indentation = INDENT_SIZE;
 
+                    Filter(jObject, searchText);
+                    
                     jObject.WriteTo(jw);
                 }
             }
+
             stringWriter.Close();
             var formatted = stringWriter.ToString();
             return formatted;
         }
-        catch (Newtonsoft.Json.JsonException)
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private void Filter(JObject jObject, string searchText)
+    {
+        var tokens = GetTokens(jObject);
+
+        foreach (var pair in tokens)
+        {
+            if (Matches(pair.Key, searchText))
+            {
+                continue;
+            }
+
+            if (pair.Value is JValue val)
+            {
+                if (!Matches(val, searchText))
+                {
+                    jObject.Remove(pair.Key);
+                }
+            }
+            else if (pair.Value is JObject jObj)
+            {
+                Filter(jObj, searchText);
+                if (jObj.Count == 0)
+                {
+                    jObject.Remove(pair.Key);
+                }
+            }
+            else if (pair.Value is JArray jArr)
+            {
+                Filter(jArr, searchText);
+                if (jArr.Count == 0)
+                {
+                    jObject.Remove(pair.Key);
+                }
+            }
+        }
+    }
+
+    private static Dictionary<string, JToken> GetTokens(JObject jObject)
+    {
+        var tokens = new Dictionary<string, JToken>();
+        foreach (var pair in jObject)
+        {
+            tokens.Add(pair.Key, pair.Value);
+        }
+
+        return tokens;
+    }
+
+    private void Filter(JArray jArray, string searchText)
+    {
+        var tokens = new List<JToken>(jArray.Children());
+        foreach (var item in tokens)
+        {
+            if (item is JObject jObj)
+            {
+                Filter(jObj, searchText);
+                if (jObj.Count == 0)
+                {
+                    jArray.Remove(item);
+                }
+            }
+            else if (item is JArray jArr)
+            {
+                Filter(jArr, searchText);
+            }
+            else if (item is JValue jVal)
+            {
+                if (jVal.Value == null || !Matches(jVal.Value, searchText))
+                {
+                    jArray.Remove(item);
+                }
+            }
+        }
+    }
+
+    private static bool Matches(object val, string searchText)
+    {
+        return val.ToString().ToLower().Contains(searchText);
+    }
+
+    public string? Format(byte[] data, bool prettyPrint)
+    {
+        var text = Encoding.UTF8.GetString(data);
+        if (text.Length < data.Length)
+        {
+            return null;
+        }
+
+        try
+        {
+            var jObject = JObject.Parse(text);
+            StringWriter stringWriter = new StringWriter();
+            using (StringWriter sw = stringWriter)
+            {
+                using (JsonTextWriter jw = new JsonTextWriter(sw))
+                {
+                    jw.Formatting = prettyPrint ? Newtonsoft.Json.Formatting.Indented
+                            : Newtonsoft.Json.Formatting.None;
+                    jw.IndentChar = INDENT_CHAR;
+                    jw.Indentation = INDENT_SIZE;
+
+                    jObject.WriteTo(jw);
+                }
+            }
+
+            stringWriter.Close();
+            var formatted = stringWriter.ToString();
+            return formatted;
+        }
+        catch (JsonException)
         {
             return null;
         }

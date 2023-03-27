@@ -35,18 +35,14 @@
                     <ContentPresenter.Resources>
                         <DataTemplate x:Key="StartDateTimePresenter">
                             <StackPanel Orientation="Vertical">
-                                <DatePicker x:Name="startDatePicker" Margin="5"
-                                            SelectedDate="{Binding StartDate}" />
-                                <xceed:TimePicker x:Name="startTimePicker" Margin="5"
-                                                  Value="{Binding StartTime, Mode=OneWayToSource}" />
+                                <DatePickerTextBox x:Name="startTimePicker" Margin="5"
+                                                   Text="{Binding StartTimeText, Mode=TwoWay}" />
                             </StackPanel>
                         </DataTemplate>
                         <DataTemplate x:Key="NoPresenter">
                             <StackPanel Orientation="Vertical" IsEnabled="False">
-                                <DatePicker x:Name="startDatePicker" Margin="5"
-                                            SelectedDate="{Binding StartDate}" />
-                                <xceed:TimePicker x:Name="startTimePicker" Margin="5"
-                                                  Value="{Binding StartTime}" />
+                                <DatePickerTextBox x:Name="startTimePicker" Margin="5"
+                                                   Text="{Binding StartTimeText, Mode=TwoWay}" />
                             </StackPanel>
                         </DataTemplate>
                     </ContentPresenter.Resources>

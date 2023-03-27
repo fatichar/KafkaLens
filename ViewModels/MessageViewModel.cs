@@ -6,13 +6,16 @@ namespace KafkaLens.ViewModels;
 
 public sealed class MessageViewModel : ObservableRecipient
 {
+    const int MaxSummaryLen = 200;
+    
     private readonly Message message;
-    private readonly IMessageFormatter formatter;
+    private IMessageFormatter formatter;
 
     public int Partition => message.Partition;
     public long Offset => message.Offset;
     public string? Key => message.KeyText;
     public string Summary { get; set; }
+    public string DecodedMessage { get; set; }
     public string FormattedMessage { get; set; }
 
     public string DisplayText
@@ -43,10 +46,10 @@ public sealed class MessageViewModel : ObservableRecipient
             if (value != formatterName)
             {
                 SetProperty(ref formatterName, value);
-                var formatter = FormatterFactory.Instance.GetFormatter(value);
-                FormattedMessage = formatter.Format(message.Value ?? Array.Empty<byte>()) ?? message.ValueText;
-                int limit = Math.Min(100, message.ValueText.Length);
-                Summary = FormattedMessage[..limit].ReplaceLineEndings(" ");
+                formatter = FormatterFactory.Instance.GetFormatter(value);
+                DecodedMessage = formatter.Format(message.Value ?? Array.Empty<byte>(), false) ?? message.ValueText;
+                int limit = Math.Min(MaxSummaryLen, message.ValueText.Length);
+                Summary = DecodedMessage[..limit].ReplaceLineEndings(" ");
 
                 UpdateText();
             }
@@ -76,23 +79,16 @@ public sealed class MessageViewModel : ObservableRecipient
 
     private void UpdateText()
     {
-        if (lineFilter.Length > 0)
-        {
-            var lines = FormattedMessage.Split(Environment.NewLine);
-            var filteredLines = new List<string>();
-            foreach (var line in lines)
-            {
-                if (line.Contains(lineFilter, StringComparison.OrdinalIgnoreCase))
-                {
-                    filteredLines.Add(line);
-                }
-            }
+        DisplayText = formatter.Format(message.Value, lineFilter) ?? DecodedMessage;
+    }
 
-            DisplayText = string.Join(Environment.NewLine, filteredLines);
-        }
-        else
-        {
-            DisplayText = FormattedMessage;
-        }
+    public void PrettyFormat()
+    {
+        UpdateText();
+    }
+
+    public void Cleanup()
+    {
+        DisplayText = "";
     }
 }

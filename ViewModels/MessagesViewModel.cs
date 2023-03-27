@@ -85,7 +85,7 @@ public sealed class MessagesViewModel : ObservableRecipient
 
         foreach (var message in Messages)
         {
-            if (FilterAccepts(message.FormattedMessage))
+            if (FilterAccepts(message.DecodedMessage))
             {
                 Filtered.Add(message);
             }
@@ -125,7 +125,7 @@ public sealed class MessagesViewModel : ObservableRecipient
     internal void Add(MessageViewModel message)
     {
         Messages.Add(message);
-        if (FilterAccepts(message.FormattedMessage))
+        if (FilterAccepts(message.DecodedMessage))
         {
             Filtered.Add(message);
         }

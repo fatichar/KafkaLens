@@ -1,7 +1,4 @@
-using System.Windows;
 using System.Windows.Controls;
-using ICSharpCode.AvalonEdit.Highlighting;
-using KafkaLens.ViewModels;
 
 namespace KafkaLens.App.Controls;
 

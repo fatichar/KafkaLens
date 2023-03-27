@@ -11,6 +11,7 @@ public partial class TopicPartitionBrowser : UserControl
     private string singleMessageFilter = "";
     private string messageTablePositiveFilter = "";
     private string messageTableNegativeFilter = "";
+    private MessageViewModel? lastMessage = null;
 
     public TopicPartitionBrowser()
     {
@@ -83,16 +84,20 @@ public partial class TopicPartitionBrowser : UserControl
         if (message != null)
         {
             UpdateMessageText(message);
+            lastMessage = message;
         }
         else
         {
+            lastMessage = null;
             MessageViewer.Document.Text = "";
         }
     }
 
     private void UpdateMessageText(MessageViewModel message)
     {
-        //// this will update DisplayText
+        //// this will update
+        lastMessage?.Cleanup();
+        message.PrettyFormat();
         MessageViewer.Document.Text = message.DisplayText ?? "";
 
         UpdateHighlighting();
@@ -100,7 +105,7 @@ public partial class TopicPartitionBrowser : UserControl
 
     private void UpdateHighlighting()
     {
-        if (string.IsNullOrEmpty(singleMessageFilter))
+        if (true)
         {
             var messageSource = (IMessageSource?)dataContext?.SelectedNode;
             MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
