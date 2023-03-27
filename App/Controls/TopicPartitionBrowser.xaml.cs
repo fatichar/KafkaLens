@@ -103,7 +103,7 @@ public partial class TopicPartitionBrowser : UserControl
         if (string.IsNullOrEmpty(singleMessageFilter))
         {
             var messageSource = (IMessageSource?)dataContext?.SelectedNode;
-            MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(messageSource?.FormatterName ?? "Json");
+            MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
         }
         else
         {

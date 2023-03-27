@@ -12,7 +12,7 @@
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition />
+            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
             <ToolBar Grid.Column="0">
             <Label Content="Filter"/>
@@ -28,7 +28,7 @@
         </ToolBar>
         <ToolBar Grid.Column="3">
             <Label Content="Zoom"/>
-            <Slider x:Name="fontSizeSlider" Margin="5" Width="200"
+            <Slider x:Name="fontSizeSlider" Margin="5" Width="200" HorizontalAlignment="Right"
                     Minimum="6" Maximum="32" Value="{Binding FontSize, Mode=TwoWay}"/>
         </ToolBar>
     </Grid>

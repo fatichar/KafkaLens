@@ -76,5 +76,8 @@
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\ViewModels\ViewModels.csproj" />
   </ItemGroup>
-
+  
+  <PropertyGroup>
+    <PublishSingleFile>true</PublishSingleFile>
+  </PropertyGroup>
 </Project>
