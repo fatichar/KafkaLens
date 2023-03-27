@@ -6,7 +6,7 @@ using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
-public sealed class TopicViewModel : ObservableRecipient, IMessageSource
+public partial class TopicViewModel : ObservableRecipient, IMessageSource
 {
     private readonly IKafkaLensClient kafkaLensClient;
     private readonly Topic topic;
@@ -16,14 +16,17 @@ public sealed class TopicViewModel : ObservableRecipient, IMessageSource
     public bool IsExpandable => true;
     public bool IsExpanded { get; set; }
     public bool IsSelected { get; set; }
-    public string FormatterName { get; set; }
+
+    [ObservableProperty] public List<IMessageFormatter> formatters;
+    public string? FormatterName { get; set; }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.TOPIC;
 
-    public TopicViewModel(IKafkaLensClient kafkaLensClient, Topic topic, string formatterName)
+    public TopicViewModel(IKafkaLensClient kafkaLensClient, Topic topic, string? formatterName) 
     {
+        formatters = FormatterFactory.Instance.GetFormatters();
         this.kafkaLensClient = kafkaLensClient;
         this.topic = topic;
         FormatterName = formatterName;

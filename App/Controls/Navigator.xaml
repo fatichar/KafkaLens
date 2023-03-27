@@ -8,23 +8,15 @@
              xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <UserControl.Resources>
-        <!--<StaticResource ResourceKey="formats" >
-            
-        </StaticResource>-->
-        <ContextMenu x:Key="ContextMenu" 
-                     ItemsSource="{Binding Formatters}">
-            <ContextMenu.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding Name}"></TextBlock >
-                </DataTemplate>
-            </ContextMenu.ItemTemplate>
-            <!-- <ContextMenu.ItemTemplate> -->
-            <!--     <DataTemplate> -->
-            <!--         <MenuItem Header="{Binding Name}"  -->
-            <!--                   Command="{Binding ChangeFormatterCommand}"  -->
-            <!--                   /> -->
-            <!--     </DataTemplate> -->
-            <!-- </ContextMenu.ItemTemplate> -->
+        <ContextMenu x:Key="ContextMenu"
+                ItemsSource="{Binding Formatters}">
+             <ContextMenu.ItemTemplate>
+                 <DataTemplate>
+                     <MenuItem Header="{Binding Name}"
+                               Command="{Binding Path=ChangeFormatterCommand, RelativeSource={RelativeSource AncestorType={x:Type viewModels:OpenedClusterViewModel}}}"
+                               />
+                 </DataTemplate>
+             </ContextMenu.ItemTemplate>
         </ContextMenu>
         <HierarchicalDataTemplate DataType = "{x:Type viewModels:OpenedClusterViewModel}"
                                 ItemsSource = "{Binding Path=Topics}">
@@ -33,7 +25,8 @@
 
         <HierarchicalDataTemplate DataType = "{x:Type viewModels:TopicViewModel}"
                                 ItemsSource = "{Binding Path=Partitions}">
-            <TextBlock Text="{Binding Path=Name}" ContextMenu="{StaticResource ContextMenu}">
+            <TextBlock Text="{Binding Path=Name}"
+                       >
             </TextBlock>
         </HierarchicalDataTemplate>
 

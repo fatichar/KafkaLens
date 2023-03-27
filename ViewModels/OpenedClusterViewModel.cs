@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -8,6 +9,7 @@ using KafkaLens.Messages;
 using KafkaLens.Shared;
 using KafkaLens.Formatting;
 using Serilog;
+using Xunit;
 
 namespace KafkaLens.ViewModels;
 
@@ -149,7 +151,8 @@ public partial class OpenedClusterViewModel : ObservableRecipient, ITreeNode
 
     private async Task UpdateFormatterAsync()
     {
-        // SelectedNode.Formatter =
+        //((IMessageSource)SelectedNode).FormatterName = "Json";
+        Console.WriteLine("");
     }
 
     internal async Task LoadTopicsAsync()
@@ -161,7 +164,7 @@ public partial class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         Topics.Clear();
         foreach (var topic in clusterViewModel.Topics)
         {
-            Topics.Add(new TopicViewModel(KafkaLensClient, topic, DefaultFormatter.Name));
+            Topics.Add(new TopicViewModel(KafkaLensClient, topic, null));
         }
     }
 
@@ -229,18 +232,43 @@ public partial class OpenedClusterViewModel : ObservableRecipient, ITreeNode
     private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         var node = (IMessageSource?)SelectedNode;
-        var formatter = node?.FormatterName ?? DefaultFormatter.Name;
+        if (node == null)
+        {
+            return;
+        }
+        if (node.FormatterName == null) 
+        {
+            Assert.True(e.NewItems?.Count > 0);
+            var message = (Message)e.NewItems[0];
+            var formatter = GuessFormatter(message);
+            node.FormatterName = formatter?.Name ?? DefaultFormatter.Name;
+        }
+        //var formatter = node?.FormatterName ?? DefaultFormatter.Name;
         lock (pendingMessages)
         {
             Log.Debug("Pending messages = {Count}", pendingMessages.Count);
             Log.Debug("Received {Count} messages", e.NewItems?.Count);
             foreach (var msg in e.NewItems ?? new List<Message>())
             {
-                MessageViewModel viewModel = new((Message)msg, formatter);
+                var viewModel = new MessageViewModel((Message)msg, node.FormatterName);
                 pendingMessages.Add(viewModel);
             }
             Log.Debug("Pending messages = {Count}", pendingMessages.Count);
         }
+    }
+
+    private IMessageFormatter? GuessFormatter(Message message) {
+        IMessageFormatter best = null;
+        int maxLength = 0;
+        foreach (var formatter in Formatters) {
+            var text = formatter.Format(message.Value);
+            if (text == null) continue;
+            if (text.Length > maxLength) {
+                maxLength = text.Length;
+                best = formatter;
+            }
+        }
+        return best;
     }
 
     private void OnMessagesFinished()
