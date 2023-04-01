@@ -78,12 +78,38 @@ public class JsonFormatter : IMessageFormatter
             }
             else if (pair.Value is JArray jArr)
             {
-                Filter(jArr, searchText);
+                if (AtomicArrays)
+                {
+                    FilterAtomic(jArr, searchText);
+                }
+                else
+                {
+                    Filter(jArr, searchText);
+                }
                 if (jArr.Count == 0)
                 {
                     jObject.Remove(pair.Key);
                 }
             }
+        }
+    }
+
+    private void FilterAtomic(JArray jArr, string searchText)
+    {
+        // if any element matches, keep the whole array, else remove every item
+        var tokens = new List<JToken>(jArr.Children());
+        bool keep = false;
+        foreach (var token in tokens)
+        {
+            if (Matches(token, searchText))
+            {
+                keep = true;
+                break;
+            }
+        }
+        if (!keep)
+        {
+            jArr.RemoveAll();
         }
     }
 
@@ -166,4 +192,5 @@ public class JsonFormatter : IMessageFormatter
     }
 
     public string Name => "Json";
+    public bool AtomicArrays { get; set; }
 }
