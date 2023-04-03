@@ -42,7 +42,7 @@ public class LocalClient : IKafkaLensClient
 
     #region Create
 
-    public string Name => "Local";
+    public string Name { get; } = "Local";
 
     public Task<bool> ValidateConnectionAsync(string BootstrapServers)
     {

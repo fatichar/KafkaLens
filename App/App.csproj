@@ -75,7 +75,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
-    <Content Include="KafkaLensApp.db">
+    <Content Include="../KafkaLensApp.db">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
@@ -86,7 +86,7 @@
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\ViewModels\ViewModels.csproj" />
   </ItemGroup>
-  
+
   <PropertyGroup>
     <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
