@@ -4,7 +4,7 @@ using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
-public sealed class MessageViewModel : ObservableRecipient
+public sealed class MessageViewModel: ViewModelBase
 {
     const int MaxSummaryLen = 200;
     

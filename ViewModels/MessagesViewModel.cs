@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace KafkaLens.ViewModels;
 
-public sealed class MessagesViewModel : ObservableRecipient
+public sealed class MessagesViewModel: ViewModelBase
 {
     private StringComparison comparisonType = StringComparison.OrdinalIgnoreCase;
     public ObservableCollection<MessageViewModel> Messages { get; } = new();

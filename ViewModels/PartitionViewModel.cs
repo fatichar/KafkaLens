@@ -9,7 +9,7 @@ using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
-public class PartitionViewModel : ObservableRecipient, IMessageSource {
+public class PartitionViewModel: ViewModelBase, IMessageSource {
     private readonly IKafkaLensClient kafkaLensClient;
     private readonly Partition partition;
     public int Id => partition.Id;

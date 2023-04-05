@@ -9,7 +9,7 @@ using KafkaLens.ViewModels.DataAccess;
 using KafkaLens.Formatting;
 using Microsoft.Extensions.Configuration;
 using Serilog;
-using AppConfig = KafkaLens.App.Config.AppConfig;
+using AppConfig = KafkaLens.ViewModels.AppConfig;
 
 namespace KafkaLens.App;
 

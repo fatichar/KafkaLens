@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             xmlns:views="clr-namespace:AvaloniaApp.Views"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AvaloniaApp.Views.OpenedClusterPanel"
+             x:DataType="vm:OpenedClusterViewModel">
+    <Grid ColumnDefinitions="*, 3, *">
+        <views:Navigator Grid.Column="0" 
+                         BorderBrush="Red" 
+                         BorderThickness="2" 
+                         />
+        <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
+        <TextBlock Grid.Column="2" Text="sdfugdsfljgszldffglkdhjbfg\ndsfgkjhgzdskfjuhgz"></TextBlock>
+    </Grid>
+</UserControl>

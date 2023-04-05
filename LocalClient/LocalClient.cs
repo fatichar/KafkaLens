@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Entities = KafkaLens.ViewModels.Entities;
 
-namespace KafkaLens.App;
+namespace KafkaLens;
 
 public class LocalClient : IKafkaLensClient
 {

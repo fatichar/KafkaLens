@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             xmlns:views="clr-namespace:AvaloniaApp.Views"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AvaloniaApp.Views.MainView"
+             x:DataType="vm:MainViewModel">
+    <StackPanel>
+        <Menu x:Name="MenuBar" DockPanel.Dock="Top" Items="{Binding MenuItems}">
+            <Menu.Styles>
+                <Style Selector="MenuItem" x:DataType="vm:MenuItemViewModel">
+                    <Design.DataContext>
+                        <vm:MenuItemViewModel />
+                    </Design.DataContext>
+                    <Setter Property="Header" Value="{Binding Header}"/>
+                    <Setter Property="Items" Value="{Binding Items}"/>
+                    <Setter Property="Command" Value="{Binding Command}"/>
+                    <Setter Property="CommandParameter" Value="{Binding CommandParameter}"/>
+                </Style>
+            </Menu.Styles>
+        </Menu>
+        <TabControl Items="{Binding OpenedClusters}"
+                    SelectedIndex="{Binding SelectedIndex}">
+            <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:OpenedClusterViewModel">
+                    <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+            </TabControl.ItemTemplate >
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <DockPanel LastChildFill="True">
+                        <views:OpenedClusterPanel/>
+                    </DockPanel>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+    </StackPanel>
+</UserControl>

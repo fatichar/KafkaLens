@@ -13,7 +13,7 @@ using Xunit;
 
 namespace KafkaLens.ViewModels;
 
-public partial class OpenedClusterViewModel : ObservableRecipient, ITreeNode
+public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 {
     private readonly ISettingsService settingsService;
     private readonly ClusterViewModel clusterViewModel;
@@ -86,7 +86,8 @@ public partial class OpenedClusterViewModel : ObservableRecipient, ITreeNode
         }
     }
 
-    [ObservableProperty] public DateTime startTime;
+    [ObservableProperty] 
+    public DateTime startTime;
 
     private int fontSize = 14;
     public int FontSize

@@ -6,7 +6,7 @@ using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
-public partial class TopicViewModel : ObservableRecipient, IMessageSource
+public partial class TopicViewModel: ViewModelBase, IMessageSource
 {
     private readonly IKafkaLensClient kafkaLensClient;
     private readonly Topic topic;

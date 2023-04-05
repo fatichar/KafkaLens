@@ -8,7 +8,7 @@ using KafkaLens.Shared;
 
 namespace KafkaLens.ViewModels;
 
-public sealed class ClusterViewModel : ObservableRecipient
+public sealed class ClusterViewModel: ViewModelBase
 {
     public IKafkaLensClient KafkaLensClient { get; }
     public IRelayCommand OpenClusterCommand { get; }

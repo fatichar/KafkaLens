@@ -15,7 +15,7 @@ using Serilog;
 
 namespace KafkaLens.ViewModels;
 
-public partial class MainViewModel : ObservableRecipient
+public partial class MainViewModel: ViewModelBase
 {
     private const string HTTP_PROTOCOL_PREFIX = "http://";
 
@@ -36,16 +36,14 @@ public partial class MainViewModel : ObservableRecipient
 
     // commands
     public IRelayCommand AddClusterCommand { get; }
+    public IRelayCommand OpenClusterCommand { get; }
     public IRelayCommand LoadClustersCommand { get; }
+    
+    [ObservableProperty]
+    ObservableCollection<MenuItemViewModel> menuItems;
 
     [ObservableProperty]
     private int selectedIndex = -1;
-
-    public int SelectedIndex
-    {
-        get => selectedIndex;
-        set => SetProperty(ref selectedIndex, value);
-    }
 
     public MainViewModel(
         IOptions<AppConfig> appInfo,
@@ -70,11 +68,86 @@ public partial class MainViewModel : ObservableRecipient
         OpenedClusterViewModel.FormatterFactory = formatterFactory;
 
         AddClusterCommand = new RelayCommand(AddClusterAsync);
-        LoadClustersCommand = new RelayCommand(LoadClustersAsync);
+        // LoadClustersCommand = new RelayCommand(LoadClustersAsync);
+        OpenClusterCommand = new RelayCommand<string>(OpenCluster);
+
+        LoadClustersAsync().Wait();
+        
+        menuItems = CreateMenuItems();
 
         Title = $"Main - {appInfo?.Value?.Title}";
 
         IsActive = true;
+    }
+
+    private ObservableCollection<MenuItemViewModel> CreateMenuItems()
+    {
+        return new ObservableCollection<MenuItemViewModel>
+        {
+            CreateClusterMenu(),
+            CreateHelpMenu()
+        };
+    }
+
+    private static MenuItemViewModel CreateHelpMenu()
+    {
+        return new MenuItemViewModel
+        {
+            Header = "Help",
+            Items = new []
+            {
+                new MenuItemViewModel
+                {
+                    Header = "About",
+                    // Command = new RelayCommand(() => MessageBox.Show("About")),
+                },
+            }
+        };
+    }
+
+    private MenuItemViewModel CreateClusterMenu()
+    {
+        return new MenuItemViewModel
+        {
+            Header = "Cluster",
+            Items = new []
+            {
+                new MenuItemViewModel
+                {
+                    Header = "Add Cluster",
+                    Command = AddClusterCommand,
+                },
+                CreateOpenMenu()
+            }
+        };
+    }
+
+    private MenuItemViewModel CreateOpenMenu()
+    {
+        var openClusterItems = Clusters.Select(c => new MenuItemViewModel
+        {
+            Header = c.Name,
+            Command = OpenClusterCommand,
+            CommandParameter = c.Id
+        }).ToList();
+        return new MenuItemViewModel
+        {
+            Header = "Load Clusters",
+            Command = LoadClustersCommand,
+            Items = new ObservableCollection<MenuItemViewModel>(openClusterItems)
+        };
+    }
+
+    private void OpenCluster(string clusterId)
+    {
+        var cluster = Clusters.FirstOrDefault(c => c.Id == clusterId);
+        if (cluster == null)
+        {
+            Log.Error("Failed to find cluster with id {ClusterId}", clusterId);
+            return;
+        }
+
+        OpenCluster(cluster);
     }
 
     protected override void OnActivated()
@@ -82,7 +155,7 @@ public partial class MainViewModel : ObservableRecipient
         Messenger.Register<MainViewModel, OpenClusterMessage>(this, (r, m) => r.Receive(m));
         Messenger.Register<MainViewModel, CloseTabMessage>(this, (r, m) => r.Receive(m));
 
-        LoadClustersCommand.Execute(null);
+        // LoadClustersCommand.Execute(null);
     }
 
     private void AddClusterAsync()
@@ -156,7 +229,7 @@ public partial class MainViewModel : ObservableRecipient
         return $"{clusterName} ({smallestAvailable})";
     }
 
-    private async void LoadClustersAsync()
+    private async Task LoadClustersAsync()
     {
         Clients.Clear();
         Clusters.Clear();
@@ -197,7 +270,7 @@ public partial class MainViewModel : ObservableRecipient
         foreach (var clientInfo in clientInfos.Values)
         {
             // Uncomment for local testing
-            // break;
+            break;
             //
             Log.Information("Loading client: {ClientName}", clientInfo.Name);
             try
