@@ -11,8 +11,9 @@ using KafkaLens.ViewModels.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Serilog;
 using System;
+using Avalonia.Logging;
+using Serilog;
 
 namespace AvaloniaApp
 {
@@ -49,17 +50,21 @@ namespace AvaloniaApp
             services.AddLogging();
 
             ConfigureLogging();
+            
 
             return services.BuildServiceProvider();
         }
 
         private static void ConfigureLogging()
         {
-            using var log = new LoggerConfiguration()
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
                 .WriteTo.Console(outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u4}] {Message:lj}{NewLine}{Exception}")
+                .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day)
                 .CreateLogger();
-            Log.Logger = log;
+            
             Log.Information("The global logger has been configured");
+            System.Diagnostics.Debug.WriteLine("Log to console");
         }
         public override void Initialize()
         {

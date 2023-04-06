@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -31,6 +32,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     public ITreeNode.NodeType Type => ITreeNode.NodeType.CLUSTER;
 
     public bool IsSelected { get; set; }
+    public ObservableCollection<ITreeNode> Children { get; }  = new();
     public bool IsExpanded { get; set; }
 
     [ObservableProperty] public List<IMessageFormatter> formatters;
@@ -165,7 +167,9 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         Topics.Clear();
         foreach (var topic in clusterViewModel.Topics)
         {
-            Topics.Add(new TopicViewModel(KafkaLensClient, topic, null));
+            var viewModel = new TopicViewModel(KafkaLensClient, topic, null);
+            Topics.Add(viewModel);
+            Children.Add(viewModel);
         }
     }
 
@@ -254,6 +258,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
                 var viewModel = new MessageViewModel((Message)msg, node.FormatterName);
                 pendingMessages.Add(viewModel);
             }
+            Dispatcher.UIThread.InvokeAsync(UpdateMessages);
             Log.Debug("Pending messages = {Count}", pendingMessages.Count);
         }
     }

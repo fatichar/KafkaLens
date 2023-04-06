@@ -13,6 +13,6 @@
                          BorderThickness="2" 
                          />
         <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
-        <TextBlock Grid.Column="2" Text="sdfugdsfljgszldffglkdhjbfg\ndsfgkjhgzdskfjuhgz"></TextBlock>
+        <views:Browser Grid.Column="2"/>
     </Grid>
 </UserControl>

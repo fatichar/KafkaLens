@@ -8,9 +8,11 @@
 		<vm:OpenedClusterViewModel></vm:OpenedClusterViewModel>
 	</Design.DataContext>
 	
-	<TreeView Items="{Binding Nodes}">
+	<TreeView Items="{Binding Nodes}"
+	          SelectedItem="{Binding SelectedNode}">
 		<TreeView.ItemTemplate>
-			<TreeDataTemplate x:DataType="vm:ITreeNode">
+			<TreeDataTemplate x:DataType="vm:ITreeNode"
+			                  ItemsSource="{Binding Children}">
 				<TextBlock Text="{Binding Name}"></TextBlock>
 			</TreeDataTemplate>
 		</TreeView.ItemTemplate>

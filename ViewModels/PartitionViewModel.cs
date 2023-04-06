@@ -20,6 +20,7 @@ public class PartitionViewModel: ViewModelBase, IMessageSource {
     public bool IsExpandable => false;
     public bool IsExpanded { get; set; }
     public bool IsSelected { get; set; }
+    public ObservableCollection<ITreeNode> Children { get; } = new();
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.PARTITION;
 

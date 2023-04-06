@@ -1,6 +1,6 @@
 ﻿using Avalonia;
-using Avalonia.ReactiveUI;
 using System;
+using Avalonia.Logging;
 
 namespace AvaloniaApp.Desktop
 {
@@ -17,6 +17,6 @@ namespace AvaloniaApp.Desktop
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()
-                .LogToTrace();
+                .LogToTrace(LogEventLevel.Information);
     }
 }

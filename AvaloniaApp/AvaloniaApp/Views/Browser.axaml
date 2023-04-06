@@ -1,0 +1,32 @@
+﻿<UserControl x:Class="AvaloniaApp.Views.Browser"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             xmlns:views="clr-namespace:AvaloniaApp.Views"
+             x:DataType="vm:OpenedClusterViewModel">
+    <Design.DataContext>
+        <vm:OpenedClusterViewModel />
+    </Design.DataContext>
+    <Grid RowDefinitions="*, 3, *">
+        <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  Items="{Binding CurrentMessages.Messages}"
+                  SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
+                  >
+            <DataGrid.Columns>
+                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition" Binding="{Binding Partition }"/>
+                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}"/>
+                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp" Binding="{Binding }"/>
+                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }"/>
+                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Body" Binding="{Binding Summary }"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <GridSplitter Grid.Row="1" Background="Blue"></GridSplitter>
+        <StackPanel Grid.Row="2">
+            <Button Content="Previous" />
+            <Button Content="Next" />
+        </StackPanel>
+    </Grid>
+</UserControl>

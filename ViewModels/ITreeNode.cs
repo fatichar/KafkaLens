@@ -1,4 +1,6 @@
-﻿namespace KafkaLens.ViewModels;
+﻿using System.Collections.ObjectModel;
+
+namespace KafkaLens.ViewModels;
 
 public interface ITreeNode
 {
@@ -13,4 +15,5 @@ public interface ITreeNode
     NodeType Type { get; }
     public bool IsExpanded { get; }
     bool IsSelected { get; set; }
+    ObservableCollection<ITreeNode> Children { get; }
 }
