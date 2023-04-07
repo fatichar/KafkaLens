@@ -3,30 +3,54 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              xmlns:views="clr-namespace:AvaloniaApp.Views"
+             xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit"
              x:DataType="vm:OpenedClusterViewModel">
     <Design.DataContext>
         <vm:OpenedClusterViewModel />
     </Design.DataContext>
     <Grid RowDefinitions="*, 3, *">
-        <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"
-                  CanUserReorderColumns="True"
-                  CanUserResizeColumns="True"
-                  CanUserSortColumns="True"
-                  Items="{Binding CurrentMessages.Messages}"
-                  SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
-                  >
-            <DataGrid.Columns>
-                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition" Binding="{Binding Partition }"/>
-                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}"/>
-                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp" Binding="{Binding }"/>
-                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }"/>
-                <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Body" Binding="{Binding Summary }"/>
-            </DataGrid.Columns>
-        </DataGrid>
-        <GridSplitter Grid.Row="1" Background="Blue"></GridSplitter>
-        <StackPanel Grid.Row="2">
-            <Button Content="Previous" />
-            <Button Content="Next" />
+        <StackPanel Width="NaN" Height="NaN">
+            <views:MessagesToolbar x:Name="MessagesToolbar" DockPanel.Dock="Top"
+                                   Height="40" Width="NaN"
+                                   Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7">
+            </views:MessagesToolbar>
+        
+            <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"
+                      CanUserReorderColumns="True"
+                      CanUserResizeColumns="True"
+                      CanUserSortColumns="True"
+                      IsReadOnly="True"
+                      Width="NaN" Height="NaN"
+                      Items="{Binding CurrentMessages.Messages}"
+                      SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
+                      SelectionChanged="MessagesGrid_OnSelectionChanged"
+                      >
+                <DataGrid.Columns>
+                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition" Binding="{Binding Partition }"/>
+                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}"/>
+                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp" Binding="{Binding }"/>
+                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }"/>
+                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Body" Binding="{Binding Summary }"/>
+                </DataGrid.Columns>
+            </DataGrid>
         </StackPanel>
+        
+        <GridSplitter Grid.Row="1" Background="Blue"/>
+        
+        <DockPanel Grid.Row="2" MaxWidth="3000" MaxHeight="1000">
+            <views:MessageDisplayToolbar x:Name="MessageDisplayToolbar" DockPanel.Dock="Top"
+                                         Height="40" Width="NaN" VerticalAlignment="Center"
+                                         Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7">
+            </views:MessageDisplayToolbar>
+            <ScrollViewer>
+                <TextBlock MinWidth="1000" MaxWidth="2000" 
+                           Name="MessageViewer"></TextBlock>
+            </ScrollViewer>
+            <!-- <avaloniaEdit:TextEditor Height="600" Width="NaN" -->
+            <!--     Name="MessageViewer" -->
+            <!--     FontFamily="Consolas" -->
+            <!--     FontSize="{Binding FontSize, Mode=OneWay}" -->
+            <!--     IsReadOnly="True" /> -->
+        </DockPanel>
     </Grid>
 </UserControl>

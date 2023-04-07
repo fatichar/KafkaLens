@@ -1,0 +1,32 @@
+﻿<UserControl x:Class="AvaloniaApp.Views.MessageDisplayToolbar"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+	xmlns:views="clr-namespace:AvaloniaApp.Views"
+	x:DataType="vm:OpenedClusterViewModel">
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+		<WrapPanel Grid.Column="0">
+			<Label Content="Filter"/>
+			<TextBox x:Name="filterBox" MinWidth="300" VerticalContentAlignment="Center"
+			         Text="{Binding CurrentMessages.LineFilter, Mode=TwoWay}" />
+		</WrapPanel>
+		<WrapPanel Grid.Column="2">
+			<Label Content="Format"/>
+			<ComboBox x:Name="FormatterCombo" Margin="5" Width="200"
+			          Items="{Binding FormatterNames}"
+			          SelectedItem="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=TwoWay}"
+			/>
+		</WrapPanel>
+		<WrapPanel Grid.Column="3">
+			<Label Content="Zoom"/>
+			<Slider x:Name="fontSizeSlider" Margin="5" Width="200" HorizontalAlignment="Right"
+			        Minimum="6" Maximum="32" Value="{Binding FontSize, Mode=TwoWay}"/>
+		</WrapPanel>
+	</Grid>
+</UserControl>

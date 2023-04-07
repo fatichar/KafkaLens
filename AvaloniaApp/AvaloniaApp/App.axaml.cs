@@ -48,9 +48,7 @@ namespace AvaloniaApp
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<FormatterFactory>();
             services.AddLogging();
-
             ConfigureLogging();
-            
 
             return services.BuildServiceProvider();
         }

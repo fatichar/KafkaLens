@@ -31,7 +31,16 @@ public sealed class MessagesViewModel: ViewModelBase
     public int SelectedIndex
     {
         get => selectedIndex;
-        set => SetProperty(ref selectedIndex, value);
+        set
+        {
+            if (SetProperty(ref selectedIndex, value))
+            {
+                if (selectedIndex >= 0 && selectedIndex < Filtered.Count)
+                {
+                    CurrentMessage = Filtered[selectedIndex];
+                }
+            }
+        }
     }
 
     private string positiveFilter = "";
