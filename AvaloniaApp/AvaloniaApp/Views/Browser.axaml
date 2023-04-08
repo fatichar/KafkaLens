@@ -21,7 +21,7 @@
                       CanUserResizeColumns="True"
                       CanUserSortColumns="True"
                       IsReadOnly="True"
-                      Items="{Binding CurrentMessages.Messages}"
+                      Items="{Binding CurrentMessages.Filtered}"
                       SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
                       SelectionChanged="MessagesGrid_OnSelectionChanged"
                       >
@@ -40,12 +40,9 @@
         <DockPanel Grid.Row="2">
             <views:MessageDisplayToolbar x:Name="MessageDisplayToolbar" DockPanel.Dock="Bottom"
                                          VerticalAlignment="Center" HorizontalAlignment="Stretch"
-                                         Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7">
+                                         Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7"
+                                         >
             </views:MessageDisplayToolbar>
-            <!-- <ScrollViewer> -->
-            <!--     <TextBlock MinWidth="1000" MaxWidth="2000" -->
-            <!--                Name="MessageViewer"></TextBlock> -->
-            <!-- </ScrollViewer> -->
             <avaloniaEdit:TextEditor 
                 Name="MessageViewer"
                 FontFamily="Consolas"

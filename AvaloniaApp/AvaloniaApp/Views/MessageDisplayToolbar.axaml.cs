@@ -9,9 +9,4 @@ public partial class MessageDisplayToolbar : UserControl
     {
         InitializeComponent();
     }
-
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
 }

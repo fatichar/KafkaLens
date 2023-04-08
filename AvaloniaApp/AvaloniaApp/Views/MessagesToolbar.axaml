@@ -3,12 +3,14 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
 	x:DataType="vm:OpenedClusterViewModel">
-	<WrapPanel FlowDirection="LeftToRight">
-		<Label>Contains</Label>
-		<TextBox x:Name="PositiveFilterBox" MinWidth="300" VerticalContentAlignment="Center" 
+	<WrapPanel FlowDirection="LeftToRight" Margin="5">
+		<Label VerticalAlignment="Center">Contains</Label>
+		<TextBox x:Name="PositiveFilterBox" 
+		         MinWidth="300" VerticalContentAlignment="Center" VerticalAlignment="Center"
 		         Text="{Binding CurrentMessages.PositiveFilter}"/>
-		<Label Content="But not"/>
-		<TextBox x:Name="NegativeFilterBox" MinWidth="300" VerticalContentAlignment="Center" 
+		<Label Content="But not" VerticalAlignment="Center"/>
+		<TextBox x:Name="NegativeFilterBox" 
+		         MinWidth="300" VerticalContentAlignment="Center" VerticalAlignment="Center"
 		         Text="{Binding Path=CurrentMessages.NegativeFilter}"/>
 	</WrapPanel>
 </UserControl>

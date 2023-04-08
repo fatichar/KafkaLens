@@ -21,41 +21,24 @@ public partial class Browser : UserControl
 
         DataContextChanged += OnDataContextChanged;
 
-        // MessageDisplayToolbar.fontSizeSlider.ValueChanged += (s, e) =>
-        // {
-        //     MessageViewer.FontSize = (int)e.NewValue;
-        // };
-        //     
-        // MessagesPanel.MessagesToolbar.positiveFilterBox.TextChanged += (s, e) =>
-        // {
-        //     messageTablePositiveFilter = MessagesPanel.MessagesToolbar.positiveFilterBox.Text.Trim();
-        //     UpdateMessagesView();
-        // };
-        //
-        // MessagesPanel.MessagesToolbar.negativeFilterBox.TextChanged += (s, e) =>
-        // {
-        //     messageTableNegativeFilter = MessagesPanel.MessagesToolbar.negativeFilterBox.Text.Trim();
-        //     UpdateMessagesView();
-        // };
-
-        // MessageDisplayToolbar.filterBox.TextChanged += (s, e) =>
-        // {
-        //     singleMessageFilter = MessageDisplayToolbar.filterBox.Text.Trim();
-        //     var message = dataContext?.CurrentMessages?.CurrentMessage;
-        //     if (message != null)
-        //     {
-        //         UpdateMessageText(message);
-        //     }
-        // };
-        //
-        // MessageDisplayToolbar.FormatterCombo.SelectionChanged += (s, e) =>
-        // {
-        //     var message = dataContext?.CurrentMessages?.CurrentMessage;
-        //     if (message != null)
-        //     {
-        //         UpdateMessageText(message);
-        //     }
-        // };
+        MessageDisplayToolbar.FilterBox.TextChanged += (s, e) =>
+        {
+            singleMessageFilter = MessageDisplayToolbar.FilterBox.Text.Trim();
+            var message = dataContext?.CurrentMessages?.CurrentMessage;
+            if (message != null)
+            {
+                UpdateMessageText(message);
+            }
+        };
+        
+        MessageDisplayToolbar.FormatterCombo.SelectionChanged += (s, e) =>
+        {
+            var message = dataContext?.CurrentMessages?.CurrentMessage;
+            if (message != null)
+            {
+                UpdateMessageText(message);
+            }
+        };
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -106,8 +89,8 @@ public partial class Browser : UserControl
 
     private void UpdateHighlighting()
     {
-        // var messageSource = (IMessageSource?)dataContext?.SelectedNode;
-        // MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
+        var messageSource = (IMessageSource?)dataContext?.SelectedNode;
+        MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
     }
 
     private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)

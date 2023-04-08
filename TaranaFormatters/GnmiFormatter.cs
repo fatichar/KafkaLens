@@ -69,7 +69,8 @@ public class GnmiFormatter : Formatting.IMessageFormatter
                 continue;
             }
             var pathStr = path.ToString();
-            if (!Matches(pathStr, searchText))
+            if (!Matches(pathStr, searchText)
+                && !Matches(update.Val.ToString(), searchText))
             {
                 notification.Update.Remove(update);
             }

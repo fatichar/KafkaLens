@@ -10,21 +10,22 @@
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
-		<WrapPanel Grid.Column="0">
-			<Label Content="Filter"/>
-			<TextBox x:Name="filterBox" MinWidth="300" VerticalContentAlignment="Center"
+		<WrapPanel Grid.Column="0" VerticalAlignment="Center">
+			<Label Content="Filter" VerticalAlignment="Center"/>
+			<TextBox x:Name="FilterBox" MinWidth="300" VerticalAlignment="Center"
 			         Text="{Binding CurrentMessages.LineFilter, Mode=TwoWay}" />
 		</WrapPanel>
-		<WrapPanel Grid.Column="2">
-			<Label Content="Format"/>
-			<ComboBox x:Name="FormatterCombo" Margin="5" Width="200"
+		<WrapPanel Grid.Column="2" VerticalAlignment="Center">
+			<Label Content="Format" VerticalAlignment="Center"/>
+			<ComboBox x:Name="FormatterCombo" Margin="5" Width="200" VerticalAlignment="Center"
 			          Items="{Binding FormatterNames}"
 			          SelectedItem="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=TwoWay}"
 			/>
 		</WrapPanel>
-		<WrapPanel Grid.Column="3">
-			<Label Content="Zoom"/>
-			<Slider x:Name="fontSizeSlider" Margin="5" Width="200" HorizontalAlignment="Right"
+		<WrapPanel Grid.Column="3" VerticalAlignment="Center">
+			<Label Content="Zoom" VerticalAlignment="Center"/>
+			<Slider x:Name="fontSizeSlider" Width="200"
+			        VerticalAlignment="Center" HorizontalAlignment="Right"
 			        Minimum="6" Maximum="32" Value="{Binding FontSize, Mode=TwoWay}"/>
 		</WrapPanel>
 	</Grid>
