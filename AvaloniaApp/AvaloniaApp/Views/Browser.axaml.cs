@@ -10,7 +10,6 @@ namespace AvaloniaApp.Views;
 public partial class Browser : UserControl
 {
     private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
-    private string singleMessageFilter = "";
     private string messageTablePositiveFilter = "";
     private string messageTableNegativeFilter = "";
     private MessageViewModel? lastMessage = null;
@@ -23,7 +22,7 @@ public partial class Browser : UserControl
 
         MessageDisplayToolbar.FilterBox.TextChanged += (s, e) =>
         {
-            singleMessageFilter = MessageDisplayToolbar.FilterBox.Text.Trim();
+            MessageDisplayToolbar.FilterBox.Text.Trim();
             var message = dataContext?.CurrentMessages?.CurrentMessage;
             if (message != null)
             {
