@@ -1,6 +1,7 @@
 ﻿using System;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using AvaloniaEdit.Document;
 using AvaloniaEdit.Highlighting;
 using KafkaLens.ViewModels;
 
@@ -97,9 +98,10 @@ public partial class Browser : UserControl
         UpdateHighlighting();
     }
 
-    private string SetText(string message)
+    private void SetText(string message)
     {
-        return MessageViewer.Text = message ?? "";
+        message ??= "";
+        MessageViewer.Document = new TextDocument(message.ToCharArray());
     }
 
     private void UpdateHighlighting()

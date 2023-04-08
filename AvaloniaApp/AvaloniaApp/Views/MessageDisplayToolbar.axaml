@@ -2,7 +2,6 @@
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
-	xmlns:views="clr-namespace:AvaloniaApp.Views"
 	x:DataType="vm:OpenedClusterViewModel">
 	<Grid>
 		<Grid.ColumnDefinitions>

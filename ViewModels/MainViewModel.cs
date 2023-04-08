@@ -78,6 +78,11 @@ public partial class MainViewModel: ViewModelBase
         Title = $"Main - {appInfo?.Value?.Title}";
 
         IsActive = true;
+
+        if (Clusters.Count > 0)
+        {
+            OpenCluster(Clusters[0].Id);
+        }
     }
 
     private ObservableCollection<MenuItemViewModel> CreateMenuItems()
