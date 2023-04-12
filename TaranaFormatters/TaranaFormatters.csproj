@@ -25,6 +25,7 @@
     <ItemGroup>
         <Protobuf Include="Protos\gnmi.proto" />
         <Protobuf Include="Protos\gnmi_ext.proto" />
+        <Protobuf Include="Protos\event.proto" />
     </ItemGroup>
 
 </Project>

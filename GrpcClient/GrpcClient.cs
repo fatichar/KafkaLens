@@ -51,7 +51,17 @@ public class GrpcClient : IKafkaLensClient
     #region Read
     public async Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
-        var responseTask = client.GetAllClustersAsync(new Empty()).ResponseAsync;
+        var call = client.GetAllClustersAsync(
+            new Empty(), 
+            null, 
+            DateTime.UtcNow.AddSeconds(3));
+        var responseTask = call.ResponseAsync;
+        if (responseTask == null
+            || !responseTask.Wait(3000)
+            )
+        {
+            throw new Exception($"Failed to connect to grpc server: {url}");
+        }
         var response = await responseTask;
         if (responseTask.IsFaulted)
         {

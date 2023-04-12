@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Gnmi;
+﻿using Gnmi;
 using Google.Protobuf;
 using Path = Gnmi.Path;
 
@@ -7,13 +6,7 @@ namespace KafkaLens.TaranaFormatters;
 
 public class GnmiFormatter : Formatting.IMessageFormatter
 {
-    public GnmiFormatter()
-    {
-        jsonFormatter.AtomicArrays = true;
-    }
-
     public string Name => "Gnmi";
-    private readonly KafkaLens.Formatting.JsonFormatter jsonFormatter = new ();
 
     public string? Format(byte[] data, bool prettyPrint)
     {

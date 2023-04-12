@@ -1,0 +1,26 @@
+﻿<UserControl x:Class="AvaloniaApp.Views.FetchPanel"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+	xmlns:views="clr-namespace:AvaloniaApp.Views"
+	x:DataType="vm:OpenedClusterViewModel">
+    <Grid Margin="5" RowDefinitions="1*, 1*, 1*, 1*, *" ColumnDefinitions="2*, 5*"
+          VerticalAlignment="Top">
+        <Label Grid.Row="0" Grid.Column="0"
+               Width="NaN" HorizontalAlignment="Stretch" Margin="5">Fetch from</Label>
+        <ComboBox Grid.Row="0" Grid.Column="1" Margin="5"
+                  Items="{Binding FetchPositions}"
+                  SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
+        </ComboBox>
+
+        <CalendarDatePicker Margin="5" Grid.Row="1" Grid.Column="1"
+                            SelectedDate="{Binding StartTime}"/>
+        <Label Grid.Row="2" Grid.Column="0" Margin="5">Count</Label>
+        <ComboBox x:Name="fetchCountBox" Grid.Row="2" Grid.Column="1" SelectedIndex="0" 
+                  Items="{Binding FetchCounts}" Margin="5" HorizontalContentAlignment="Right"
+                  SelectedItem="{Binding FetchCount, Mode=TwoWay}">
+        </ComboBox>
+        <Button Content="Fetch Messages" Command="{Binding FetchMessagesCommand}"
+                 Grid.Row="3" Grid.Column="1" Height="30" Margin="5"/>
+    </Grid>
+</UserControl>

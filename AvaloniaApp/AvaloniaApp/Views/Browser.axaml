@@ -28,7 +28,7 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition" Binding="{Binding Partition }"/>
                     <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}"/>
-                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp" Binding="{Binding }"/>
+                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp" Binding="{Binding Timestamp}"/>
                     <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }"/>
                     <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Body" Binding="{Binding Summary }"/>
                 </DataGrid.Columns>

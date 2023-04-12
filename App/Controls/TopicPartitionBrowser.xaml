@@ -9,8 +9,7 @@
              xmlns:viewmodels="clr-namespace:KafkaLens.ViewModels"
              xmlns:dgx="clr-namespace:DataGridExtensions;assembly=DataGridExtensions"
              xmlns:viewModels="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
-             xmlns:avalonEdit=""
-             xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+             xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
              d:DataContext="{d:DesignInstance Type=viewModels:OpenedClusterViewModel}">
     <Grid>
         <Grid.RowDefinitions>
@@ -58,7 +57,7 @@
                                          Width="Auto" Height="Auto"
                                          Background="#FFDFE5EF" BorderThickness="1" BorderBrush="#FF558FE7">
             </local:MessageDisplayToolbar>
-            <avalonedit:TextEditor
+            <avalonEdit:TextEditor
                 Name="MessageViewer"
                 FontFamily="Consolas"
                 FontSize="{Binding FontSize, Mode=OneWay}"

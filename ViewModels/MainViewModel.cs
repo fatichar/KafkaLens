@@ -60,6 +60,7 @@ public partial class MainViewModel: ViewModelBase
         try
         {
             formatterFactory.AddFormatter(new GnmiFormatter());
+            formatterFactory.AddFormatter(new EventFormatter());
         }
         catch (Exception e)
         {
@@ -240,10 +241,9 @@ public partial class MainViewModel: ViewModelBase
         Clusters.Clear();
         await LoadClients();
 
-        foreach (var client in Clients)
-        {
-            await LoadClusters(client);
-        }
+        // call LoadClusters for each client in parallel
+        var tasks = Clients.Select(LoadClusters).ToList();
+        await Task.WhenAll(tasks);
     }
 
     private async Task LoadClusters(IKafkaLensClient client)
