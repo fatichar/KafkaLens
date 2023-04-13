@@ -209,6 +209,13 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
             return;
         }
 
+        if (messages != null)
+        {
+            messages.Messages.CollectionChanged -= OnMessagesChanged;
+        }
+        
+        CurrentMessages.Clear();
+
         var fetchOptions = CreateFetchOptions();
         messageLoadListeners.ForEach(listener => listener.MessageLoadingStarted());
 
@@ -225,7 +232,6 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
         if (messages != null)
         {
-            CurrentMessages.Clear();
             messages.Messages.CollectionChanged += OnMessagesChanged;
         }
     }
