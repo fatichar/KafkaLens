@@ -123,7 +123,12 @@ public partial class MainViewModel: ViewModelBase
                     Header = "Add Cluster",
                     Command = AddClusterCommand,
                 },
-                CreateOpenMenu()
+                CreateOpenMenu(),
+                new MenuItemViewModel()
+                {
+                    Header = "Close Tab",
+                    Command = new RelayCommand(() => CloseCurrentTab()),
+                }
             }
         };
     }
@@ -174,6 +179,15 @@ public partial class MainViewModel: ViewModelBase
     {
         OpenCluster(message.ClusterViewModel);
         SelectedIndex = OpenedClusters.Count - 1;
+    }
+
+    private void CloseCurrentTab()
+    {
+        if (SelectedIndex >= 0)
+        {
+            var openedCluster = OpenedClusters[SelectedIndex];
+            CloseTab(openedCluster);
+        }
     }
 
     private void Receive(CloseTabMessage message)

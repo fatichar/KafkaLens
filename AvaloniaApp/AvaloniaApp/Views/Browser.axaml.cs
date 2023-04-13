@@ -22,7 +22,6 @@ public partial class Browser : UserControl
 
         MessageDisplayToolbar.FilterBox.TextChanged += (s, e) =>
         {
-            MessageDisplayToolbar.FilterBox.Text.Trim();
             var message = dataContext?.CurrentMessages?.CurrentMessage;
             if (message != null)
             {
