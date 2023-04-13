@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace KafkaLens.ViewModels;
 
@@ -11,8 +10,8 @@ public sealed class MessagesViewModel: ViewModelBase
 
     public ObservableCollection<MessageViewModel> SelectedMessages { get; } = new();
 
-    private MessageViewModel? currentMessage;
-    public MessageViewModel? CurrentMessage
+    private MessageViewModel currentMessage;
+    public MessageViewModel CurrentMessage
     {
         get => currentMessage;
         set
@@ -33,6 +32,10 @@ public sealed class MessagesViewModel: ViewModelBase
         get => selectedIndex;
         set
         {
+            if (value < 0)
+            {
+                return;
+            }
             if (SetProperty(ref selectedIndex, value))
             {
                 if (selectedIndex >= 0 && selectedIndex < Filtered.Count)
@@ -82,10 +85,6 @@ public sealed class MessagesViewModel: ViewModelBase
                 currentMessage.LineFilter = lineFilter;
             }
         }
-    }
-
-    public MessagesViewModel()
-    {
     }
 
     private void ApplyFilter()

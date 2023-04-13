@@ -43,7 +43,7 @@ public sealed class MessageViewModel: ViewModelBase
         get => formatterName;
         set
         {
-            if (value != formatterName)
+            if (value != null && value != formatterName)
             {
                 SetProperty(ref formatterName, value);
                 formatter = FormatterFactory.Instance.GetFormatter(value);

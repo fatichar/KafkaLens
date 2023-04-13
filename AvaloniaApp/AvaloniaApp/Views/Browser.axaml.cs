@@ -1,6 +1,5 @@
 ﻿using System;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Highlighting;
 using KafkaLens.ViewModels;
@@ -18,6 +17,8 @@ public partial class Browser : UserControl
     {
         InitializeComponent();
 
+        UpdateHighlighting();
+
         DataContextChanged += OnDataContextChanged;
 
         MessageDisplayToolbar.FilterBox.TextChanged += (s, e) =>
@@ -34,6 +35,7 @@ public partial class Browser : UserControl
             var message = dataContext?.CurrentMessages?.CurrentMessage;
             if (message != null)
             {
+                message.FormatterName = MessageDisplayToolbar.FormatterCombo.SelectedItem.ToString();
                 UpdateMessageText(message);
             }
         };
@@ -41,7 +43,7 @@ public partial class Browser : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        UpdateMessagesView();
+        // UpdateMessagesView();
     }
 
     private void UpdateMessagesView()
@@ -57,9 +59,10 @@ public partial class Browser : UserControl
     {
         var grid = (DataGrid)sender;
         var message = (MessageViewModel?)grid.SelectedItem;
-        dataContext.CurrentMessages.CurrentMessage = message;
+        // dataContext.CurrentMessages.CurrentMessage = message;
         if (message != null)
         {
+            lastMessage?.Cleanup();
             UpdateMessageText(message);
             lastMessage = message;
         }
@@ -73,27 +76,34 @@ public partial class Browser : UserControl
     private void UpdateMessageText(MessageViewModel message)
     {
         //// this will update
-        lastMessage?.Cleanup();
-        message.PrettyFormat();
         SetText(message.DisplayText);
-
-        UpdateHighlighting();
     }
 
     private void SetText(string message)
     {
         message ??= "";
-        MessageViewer.Document = new TextDocument(message.ToCharArray());
+        if (MessageViewer != null)
+        {
+            if (MessageViewer.Document == null)
+            {
+                MessageViewer.Document = new TextDocument();
+            }
+            MessageViewer.Document.Text = message;
+        }
     }
 
     private void UpdateHighlighting()
     {
-        // var messageSource = (IMessageSource?)dataContext?.SelectedNode;
         MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
     }
 
-    private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-        e.Row.Header = e.Row.GetIndex();
-    }
+    // private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+    // {
+    //     e.Row.Header = e.Row.GetIndex();
+    // }
+    //
+    // private void MessageViewer_OnDocumentChanged(object? sender, EventArgs e)
+    // {
+    //     SetText(dataContext?.CurrentMessages?.CurrentMessage?.DisplayText);
+    // }
 }

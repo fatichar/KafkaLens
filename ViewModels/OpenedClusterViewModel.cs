@@ -88,7 +88,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         }
     }
 
-    [ObservableProperty] 
+    [ObservableProperty]
     public DateTime startTime;
 
     private int fontSize = 14;
@@ -135,7 +135,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
         FetchPositions = FetchPositionsForTopic;
         FetchPosition = FetchPositions[0];
-        
+
         formatters = FormatterFactory.GetFormatters();
         FormatterNames = formatters.ConvertAll(f => f.Name);
         DefaultFormatter = Formatters.FirstOrDefault();
@@ -179,7 +179,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
             if (SetProperty(ref selectedNode, value))
             {
                 SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.NONE;
-                
+
                 // FetchPositions = SelectedNodeType == ITreeNode.NodeType.PARTITION
                 //     ? FetchPositionsForPartition
                 //     : FetchPositionsForTopic;
@@ -213,7 +213,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         {
             messages.Messages.CollectionChanged -= OnMessagesChanged;
         }
-        
+
         CurrentMessages.Clear();
 
         var fetchOptions = CreateFetchOptions();
@@ -243,7 +243,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         {
             return;
         }
-        if (node.FormatterName == null) 
+        if (node.FormatterName == null)
         {
             Assert.True(e.NewItems?.Count > 0);
             var message = (Message)e.NewItems[0];
