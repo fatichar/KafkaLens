@@ -13,7 +13,7 @@ public partial class Browser : UserControl
     private string messageTablePositiveFilter = "";
     private string messageTableNegativeFilter = "";
     private MessageViewModel? lastMessage = null;
-    
+
     public Browser()
     {
         InitializeComponent();
@@ -29,7 +29,7 @@ public partial class Browser : UserControl
                 UpdateMessageText(message);
             }
         };
-        
+
         MessageDisplayToolbar.FormatterCombo.SelectionChanged += (s, e) =>
         {
             var message = dataContext?.CurrentMessages?.CurrentMessage;
@@ -42,6 +42,7 @@ public partial class Browser : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
+        UpdateMessagesView();
     }
 
     private void UpdateMessagesView()
@@ -88,7 +89,7 @@ public partial class Browser : UserControl
 
     private void UpdateHighlighting()
     {
-        var messageSource = (IMessageSource?)dataContext?.SelectedNode;
+        // var messageSource = (IMessageSource?)dataContext?.SelectedNode;
         MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
     }
 

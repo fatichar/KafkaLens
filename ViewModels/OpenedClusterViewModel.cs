@@ -98,12 +98,8 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         set => SetProperty(ref fontSize, value, true);
     }
 
+    [ObservableProperty]
     private string? fetchPosition = null;
-    public string? FetchPosition
-    {
-        get => fetchPosition;
-        set => SetProperty(ref fetchPosition, value);
-    }
 
     static OpenedClusterViewModel()
     {
