@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AvaloniaApp.Views.Browser"
+<UserControl x:Class="AvaloniaApp.Views.Browser"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
@@ -16,10 +16,12 @@
             </views:MessagesToolbar>
         
             <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"
-                      HorizontalAlignment="Stretch"
+                      HorizontalAlignment="Stretch" 
                       CanUserReorderColumns="True"
                       CanUserResizeColumns="True"
+                      LoadingRow="messagesGrid_LoadingRow"
                       CanUserSortColumns="True"
+                      RowHeaderWidth="50"
                       IsReadOnly="True"
                       Items="{Binding CurrentMessages.Filtered}"
                       SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"

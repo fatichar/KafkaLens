@@ -70,13 +70,8 @@ public partial class Browser : UserControl
         MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
     }
 
-    // private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    // {
-    //     e.Row.Header = e.Row.GetIndex();
-    // }
-    //
-    // private void MessageViewer_OnDocumentChanged(object? sender, EventArgs e)
-    // {
-    //     SetText(dataContext?.CurrentMessages?.CurrentMessage?.DisplayText);
-    // }
+    private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+    {
+        e.Row.Header = e.Row.GetIndex();
+    }
 }
