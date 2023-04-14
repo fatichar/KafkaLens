@@ -104,11 +104,6 @@ public partial class MainViewModel: ViewModelBase
     #endregion Init
 
     #region Menus
-    private void UpdateMenuItems(ClusterViewModel cluster)
-    {
-        openClusterMenuItems.Add(CreateOpenMenuItem(cluster));
-    }
-
     private void CreateMenuItems()
     {
         menuItems.Add(CreateClusterMenu());
@@ -137,14 +132,9 @@ public partial class MainViewModel: ViewModelBase
         };
     }
 
-    private MenuItemViewModel CreateOpenMenu()
+    private void UpdateMenuItems(ClusterViewModel cluster)
     {
-        openClusterMenuItems = new ObservableCollection<MenuItemViewModel>();
-        return new MenuItemViewModel
-        {
-            Header = "Load Clusters",
-            Items = openClusterMenuItems
-        };
+        openClusterMenuItems.Add(CreateOpenMenuItem(cluster));
     }
 
     private MenuItemViewModel CreateOpenMenuItem(ClusterViewModel c)
@@ -153,7 +143,18 @@ public partial class MainViewModel: ViewModelBase
         {
             Header = c.Name,
             Command = OpenClusterCommand,
-            CommandParameter = c.Id
+            CommandParameter = c.Id,
+            IsEnabled = c.IsConnected
+        };
+    }
+
+    private MenuItemViewModel CreateOpenMenu()
+    {
+        openClusterMenuItems = new ObservableCollection<MenuItemViewModel>();
+        return new MenuItemViewModel
+        {
+            Header = "Load Clusters",
+            Items = openClusterMenuItems
         };
     }
 
@@ -184,7 +185,10 @@ public partial class MainViewModel: ViewModelBase
             return;
         }
 
-        OpenCluster(cluster);
+        if (cluster.IsConnected)
+        {
+            OpenCluster(cluster);
+        }
     }
 
     private void AddClusterAsync()

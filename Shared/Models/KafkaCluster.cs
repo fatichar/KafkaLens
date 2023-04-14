@@ -12,4 +12,5 @@ public class KafkaCluster
     public string Id { get; set; }
     public string Name { get; set; }
     public string BootstrapServers { get; set; }
+    public bool IsConnected { get; set; } = true;
 }

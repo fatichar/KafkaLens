@@ -24,10 +24,13 @@ public sealed class ClusterViewModel: ViewModelBase
     {
         this.KafkaLensClient = kafkaLensClient;
         this.cluster = cluster;
+        IsConnected = this.cluster.IsConnected;
 
         OpenClusterCommand = new RelayCommand(OpenCluster);
         LoadTopicsCommand = new AsyncRelayCommand(LoadTopicsAsync);
     }
+
+    public bool IsConnected { get; set; }
 
     private void OpenCluster()
     {

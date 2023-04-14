@@ -64,8 +64,14 @@ public class GrpcClient : IKafkaLensClient
         }
         catch (RpcException e)
         {
-            Console.WriteLine(e);
-            throw new Exception($"Failed to connect to grpc server: {url}", e);
+            Console.WriteLine($"Failed to connect to grpc server: {url}", e);
+            return new List<KafkaCluster>()
+            {
+                new KafkaCluster(Guid.NewGuid().ToString(), name, url)
+                {
+                    IsConnected = false
+                }
+            };
         }
     }
 

@@ -18,6 +18,7 @@
                     <Setter Property="Items" Value="{Binding Items}"/>
                     <Setter Property="Command" Value="{Binding Command}"/>
                     <Setter Property="CommandParameter" Value="{Binding CommandParameter}"/>
+                    <Setter Property="IsEnabled" Value="{Binding IsEnabled}"/>
                 </Style>
             </Menu.Styles>
         </Menu>
