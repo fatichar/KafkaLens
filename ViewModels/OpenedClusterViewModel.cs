@@ -4,9 +4,7 @@ using System.Linq;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
-using KafkaLens.Messages;
 using KafkaLens.Shared;
 using KafkaLens.Formatting;
 using Serilog;
@@ -122,7 +120,6 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         this.clusterViewModel = clusterViewModel;
         Name = name;
 
-        CloseTabCommand = new RelayCommand(Close);
         FetchMessagesCommand = new RelayCommand(FetchMessages);
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
@@ -141,11 +138,6 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         DefaultFormatter = Formatters.FirstOrDefault();
 
         IsActive = true;
-    }
-
-    private void Close()
-    {
-        _ = Messenger.Send(new CloseTabMessage(this));
     }
 
     private async Task UpdateFormatterAsync()
@@ -194,7 +186,6 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     }
 
     public string ClusterId => clusterViewModel.Id;
-    public IRelayCommand CloseTabCommand { get; }
     public static FormatterFactory FormatterFactory { get; set; }
 
     MessageStream? messages = null;

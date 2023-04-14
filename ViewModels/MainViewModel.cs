@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using System.Collections.ObjectModel;
-using KafkaLens.Messages;
 using KafkaLens.Shared;
 using KafkaLens.ViewModels.DataAccess;
 using KafkaLens.ViewModels.Entities;
@@ -83,9 +82,6 @@ public partial class MainViewModel: ViewModelBase
 
     protected override async void OnActivated()
     {
-        Messenger.Register<MainViewModel, OpenClusterMessage>(this, (r, m) => r.Receive(m));
-        Messenger.Register<MainViewModel, CloseTabMessage>(this, (r, m) => r.Receive(m));
-
         CreateMenuItems();
         
         Clusters.CollectionChanged += (sender, args) =>
@@ -197,12 +193,6 @@ public partial class MainViewModel: ViewModelBase
         // alreadyOpened.Add(openedCluster);
     }
 
-    private void Receive(OpenClusterMessage message)
-    {
-        OpenCluster(message.ClusterViewModel);
-        SelectedIndex = OpenedClusters.Count - 1;
-    }
-
     private void CloseCurrentTab()
     {
         if (SelectedIndex >= 0)
@@ -210,11 +200,6 @@ public partial class MainViewModel: ViewModelBase
             var openedCluster = OpenedClusters[SelectedIndex];
             CloseTab(openedCluster);
         }
-    }
-
-    private void Receive(CloseTabMessage message)
-    {
-        CloseTab(message.OpenedClusterViewModel);
     }
 
     private void CloseTab(OpenedClusterViewModel openedCluster)
@@ -249,6 +234,7 @@ public partial class MainViewModel: ViewModelBase
         alreadyOpened.Add(openedCluster);
         OpenedClusters.Add(openedCluster);
         _ = openedCluster.LoadTopicsAsync();
+        SelectedIndex = OpenedClusters.Count - 1;
     }
 
     private static string GenerateNewName(string clusterName, List<OpenedClusterViewModel> alreadyOpened)

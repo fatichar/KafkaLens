@@ -30,10 +30,6 @@
 	  <ProjectReference Include="..\GrpcClient\GrpcClient.csproj" />
 	  <ProjectReference Include="..\TaranaFormatters\TaranaFormatters.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Business\Models\" />
-	  <Folder Include="Formatting" />
-	</ItemGroup>
 	<!--<Import Project="..\Extensions.props" />-->
 
 </Project>

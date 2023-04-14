@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
-using KafkaLens.Messages;
 using KafkaLens.Shared;
 
 namespace KafkaLens.ViewModels;
@@ -11,7 +10,6 @@ namespace KafkaLens.ViewModels;
 public sealed class ClusterViewModel: ViewModelBase
 {
     public IKafkaLensClient KafkaLensClient { get; }
-    public IRelayCommand OpenClusterCommand { get; }
     public IAsyncRelayCommand LoadTopicsCommand { get; }
     private readonly KafkaCluster cluster;
     public ObservableCollection<Topic> Topics { get; } = new();
@@ -26,16 +24,10 @@ public sealed class ClusterViewModel: ViewModelBase
         this.cluster = cluster;
         IsConnected = this.cluster.IsConnected;
 
-        OpenClusterCommand = new RelayCommand(OpenCluster);
         LoadTopicsCommand = new AsyncRelayCommand(LoadTopicsAsync);
     }
 
     public bool IsConnected { get; set; }
-
-    private void OpenCluster()
-    {
-        _ = Messenger.Send(new OpenClusterMessage(this));
-    }
 
     private async Task LoadTopicsAsync()
     {
