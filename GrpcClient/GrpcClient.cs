@@ -1,4 +1,5 @@
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.Client;
 using KafkaLens.Grpc;
 using KafkaLens.Shared;
@@ -15,13 +16,15 @@ public class GrpcClient : IKafkaLensClient
     #region fields
 
     private readonly KafkaApi.KafkaApiClient client;
+    private readonly string name;
     private readonly string url;
 
     #endregion
 
     #region Constructor
-    public GrpcClient(string url)
+    public GrpcClient(string name, string url)
     {
+        this.name = name;
         this.url = url;
         var channel = GrpcChannel.ForAddress(url);
         client = new KafkaApi.KafkaApiClient(channel);
@@ -51,23 +54,19 @@ public class GrpcClient : IKafkaLensClient
     #region Read
     public async Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
-        var call = client.GetAllClustersAsync(
-            new Empty(), 
-            null, 
-            DateTime.UtcNow.AddSeconds(3));
-        var responseTask = call.ResponseAsync;
-        if (responseTask == null
-            || !responseTask.Wait(3000)
-            )
+        try
         {
-            throw new Exception($"Failed to connect to grpc server: {url}");
+            var response = await client.GetAllClustersAsync(
+                new Empty(), 
+                null, 
+                DateTime.UtcNow.AddSeconds(5));
+            return response.Clusters.Select(ToClusterModel);
         }
-        var response = await responseTask;
-        if (responseTask.IsFaulted)
+        catch (RpcException e)
         {
-            throw new Exception($"Failed to connect to grpc server: {url}", responseTask.Exception);
+            Console.WriteLine(e);
+            throw new Exception($"Failed to connect to grpc server: {url}", e);
         }
-        return response.Clusters.Select(ToClusterModel);
     }
 
     public Task<KafkaCluster> GetClusterByIdAsync(string clusterId)

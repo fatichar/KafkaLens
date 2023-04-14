@@ -32,19 +32,20 @@ public partial class MainViewModel: ViewModelBase
     private readonly KafkaClientContext dbContext;
     private readonly ISettingsService settingsService;
     private readonly IKafkaLensClient localClient;
-    private readonly FormatterFactory formatterFactory;
 
     // commands
     public IRelayCommand AddClusterCommand { get; }
     public IRelayCommand OpenClusterCommand { get; }
-    public IRelayCommand LoadClustersCommand { get; }
-    
+
     [ObservableProperty]
-    ObservableCollection<MenuItemViewModel> menuItems;
+    ObservableCollection<MenuItemViewModel> menuItems = new ObservableCollection<MenuItemViewModel>();
 
     [ObservableProperty]
     private int selectedIndex = -1;
 
+    private ObservableCollection<MenuItemViewModel> openClusterMenuItems;
+
+    #region Init
     public MainViewModel(
         IOptions<AppConfig> appInfo,
         KafkaClientContext dbContext,
@@ -56,7 +57,6 @@ public partial class MainViewModel: ViewModelBase
         this.dbContext = dbContext;
         this.settingsService = settingsService;
         this.localClient = localClient;
-        this.formatterFactory = formatterFactory;
         try
         {
             formatterFactory.AddFormatter(new GnmiFormatter());
@@ -69,12 +69,7 @@ public partial class MainViewModel: ViewModelBase
         OpenedClusterViewModel.FormatterFactory = formatterFactory;
 
         AddClusterCommand = new RelayCommand(AddClusterAsync);
-        // LoadClustersCommand = new RelayCommand(LoadClustersAsync);
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
-
-        LoadClustersAsync().Wait();
-        
-        menuItems = CreateMenuItems();
 
         Title = $"Main - {appInfo?.Value?.Title}";
 
@@ -86,12 +81,79 @@ public partial class MainViewModel: ViewModelBase
         }
     }
 
-    private ObservableCollection<MenuItemViewModel> CreateMenuItems()
+    protected override async void OnActivated()
     {
-        return new ObservableCollection<MenuItemViewModel>
+        Messenger.Register<MainViewModel, OpenClusterMessage>(this, (r, m) => r.Receive(m));
+        Messenger.Register<MainViewModel, CloseTabMessage>(this, (r, m) => r.Receive(m));
+
+        CreateMenuItems();
+        
+        Clusters.CollectionChanged += (sender, args) =>
         {
-            CreateClusterMenu(),
-            CreateHelpMenu()
+            if (args.NewItems != null)
+            {
+                foreach (ClusterViewModel item in args.NewItems)
+                {
+                    UpdateMenuItems(item);
+                }
+            }
+        };
+
+        LoadClustersAsync();
+    }
+    #endregion Init
+
+    #region Menus
+    private void UpdateMenuItems(ClusterViewModel cluster)
+    {
+        openClusterMenuItems.Add(CreateOpenMenuItem(cluster));
+    }
+
+    private void CreateMenuItems()
+    {
+        menuItems.Add(CreateClusterMenu());
+        menuItems.Add(CreateHelpMenu());
+    }
+
+    private MenuItemViewModel CreateClusterMenu()
+    {
+        return new MenuItemViewModel
+        {
+            Header = "Cluster",
+            Items = new []
+            {
+                new MenuItemViewModel
+                {
+                    Header = "Add Cluster",
+                    Command = AddClusterCommand,
+                },
+                CreateOpenMenu(),
+                new MenuItemViewModel()
+                {
+                    Header = "Close Tab",
+                    Command = new RelayCommand(CloseCurrentTab),
+                }
+            }
+        };
+    }
+
+    private MenuItemViewModel CreateOpenMenu()
+    {
+        openClusterMenuItems = new ObservableCollection<MenuItemViewModel>();
+        return new MenuItemViewModel
+        {
+            Header = "Load Clusters",
+            Items = openClusterMenuItems
+        };
+    }
+
+    private MenuItemViewModel CreateOpenMenuItem(ClusterViewModel c)
+    {
+        return new MenuItemViewModel
+        {
+            Header = c.Name,
+            Command = OpenClusterCommand,
+            CommandParameter = c.Id
         };
     }
 
@@ -111,43 +173,7 @@ public partial class MainViewModel: ViewModelBase
         };
     }
 
-    private MenuItemViewModel CreateClusterMenu()
-    {
-        return new MenuItemViewModel
-        {
-            Header = "Cluster",
-            Items = new []
-            {
-                new MenuItemViewModel
-                {
-                    Header = "Add Cluster",
-                    Command = AddClusterCommand,
-                },
-                CreateOpenMenu(),
-                new MenuItemViewModel()
-                {
-                    Header = "Close Tab",
-                    Command = new RelayCommand(() => CloseCurrentTab()),
-                }
-            }
-        };
-    }
-
-    private MenuItemViewModel CreateOpenMenu()
-    {
-        var openClusterItems = Clusters.Select(c => new MenuItemViewModel
-        {
-            Header = c.Name,
-            Command = OpenClusterCommand,
-            CommandParameter = c.Id
-        }).ToList();
-        return new MenuItemViewModel
-        {
-            Header = "Load Clusters",
-            Command = LoadClustersCommand,
-            Items = new ObservableCollection<MenuItemViewModel>(openClusterItems)
-        };
-    }
+    #endregion Menus
 
     private void OpenCluster(string clusterId)
     {
@@ -159,14 +185,6 @@ public partial class MainViewModel: ViewModelBase
         }
 
         OpenCluster(cluster);
-    }
-
-    protected override void OnActivated()
-    {
-        Messenger.Register<MainViewModel, OpenClusterMessage>(this, (r, m) => r.Receive(m));
-        Messenger.Register<MainViewModel, CloseTabMessage>(this, (r, m) => r.Receive(m));
-
-        // LoadClustersCommand.Execute(null);
     }
 
     private void AddClusterAsync()
@@ -313,7 +331,7 @@ public partial class MainViewModel: ViewModelBase
         switch (clientInfo.Protocol)
         {
             case "grpc":
-                return new GrpcClient(clientInfo.ServerUrl);
+                return new GrpcClient(clientInfo.Name, clientInfo.ServerUrl);
             default:
                 throw new ArgumentException($"Protocol {clientInfo.Protocol} is not supported");
         }
