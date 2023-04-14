@@ -4,8 +4,8 @@ namespace KafkaLens.ViewModels;
 
 public sealed class MessagesViewModel: ViewModelBase
 {
-    private StringComparison comparisonType = StringComparison.OrdinalIgnoreCase;
-    public ObservableCollection<MessageViewModel> Messages { get; } = new();
+    private readonly StringComparison comparisonType = StringComparison.OrdinalIgnoreCase;
+    private ObservableCollection<MessageViewModel> Messages { get; } = new();
     public ObservableCollection<MessageViewModel> Filtered { get; } = new();
 
     public ObservableCollection<MessageViewModel> SelectedMessages { get; } = new();
@@ -16,6 +16,10 @@ public sealed class MessagesViewModel: ViewModelBase
         get => currentMessage;
         set
         {
+            if (currentMessage != null && currentMessage != value)
+            {
+                currentMessage.Cleanup();
+            }
             if (SetProperty(ref currentMessage, value))
             {
                 if (currentMessage != null)

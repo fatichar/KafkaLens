@@ -1,17 +1,19 @@
 ﻿using Gnmi;
 using Google.Protobuf;
+using KafkaLens.Formatting;
+using JsonFormatter = Google.Protobuf.JsonFormatter;
 using Path = Gnmi.Path;
 
 namespace KafkaLens.TaranaFormatters;
 
-public class GnmiFormatter : Formatting.IMessageFormatter
+public class GnmiFormatter : IMessageFormatter
 {
     public string Name => "Gnmi";
 
     public string? Format(byte[] data, bool prettyPrint)
     {
         try {
-            var message = Gnmi.SubscribeResponse.Parser.ParseFrom(data);
+            var message = SubscribeResponse.Parser.ParseFrom(data);
             
             JsonFormatter formatter = new JsonFormatter(
                 prettyPrint ? JsonFormatter.Settings.Default.WithIndentation()
@@ -28,7 +30,7 @@ public class GnmiFormatter : Formatting.IMessageFormatter
     public string? Format(byte[] data, string searchText)
     {
         try {
-            var message = Gnmi.SubscribeResponse.Parser.ParseFrom(data);
+            var message = SubscribeResponse.Parser.ParseFrom(data);
             Filter(message, searchText);
 
             JsonFormatter formatter = new(JsonFormatter.Settings.Default.WithIndentation());

@@ -11,7 +11,6 @@ public partial class Browser : UserControl
     private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
     private string messageTablePositiveFilter = "";
     private string messageTableNegativeFilter = "";
-    private MessageViewModel? lastMessage = null;
 
     public Browser()
     {
@@ -19,64 +18,38 @@ public partial class Browser : UserControl
 
         UpdateHighlighting();
 
-        DataContextChanged += OnDataContextChanged;
-
         MessageDisplayToolbar.FilterBox.TextChanged += (s, e) =>
         {
             var message = dataContext?.CurrentMessages?.CurrentMessage;
             if (message != null)
             {
-                UpdateMessageText(message);
+                SetText(message.DisplayText);
             }
         };
 
         MessageDisplayToolbar.FormatterCombo.SelectionChanged += (s, e) =>
         {
             var message = dataContext?.CurrentMessages?.CurrentMessage;
-            if (message != null)
+            if (message != null && MessageDisplayToolbar.FormatterCombo.SelectedItem != null)
             {
                 message.FormatterName = MessageDisplayToolbar.FormatterCombo.SelectedItem.ToString();
-                UpdateMessageText(message);
+                SetText(message.DisplayText);
             }
         };
-    }
-
-    private void OnDataContextChanged(object? sender, EventArgs e)
-    {
-        // UpdateMessagesView();
-    }
-
-    private void UpdateMessagesView()
-    {
-        if (dataContext != null)
-        {
-            dataContext.CurrentMessages.PositiveFilter = messageTablePositiveFilter;
-            dataContext.CurrentMessages.NegativeFilter = messageTableNegativeFilter;
-        }
     }
 
     private void MessagesGrid_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         var grid = (DataGrid)sender;
         var message = (MessageViewModel?)grid.SelectedItem;
-        // dataContext.CurrentMessages.CurrentMessage = message;
         if (message != null)
         {
-            lastMessage?.Cleanup();
-            UpdateMessageText(message);
-            lastMessage = message;
+            SetText(message.DisplayText);
         }
         else
         {
-            lastMessage = null;
             SetText("");
         }
-    }
-
-    private void UpdateMessageText(MessageViewModel message)
-    {
-        //// this will update
-        SetText(message.DisplayText);
     }
 
     private void SetText(string message)

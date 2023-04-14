@@ -37,7 +37,7 @@ public sealed class MessageViewModel: ViewModelBase
         }
     }
 
-    public string formatterName;
+    private string formatterName;
     public string FormatterName
     {
         get => formatterName;

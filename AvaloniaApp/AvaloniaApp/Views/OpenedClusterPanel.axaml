@@ -7,7 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaApp.Views.OpenedClusterPanel"
              x:DataType="vm:OpenedClusterViewModel">
-    <Grid ColumnDefinitions="1*, 3, 8*, 3, 2*">
+    <Grid ColumnDefinitions="1*, 3, 8*, 3, 1.5*">
         <views:Navigator Grid.Column="0" 
                          BorderThickness="2" 
                          />
