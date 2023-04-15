@@ -4,11 +4,11 @@ using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
-public sealed class MessageViewModel: ViewModelBase
+public sealed partial class MessageViewModel: ViewModelBase
 {
     const int MaxSummaryLen = 200;
-    
-    private readonly Message message;
+
+    public readonly Message message;
     private IMessageFormatter formatter;
 
     public int Partition => message.Partition;
@@ -18,15 +18,6 @@ public sealed class MessageViewModel: ViewModelBase
     public string DecodedMessage { get; set; }
     public string FormattedMessage { get; set; }
 
-    public string DisplayText
-    {
-        get => displayText;
-        set
-        {
-            SetProperty(ref displayText, value);
-        }
-    }
-    
     public string Timestamp
     {
         get
@@ -64,9 +55,10 @@ public sealed class MessageViewModel: ViewModelBase
         IsActive = true;
     }
 
-    private string lineFilter = "";
-    private string displayText = "";
+    [ObservableProperty]
+    private string displayText;
 
+    private string lineFilter = "";
     public string LineFilter
     {
         get => lineFilter;
@@ -76,6 +68,8 @@ public sealed class MessageViewModel: ViewModelBase
             UpdateText();
         }
     }
+
+    public string Topic { get; set; }
 
     private void UpdateText()
     {

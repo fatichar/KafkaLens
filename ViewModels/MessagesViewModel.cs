@@ -5,10 +5,8 @@ namespace KafkaLens.ViewModels;
 public sealed class MessagesViewModel: ViewModelBase
 {
     private readonly StringComparison comparisonType = StringComparison.OrdinalIgnoreCase;
-    private ObservableCollection<MessageViewModel> Messages { get; } = new();
+    public ObservableCollection<MessageViewModel> Messages { get; } = new();
     public ObservableCollection<MessageViewModel> Filtered { get; } = new();
-
-    public ObservableCollection<MessageViewModel> SelectedMessages { get; } = new();
 
     private MessageViewModel currentMessage;
     public MessageViewModel CurrentMessage

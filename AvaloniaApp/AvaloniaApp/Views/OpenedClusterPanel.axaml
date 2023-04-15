@@ -6,14 +6,20 @@
              xmlns:views="clr-namespace:AvaloniaApp.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaApp.Views.OpenedClusterPanel"
-             x:DataType="vm:OpenedClusterViewModel">
+             x:DataType="vm:OpenedClusterViewModel"
+             BorderThickness="2"
+             BorderBrush="LightGray">
     <Grid ColumnDefinitions="1*, 3, 8*, 3, 1.5*">
-        <views:Navigator Grid.Column="0" 
-                         BorderThickness="2" 
-                         />
-        <GridSplitter Grid.Column="1" Background="Gray" ResizeDirection="Columns"/>
-        <views:Browser Grid.Column="2"/>
-        <GridSplitter Grid.Column="3" Background="Gray" ResizeDirection="Columns"/>
-        <views:FetchPanel Grid.Column="4" VerticalAlignment="Stretch"/>
+        <views:Navigator Grid.Column="0"
+                         BorderThickness="0"
+                         BorderBrush="LightGray" />
+        <GridSplitter Grid.Column="1" Background="LightSteelBlue" ResizeDirection="Columns" />
+        <views:Browser Grid.Column="2" 
+                       BorderThickness="0"
+                       BorderBrush="LightGray"/>
+        <GridSplitter Grid.Column="3" Background="LightSteelBlue" ResizeDirection="Columns" />
+        <views:FetchPanel Grid.Column="4" VerticalAlignment="Stretch"
+                          BorderThickness="0"
+                          BorderBrush="LightGray" />
     </Grid>
 </UserControl>

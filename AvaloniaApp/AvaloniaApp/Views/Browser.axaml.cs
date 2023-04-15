@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Avalonia.Controls;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Highlighting;
@@ -41,6 +42,7 @@ public partial class Browser : UserControl
     private void MessagesGrid_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         var grid = (DataGrid)sender;
+        dataContext.SelectedMessages = grid.SelectedItems.Cast<MessageViewModel>().ToList();
         var message = (MessageViewModel?)grid.SelectedItem;
         if (message != null)
         {
@@ -72,6 +74,6 @@ public partial class Browser : UserControl
 
     private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
-        e.Row.Header = e.Row.GetIndex();
+        e.Row.Header = 1 + e.Row.GetIndex();
     }
 }

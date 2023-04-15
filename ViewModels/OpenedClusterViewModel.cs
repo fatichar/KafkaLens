@@ -1,5 +1,7 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -40,6 +42,10 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
     public RelayCommand FetchMessagesCommand { get; }
     public IAsyncRelayCommand ChangeFormatterCommand { get; }
+    public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
+    public AsyncRelayCommand SaveSelectedAsFormattedCommand { get; set; }
+    public AsyncRelayCommand SaveAllAsRawCommand { get; set; }
+    public AsyncRelayCommand SaveAllAsFormattedCommand { get; set; }
 
     public string Name { get; }
     public string Address => clusterViewModel.Address;
@@ -62,14 +68,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
     public int FetchCount { get; set; } = 10;
     public string? StartOffset { get; }
-    public DateTime StartDate
-    {
-        get => startDate;
-        set
-        {
-            startDate = value;
-        }
-    }
+    public DateTime StartDate { get; set; }
 
     public string StartTimeText
     {
@@ -122,6 +121,11 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
         FetchMessagesCommand = new RelayCommand(FetchMessages);
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
+        
+        SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw);
+        SaveSelectedAsFormattedCommand = new AsyncRelayCommand(SaveSelectedMessagesAsFormatted);
+        SaveAllAsRawCommand = new AsyncRelayCommand(SaveAllMessagesAsRaw);
+        SaveAllAsFormattedCommand = new AsyncRelayCommand(SaveAllMessagesAsFormatted);
 
         Nodes.Add(this);
         IsSelected = true;
@@ -139,6 +143,67 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
         IsActive = true;
     }
+
+    #region SAVE MESSAGES
+    private const string SAVE_MESSAGES_DIR = "saved_messages";
+    private async Task SaveAllMessagesAsRaw()
+    {
+        await SaveAsync(CurrentMessages.Messages, false);   
+    }
+    
+    private async Task SaveAllMessagesAsFormatted()
+    {
+        await SaveAsync(CurrentMessages.Messages, true);   
+    }
+    
+    private async Task SaveSelectedMessagesAsRaw()
+    {
+        await SaveAsync(SelectedMessages, false);
+    }
+
+    private async Task SaveSelectedMessagesAsFormatted()
+    {
+        await SaveAsync(SelectedMessages, true);
+    }
+
+    private async Task SaveAsync(IList<MessageViewModel> messages, bool formatted)
+    {
+        if (messages.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var msg in messages)
+        {
+            await SaveAsync(msg, formatted);
+        }
+    }
+
+    private async Task SaveAsync(MessageViewModel msg, bool formatted)
+    {
+        var dir = Path.Join(SAVE_MESSAGES_DIR, Name, msg.Topic, msg.Partition.ToString());
+        Directory.CreateDirectory(dir);
+        
+        var fileName = msg.Offset + GetExtension(formatted);
+        var filePath = Path.Join(dir, fileName);
+        // save as binary
+        if (!formatted)
+        {
+            await File.WriteAllBytesAsync(filePath, msg.message.Value);
+        }
+        else
+        {
+            // save as formatted
+            msg.PrettyFormat();
+            await File.WriteAllTextAsync(filePath, msg.DisplayText);
+        }
+    }
+
+    private static string GetExtension(bool formatted)
+    {
+        return formatted ? ".txt" : ".klm";
+    }
+    #endregion
 
     private async Task UpdateFormatterAsync()
     {
@@ -187,10 +252,10 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
     public string ClusterId => clusterViewModel.Id;
     public static FormatterFactory FormatterFactory { get; set; }
+    public IList<MessageViewModel> SelectedMessages { get; set; }
 
     MessageStream? messages = null;
     private List<IMessageLoadListener> messageLoadListeners = new();
-    private DateTime startDate;
     private string startTimeText;
 
     private void FetchMessages()
@@ -249,10 +314,24 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
             foreach (var msg in e.NewItems ?? new List<Message>())
             {
                 var viewModel = new MessageViewModel((Message)msg, node.FormatterName);
+                viewModel.Topic = GetCurrentTopicName();
                 pendingMessages.Add(viewModel);
             }
             Dispatcher.UIThread.InvokeAsync(UpdateMessages);
             Log.Debug("Pending messages = {Count}", pendingMessages.Count);
+        }
+    }
+
+    private string GetCurrentTopicName()
+    {
+        switch (selectedNode)
+        {
+            case TopicViewModel topic:
+                return topic.Name;
+            case PartitionViewModel partition:
+                return partition.TopicName;
+            default:
+                throw new InvalidOperationException();
         }
     }
 

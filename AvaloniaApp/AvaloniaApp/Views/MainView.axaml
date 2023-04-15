@@ -7,7 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaApp.Views.MainView"
              x:DataType="vm:MainViewModel">
-    <DockPanel>
+    <DockPanel Margin="0">
         <Menu x:Name="MenuBar" DockPanel.Dock="Top" Items="{Binding MenuItems}">
             <Menu.Styles>
                 <Style Selector="MenuItem" x:DataType="vm:MenuItemViewModel">
@@ -23,7 +23,9 @@
             </Menu.Styles>
         </Menu>
         <TabControl Items="{Binding OpenedClusters}"
-                    SelectedIndex="{Binding SelectedIndex}">
+                    SelectedIndex="{Binding SelectedIndex}"
+                    Padding="0"
+                    BorderThickness="0,2,0,0">
             <TabControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:OpenedClusterViewModel">
                     <TextBlock Text="{Binding Name}" />
