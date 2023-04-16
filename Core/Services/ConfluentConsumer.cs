@@ -6,13 +6,11 @@ using TopicPartition = Confluent.Kafka.TopicPartition;
 
 namespace KafkaLens.Core.Services;
 
-class ConfluentConsumer : IKafkaConsumer, IDisposable
+class ConfluentConsumer : ConsumerBase, IDisposable
 {
     private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(5);
     private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
     private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(5);
-
-    private Dictionary<string, Topic> Topics { get; set; } = new();
 
     private IConsumer<byte[], byte[]> Consumer { get; }
 
@@ -58,63 +56,18 @@ class ConfluentConsumer : IKafkaConsumer, IDisposable
     #endregion Create
 
     #region Read
-    public List<Topic> GetTopics()
-    {
-        if (Topics.Count == 0)
-        {
-            try
-            {
-                LoadTopics();
-            }
-            catch (KafkaException e)
-            {
-                Console.WriteLine(e);
-                throw new Exception("Failed to load topics", e);
-            }
-        }
-        return Topics.Values.ToList();
-    }
 
-    private void LoadTopics()
-    {
-        Log.Information("Loading topics...");
-        var topics = FetchTopics();
-        topics.ForEach(topic => Topics.Add(topic.Name, topic));
-        Log.Information("Loaded {TopicsCount} topics", topics.Count);
-    }
-
-    private List<Topic> FetchTopics()
+    protected override List<Topic> FetchTopics()
     {
         var metadata = AdminClient.GetMetadata(queryTopicsTimeout);
 
         var topics = metadata.Topics
             .ConvertAll(topic => new Topic(topic.Topic, topic.Partitions.Count));
-        
-        // var topicPartitions = topics
-        //     .SelectMany(topic => topic.Partitions.Select(partition => new TopicPartition(topic.Name, partition.Id)))
-        //     .ToList();
-        //
-        // QueryWatermarkOffsets(topicPartitions);
 
         return topics;
     }
 
-    public MessageStream GetMessageStream(string topic, int partition, FetchOptions options)
-    {
-        var messages = new MessageStream();
-        Task.Run(() =>
-            GetMessages(topic, partition, options, messages));
-        return messages;
-    }
-
-    public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options)
-    {
-        var messages = new MessageStream();
-        await Task.Run(() => GetMessages(topic, partition, options, messages));
-        return messages.Messages.ToList();
-    }
-
-    private void GetMessages(string topicName, int partition, FetchOptions options,
+    protected override void GetMessages(string topicName, int partition, FetchOptions options,
         MessageStream messages)
     {
         Log.Information("Fetching {MessageCount} messages for partition {Topic}:{Partition}", options.Limit, topicName, partition);
@@ -133,21 +86,7 @@ class ConfluentConsumer : IKafkaConsumer, IDisposable
         return new Confluent.Kafka.TopicPartition(topicName, partition);
     }
 
-    public MessageStream GetMessageStream(string topic, FetchOptions options)
-    {
-        var messages = new MessageStream();
-        Task.Run(() => GetMessages(topic, options, messages));
-        return messages;
-    }
-
-    public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options)
-    {
-        var messages = new MessageStream();
-        await Task.Run(() => GetMessages(topic, options, messages));
-        return messages.Messages.ToList();
-    }
-
-    public void GetMessages(string topicName, FetchOptions options, MessageStream messages)
+    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages)
     {
         Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topicName);
 
@@ -287,58 +226,6 @@ class ConfluentConsumer : IKafkaConsumer, IDisposable
         }
     }
 
-    private Topic ValidateTopic(string topicName)
-    {
-        if (Topics.Count == 0)
-        {
-            LoadTopics();
-        }
-        if (Topics.TryGetValue(topicName, out var topic))
-        {
-            return topic;
-        }
-        throw new Exception($"Topic {topicName} does not exist.");
-    }
-
-    private TopicPartitionOffset CreateTopicPartitionOffset(Confluent.Kafka.TopicPartition tp, WatermarkOffsets watermarks, FetchOptions options)
-    {
-        UpdateForTimestamps(tp, options);
-
-        UpdateForWatermarks(options.Start, watermarks);
-        if (options.End == null)
-        {
-            options.End = new FetchPosition(PositionType.OFFSET, options.Start.Offset + options.Limit);
-        }
-        UpdateForWatermarks(options.End, watermarks);
-        return new TopicPartitionOffset(tp, options.Start.Offset);
-    }
-
-    private void UpdateForTimestamps(Confluent.Kafka.TopicPartition tp, FetchOptions options)
-    {
-        var tptList = new List<TopicPartitionTimestamp>();
-        if (options.Start.Type == PositionType.TIMESTAMP)
-        {
-            tptList.Add(new(tp, new Timestamp(options.Start.Timestamp, TimestampType.CreateTime)));
-        }
-        if (options.End?.Type == PositionType.TIMESTAMP)
-        {
-            tptList.Add(new(tp, new Timestamp(options.End.Timestamp, TimestampType.CreateTime)));
-        }
-        if (tptList.Count > 0)
-        {
-            var tops = Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout);
-            var i = 0;
-            if (options.Start.Type == PositionType.TIMESTAMP)
-            {
-                options.Start.SetOffset(tops[i++].Offset);
-            }
-            if (options.End?.Type == PositionType.TIMESTAMP)
-            {
-                options.End.SetOffset(tops[i++].Offset);
-            }
-        }
-    }
-
     private static void UpdateForWatermarks(FetchPosition position, WatermarkOffsets watermarks)
     {
         var offset = position.Offset;
@@ -357,25 +244,6 @@ class ConfluentConsumer : IKafkaConsumer, IDisposable
             offset = watermarks.High.Value;
         }
         position.SetOffset(offset);
-    }
-
-    private void UpdateLimitUsingEnd(FetchOptions options)
-    {
-        if (options.End != null)
-        {
-            var end = options.End;
-
-            // now end has a valid offset
-            var distance = (int)(end.Offset - options.Start.Offset);
-            if (options.Limit == 0 || options.Limit > distance)
-            {
-                options.Limit = distance;
-            }
-            else
-            {
-                end.SetOffset(options.Start.Offset + distance);
-            }
-        }
     }
 
     private static Message CreateMessage(ConsumeResult<byte[], byte[]> result)

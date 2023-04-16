@@ -4,9 +4,9 @@ using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
-public sealed partial class MessageViewModel: ViewModelBase
+public sealed partial class MessageViewModel : ViewModelBase
 {
-    const int MaxSummaryLen = 200;
+    const int MaxSummaryLen = 100;
 
     public readonly Message message;
     private IMessageFormatter formatter;
@@ -29,6 +29,7 @@ public sealed partial class MessageViewModel: ViewModelBase
     }
 
     private string formatterName;
+
     public string FormatterName
     {
         get => formatterName;
@@ -40,7 +41,8 @@ public sealed partial class MessageViewModel: ViewModelBase
                 formatter = FormatterFactory.Instance.GetFormatter(value);
                 DecodedMessage = formatter.Format(message.Value ?? Array.Empty<byte>(), false) ?? message.ValueText;
                 int limit = Math.Min(MaxSummaryLen, message.ValueText.Length);
-                Summary = DecodedMessage[..limit].ReplaceLineEndings(" ");
+                Summary = DecodedMessage[..limit].ReplaceLineEndings(" ") +
+                          (limit < message.ValueText.Length ? "..." : "");
 
                 UpdateText();
             }
@@ -55,10 +57,10 @@ public sealed partial class MessageViewModel: ViewModelBase
         IsActive = true;
     }
 
-    [ObservableProperty]
-    private string displayText;
+    [ObservableProperty] private string displayText;
 
     private string lineFilter = "";
+
     public string LineFilter
     {
         get => lineFilter;

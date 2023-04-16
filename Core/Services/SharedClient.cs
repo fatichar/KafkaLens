@@ -83,7 +83,7 @@ public class SharedClient : IKafkaLensClient
         return new Entities.KafkaCluster(
             Guid.NewGuid().ToString(),
             newCluster.Name,
-            newCluster.BootstrapServers);
+            newCluster.Address);
     }
 
     private IKafkaConsumer CreateConsumer(string bootstrapServers)

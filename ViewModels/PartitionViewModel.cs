@@ -3,14 +3,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
 using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
 public class PartitionViewModel: ViewModelBase, IMessageSource {
-    private readonly IKafkaLensClient kafkaLensClient;
     private readonly Partition partition;
     public int Id => partition.Id;
     public string Name => partition.Name;
@@ -24,9 +22,8 @@ public class PartitionViewModel: ViewModelBase, IMessageSource {
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.PARTITION;
 
-    public PartitionViewModel(IKafkaLensClient kafkaLensClient, TopicViewModel topic, Partition partition) {
+    public PartitionViewModel(TopicViewModel topic, Partition partition) {
         LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
-        this.kafkaLensClient = kafkaLensClient;
         this.partition = partition;
         this.topic = topic;
 
@@ -41,10 +38,10 @@ public class PartitionViewModel: ViewModelBase, IMessageSource {
     public IAsyncRelayCommand LoadMessagesCommand { get; }
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
-    public string FormatterName 
-    { 
-        get => topic.FormatterName; 
-        set => topic.FormatterName = value; 
+    public string FormatterName
+    {
+        get => topic.FormatterName;
+        set => topic.FormatterName = value;
     }
 
     private Task LoadMessagesAsync() {

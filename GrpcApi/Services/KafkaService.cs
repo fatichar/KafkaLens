@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using KafkaLens.Grpc;
@@ -124,7 +125,7 @@ public class KafkaService : KafkaApi.KafkaApiBase
         {
             Id = cluster.Id,
             Name = cluster.Name,
-            BootstrapServers = cluster.BootstrapServers
+            BootstrapServers = cluster.Address
         };
     }
 
@@ -139,7 +140,7 @@ public class KafkaService : KafkaApi.KafkaApiBase
 
     private static Message ToMessageResponse(Models.Message message)
     {
-        return new Message
+        var response = new Message
         {
             Key = message.Key == null ? ByteString.Empty : ByteString.CopyFrom(message.Key),
             Value = message.Value == null ? ByteString.Empty : ByteString.CopyFrom(message.Value),
@@ -147,6 +148,22 @@ public class KafkaService : KafkaApi.KafkaApiBase
             Partition = message.Partition,
             Timestamp = ToGrpcTimestamp(message.EpochMillis)
         };
+        response.Headers.Add(CreateHeaders(message.Headers));
+        return response;
+    }
+
+    private static MapField<string, ByteString> CreateHeaders(Dictionary<string,byte[]>? headers)
+    {
+        var map = new MapField<string, ByteString>();
+        if (headers == null)
+        {
+            return map;
+        }
+        foreach (var header in headers)
+        {
+            map.Add(header.Key, ByteString.CopyFrom(header.Value));
+        }
+        return map;
     }
 
     private static Timestamp ToGrpcTimestamp(long milliseconds)

@@ -43,7 +43,10 @@ namespace AvaloniaApp
             services.AddDbContext<KafkaClientContext>(opt =>
                 opt.UseSqlite($"Data Source={config.DatabasePath};",
                     b => b.MigrationsAssembly("ViewModels")));
+
             services.AddSingleton<IKafkaLensClient, LocalClient>();
+            services.AddSingleton<ISavedMessagesClient, SavedMessagesClient>();
+
             services.AddSingleton<ConsumerFactory>();
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<FormatterFactory>();
@@ -60,7 +63,7 @@ namespace AvaloniaApp
                 .WriteTo.Console(outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u4}] {Message:lj}{NewLine}{Exception}")
                 .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day)
                 .CreateLogger();
-            
+
             Log.Information("The global logger has been configured");
             System.Diagnostics.Debug.WriteLine("Log to console");
         }

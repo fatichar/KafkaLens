@@ -100,6 +100,7 @@ message Message {
   google.protobuf.Timestamp timestamp = 3;
   bytes key = 4;
   bytes value = 5;
+  map<string, bytes> headers = 6;
 }
 
 message UpdateClusterRequest {

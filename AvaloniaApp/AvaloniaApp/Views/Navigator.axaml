@@ -1,20 +1,55 @@
 <UserControl x:Class="AvaloniaApp.Views.Navigator"
-	xmlns="https://github.com/avaloniaui"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
-	xmlns:views="clr-namespace:AvaloniaApp.Views"
-	x:DataType="vm:OpenedClusterViewModel">
-	<Design.DataContext>
-		<vm:OpenedClusterViewModel></vm:OpenedClusterViewModel>
-	</Design.DataContext>
-	
-	<TreeView Items="{Binding Children}"
-	          SelectedItem="{Binding SelectedNode}">
-		<TreeView.ItemTemplate>
-			<TreeDataTemplate x:DataType="vm:ITreeNode"
-			                  ItemsSource="{Binding Children}">
-				<TextBlock Text="{Binding Name}"></TextBlock>
-			</TreeDataTemplate>
-		</TreeView.ItemTemplate>
-	</TreeView>
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             xmlns:views="clr-namespace:AvaloniaApp.Views"
+             x:DataType="vm:OpenedClusterViewModel">
+    <UserControl.Styles>
+        <Style Selector="TabControl">
+            <Setter Property="Background" Value="#F0F0F0" />
+            <Setter Property="Height" Value="120" />
+        </Style>
+        <Style Selector="TabControl WrapPanel">
+            <Setter Property="Background" Value="#2B579A" />
+        </Style>
+
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="#2B579A" />
+            <Setter Property="Foreground" Value="#F0F0F0" />
+            <Setter Property="Margin" Value="0 0 0 0" />
+            <Setter Property="Padding" Value="10 0" />
+        </Style>
+        <Style Selector="TabItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#124078" />
+        </Style>
+
+        <Style Selector="TabItem:focus">
+            <Setter Property="Foreground" Value="#2B579A" />
+            <Setter Property="Margin" Value="0 0 0 0" />
+            <Setter Property="Padding" Value="10 0" />
+        </Style>
+        <Style Selector="TabItem:focus /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#f0f0f0" />
+        </Style>
+
+        <Style Selector="TabItem:selected">
+            <Setter Property="Foreground" Value="#2B579A" />
+            <Setter Property="Margin" Value="0 0 0 0" />
+            <Setter Property="Padding" Value="10 0" />
+        </Style>
+        <Style Selector="TabItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#f0f0f0" />
+        </Style>
+    </UserControl.Styles>
+    <TabControl Height="NaN" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TabStripPlacement="Bottom">
+        <TabItem Header="Topics">
+            <views:TopicsPanel />
+        </TabItem>
+        <TabItem Header="Cluster Info">
+            <views:ClusterInfoPanel />
+        </TabItem>
+    </TabControl>
 </UserControl>

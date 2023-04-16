@@ -16,11 +16,11 @@ public sealed class ClusterViewModel: ViewModelBase
 
     public string Id => cluster.Id;
     public string Name => cluster.Name;
-    public string Address => cluster.BootstrapServers;
+    public string Address => cluster.Address;
 
     public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient kafkaLensClient)
     {
-        this.KafkaLensClient = kafkaLensClient;
+        KafkaLensClient = kafkaLensClient;
         this.cluster = cluster;
         IsConnected = this.cluster.IsConnected;
 

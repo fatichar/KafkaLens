@@ -44,7 +44,7 @@ public class GrpcClient : IKafkaLensClient
         var response = await client.AddClusterAsync(new AddClusterRequest
         {
             Name = newCluster.Name,
-            BootstrapServers = newCluster.BootstrapServers
+            BootstrapServers = newCluster.Address
         });
 
         return ToClusterModel(response);

@@ -2,15 +2,15 @@
 
 public class KafkaCluster
 {
-    public KafkaCluster(string id, string name, string bootstrapServers)
+    public KafkaCluster(string id, string name, string address)
     {
         Id = id;
         Name = name;
-        BootstrapServers = bootstrapServers;
+        Address = address;
     }
 
     public string Id { get; set; }
     public string Name { get; set; }
-    public string BootstrapServers { get; set; }
+    public string Address { get; set; }
     public bool IsConnected { get; set; } = true;
 }

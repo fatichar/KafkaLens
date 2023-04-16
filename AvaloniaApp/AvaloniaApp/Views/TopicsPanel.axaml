@@ -1,0 +1,17 @@
+﻿<UserControl x:Class="AvaloniaApp.Views.TopicsPanel"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+	x:DataType="vm:OpenedClusterViewModel">
+	<TreeView Items="{Binding Children}"
+	          SelectedItem="{Binding SelectedNode}">
+		<TreeView.ItemTemplate>
+			<TreeDataTemplate x:DataType="vm:ITreeNode"
+			                  ItemsSource="{Binding Children}">
+				<TextBlock Text="{Binding Name}"
+				           Margin="0"
+				           FontSize="12"/>
+			</TreeDataTemplate>
+		</TreeView.ItemTemplate>
+	</TreeView>
+</UserControl>

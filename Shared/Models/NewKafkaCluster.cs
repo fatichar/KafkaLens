@@ -2,12 +2,12 @@
 
 public class NewKafkaCluster
 {
-    public NewKafkaCluster(string name, string bootstrapServers)
+    public NewKafkaCluster(string name, string address)
     {
         Name = name;
-        BootstrapServers = bootstrapServers;
+        Address = address;
     }
 
     public string Name { get; set; }
-    public string BootstrapServers { get; set; }
+    public string Address { get; set; }
 }

@@ -6,11 +6,11 @@ namespace KafkaLens.ViewModels.Entities;
 [Table("kafka_cluster")]
 public class KafkaCluster
 {
-    public KafkaCluster(string id, string name, string bootstrapServers)
+    public KafkaCluster(string id, string name, string address)
     {
         Id = id;
         Name = name;
-        BootstrapServers = bootstrapServers;
+        Address = address;
     }
 
     [Required]
@@ -19,14 +19,14 @@ public class KafkaCluster
 
     [Column("client_id")]
     public string? ClientId { get; set; }
-    
+
     [Required]
     [Column("name")]
     public string Name { get; set; }
-    
+
     [Required]
     [Column("bootstrap_servers")]
-    public string BootstrapServers { get; set; }
+    public string Address { get; set; }
 
     [ForeignKey("ClientId")]
     public KafkaLensClient? Client { get; set; }

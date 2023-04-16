@@ -15,21 +15,19 @@ using Entities = KafkaLens.ViewModels.Entities;
 
 namespace KafkaLens;
 
-public class LocalClient : IKafkaLensClient
+public class SavedMessagesClient : ISavedMessagesClient
 {
-    public string Name { get; } = "Local";
-
     private readonly ILogger<LocalClient> logger;
     private readonly IServiceScopeFactory scopeFactory;
     private readonly ConsumerFactory consumerFactory;
 
     // key = cluster id, value = kafka cluster
-    private readonly Dictionary<string, Entities.KafkaCluster> clusters;
+    private readonly Dictionary<string, Entities.KafkaCluster> clusters = new();
 
     // key = cluster id, value = kafka consumer
     private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
-    public LocalClient(
+    public SavedMessagesClient(
         [NotNull] ILogger<LocalClient> logger,
         [NotNull] IServiceScopeFactory scopeFactory,
         [NotNull] ConsumerFactory consumerFactory)
@@ -37,12 +35,12 @@ public class LocalClient : IKafkaLensClient
         this.logger = logger;
         this.scopeFactory = scopeFactory;
         this.consumerFactory = consumerFactory;
-
-        using var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaClientContext>();
-        clusters = dbContext.Clusters.ToDictionary(cluster => cluster.Id);
     }
 
     #region Create
+
+    public string Name { get; } = "Saved Messages";
+
     public Task<bool> ValidateConnectionAsync(string BootstrapServers)
     {
         return Task.FromResult(false);
@@ -95,7 +93,7 @@ public class LocalClient : IKafkaLensClient
 
     private IKafkaConsumer CreateConsumer(string bootstrapServers)
     {
-        return consumerFactory.CreateNew(bootstrapServers);
+        return new SavedMessagesConsumer(bootstrapServers);
     }
     #endregion Create
 

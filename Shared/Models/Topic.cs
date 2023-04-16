@@ -14,6 +14,12 @@ public class Topic
         }
     }
 
+    public Topic(string name, List<Partition> partitions)
+    {
+        Name = name;
+        Partitions = partitions;
+    }
+
     public string Name { get; set; }
 
     public int PartitionCount => Partitions.Count;

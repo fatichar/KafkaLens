@@ -3,14 +3,19 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows.Input;
+using Avalonia.Controls;
 using KafkaLens.Shared;
 using KafkaLens.ViewModels.DataAccess;
 using KafkaLens.ViewModels.Entities;
 using KafkaLens.Clients;
 using KafkaLens.Formatting;
+using KafkaLens.Shared.Models;
 using KafkaLens.TaranaFormatters;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using KafkaCluster = KafkaLens.Shared.Models.KafkaCluster;
 
 namespace KafkaLens.ViewModels;
 
@@ -30,11 +35,12 @@ public partial class MainViewModel: ViewModelBase
     // services
     private readonly KafkaClientContext dbContext;
     private readonly ISettingsService settingsService;
-    private readonly IKafkaLensClient localClient;
+    private readonly ISavedMessagesClient savedMessagesClient;
 
     // commands
     public IRelayCommand AddClusterCommand { get; }
     public IRelayCommand OpenClusterCommand { get; }
+    public IRelayCommand OpenSavedMessagesCommand { get; set; }
 
     [ObservableProperty]
     ObservableCollection<MenuItemViewModel> menuItems = new ObservableCollection<MenuItemViewModel>();
@@ -50,12 +56,14 @@ public partial class MainViewModel: ViewModelBase
         KafkaClientContext dbContext,
         ISettingsService settingsService,
         IKafkaLensClient localClient,
+        ISavedMessagesClient savedMessagesClient,
         FormatterFactory formatterFactory)
     {
         Log.Information("Creating MainViewModel");
         this.dbContext = dbContext;
         this.settingsService = settingsService;
-        this.localClient = localClient;
+        this.savedMessagesClient = savedMessagesClient;
+        Clients.Add(localClient);
         try
         {
             formatterFactory.AddFormatter(new GnmiFormatter());
@@ -69,6 +77,7 @@ public partial class MainViewModel: ViewModelBase
 
         AddClusterCommand = new RelayCommand(AddClusterAsync);
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
+        OpenSavedMessagesCommand = new RelayCommand(OpenSavedMessages);
 
         Title = $"Main - {appInfo?.Value?.Title}";
 
@@ -83,7 +92,7 @@ public partial class MainViewModel: ViewModelBase
     protected override async void OnActivated()
     {
         CreateMenuItems();
-        
+
         Clusters.CollectionChanged += (sender, args) =>
         {
             if (args.NewItems != null)
@@ -119,6 +128,11 @@ public partial class MainViewModel: ViewModelBase
                     Command = AddClusterCommand,
                 },
                 CreateOpenMenu(),
+                new MenuItemViewModel
+                {
+                    Header = "Open Saved Messages",
+                    Command = OpenSavedMessagesCommand,
+                },
                 new MenuItemViewModel()
                 {
                     Header = "Close Tab",
@@ -169,10 +183,9 @@ public partial class MainViewModel: ViewModelBase
             }
         };
     }
-
     #endregion Menus
 
-    private void OpenCluster(string clusterId)
+    private void OpenCluster(string? clusterId)
     {
         var cluster = Clusters.FirstOrDefault(c => c.Id == clusterId);
         if (cluster == null)
@@ -181,10 +194,44 @@ public partial class MainViewModel: ViewModelBase
             return;
         }
 
+        if (!cluster.IsConnected)
+        {
+            cluster.LoadTopicsCommand.Execute(null);
+        }
         if (cluster.IsConnected)
         {
             OpenCluster(cluster);
         }
+    }
+
+    private async void OpenSavedMessages()
+    {
+        // show open dialog
+        var dialog = new OpenFolderDialog();
+        var result = dialog.ShowAsync(new Window());
+        var path = await result;
+        if (path == null)
+        {
+            return;
+        }
+
+        var clusterName = Path.GetFileName(path) + "(saved)";
+        var clusterViewModel = await AddOrGetCluster(clusterName, path);
+        OpenCluster(clusterViewModel);
+    }
+
+    private async Task<ClusterViewModel> AddOrGetCluster(string clusterName, string path)
+    {
+        ClusterViewModel? existing = Clusters.FirstOrDefault(c => c.Name == clusterName);
+        if (existing != null)
+        {
+            return existing;
+        }
+        NewKafkaCluster newCluster = new(clusterName, path);
+        var cluster = await savedMessagesClient.AddAsync(newCluster);
+        var clusterViewModel = new ClusterViewModel(cluster, savedMessagesClient);
+        Clusters.Add(clusterViewModel);
+        return clusterViewModel;
     }
 
     private void AddClusterAsync()
@@ -288,7 +335,6 @@ public partial class MainViewModel: ViewModelBase
 
     private async Task LoadClients()
     {
-        Clients.Add(localClient);
         var clientInfos = await dbContext.Clients.ToDictionaryAsync(client => client.Id);
         foreach (var clientInfosKey in clientInfos.Values)
         {

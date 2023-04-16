@@ -17,9 +17,8 @@ namespace KafkaLens.ViewModels;
 public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 {
     private readonly ISettingsService settingsService;
-    private readonly ClusterViewModel clusterViewModel;
-    private IKafkaLensClient KafkaLensClient => clusterViewModel.KafkaLensClient;
-    private const int DEFAULT_FETCH_COUNT = 10;
+    private readonly ClusterViewModel cluster;
+    private IKafkaLensClient KafkaLensClient => cluster.KafkaLensClient;
     public static IList<string> FetchPositionsForTopic { get; } = new List<string>();
     public static IList<string> FetchPositionsForPartition { get; } = new List<string>();
     public IList<string> fetchPositions = new List<string>();
@@ -48,7 +47,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     public AsyncRelayCommand SaveAllAsFormattedCommand { get; set; }
 
     public string Name { get; }
-    public string Address => clusterViewModel.Address;
+    public string Address => cluster.Address;
 
     public ObservableCollection<ITreeNode> Nodes { get; } = new();
     public ObservableCollection<TopicViewModel> Topics { get; } = new();
@@ -112,16 +111,16 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
     public OpenedClusterViewModel(
         ISettingsService settingsService,
-        ClusterViewModel clusterViewModel,
+        ClusterViewModel cluster,
         string name)
     {
         this.settingsService = settingsService;
-        this.clusterViewModel = clusterViewModel;
+        this.cluster = cluster;
         Name = name;
 
         FetchMessagesCommand = new RelayCommand(FetchMessages);
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
-        
+
         SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw);
         SaveSelectedAsFormattedCommand = new AsyncRelayCommand(SaveSelectedMessagesAsFormatted);
         SaveAllAsRawCommand = new AsyncRelayCommand(SaveAllMessagesAsRaw);
@@ -148,14 +147,14 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     private const string SAVE_MESSAGES_DIR = "saved_messages";
     private async Task SaveAllMessagesAsRaw()
     {
-        await SaveAsync(CurrentMessages.Messages, false);   
+        await SaveAsync(CurrentMessages.Messages, false);
     }
-    
+
     private async Task SaveAllMessagesAsFormatted()
     {
-        await SaveAsync(CurrentMessages.Messages, true);   
+        await SaveAsync(CurrentMessages.Messages, true);
     }
-    
+
     private async Task SaveSelectedMessagesAsRaw()
     {
         await SaveAsync(SelectedMessages, false);
@@ -183,7 +182,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     {
         var dir = Path.Join(SAVE_MESSAGES_DIR, Name, msg.Topic, msg.Partition.ToString());
         Directory.CreateDirectory(dir);
-        
+
         var fileName = msg.Offset + GetExtension(formatted);
         var filePath = Path.Join(dir, fileName);
         // save as binary
@@ -213,14 +212,11 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
     internal async Task LoadTopicsAsync()
     {
-        if (clusterViewModel.Topics.Count == 0)
-        {
-            await clusterViewModel.LoadTopicsCommand.ExecuteAsync(null);
-        }
+        await cluster.LoadTopicsCommand.ExecuteAsync(null);
         Topics.Clear();
-        foreach (var topic in clusterViewModel.Topics)
+        foreach (var topic in cluster.Topics)
         {
-            var viewModel = new TopicViewModel(KafkaLensClient, topic, null);
+            var viewModel = new TopicViewModel(topic, null);
             Topics.Add(viewModel);
             Children.Add(viewModel);
         }
@@ -250,7 +246,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         }
     }
 
-    public string ClusterId => clusterViewModel.Id;
+    public string ClusterId => cluster.Id;
     public static FormatterFactory FormatterFactory { get; set; }
     public IList<MessageViewModel> SelectedMessages { get; set; }
 
@@ -277,10 +273,10 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
         messages = selectedNode switch
         {
-            TopicViewModel topic => KafkaLensClient.GetMessageStream(clusterViewModel.Id, topic.Name,
+            TopicViewModel topic => KafkaLensClient.GetMessageStream(cluster.Id, topic.Name,
                 fetchOptions),
 
-            PartitionViewModel partition => KafkaLensClient.GetMessageStream(clusterViewModel.Id,
+            PartitionViewModel partition => KafkaLensClient.GetMessageStream(cluster.Id,
                 partition.TopicName, partition.Id, fetchOptions),
 
             _ => null

@@ -1,0 +1,15 @@
+﻿<UserControl x:Class="AvaloniaApp.Views.ClusterInfoPanel"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels">
+    <StackPanel Orientation="Vertical" VerticalAlignment="Top"
+                x:DataType="vm:OpenedClusterViewModel">
+        <Label>Cluster Name</Label>
+        <TextBox IsReadOnly="True" Text="{Binding Name}" />
+        <Line StrokeThickness="0" />
+        <Label>Address</Label>
+        <TextBox IsReadOnly="True" Text="{Binding Address}" />
+        <Label>Number of Topics</Label>
+        <TextBox IsReadOnly="True" Text="{Binding Topics.Count}" />
+    </StackPanel>
+</UserControl>
