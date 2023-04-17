@@ -163,7 +163,7 @@ public partial class MainViewModel: ViewModelBase
         openClusterMenuItems = new ObservableCollection<MenuItemViewModel>();
         return new MenuItemViewModel
         {
-            Header = "Load Clusters",
+            Header = "Open Cluster",
             Items = openClusterMenuItems
         };
     }
@@ -306,7 +306,6 @@ public partial class MainViewModel: ViewModelBase
 
     private async Task LoadClustersAsync()
     {
-        Clients.Clear();
         Clusters.Clear();
         await LoadClients();
 
@@ -342,9 +341,6 @@ public partial class MainViewModel: ViewModelBase
         }
         foreach (var clientInfo in clientInfos.Values)
         {
-            // Uncomment for local testing
-            // break;
-            //
             Log.Information("Loading client: {ClientName}", clientInfo.Name);
             try
             {
