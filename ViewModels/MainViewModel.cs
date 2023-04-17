@@ -1,11 +1,8 @@
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Windows.Input;
-using Avalonia.Controls;
 using KafkaLens.Shared;
 using KafkaLens.ViewModels.DataAccess;
 using KafkaLens.ViewModels.Entities;
@@ -41,6 +38,8 @@ public partial class MainViewModel: ViewModelBase
     public IRelayCommand AddClusterCommand { get; }
     public IRelayCommand OpenClusterCommand { get; }
     public IRelayCommand OpenSavedMessagesCommand { get; set; }
+    public static Action ShowAboutDialog { get; set; }
+    public static Action ShowFolderOpenDialog { get; set; }
 
     [ObservableProperty]
     ObservableCollection<MenuItemViewModel> menuItems = new ObservableCollection<MenuItemViewModel>();
@@ -77,7 +76,7 @@ public partial class MainViewModel: ViewModelBase
 
         AddClusterCommand = new RelayCommand(AddClusterAsync);
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
-        OpenSavedMessagesCommand = new RelayCommand(OpenSavedMessages);
+        OpenSavedMessagesCommand = new RelayCommand(() => ShowFolderOpenDialog());
 
         Title = $"Main - {appInfo?.Value?.Title}";
 
@@ -178,11 +177,12 @@ public partial class MainViewModel: ViewModelBase
                 new MenuItemViewModel
                 {
                     Header = "About",
-                    // Command = new RelayCommand(() => MessageBox.Show("About")),
+                    Command = new RelayCommand(() => ShowAboutDialog()),
                 },
             }
         };
     }
+
     #endregion Menus
 
     private void OpenCluster(string? clusterId)
@@ -204,17 +204,8 @@ public partial class MainViewModel: ViewModelBase
         }
     }
 
-    private async void OpenSavedMessages()
+    public async void OpenSavedMessages(string path)
     {
-        // show open dialog
-        var dialog = new OpenFolderDialog();
-        var result = dialog.ShowAsync(new Window());
-        var path = await result;
-        if (path == null)
-        {
-            return;
-        }
-
         var clusterName = Path.GetFileName(path) + "(saved)";
         var clusterViewModel = await AddOrGetCluster(clusterName, path);
         OpenCluster(clusterViewModel);
