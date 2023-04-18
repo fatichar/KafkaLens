@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.VisualTree;
 using KafkaLens.ViewModels;
 
@@ -11,7 +12,13 @@ namespace AvaloniaApp.Views
         public MainView()
         {
             InitializeComponent();
-            window = this.GetVisualRoot() as Window ?? new Window();
+            window = this.GetVisualRoot() as Window ??
+                     this.FindAncestorOfType<Window>() ??
+                    (Avalonia.Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null) ??
+                    new Window();
+            // {
+            //     window = desktop.MainWindow ?? new Window();
+            // }
 
             MainViewModel.ShowAboutDialog += () =>
             {

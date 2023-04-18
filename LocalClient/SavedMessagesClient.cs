@@ -19,7 +19,6 @@ public class SavedMessagesClient : ISavedMessagesClient
 {
     private readonly ILogger<LocalClient> logger;
     private readonly IServiceScopeFactory scopeFactory;
-    private readonly ConsumerFactory consumerFactory;
 
     // key = cluster id, value = kafka cluster
     private readonly Dictionary<string, Entities.KafkaCluster> clusters = new();
@@ -29,12 +28,10 @@ public class SavedMessagesClient : ISavedMessagesClient
 
     public SavedMessagesClient(
         [NotNull] ILogger<LocalClient> logger,
-        [NotNull] IServiceScopeFactory scopeFactory,
-        [NotNull] ConsumerFactory consumerFactory)
+        [NotNull] IServiceScopeFactory scopeFactory)
     {
         this.logger = logger;
         this.scopeFactory = scopeFactory;
-        this.consumerFactory = consumerFactory;
     }
 
     #region Create
@@ -52,18 +49,6 @@ public class SavedMessagesClient : ISavedMessagesClient
 
         var cluster = CreateCluster(newCluster);
         clusters.Add(cluster.Id, cluster);
-        try
-        {
-            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaClientContext>();
-            dbContext.Clusters.Add(cluster);
-            await dbContext.SaveChangesAsync();
-        }
-        catch (Exception e)
-        {
-            clusters.Remove(cluster.Id);
-            logger.LogError(e, "Failed to save cluster", newCluster);
-            throw;
-        }
 
         return ToModel(cluster);
     }
@@ -170,18 +155,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     #region update
     public async Task<KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
-        ValidateClusterId(clusterId);
-
-        await using (var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaClientContext>())
-        {
-            Entities.KafkaCluster? existing = await dbContext.Clusters.FindAsync(clusterId);
-            if (existing != null)
-            {
-                existing.Name = update.Name;
-                existing.Address = update.BootstrapServers;
-            }
-        }
-        return await GetClusterByIdAsync(clusterId);
+        return null;
     }
     #endregion update
 
@@ -191,13 +165,6 @@ public class SavedMessagesClient : ISavedMessagesClient
         if (!clusters.ContainsKey(clusterId))
         {
             throw new KeyNotFoundException($"Cluster with id {clusterId} not found");
-        }
-        var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KafkaClientContext>();
-        var cluster = await dbContext.Clusters.FindAsync(clusterId);
-        if (cluster != null)
-        {
-            dbContext.Clusters.Remove(cluster);
-            await dbContext.SaveChangesAsync();
         }
         clusters.Remove(clusterId);
     }
