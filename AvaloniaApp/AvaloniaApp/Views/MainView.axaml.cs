@@ -7,33 +7,34 @@ namespace AvaloniaApp.Views
 {
     public partial class MainView : UserControl
     {
-        private Window? window;
-
         public MainView()
         {
             InitializeComponent();
-            window = this.GetVisualRoot() as Window ??
-                     this.FindAncestorOfType<Window>() ??
-                    (Avalonia.Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null) ??
-                    new Window();
-            // {
-            //     window = desktop.MainWindow ?? new Window();
-            // }
 
             MainViewModel.ShowAboutDialog += () =>
             {
-                var about = new About();
-                about.ShowDialog(window);
+                var mainWindow = GetMainWindow();
+                if (mainWindow != null)
+                {
+                    var about = new About();
+                    about.ShowDialog(mainWindow);
+                }
             };
 
             MainViewModel.ShowFolderOpenDialog += OnShowFolderOpenDialog;
         }
 
+        private Window? GetMainWindow()
+        {
+            return this.GetVisualRoot() as Window;
+        }
+
         private async void OnShowFolderOpenDialog()
         {
+            var mainWindow = GetMainWindow();
             var dialog = new OpenFolderDialog();
             dialog.Title = "Select a folder";
-            var result = dialog.ShowAsync(window);
+            var result = dialog.ShowAsync(mainWindow);
             var path = await result;
             if (path == null)
             {
