@@ -2,6 +2,15 @@
 
 KafkaLens is an app to browse Kafka messages. It allows you to easily monitor your Kafka cluster and debug any issues.
 
+##
+<div align="center">
+  <div style="width: 80%">
+    <div class="slick">
+      <div><img src="screenshots/Main.png"></div>
+    </div>
+  </div>
+</div>
+
 ## Download
 
 Download the latest release for your operating system:
