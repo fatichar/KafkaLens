@@ -15,9 +15,8 @@ KafkaLens is an app to browse Kafka messages. It allows you to easily monitor yo
 
 Download the latest release for your operating system:
 
-- [Windows](https://github.com/fatichar/KafkaLens/releases/latest/download/kafkalens-setup.exe)
-- [macOS](https://github.com/fatichar/KafkaLens/releases/latest/download/kafkalens.dmg)
-- [Linux](https://github.com/fatichar/KafkaLens/releases/latest/download/kafkalens.deb)
+- [Windows](https://github.com/fatichar/KafkaLens/releases/download/0.1.0/KafkaLens_win.zip)
+- [Linux](https://github.com/fatichar/KafkaLens/releases/download/0.1.0/KafkaLens_linux.zip)
 
 ## Buy Me a Coffee
 
