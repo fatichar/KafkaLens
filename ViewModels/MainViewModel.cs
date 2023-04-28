@@ -11,6 +11,7 @@ using KafkaLens.Shared;
 using KafkaLens.Formatting;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
+using KafkaLens.TaranaFormatters;
 using KafkaLens.ViewModels.Config;
 using Serilog;
 
