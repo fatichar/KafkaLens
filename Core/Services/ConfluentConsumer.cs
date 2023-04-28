@@ -143,7 +143,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
         for (var i = 0; i < tps.Count; ++i)
         {
-            UpdateForWatermarks(partitionOptions[i].Start, watermarks[i]);
+            UpdateForWatermarks(partitionOptions[i], watermarks[i]);
             var tpo = new TopicPartitionOffset(tps[i], partitionOptions[i].Start.Offset);
             tpos.Add(tpo);
         }
@@ -192,6 +192,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
     private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount)
     {
+        if (requiredCount < 0)
+        {
+            return 0;
+        }
         lock (Consumer)
         {
             while (requiredCount > 0)
@@ -226,8 +230,9 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         }
     }
 
-    private static void UpdateForWatermarks(FetchPosition position, WatermarkOffsets watermarks)
+    private static void UpdateForWatermarks(FetchOptions fetchOptions, WatermarkOffsets watermarks)
     {
+        var position = fetchOptions.Start;
         var offset = position.Offset;
         if (offset < 0)
         {
@@ -244,6 +249,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             offset = watermarks.High.Value;
         }
         position.SetOffset(offset);
+        if (position.Offset + fetchOptions.Limit > watermarks.High.Value)
+        {
+            fetchOptions.Limit = (int)(watermarks.High.Value - position.Offset);
+        }
     }
 
     private static Message CreateMessage(ConsumeResult<byte[], byte[]> result)

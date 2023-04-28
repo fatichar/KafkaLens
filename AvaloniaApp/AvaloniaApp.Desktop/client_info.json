@@ -1,0 +1,10 @@
+{
+    "clients": [
+        {
+            "id": "local",
+            "name": "Local gRPC",
+            "address": "localhost:8080",
+            "protocol": "grpc"
+        }
+    ]
+}

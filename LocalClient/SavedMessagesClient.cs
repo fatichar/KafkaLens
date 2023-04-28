@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using KafkaLens.ViewModels.DataAccess;
+using KafkaLens.Clients;
 using KafkaLens.Core.Services;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
@@ -11,7 +11,7 @@ using KafkaLens.Shared.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using Entities = KafkaLens.ViewModels.Entities;
+using KafkaCluster = KafkaLens.Shared.Entities.KafkaCluster;
 
 namespace KafkaLens;
 
@@ -21,7 +21,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     private readonly IServiceScopeFactory scopeFactory;
 
     // key = cluster id, value = kafka cluster
-    private readonly Dictionary<string, Entities.KafkaCluster> clusters = new();
+    private readonly Dictionary<string, KafkaCluster> clusters = new();
 
     // key = cluster id, value = kafka consumer
     private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
@@ -43,7 +43,7 @@ public class SavedMessagesClient : ISavedMessagesClient
         return Task.FromResult(false);
     }
 
-    public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
+    public async Task<Shared.Models.KafkaCluster> AddAsync(NewKafkaCluster newCluster)
     {
         Validate(newCluster);
 
@@ -53,7 +53,7 @@ public class SavedMessagesClient : ISavedMessagesClient
         return ToModel(cluster);
     }
 
-    private IKafkaConsumer Connect(Entities.KafkaCluster cluster)
+    private IKafkaConsumer Connect(KafkaCluster cluster)
     {
         try
         {
@@ -68,9 +68,9 @@ public class SavedMessagesClient : ISavedMessagesClient
         }
     }
 
-    private static Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
+    private static KafkaCluster CreateCluster(NewKafkaCluster newCluster)
     {
-        return new Entities.KafkaCluster(
+        return new KafkaCluster(
             Guid.NewGuid().ToString(),
             newCluster.Name,
             newCluster.Address);
@@ -83,19 +83,19 @@ public class SavedMessagesClient : ISavedMessagesClient
     #endregion Create
 
     #region Read
-    public Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
+    public Task<IEnumerable<Shared.Models.KafkaCluster>> GetAllClustersAsync()
     {
-        Log.Information("Get all clusters");
+        Log.Information("GetById all clusters");
         return Task.FromResult(clusters.Values.Select(ToModel));
     }
 
-    public Task<KafkaCluster> GetClusterByIdAsync(string clusterId)
+    public Task<Shared.Models.KafkaCluster> GetClusterByIdAsync(string clusterId)
     {
         var cluster = ValidateClusterId(clusterId);
         return Task.FromResult(ToModel(cluster));
     }
 
-    Task<KafkaCluster> IKafkaLensClient.GetClusterByNameAsync(string name)
+    Task<Shared.Models.KafkaCluster> IKafkaLensClient.GetClusterByNameAsync(string name)
     {
         var cluster = ValidateClusterId(name);
         return Task.FromResult(ToModel(cluster));
@@ -153,7 +153,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     #endregion Read
 
     #region update
-    public async Task<KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
+    public async Task<Shared.Models.KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
         return null;
     }
@@ -184,7 +184,7 @@ public class SavedMessagesClient : ISavedMessagesClient
         }
     }
 
-    private Entities.KafkaCluster ValidateClusterId(string id)
+    private KafkaCluster ValidateClusterId(string id)
     {
         clusters.TryGetValue(id, out var cluster);
         if (cluster == null)
@@ -194,7 +194,7 @@ public class SavedMessagesClient : ISavedMessagesClient
         return cluster;
     }
 
-    private Entities.KafkaCluster validateClusterName(string name)
+    private KafkaCluster validateClusterName(string name)
     {
         var cluster = clusters.Values
             .FirstOrDefault(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
@@ -221,9 +221,9 @@ public class SavedMessagesClient : ISavedMessagesClient
     #endregion Validations
 
     #region Mappers
-    private KafkaCluster ToModel(Entities.KafkaCluster cluster)
+    private Shared.Models.KafkaCluster ToModel(KafkaCluster cluster)
     {
-        return new KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
+        return new Shared.Models.KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
     }
     #endregion Mappers
 }

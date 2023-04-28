@@ -18,7 +18,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 {
     private readonly ISettingsService settingsService;
     private readonly ClusterViewModel cluster;
-    private IKafkaLensClient KafkaLensClient => cluster.KafkaLensClient;
+    private IKafkaLensClient KafkaLensClient => cluster.Client;
     public static IList<string> FetchPositionsForTopic { get; } = new List<string>();
     public static IList<string> FetchPositionsForPartition { get; } = new List<string>();
     public IList<string> fetchPositions = new List<string>();

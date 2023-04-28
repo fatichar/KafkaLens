@@ -1,8 +1,0 @@
-
-namespace KafkaLens.ViewModels;
-
-public record AppConfig
-{
-	public string Title { get; init; } = "KafkaLens";
-    public string DatabasePath { get; set; } = "";
-}

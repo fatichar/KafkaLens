@@ -4,15 +4,14 @@ using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.IO;
 using KafkaLens.Shared;
-using KafkaLens.ViewModels.DataAccess;
-using KafkaLens.ViewModels.Entities;
 using KafkaLens.Clients;
+using KafkaLens.Clients.Entities;
 using KafkaLens.Formatting;
+using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
 using KafkaLens.TaranaFormatters;
-using Microsoft.EntityFrameworkCore;
+using KafkaLens.ViewModels.Config;
 using Serilog;
-using KafkaCluster = KafkaLens.Shared.Models.KafkaCluster;
 
 namespace KafkaLens.ViewModels;
 
@@ -30,7 +29,7 @@ public partial class MainViewModel: ViewModelBase
     private readonly IDictionary<string, List<OpenedClusterViewModel>> openedClustersMap = new Dictionary<string, List<OpenedClusterViewModel>>();
 
     // services
-    private readonly KafkaClientContext dbContext;
+    private readonly IClientsRepository repository;
     private readonly ISettingsService settingsService;
     private readonly ISavedMessagesClient savedMessagesClient;
 
@@ -51,15 +50,15 @@ public partial class MainViewModel: ViewModelBase
 
     #region Init
     public MainViewModel(
-        IOptions<AppConfig> appInfo,
-        KafkaClientContext dbContext,
+        AppConfig appConfig,
+        IClientsRepository repository,
         ISettingsService settingsService,
         IKafkaLensClient localClient,
         ISavedMessagesClient savedMessagesClient,
         FormatterFactory formatterFactory)
     {
         Log.Information("Creating MainViewModel");
-        this.dbContext = dbContext;
+        this.repository = repository;
         this.settingsService = settingsService;
         this.savedMessagesClient = savedMessagesClient;
         Clients.Add(localClient);
@@ -78,7 +77,7 @@ public partial class MainViewModel: ViewModelBase
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
         OpenSavedMessagesCommand = new RelayCommand(() => ShowFolderOpenDialog());
 
-        Title = $"Main - {appInfo?.Value?.Title}";
+        Title = $"Main - {appConfig?.Title ?? ""}";
 
         IsActive = true;
 
@@ -325,7 +324,7 @@ public partial class MainViewModel: ViewModelBase
 
     private async Task LoadClients()
     {
-        var clientInfos = await dbContext.Clients.ToDictionaryAsync(client => client.Id);
+         var clientInfos = repository.GetAll();
         foreach (var clientInfosKey in clientInfos.Values)
         {
             Log.Information("Found client: {ClientName} in database", clientInfosKey.Name);
@@ -347,14 +346,14 @@ public partial class MainViewModel: ViewModelBase
 
     private static IKafkaLensClient CreateClient(KafkaLensClient clientInfo)
     {
-        if (!clientInfo.ServerUrl.StartsWith(HTTP_PROTOCOL_PREFIX))
+        if (!clientInfo.Address.StartsWith(HTTP_PROTOCOL_PREFIX))
         {
-            clientInfo.ServerUrl = HTTP_PROTOCOL_PREFIX + clientInfo.ServerUrl;
+            clientInfo.Address = HTTP_PROTOCOL_PREFIX + clientInfo.Address;
         }
         switch (clientInfo.Protocol)
         {
             case "grpc":
-                return new GrpcClient(clientInfo.Name, clientInfo.ServerUrl);
+                return new GrpcClient(clientInfo.Name, clientInfo.Address);
             default:
                 throw new ArgumentException($"Protocol {clientInfo.Protocol} is not supported");
         }

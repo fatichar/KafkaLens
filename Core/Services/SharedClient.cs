@@ -1,42 +1,37 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using KafkaLens.Core.DataAccess;
+﻿using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
+using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
 using Serilog;
+using KafkaCluster = KafkaLens.Shared.Models.KafkaCluster;
 
 namespace KafkaLens.Core.Services;
 
 public class SharedClient : IKafkaLensClient
 {
-    private readonly ILogger<SharedClient> logger;
-    private readonly IServiceScopeFactory scopeFactory;
+    public string Name => "Shared";
+    
+    private readonly IClustersRepository repository;
     private readonly ConsumerFactory consumerFactory;
 
     // key = cluster id, value = kafka cluster
-    private readonly Dictionary<string, Entities.KafkaCluster> clusters;
+    private ReadOnlyDictionary<string, Shared.Entities.KafkaCluster> Clusters => repository.GetAll();
 
     // key = cluster id, value = kafka consumer
     private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
     public SharedClient(
-        [NotNull] ILogger<SharedClient> logger,
-        [NotNull] IServiceScopeFactory scopeFactory,
-        [NotNull] ConsumerFactory consumerFactory)
+        IClustersRepository repository,
+        ConsumerFactory consumerFactory)
     {
-        this.logger = logger;
-        this.scopeFactory = scopeFactory;
+        this.repository = repository;
         this.consumerFactory = consumerFactory;
-
-        using var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>();
-        clusters = dbContext.KafkaClusters.ToDictionary(cluster => cluster.Id);
     }
 
     #region Create
-
-    public string Name => "Shared";
-
-    public Task<bool> ValidateConnectionAsync(string BootstrapServers)
+    public Task<bool> ValidateConnectionAsync(string address)
     {
         return Task.FromResult(false);
     }
@@ -46,49 +41,45 @@ public class SharedClient : IKafkaLensClient
         Validate(newCluster);
 
         var cluster = CreateCluster(newCluster);
-        clusters.Add(cluster.Id, cluster);
         try
         {
-            var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>();
-            dbContext.KafkaClusters.Add(cluster);
-            await dbContext.SaveChangesAsync();
+            repository.Add(cluster);
         }
         catch (Exception e)
         {
-            clusters.Remove(cluster.Id);
-            logger.LogError(e, "Failed to save cluster", newCluster);
+            Log.Error(e, "Failed to save cluster");
             throw;
         }
 
         return ToModel(cluster);
     }
 
-    private IKafkaConsumer Connect(Entities.KafkaCluster cluster)
+    private IKafkaConsumer Connect(Shared.Entities.KafkaCluster cluster)
     {
         try
         {
-            var consumer = CreateConsumer(cluster.BootstrapServers);
+            var consumer = CreateConsumer(cluster.Address);
             consumers.Add(cluster.Id, consumer);
             return consumer;
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to create consumer", cluster);
+            Log.Error(e, "Failed to create consumer", cluster);
             throw;
         }
     }
 
-    private static Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
+    private static Shared.Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
     {
-        return new Entities.KafkaCluster(
+        return new Shared.Entities.KafkaCluster(
             Guid.NewGuid().ToString(),
             newCluster.Name,
             newCluster.Address);
     }
 
-    private IKafkaConsumer CreateConsumer(string bootstrapServers)
+    private IKafkaConsumer CreateConsumer(string address)
     {
-        return consumerFactory.CreateNew(bootstrapServers);
+        return consumerFactory.CreateNew(address);
     }
     #endregion Create
 
@@ -96,7 +87,7 @@ public class SharedClient : IKafkaLensClient
     public Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
         Log.Information("Get all clusters");
-        return Task.FromResult(clusters.Values.Select(ToModel));
+        return Task.FromResult(Clusters.Values.Select(ToModel));
     }
 
     public Task<KafkaCluster> GetClusterByIdAsync(string clusterId)
@@ -111,7 +102,7 @@ public class SharedClient : IKafkaLensClient
         return Task.FromResult(ToModel(cluster));
     }
 
-    public Task<IList<Topic>> GetTopicsAsync([DisallowNull] string clusterId)
+    public Task<IList<Topic>> GetTopicsAsync(string clusterId)
     {
         var consumer = GetConsumer(clusterId);
 
@@ -165,17 +156,10 @@ public class SharedClient : IKafkaLensClient
     #region update
     public async Task<KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
-        ValidateClusterId(clusterId);
-
-        await using (var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>())
-        {
-            Entities.KafkaCluster? existing = await dbContext.KafkaClusters.FindAsync(clusterId);
-            if (existing != null)
-            {
-                existing.Name = update.Name;
-                existing.BootstrapServers = update.BootstrapServers;
-            }
-        }
+        var existing = ValidateClusterId(clusterId);
+        existing.Name = update.Name;
+        existing.Address = update.Address;
+        repository.Update(existing);
         return await GetClusterByIdAsync(clusterId);
     }
     #endregion update
@@ -183,27 +167,16 @@ public class SharedClient : IKafkaLensClient
     #region Delete
     public async Task RemoveClusterByIdAsync(string clusterId)
     {
-        if (!clusters.ContainsKey(clusterId))
-        {
-            throw new KeyNotFoundException($"Cluster with id {clusterId} not found");
-        }
-        var dbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<KlServerContext>();
-        var cluster = dbContext.KafkaClusters.Find(clusterId);
-        if (cluster != null)
-        {
-            dbContext.KafkaClusters.Remove(cluster);
-            await dbContext.SaveChangesAsync();
-        }
-        clusters.Remove(clusterId);
+        repository.Delete(clusterId);
     }
     #endregion
 
     #region Validations
     private void Validate(NewKafkaCluster newCluster)
     {
-        var all = clusters.ToList();
+        var all = Clusters.ToList();
 
-        var existing = clusters.Values.FirstOrDefault(cluster =>
+        var existing = Clusters.Values.FirstOrDefault(cluster =>
             cluster.Name.Equals(newCluster.Name, StringComparison.InvariantCultureIgnoreCase));
 
         if (existing != null)
@@ -212,9 +185,9 @@ public class SharedClient : IKafkaLensClient
         }
     }
 
-    private Entities.KafkaCluster ValidateClusterId(string id)
+    private Shared.Entities.KafkaCluster ValidateClusterId(string id)
     {
-        clusters.TryGetValue(id, out var cluster);
+        Clusters.TryGetValue(id, out var cluster);
         if (cluster == null)
         {
             throw new ArgumentException("", nameof(id));
@@ -222,9 +195,9 @@ public class SharedClient : IKafkaLensClient
         return cluster;
     }
 
-    private Entities.KafkaCluster validateClusterName(string name)
+    private Shared.Entities.KafkaCluster validateClusterName(string name)
     {
-        var cluster = clusters.Values
+        var cluster = Clusters.Values
             .FirstOrDefault(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
         if (cluster == null)
         {
@@ -233,14 +206,13 @@ public class SharedClient : IKafkaLensClient
         return cluster;
     }
 
-    [return: NotNull]
     private IKafkaConsumer GetConsumer(string clusterId)
     {
         if (consumers.TryGetValue(clusterId, out var consumer))
         {
             return consumer;
         }
-        if (clusters.TryGetValue(clusterId, out var cluster))
+        if (Clusters.TryGetValue(clusterId, out var cluster))
         {
             return Connect(cluster);
         }
@@ -249,9 +221,9 @@ public class SharedClient : IKafkaLensClient
     #endregion Validations
 
     #region Mappers
-    private KafkaCluster ToModel(Entities.KafkaCluster cluster)
+    private KafkaCluster ToModel(Shared.Entities.KafkaCluster cluster)
     {
-        return new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
+        return new KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
     }
     #endregion Mappers
 }

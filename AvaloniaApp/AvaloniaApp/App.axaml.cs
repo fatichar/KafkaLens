@@ -7,12 +7,14 @@ using KafkaLens.Core.Services;
 using KafkaLens.Formatting;
 using KafkaLens.Shared;
 using KafkaLens.ViewModels;
-using KafkaLens.ViewModels.DataAccess;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Avalonia.Logging;
+using KafkaLens.Clients;
+using KafkaLens.Core.DataAccess;
+using KafkaLens.Shared.DataAccess;
+using KafkaLens.ViewModels.Config;
 using Serilog;
 
 namespace AvaloniaApp
@@ -36,13 +38,17 @@ namespace AvaloniaApp
 
             var config = new AppConfig();
             configuration.Bind(config);
-
+            
             var services = new ServiceCollection();
-            services.AddSingleton<ISettingsService, SettingsService>();
+            services.AddSingleton(config);
 
-            services.AddDbContext<KafkaClientContext>(opt =>
-                opt.UseSqlite($"Data Source={config.DatabasePath};",
-                    b => b.MigrationsAssembly("ViewModels")));
+            var clusterRepo = new ClustersRepository(config.ClusterInfoFilePath);
+            services.AddSingleton<IClustersRepository>(clusterRepo);
+            
+            var clientRepo = new ClientsRepository(config.ClientInfoFilePath);
+            services.AddSingleton<IClientsRepository>(clientRepo);
+            
+            services.AddSingleton<ISettingsService, SettingsService>();
 
             services.AddSingleton<IKafkaLensClient, LocalClient>();
             services.AddSingleton<ISavedMessagesClient, SavedMessagesClient>();

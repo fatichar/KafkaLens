@@ -9,7 +9,7 @@ namespace KafkaLens.ViewModels;
 
 public sealed class ClusterViewModel: ViewModelBase
 {
-    public IKafkaLensClient KafkaLensClient { get; }
+    public IKafkaLensClient Client { get; }
     public IAsyncRelayCommand LoadTopicsCommand { get; }
     private readonly KafkaCluster cluster;
     public ObservableCollection<Topic> Topics { get; } = new();
@@ -18,9 +18,9 @@ public sealed class ClusterViewModel: ViewModelBase
     public string Name => cluster.Name;
     public string Address => cluster.Address;
 
-    public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient kafkaLensClient)
+    public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient client)
     {
-        KafkaLensClient = kafkaLensClient;
+        Client = client;
         this.cluster = cluster;
         IsConnected = this.cluster.IsConnected;
 
@@ -32,7 +32,7 @@ public sealed class ClusterViewModel: ViewModelBase
     private async Task LoadTopicsAsync()
     {
         Topics.Clear();
-        var topics = await KafkaLensClient.GetTopicsAsync(cluster.Id);
+        var topics = await Client.GetTopicsAsync(cluster.Id);
         foreach (var topic in topics)
         {
             Topics.Add(topic);

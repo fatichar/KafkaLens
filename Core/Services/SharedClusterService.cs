@@ -40,7 +40,7 @@
 //            {
 //                try
 //                {
-//                    var consumer = CreateConsumer(cluster.BootstrapServers);
+//                    var consumer = CreateConsumer(cluster.Address);
 //                    consumers.Add(cluster.Name, consumer);
 //                }
 //                catch (Exception ex)
@@ -71,7 +71,7 @@
 //            }
 //            try
 //            {
-//                var consumer = CreateConsumer(cluster.BootstrapServers);
+//                var consumer = CreateConsumer(cluster.Address);
 //                consumers.Add(cluster.Name, consumer);
 //            }
 //            catch (Exception e)
@@ -87,7 +87,7 @@
 //            return new Entities.KafkaCluster(
 //                Guid.NewGuid().ToString(),
 //                newCluster.Name,
-//                newCluster.BootstrapServers);
+//                newCluster.Address);
 //        }
 
 //        private IKafkaConsumer CreateConsumer(string bootstrapServers)
@@ -211,15 +211,15 @@
 //        #region Mappers
 //        private KafkaCluster ToModel(Entities.KafkaCluster cluster)
 //        {
-//            return new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
+//            return new KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
 //        }
 
 //        private Entities.KafkaCluster ToEntity(KafkaCluster cluster)
 //        {
-//            return new Entities.KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
+//            return new Entities.KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
 //        }
 
-//        public Task<KafkaCluster> ValidateConnectionAsync(string BootstrapServers)
+//        public Task<KafkaCluster> ValidateConnectionAsync(string Address)
 //        {
 //            throw new NotImplementedException();
 //        }

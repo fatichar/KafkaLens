@@ -1,0 +1,9 @@
+{
+    "clusters": [
+        {
+            "id": "local_direct",
+            "name": "Local Direct",
+            "address": "localhost:9092"
+        }
+    ]
+}

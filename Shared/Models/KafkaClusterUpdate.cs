@@ -2,12 +2,12 @@
 
 public class KafkaClusterUpdate
 {
-    public KafkaClusterUpdate(string name, string bootstrapServers)
+    public KafkaClusterUpdate(string name, string address)
     {
         Name = name;
-        BootstrapServers = bootstrapServers;
+        Address = address;
     }
 
     public string Name { get; set; }
-    public string BootstrapServers { get; set; }
+    public string Address { get; set; }
 }

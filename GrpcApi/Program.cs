@@ -1,14 +1,14 @@
 using Confluent.Kafka;
 using GrpcApi.Config;
 using GrpcApi.Services;
-using KafkaLens.Core.DataAccess;
-using KafkaLens.Core.Services;
 using KafkaLens.Shared;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Net;
+using KafkaLens.Core.DataAccess;
+using KafkaLens.Core.Services;
+using KafkaLens.Shared.DataAccess;
 
 var configuration = new ConfigurationBuilder()
     .AddEnvironmentVariables()
@@ -32,28 +32,20 @@ builder.WebHost.ConfigureKestrel(options =>
 // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
 
 // Add services to the container.
-builder.Services.AddGrpc();
-builder.Services.AddSingleton<IKafkaLensClient, SharedClient>();
-builder.Services.AddSingleton<ConsumerFactory>();
-builder.Services.AddDbContext<KlServerContext>(opt =>
-    opt.UseSqlite($"Data Source={config.DatabasePath};", b => b.MigrationsAssembly("KafkaLens.GrpcApi")));
+var services = builder.Services;
+services.AddGrpc();
+services.AddSingleton(config);
+var clusterRepo = new ClustersRepository(config.DatabasePath);
+services.AddSingleton<IClustersRepository>(clusterRepo);
+services.AddSingleton<IKafkaLensClient, SharedClient>();
+services.AddSingleton<ConsumerFactory>();
 
 
 var app = builder.Build();
 
 using var scope = app.Services.CreateScope();
-var services = scope.ServiceProvider;
-var logger = services.GetRequiredService<ILogger<Program>>();
-
-try
-{
-    var context = services.GetRequiredService<KlServerContext>();
-    context.Database.Migrate();
-}
-catch (Exception ex)
-{
-    logger.LogError(ex, "An error occurred migrating the DB");
-}
+var serviceProvider = scope.ServiceProvider;
+var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
 // Configure the HTTP request pipeline.
 app.MapGrpcService<KafkaService>();

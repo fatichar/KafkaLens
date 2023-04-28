@@ -1,0 +1,10 @@
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace KafkaLens.Shared.Entities;
+
+public class ClusterConfig
+{
+    [JsonPropertyName("clusters")]
+    public IList<KafkaCluster> Clusters { get; set; }
+}
