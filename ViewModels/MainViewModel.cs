@@ -9,7 +9,6 @@ using KafkaLens.Clients.Entities;
 using KafkaLens.Formatting;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
-using KafkaLens.TaranaFormatters;
 using KafkaLens.ViewModels.Config;
 using Serilog;
 
@@ -62,15 +61,6 @@ public partial class MainViewModel: ViewModelBase
         this.settingsService = settingsService;
         this.savedMessagesClient = savedMessagesClient;
         Clients.Add(localClient);
-        try
-        {
-            formatterFactory.AddFormatter(new GnmiFormatter());
-            formatterFactory.AddFormatter(new EventFormatter());
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine("Failed to add Gnmi formatter: " + e);
-        }
         OpenedClusterViewModel.FormatterFactory = formatterFactory;
 
         AddClusterCommand = new RelayCommand(AddClusterAsync);

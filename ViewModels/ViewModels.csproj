@@ -16,7 +16,6 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\Formatting\Formatting.csproj" />
 	  <ProjectReference Include="..\GrpcClient\GrpcClient.csproj" />
-	  <ProjectReference Include="..\TaranaFormatters\TaranaFormatters.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
