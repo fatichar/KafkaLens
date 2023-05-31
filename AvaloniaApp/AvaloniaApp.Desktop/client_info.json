@@ -1,9 +1,39 @@
 {
     "clients": [
         {
-            "id": "local_grpc",
-            "name": "Local gRPC",
-            "address": "localhost:8080",
+            "id": "pre-trial",
+            "name": "Pre-trial",
+            "address": "tcc-pretrial-kafkalens.devops.taranawireless.com:8080",
+            "protocol": "grpc"
+        },
+        {
+            "id": "prod",
+            "name": "Prod",
+            "address": "tcc-prod-kafkalens.devops.taranawireless.com:8080",
+            "protocol": "grpc"
+        },
+        {
+            "id": "trial",
+            "name": "Trial",
+            "address": "tcc-trial-kafkalens.devops.taranawireless.com:8080",
+            "protocol": "grpc"
+        },
+        {
+            "id": "preprod",
+            "name": "Pre-prod",
+            "address": "tcc-preprod-kafkalens.devops.taranawireless.com:8080",
+            "protocol": "grpc"
+        },
+        {
+            "id": "devperf",
+            "name": "Devperf",
+            "address": "tcc-devperf-kafkalens.devops.taranawireless.com:8080",
+            "protocol": "grpc"
+        },
+        {
+            "id": "perf",
+            "name": "Perf",
+            "address": "tcc-perf-kafkalens.devops.taranawireless.com:8080",
             "protocol": "grpc"
         }
     ]

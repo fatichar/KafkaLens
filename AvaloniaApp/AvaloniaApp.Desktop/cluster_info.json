@@ -1,9 +1,19 @@
 {
     "clusters": [
         {
-            "id": "local_direct",
-            "name": "Local Direct",
+            "id": "lab",
+            "name": "Lab",
+            "address": "b-1.tcc-lab-kafka.0fnm32.c2.kafka.us-west-2.amazonaws.com:9092"
+        },
+        {
+            "id": "local",
+            "name": "Dev",
             "address": "localhost:9092"
+        },
+        {
+            "id": "integ",
+            "name": "Integ",
+            "address": "b-1.tcc-integ-msk-1.e0jta6.c2.kafka.us-west-2.amazonaws.com:9092"
         }
     ]
 }
