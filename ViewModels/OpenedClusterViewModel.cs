@@ -67,11 +67,12 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
     public int FetchCount { get; set; } = 10;
     public string? StartOffset { get; }
-    public DateTime StartDate { get; set; }
+
+    private string startTimeText;
 
     public string StartTimeText
     {
-        get => StartTime.ToShortDateString() + " " + StartTime.ToLongTimeString();
+        get => startTimeText;
         set
         {
             if (SetProperty(ref startTimeText, value))
@@ -130,8 +131,8 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         IsSelected = true;
         IsExpanded = true;
 
-        StartDate = DateTime.Today;
         StartTime = DateTime.Now;
+        UpdateStartTimeText();
 
         FetchPositions = FetchPositionsForTopic;
         FetchPosition = FetchPositions[0];
@@ -141,6 +142,11 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         DefaultFormatter = Formatters.FirstOrDefault();
 
         IsActive = true;
+    }
+
+    private void UpdateStartTimeText()
+    {
+        StartTimeText = StartTime.ToShortDateString() + " " + StartTime.ToLongTimeString();
     }
 
     #region SAVE MESSAGES
@@ -252,7 +258,6 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
     MessageStream? messages = null;
     private List<IMessageLoadListener> messageLoadListeners = new();
-    private string startTimeText;
 
     private void FetchMessages()
     {

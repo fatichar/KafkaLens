@@ -192,7 +192,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
     private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount)
     {
-        if (requiredCount < 0)
+        if (requiredCount <= 0)
         {
             return 0;
         }

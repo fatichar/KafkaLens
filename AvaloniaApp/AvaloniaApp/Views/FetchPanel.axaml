@@ -5,7 +5,7 @@
              xmlns:avaloniaApp="clr-namespace:AvaloniaApp"
              x:DataType="vm:OpenedClusterViewModel">
     <UserControl.Resources>
-        <avaloniaApp:FetchPositionConverter x:Key="IsTimespampPosition" />
+        <avaloniaApp:FetchPositionConverter x:Key="IsTimestampPosition" />
     </UserControl.Resources>
     <Grid Margin="5" RowDefinitions="1*, 1*, 1*, 1*, *" ColumnDefinitions="2*, 5*"
           VerticalAlignment="Top">
@@ -19,9 +19,9 @@
                   SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
         </ComboBox>
 
-        <MaskedTextBox Grid.Row="1" Grid.Column="1"
+        <TextBox Grid.Row="1" Grid.Column="1"
                        HorizontalAlignment="Stretch"
-                       Margin="5" IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimespampPosition}}"
+                       Margin="5" IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}}"
                        Text="{Binding StartTimeText}" />
 
         <Label Grid.Row="2" Grid.Column="0" Margin="5">Count</Label>
