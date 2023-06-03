@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using KafkaLens.Shared.Entities;
 
@@ -8,6 +9,8 @@ public interface IClusterInfoRepository
     ReadOnlyDictionary<string, ClusterInfo> GetAll();
     ClusterInfo GetById(string id);
     void Add(ClusterInfo clusterInfo);
+    void AddAll(IEnumerable<ClusterInfo> clusterInfos);
     void Update(ClusterInfo clusterInfo);
     void Delete(string id);
+    void DeleteAll();
 }

@@ -26,7 +26,7 @@ public class ClusterFactory : IClusterFactory
     {
         if (Clusters.Count > 0)
         {
-            return Clusters;
+            Clusters.Clear();
         }
         await clientFactory.LoadClientsAsync();
         var clients = clientFactory.GetAllClients();
