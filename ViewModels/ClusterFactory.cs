@@ -10,33 +10,34 @@ public class ClusterFactory : IClusterFactory
 {
     private readonly IClientFactory clientFactory;
 
-    private List<ClusterViewModel> Clusters { get; } = new();
+    private ObservableCollection<ClusterViewModel> Clusters { get; } = new();
     
     public ClusterFactory(IClientFactory clientFactory)
     {
         this.clientFactory = clientFactory;
     }
     
-    public List<ClusterViewModel> GetAllClusters()
+    public ObservableCollection<ClusterViewModel> GetAllClusters()
     {
         return Clusters;
     }
 
-    public async Task LoadClustersAsync()
+    public async Task<ObservableCollection<ClusterViewModel>> LoadClustersAsync()
     {
         if (Clusters.Count > 0)
         {
-            return;
+            return Clusters;
         }
         await clientFactory.LoadClientsAsync();
         var clients = clientFactory.GetAllClients();
 
-        // call LoadClusters for each client in parallel
-        var tasks = clients.Select(LoadClusters).ToList();
-        await Task.WhenAll(tasks);
+        // call LoadClustersAsync for each client in parallel
+        clients.ForEach(client => LoadClustersAsync(client).ConfigureAwait(false));
+        
+        return Clusters;
     }
 
-    private async Task LoadClusters(IKafkaLensClient client)
+    private async Task LoadClustersAsync(IKafkaLensClient client)
     {
         try
         {

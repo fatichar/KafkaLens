@@ -2,7 +2,6 @@ using KafkaLens.Clients;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
-using KafkaLens.Shared.Entities;
 using Serilog;
 
 namespace KafkaLens.ViewModels;

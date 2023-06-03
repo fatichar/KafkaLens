@@ -86,13 +86,22 @@ public partial class MainViewModel: ViewModelBase
                 }
             }
         };
-
-        await clusterFactory.LoadClustersAsync();
-        var clusters = clusterFactory.GetAllClusters();
+        
+        var clusters = await clusterFactory.LoadClustersAsync();
         foreach (var cluster in clusters)
         {
             Clusters.Add(cluster);
         }
+        clusters.CollectionChanged += (sender, args) =>
+        {
+            if (args.NewItems != null)
+            {
+                foreach (ClusterViewModel cluster in args.NewItems)
+                {
+                    Clusters.Add(cluster);
+                }
+            }
+        };
     }
     #endregion Init
 
