@@ -3,9 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace KafkaLens.Clients.Entities;
 
-public class KafkaLensClient
+public class ClientInfo
 {
-    public KafkaLensClient(string id, string name, string address, string protocol)
+    public ClientInfo(string id, string name, string address, string protocol)
     {
         Id = id;
         Name = name;

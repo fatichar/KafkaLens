@@ -7,5 +7,5 @@ namespace KafkaLens.Shared.Entities;
 public class ClientConfig
 {
     [JsonPropertyName("clients")]
-    public IList<KafkaLensClient> Clients { get; set; }
+    public IList<ClientInfo> Clients { get; set; }
 }

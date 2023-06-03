@@ -7,11 +7,11 @@ using KafkaLens.Clients;
 using KafkaLens.Core.Services;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
+using KafkaLens.Shared.Entities;
 using KafkaLens.Shared.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using KafkaCluster = KafkaLens.Shared.Entities.KafkaCluster;
 
 namespace KafkaLens;
 
@@ -20,10 +20,10 @@ public class SavedMessagesClient : ISavedMessagesClient
     private readonly ILogger<LocalClient> logger;
     private readonly IServiceScopeFactory scopeFactory;
 
-    // key = cluster id, value = kafka cluster
-    private readonly Dictionary<string, KafkaCluster> clusters = new();
+    // key = clusterInfo id, value = kafka clusterInfo
+    private readonly Dictionary<string, ClusterInfo> clusters = new();
 
-    // key = cluster id, value = kafka consumer
+    // key = clusterInfo id, value = kafka consumer
     private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
     public SavedMessagesClient(
@@ -53,24 +53,24 @@ public class SavedMessagesClient : ISavedMessagesClient
         return ToModel(cluster);
     }
 
-    private IKafkaConsumer Connect(KafkaCluster cluster)
+    private IKafkaConsumer Connect(ClusterInfo clusterInfo)
     {
         try
         {
-            var consumer = CreateConsumer(cluster.Address);
-            consumers.Add(cluster.Id, consumer);
+            var consumer = CreateConsumer(clusterInfo.Address);
+            consumers.Add(clusterInfo.Id, consumer);
             return consumer;
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to create consumer", cluster);
+            logger.LogError(e, "Failed to create consumer", clusterInfo);
             throw;
         }
     }
 
-    private static KafkaCluster CreateCluster(NewKafkaCluster newCluster)
+    private static ClusterInfo CreateCluster(NewKafkaCluster newCluster)
     {
-        return new KafkaCluster(
+        return new ClusterInfo(
             Guid.NewGuid().ToString(),
             newCluster.Name,
             newCluster.Address);
@@ -184,7 +184,7 @@ public class SavedMessagesClient : ISavedMessagesClient
         }
     }
 
-    private KafkaCluster ValidateClusterId(string id)
+    private ClusterInfo ValidateClusterId(string id)
     {
         clusters.TryGetValue(id, out var cluster);
         if (cluster == null)
@@ -194,7 +194,7 @@ public class SavedMessagesClient : ISavedMessagesClient
         return cluster;
     }
 
-    private KafkaCluster validateClusterName(string name)
+    private ClusterInfo validateClusterName(string name)
     {
         var cluster = clusters.Values
             .FirstOrDefault(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
@@ -216,14 +216,14 @@ public class SavedMessagesClient : ISavedMessagesClient
         {
             return Connect(cluster);
         }
-        throw new ArgumentException("Unknown cluster", nameof(clusterId));
+        throw new ArgumentException("Unknown clusterInfo", nameof(clusterId));
     }
     #endregion Validations
 
     #region Mappers
-    private Shared.Models.KafkaCluster ToModel(KafkaCluster cluster)
+    private Shared.Models.KafkaCluster ToModel(ClusterInfo clusterInfo)
     {
-        return new Shared.Models.KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
+        return new Shared.Models.KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address);
     }
     #endregion Mappers
 }

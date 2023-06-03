@@ -4,9 +4,9 @@ using KafkaLens.Core.Services;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
+using KafkaLens.Shared.Entities;
 using KafkaLens.Shared.Models;
 using Serilog;
-using KafkaCluster = KafkaLens.Shared.Entities.KafkaCluster;
 
 namespace KafkaLens.Clients;
 
@@ -14,21 +14,20 @@ public class LocalClient : IKafkaLensClient
 {
     public string Name { get; } = "Local";
 
-    private readonly IClustersRepository repository;
+    private readonly IClusterInfoRepository infoRepository;
     private readonly ConsumerFactory consumerFactory;
 
-    // key = cluster id, value = kafka cluster
-    private ReadOnlyDictionary<string, KafkaCluster> Clusters => repository.GetAll();
+    // key = clusterInfo id, value = kafka clusterInfo
+    private ReadOnlyDictionary<string, ClusterInfo> Clusters => infoRepository.GetAll();
 
-    // key = cluster id, value = kafka consumer
+    // key = clusterInfo id, value = kafka consumer
     private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
     public LocalClient(
-        IClustersRepository repository,
-        ConsumerFactory consumerFactory)
+        IClusterInfoRepository infoRepository)
     {
-        this.repository = repository;
-        this.consumerFactory = consumerFactory;
+        this.infoRepository = infoRepository;
+        consumerFactory = new ConsumerFactory();
     }
 
     #region Create
@@ -44,35 +43,35 @@ public class LocalClient : IKafkaLensClient
         var cluster = CreateCluster(newCluster);
         try
         {
-            repository.Add(cluster);
+            infoRepository.Add(cluster);
         }
         catch (Exception e)
         {
-            Log.Error(e, "Failed to save cluster");
+            Log.Error(e, "Failed to save clusterInfo");
             throw;
         }
 
         return ToModel(cluster);
     }
 
-    private IKafkaConsumer Connect(KafkaCluster cluster)
+    private IKafkaConsumer Connect(ClusterInfo clusterInfo)
     {
         try
         {
-            var consumer = CreateConsumer(cluster.Address);
-            consumers.Add(cluster.Id, consumer);
+            var consumer = CreateConsumer(clusterInfo.Address);
+            consumers.Add(clusterInfo.Id, consumer);
             return consumer;
         }
         catch (Exception e)
         {
-            Log.Error(e, "Failed to create consumer", cluster);
+            Log.Error(e, "Failed to create consumer", clusterInfo);
             throw;
         }
     }
 
-    private static KafkaCluster CreateCluster(NewKafkaCluster newCluster)
+    private static ClusterInfo CreateCluster(NewKafkaCluster newCluster)
     {
-        return new KafkaCluster(
+        return new ClusterInfo(
             Guid.NewGuid().ToString(),
             newCluster.Name,
             newCluster.Address);
@@ -160,7 +159,7 @@ public class LocalClient : IKafkaLensClient
         var existing = ValidateClusterId(clusterId);
         existing.Name = update.Name;
         existing.Address = update.Address;
-        repository.Update(existing);
+        infoRepository.Update(existing);
         return await GetClusterByIdAsync(clusterId);
     }
     #endregion update
@@ -168,7 +167,7 @@ public class LocalClient : IKafkaLensClient
     #region Delete
     public async Task RemoveClusterByIdAsync(string clusterId)
     {
-        repository.Delete(clusterId);
+        infoRepository.Delete(clusterId);
     }
     #endregion
 
@@ -186,7 +185,7 @@ public class LocalClient : IKafkaLensClient
         }
     }
 
-    private KafkaCluster ValidateClusterId(string id)
+    private ClusterInfo ValidateClusterId(string id)
     {
         Clusters.TryGetValue(id, out var cluster);
         if (cluster == null)
@@ -196,7 +195,7 @@ public class LocalClient : IKafkaLensClient
         return cluster;
     }
 
-    private KafkaCluster validateClusterName(string name)
+    private ClusterInfo validateClusterName(string name)
     {
         var cluster = Clusters.Values
             .FirstOrDefault(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
@@ -217,14 +216,14 @@ public class LocalClient : IKafkaLensClient
         {
             return Connect(cluster);
         }
-        throw new ArgumentException("Unknown cluster", nameof(clusterId));
+        throw new ArgumentException("Unknown clusterInfo", nameof(clusterId));
     }
     #endregion Validations
 
     #region Mappers
-    private Shared.Models.KafkaCluster ToModel(KafkaCluster cluster)
+    private Shared.Models.KafkaCluster ToModel(ClusterInfo clusterInfo)
     {
-        return new Shared.Models.KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
+        return new Shared.Models.KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address);
     }
     #endregion Mappers
 }

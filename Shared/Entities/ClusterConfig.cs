@@ -6,5 +6,5 @@ namespace KafkaLens.Shared.Entities;
 public class ClusterConfig
 {
     [JsonPropertyName("clusters")]
-    public IList<KafkaCluster> Clusters { get; set; }
+    public IList<ClusterInfo> Clusters { get; set; }
 }

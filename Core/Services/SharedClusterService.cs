@@ -16,7 +16,7 @@
 
 //        private IDictionary<string, IKafkaConsumer> consumers;
 
-//        private Dictionary<string, Entities.KafkaCluster> clusters;
+//        private Dictionary<string, Entities.ClusterInfo> clusters;
 
 //        public SharedClusterService(
 //            [NotNull] ILogger<SharedClusterService> logger,
@@ -33,7 +33,7 @@
 //        }
 
 //        #region Create
-//        private Dictionary<string, IKafkaConsumer> CreateConsumers(List<Entities.KafkaCluster> clusters)
+//        private Dictionary<string, IKafkaConsumer> CreateConsumers(List<Entities.ClusterInfo> clusters)
 //        {
 //            var consumers = new Dictionary<string, IKafkaConsumer>();
 //            clusters.ForEach(cluster =>
@@ -51,7 +51,7 @@
 //            return consumers;
 //        }
 
-//        public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
+//        public async Task<ClusterInfo> AddAsync(NewKafkaCluster newCluster)
 //        {
 //            Validate(newCluster);
 
@@ -82,9 +82,9 @@
 //            return ToModel(cluster);
 //        }
 
-//        public static Entities.KafkaCluster CreateCluster(NewKafkaCluster newCluster)
+//        public static Entities.ClusterInfo CreateCluster(NewKafkaCluster newCluster)
 //        {
-//            return new Entities.KafkaCluster(
+//            return new Entities.ClusterInfo(
 //                Guid.NewGuid().ToString(),
 //                newCluster.Name,
 //                newCluster.Address);
@@ -97,13 +97,13 @@
 //        #endregion Create
 
 //        #region Read
-//        public IEnumerable<KafkaCluster> GetAllClusters()
+//        public IEnumerable<ClusterInfo> GetAllClusters()
 //        {
 //            Log.Information("Get all clusters");
 //            return clusters.Values.Select(ToModel);
 //        }
 
-//        public KafkaCluster GetClusterById(string id)
+//        public ClusterInfo GetClusterById(string id)
 //        {
 //            var cluster = GetClusterById(id);
 //            return ToModel(cluster);
@@ -143,7 +143,7 @@
 //        }
 //        #endregion Read
 //        #region Delete
-//        public async Task<KafkaCluster> RemoveByIdAsync(string id)
+//        public async Task<ClusterInfo> RemoveByIdAsync(string id)
 //        {
 //            if (clusters.ContainsKey(id))
 //            {
@@ -176,7 +176,7 @@
 //            }
 //        }
 
-//        private Entities.KafkaCluster GetClusterById(string id)
+//        private Entities.ClusterInfo GetClusterById(string id)
 //        {
 //            clusters.TryGetValue(id, out var cluster);
 //            if (cluster == null)
@@ -186,7 +186,7 @@
 //            return cluster;
 //        }
 
-//        private Entities.KafkaCluster GetClusterByName(string name)
+//        private Entities.ClusterInfo GetClusterByName(string name)
 //        {
 //            var cluster = clusters.Values
 //                .Where(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase))
@@ -209,32 +209,32 @@
 //        }
 //        #endregion Validations
 //        #region Mappers
-//        private KafkaCluster ToModel(Entities.KafkaCluster cluster)
+//        private ClusterInfo ToModel(Entities.ClusterInfo cluster)
 //        {
-//            return new KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
+//            return new ClusterInfo(cluster.Id, cluster.Name, cluster.Address);
 //        }
 
-//        private Entities.KafkaCluster ToEntity(KafkaCluster cluster)
+//        private Entities.ClusterInfo ToEntity(ClusterInfo cluster)
 //        {
-//            return new Entities.KafkaCluster(cluster.Id, cluster.Name, cluster.Address);
+//            return new Entities.ClusterInfo(cluster.Id, cluster.Name, cluster.Address);
 //        }
 
-//        public Task<KafkaCluster> ValidateConnectionAsync(string Address)
-//        {
-//            throw new NotImplementedException();
-//        }
-
-//        KafkaCluster IClusterService.GetClusterByName(string name)
+//        public Task<ClusterInfo> ValidateConnectionAsync(string Address)
 //        {
 //            throw new NotImplementedException();
 //        }
 
-//        public KafkaCluster UpdateCluster(string id, KafkaClusterUpdate update)
+//        ClusterInfo IClusterService.GetClusterByName(string name)
 //        {
 //            throw new NotImplementedException();
 //        }
 
-//        public Task<KafkaCluster> RemoveClusterByIdAsync(string id)
+//        public ClusterInfo UpdateCluster(string id, KafkaClusterUpdate update)
+//        {
+//            throw new NotImplementedException();
+//        }
+
+//        public Task<ClusterInfo> RemoveClusterByIdAsync(string id)
 //        {
 //            throw new NotImplementedException();
 //        }

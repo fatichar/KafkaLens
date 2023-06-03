@@ -3,13 +3,15 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using AvaloniaApp.Views;
 using KafkaLens;
-using KafkaLens.Core.Services;
+// using KafkaLens.Core.Services;
 using KafkaLens.Formatting;
 using KafkaLens.Shared;
 using KafkaLens.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.IO;
+using System.Reflection;
 using Avalonia.Logging;
 using KafkaLens.Clients;
 using KafkaLens.Core.DataAccess;
@@ -33,7 +35,6 @@ namespace AvaloniaApp
         {
             var configuration = new ConfigurationBuilder()
                 .AddEnvironmentVariables()
-                .AddJsonFile("appsettings.json")
                 .Build();
 
             var config = new AppConfig();
@@ -42,24 +43,63 @@ namespace AvaloniaApp
             var services = new ServiceCollection();
             services.AddSingleton(config);
 
-            var clusterRepo = new ClustersRepository(config.ClusterInfoFilePath);
-            services.AddSingleton<IClustersRepository>(clusterRepo);
+            var clusterRepo = new ClusterInfoRepository(config.ClusterInfoFilePath);
+            services.AddSingleton<IClusterInfoRepository>(clusterRepo);
             
-            var clientRepo = new ClientsRepository(config.ClientInfoFilePath);
-            services.AddSingleton<IClientsRepository>(clientRepo);
+            var clientRepo = new ClientInfoRepository(config.ClientInfoFilePath);
+            services.AddSingleton<IClientInfoRepository>(clientRepo);
             
             services.AddSingleton<ISettingsService, SettingsService>();
 
-            services.AddSingleton<IKafkaLensClient, LocalClient>();
-            services.AddSingleton<ISavedMessagesClient, SavedMessagesClient>();
+            AddConditionalDependencies(services, clusterRepo);
+            // services.AddSingleton<ISavedMessagesClient, SavedMessagesClient>();
 
-            services.AddSingleton<ConsumerFactory>();
+            // services.AddSingleton<ConsumerFactory>();
+            services.AddSingleton<IClusterFactory, ClusterFactory>();
+            services.AddSingleton<IClientFactory, ClientFactory>();
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<FormatterFactory>();
             services.AddLogging();
             ConfigureLogging();
 
             return services.BuildServiceProvider();
+        }
+
+        private static void AddConditionalDependencies(IServiceCollection services, IClusterInfoRepository clusterRepo)
+        {
+            IKafkaLensClient? localClient = CreateLocalClient(clusterRepo);
+            if (localClient != null)
+            {
+                services.AddSingleton(localClient);
+            }
+        }
+
+        private static IKafkaLensClient? CreateLocalClient(IClusterInfoRepository clusterRepo)
+        {
+            Assembly assembly;
+            try
+            {
+                assembly = Assembly.LoadFrom("./KafkaLens.LocalClient.dll");
+            }
+            catch (Exception e)
+            {
+                Log.Error("Could not load KafkaLens.LocalClient.dll");
+                return null;
+            }
+            var type = assembly.GetType("KafkaLens.Clients.LocalClient");
+            if (type == null)
+            {
+                Log.Error("Could not find KafkaLens.Clients.LocalClient");
+                return null;
+            }
+            
+            var instance = Activator.CreateInstance(type, clusterRepo);
+            if (instance == null)
+            {
+                Log.Error("Could not create instance of KafkaLens.Clients.LocalClient");
+                return null;
+            }
+            return (IKafkaLensClient)instance;
         }
 
         private static void ConfigureLogging()

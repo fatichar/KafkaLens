@@ -35,8 +35,8 @@ builder.WebHost.ConfigureKestrel(options =>
 var services = builder.Services;
 services.AddGrpc();
 services.AddSingleton(config);
-var clusterRepo = new ClustersRepository(config.DatabasePath);
-services.AddSingleton<IClustersRepository>(clusterRepo);
+var clusterRepo = new ClusterInfoRepository(config.DatabasePath);
+services.AddSingleton<IClusterInfoRepository>(clusterRepo);
 services.AddSingleton<IKafkaLensClient, SharedClient>();
 services.AddSingleton<ConsumerFactory>();
 
