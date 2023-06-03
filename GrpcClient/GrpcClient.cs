@@ -4,6 +4,7 @@ using Grpc.Net.Client;
 using KafkaLens.Grpc;
 using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
+using Serilog;
 using FetchOptions = KafkaLens.Shared.Models.FetchOptions;
 using FetchPosition = KafkaLens.Grpc.FetchPosition;
 using Message = KafkaLens.Shared.Models.Message;
@@ -64,7 +65,7 @@ public class GrpcClient : IKafkaLensClient
         }
         catch (RpcException e)
         {
-            Console.WriteLine($"Failed to connect to grpc server: {url}", e);
+            Log.Error($"Failed to connect to grpc server: {url}", e);
             return new List<KafkaCluster>()
             {
                 new KafkaCluster(Guid.NewGuid().ToString(), name, url)
