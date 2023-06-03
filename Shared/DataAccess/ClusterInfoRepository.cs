@@ -1,4 +1,8 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Entities;
@@ -6,14 +10,14 @@ using Serilog;
 
 namespace KafkaLens.Core.DataAccess;
 
-public class ClustersRepository : IClustersRepository
+public class ClusterInfoRepository : IClusterInfoRepository
 {
     private const string DEFAULT_FILE_PATH = "cluster_info.json";
     private readonly string filePath;
-    private Dictionary<string, KafkaCluster> clusters;
-    public ReadOnlyDictionary<string, KafkaCluster> GetAll() => new(clusters);
+    private Dictionary<string, ClusterInfo> clusters;
+    public ReadOnlyDictionary<string, ClusterInfo> GetAll() => new(clusters);
 
-    public ClustersRepository(string filePath)
+    public ClusterInfoRepository(string filePath)
     {
         if (string.IsNullOrEmpty(filePath))
         {
@@ -39,7 +43,7 @@ public class ClustersRepository : IClustersRepository
         clusters = clusterConfig.Clusters.ToDictionary(cluster => cluster.Id);
     }
 
-    public KafkaCluster GetById(string id)
+    public ClusterInfo GetById(string id)
     {
         ValidateClusterById(id);
         return clusters[id];
@@ -57,14 +61,14 @@ public class ClustersRepository : IClustersRepository
         }
     }
 
-    public void Add(KafkaCluster cluster)
+    public void Add(ClusterInfo clusterInfo)
     {
-        if (clusters.ContainsKey(cluster.Id))
+        if (clusters.ContainsKey(clusterInfo.Id))
         {
-            throw new Exception($"Cluster with id {cluster.Id} already exists");
+            throw new Exception($"Cluster with id {clusterInfo.Id} already exists");
         }
 
-        clusters.Add(cluster.Id, cluster);
+        clusters.Add(clusterInfo.Id, clusterInfo);
         SaveClusters();
     }
 
@@ -82,10 +86,10 @@ public class ClustersRepository : IClustersRepository
         File.WriteAllText(filePath, json);
     }
 
-    public void Update(KafkaCluster cluster)
+    public void Update(ClusterInfo clusterInfo)
     {
-        ValidateClusterById(cluster.Id);
-        clusters[cluster.Id] = cluster;
+        ValidateClusterById(clusterInfo.Id);
+        clusters[clusterInfo.Id] = clusterInfo;
         SaveClusters();
     }
     

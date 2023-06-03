@@ -16,19 +16,16 @@ namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel: ViewModelBase
 {
-    private const string HTTP_PROTOCOL_PREFIX = "http://";
-
     // data
     private string? Title { get; }
 
     public ObservableCollection<ClusterViewModel> Clusters { get; } = new();
-    public ObservableCollection<IKafkaLensClient> Clients { get; } = new();
 
     public ObservableCollection<OpenedClusterViewModel> OpenedClusters { get; } = new();
     private readonly IDictionary<string, List<OpenedClusterViewModel>> openedClustersMap = new Dictionary<string, List<OpenedClusterViewModel>>();
 
     // services
-    private readonly IClientsRepository repository;
+    private readonly IClusterFactory clusterFactory;
     private readonly ISettingsService settingsService;
     private readonly ISavedMessagesClient savedMessagesClient;
 
@@ -50,17 +47,15 @@ public partial class MainViewModel: ViewModelBase
     #region Init
     public MainViewModel(
         AppConfig appConfig,
-        IClientsRepository repository,
+        IClusterFactory clusterFactory,
         ISettingsService settingsService,
-        IKafkaLensClient localClient,
-        ISavedMessagesClient savedMessagesClient,
+        // ISavedMessagesClient? savedMessagesClient,
         FormatterFactory formatterFactory)
     {
         Log.Information("Creating MainViewModel");
-        this.repository = repository;
+        this.clusterFactory = clusterFactory;
         this.settingsService = settingsService;
-        this.savedMessagesClient = savedMessagesClient;
-        Clients.Add(localClient);
+        // this.savedMessagesClient = savedMessagesClient;
         OpenedClusterViewModel.FormatterFactory = formatterFactory;
 
         AddClusterCommand = new RelayCommand(AddClusterAsync);
@@ -92,7 +87,12 @@ public partial class MainViewModel: ViewModelBase
             }
         };
 
-        LoadClustersAsync();
+        await clusterFactory.LoadClustersAsync();
+        var clusters = clusterFactory.GetAllClusters();
+        foreach (var cluster in clusters)
+        {
+            Clusters.Add(cluster);
+        }
     }
     #endregion Init
 
@@ -282,70 +282,5 @@ public partial class MainViewModel: ViewModelBase
             }
         }
         return $"{clusterName} ({smallestAvailable})";
-    }
-
-    private async Task LoadClustersAsync()
-    {
-        Clusters.Clear();
-        await LoadClients();
-
-        // call LoadClusters for each client in parallel
-        var tasks = Clients.Select(LoadClusters).ToList();
-        await Task.WhenAll(tasks);
-    }
-
-    private async Task LoadClusters(IKafkaLensClient client)
-    {
-        try
-        {
-            Log.Information("Loading clusters for client: {ClientName}", client.Name);
-            var clusters = await client.GetAllClustersAsync();
-            foreach (var cluster in clusters)
-            {
-                Log.Information("Found cluster: {ClusterName}", cluster.Name);
-                Clusters.Add(new ClusterViewModel(cluster, client));
-            }
-        }
-        catch (Exception e)
-        {
-            Log.Error(e, "Error loading clusters");
-        }
-    }
-
-    private async Task LoadClients()
-    {
-         var clientInfos = repository.GetAll();
-        foreach (var clientInfosKey in clientInfos.Values)
-        {
-            Log.Information("Found client: {ClientName} in database", clientInfosKey.Name);
-        }
-        foreach (var clientInfo in clientInfos.Values)
-        {
-            Log.Information("Loading client: {ClientName}", clientInfo.Name);
-            try
-            {
-                var client = CreateClient(clientInfo);
-                Clients.Add(client);
-            }
-            catch (Exception e)
-            {
-                Log.Error("Failed to load client {}", clientInfo.Name);
-            }
-        }
-    }
-
-    private static IKafkaLensClient CreateClient(KafkaLensClient clientInfo)
-    {
-        if (!clientInfo.Address.StartsWith(HTTP_PROTOCOL_PREFIX))
-        {
-            clientInfo.Address = HTTP_PROTOCOL_PREFIX + clientInfo.Address;
-        }
-        switch (clientInfo.Protocol)
-        {
-            case "grpc":
-                return new GrpcClient(clientInfo.Name, clientInfo.Address);
-            default:
-                throw new ArgumentException($"Protocol {clientInfo.Protocol} is not supported");
-        }
     }
 }

@@ -1,4 +1,8 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared.DataAccess;
@@ -7,14 +11,14 @@ using Serilog;
 
 namespace KafkaLens.Core.DataAccess;
 
-public class ClientsRepository : IClientsRepository
+public class ClientInfoRepository : IClientInfoRepository
 {
     private const string DEFAULT_FILE_PATH = "client_info.json";
     private readonly string filePath;
-    private Dictionary<string, KafkaLensClient> clients;
-    public ReadOnlyDictionary<string, KafkaLensClient> GetAll() => new(clients);
+    private Dictionary<string, ClientInfo> clients;
+    public ReadOnlyDictionary<string, ClientInfo> GetAll() => new(clients);
 
-    public ClientsRepository(string filePath)
+    public ClientInfoRepository(string filePath)
     {
         if (string.IsNullOrEmpty(filePath))
         {
@@ -40,7 +44,7 @@ public class ClientsRepository : IClientsRepository
         clients = clientConfig.Clients.ToDictionary(client => client.Id);
     }
 
-    public KafkaLensClient GetById(string id)
+    public ClientInfo GetById(string id)
     {
         ValidateClientById(id);
         return clients[id];
@@ -58,14 +62,14 @@ public class ClientsRepository : IClientsRepository
         }
     }
 
-    public void Add(KafkaLensClient client)
+    public void Add(ClientInfo clientInfo)
     {
-        if (clients.ContainsKey(client.Id))
+        if (clients.ContainsKey(clientInfo.Id))
         {
-            throw new Exception($"Client with id {client.Id} already exists");
+            throw new Exception($"Client with id {clientInfo.Id} already exists");
         }
 
-        clients.Add(client.Id, client);
+        clients.Add(clientInfo.Id, clientInfo);
         SaveClients();
     }
 
@@ -83,10 +87,10 @@ public class ClientsRepository : IClientsRepository
         File.WriteAllText(filePath, json);
     }
 
-    public void Update(KafkaLensClient client)
+    public void Update(ClientInfo clientInfo)
     {
-        ValidateClientById(client.Id);
-        clients[client.Id] = client;
+        ValidateClientById(clientInfo.Id);
+        clients[clientInfo.Id] = clientInfo;
         SaveClients();
     }
     

@@ -5,7 +5,6 @@
 	  <Nullable>enable</Nullable>
 	  <ImplicitUsings>enable</ImplicitUsings>
 	  <OutputType>Library</OutputType>
-	  <StartupObject></StartupObject>
 	  <AssemblyName>$(SolutionName).$(MSBuildProjectName)</AssemblyName>
 	  <RootNamespace>$(SolutionName).$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
 	  <LangVersion>latestmajor</LangVersion>
@@ -42,6 +41,10 @@
     <ItemGroup>
         <!-- extends watching group to include *.razor files -->
         <Watch Include="..\KafkaLens.Client\**\*.razor" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="DataAccess" />
     </ItemGroup>
 
 </Project>

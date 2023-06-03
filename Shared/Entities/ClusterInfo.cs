@@ -3,13 +3,14 @@ using System.Text.Json.Serialization;
 
 namespace KafkaLens.Shared.Entities;
 
-public class KafkaCluster
+public class ClusterInfo
 {
-    public KafkaCluster(string id, string name, string address)
+    public ClusterInfo(string id, string name, string address, string? protocol = null)
     {
         Id = id;
         Name = name;
         Address = address;
+        Protocol = protocol;
     }
 
     [Required]
@@ -23,4 +24,8 @@ public class KafkaCluster
     [Required]
     [JsonPropertyName("address")]
     public string Address { get; set; }
+    
+    [Required]
+    [JsonPropertyName("protocol")]
+    public string? Protocol { get; set; }
 }
