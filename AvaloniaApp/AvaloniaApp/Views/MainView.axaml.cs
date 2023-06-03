@@ -22,6 +22,17 @@ namespace AvaloniaApp.Views
             };
 
             MainViewModel.ShowFolderOpenDialog += OnShowFolderOpenDialog;
+
+            MainViewModel.ShowEditClustersDialog += OnShowEditClustersDialog;
+        }
+
+        private void OnShowEditClustersDialog()
+        {
+            var mainWindow = GetMainWindow();
+            var dialog = new EditClustersDialog();
+            var dataContext = DataContext as MainViewModel;
+            dialog.DataContext = new LocalClustersViewModel(dataContext.ClusterInfoRepository);
+            dialog.ShowDialog(mainWindow).ContinueWith(_ => dataContext.LoadClusters());
         }
 
         private Window? GetMainWindow()

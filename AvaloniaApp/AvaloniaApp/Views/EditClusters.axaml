@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="AvaloniaApp.Views.EditClustersDialog"
+        Title="Edit Clusters"
+        Width="800"
+        Height="600"
+        xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+        xmlns:entities="clr-namespace:KafkaLens.Shared.Entities;assembly=KafkaLens.Shared"
+        x:DataType="vm:LocalClustersViewModel"
+        Closing="OnClose">
+    <Grid Margin="20, 10" RowDefinitions="Auto,*,Auto,*">
+        <Grid Grid.Row="0" RowDefinitions="*,*" ColumnDefinitions="*,3*,*" Margin="10, 30">
+            <Label Grid.Row="0" Grid.Column="0" Margin="0, 0, 0, 0">Cluster Name</Label>
+            <Label Grid.Row="0" Grid.Column="1" Margin="5, 0, 0, 0">Address</Label>
+            <TextBox Grid.Row="1" Grid.Column="0" Name="NameBox" Margin="0, 0"/>
+            <TextBox Grid.Row="1" Grid.Column="1" Name="AddressBox" Margin="5, 0, 0, 0"/>
+            <Button Grid.Row="1" Grid.Column="2" Content="Add" Click="AddButton_Click"  Margin="5, 0"/>
+        </Grid>
+        <DataGrid Name="ClustersGrid" Grid.Row="1" Margin="0,5"
+                  Height="NaN"
+                  Items="{Binding Clusters}"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  SelectionMode="Single"
+                  RowHeaderWidth="50"
+                  IsReadOnly="True"
+                  BorderBrush="Gray"
+                  BorderThickness="1">
+            <DataGrid.Columns>
+                <DataGridTextColumn x:DataType="entities:ClusterInfo" Header="Name"
+                                    Width="*"
+                                    Binding="{Binding Name }" />
+                <DataGridTextColumn x:DataType="entities:ClusterInfo" Header="Address"
+                                    Width="3*"
+                                    Binding="{Binding Address }" />
+                <!-- <DataGridTemplateColumn> -->
+                <!--     <DataGridTemplateColumn.CellTemplate> -->
+                <!--         <DataTemplate> -->
+                <!--             <Button Content="Remove" Click="RemoveButton_Click" /> -->
+                <!--         </DataTemplate> -->
+                <!--     </DataGridTemplateColumn.CellTemplate> -->
+                <!-- </DataGridTemplateColumn> -->
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Content="Remove Selected" Click="RemoveButton_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

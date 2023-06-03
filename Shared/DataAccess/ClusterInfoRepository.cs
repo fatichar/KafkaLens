@@ -4,11 +4,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Entities;
 using Serilog;
 
-namespace KafkaLens.Core.DataAccess;
+namespace KafkaLens.Shared.DataAccess;
 
 public class ClusterInfoRepository : IClusterInfoRepository
 {
@@ -63,12 +62,26 @@ public class ClusterInfoRepository : IClusterInfoRepository
 
     public void Add(ClusterInfo clusterInfo)
     {
+        AddWithoutSaving(clusterInfo);
+        SaveClusters();
+    }
+
+    private void AddWithoutSaving(ClusterInfo clusterInfo)
+    {
         if (clusters.ContainsKey(clusterInfo.Id))
         {
             throw new Exception($"Cluster with id {clusterInfo.Id} already exists");
         }
 
         clusters.Add(clusterInfo.Id, clusterInfo);
+    }
+
+    public void AddAll(IEnumerable<ClusterInfo> clusterInfos)
+    {
+        foreach (var clusterInfo in clusterInfos)
+        {
+            AddWithoutSaving(clusterInfo);
+        }
         SaveClusters();
     }
 
@@ -97,6 +110,12 @@ public class ClusterInfoRepository : IClusterInfoRepository
     {
         ValidateClusterById(id);
         clusters.Remove(id);
+        SaveClusters();
+    }
+
+    public void DeleteAll()
+    {
+        clusters.Clear();
         SaveClusters();
     }
 }

@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.IO;
 using KafkaLens.Shared;
 using KafkaLens.Clients;
@@ -16,13 +17,16 @@ namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel: ViewModelBase
 {
+    public IClusterInfoRepository ClusterInfoRepository { get; }
+
     // data
     private string? Title { get; }
 
-    public ObservableCollection<ClusterViewModel> Clusters { get; } = new();
+    public ObservableCollection<ClusterViewModel> Clusters { get; set; }
 
     public ObservableCollection<OpenedClusterViewModel> OpenedClusters { get; } = new();
-    private readonly IDictionary<string, List<OpenedClusterViewModel>> openedClustersMap = new Dictionary<string, List<OpenedClusterViewModel>>();
+    private readonly IDictionary<string, List<OpenedClusterViewModel>> openedClustersMap
+        = new Dictionary<string, List<OpenedClusterViewModel>>();
 
     // services
     private readonly IClusterFactory clusterFactory;
@@ -30,19 +34,20 @@ public partial class MainViewModel: ViewModelBase
     private readonly ISavedMessagesClient savedMessagesClient;
 
     // commands
-    public IRelayCommand AddClusterCommand { get; }
+    public IRelayCommand EditClustersCommand { get; }
     public IRelayCommand OpenClusterCommand { get; }
     public IRelayCommand OpenSavedMessagesCommand { get; set; }
     public static Action ShowAboutDialog { get; set; }
     public static Action ShowFolderOpenDialog { get; set; }
+    public static Action ShowEditClustersDialog { get; set; }
 
-    [ObservableProperty]
-    ObservableCollection<MenuItemViewModel> menuItems = new ObservableCollection<MenuItemViewModel>();
+    [ObservableProperty] private ObservableCollection<MenuItemViewModel>? menuItems;
 
     [ObservableProperty]
     private int selectedIndex = -1;
 
-    private ObservableCollection<MenuItemViewModel> openClusterMenuItems;
+    private readonly ObservableCollection<MenuItemViewModel> openClusterMenuItems = new();
+    private MenuItemViewModel openMenu;
 
     #region Init
     public MainViewModel(
@@ -50,15 +55,17 @@ public partial class MainViewModel: ViewModelBase
         IClusterFactory clusterFactory,
         ISettingsService settingsService,
         // ISavedMessagesClient? savedMessagesClient,
+        IClusterInfoRepository clusterInfoRepository,
         FormatterFactory formatterFactory)
     {
+        ClusterInfoRepository = clusterInfoRepository;
         Log.Information("Creating MainViewModel");
         this.clusterFactory = clusterFactory;
         this.settingsService = settingsService;
         // this.savedMessagesClient = savedMessagesClient;
         OpenedClusterViewModel.FormatterFactory = formatterFactory;
 
-        AddClusterCommand = new RelayCommand(AddClusterAsync);
+        EditClustersCommand = new RelayCommand(EditClustersAsync);
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
         OpenSavedMessagesCommand = new RelayCommand(() => ShowFolderOpenDialog());
 
@@ -74,57 +81,71 @@ public partial class MainViewModel: ViewModelBase
 
     protected override async void OnActivated()
     {
+        await LoadClusters();
         CreateMenuItems();
-
-        Clusters.CollectionChanged += (sender, args) =>
-        {
-            if (args.NewItems != null)
-            {
-                foreach (ClusterViewModel item in args.NewItems)
-                {
-                    UpdateMenuItems(item);
-                }
-            }
-        };
-        
-        var clusters = await clusterFactory.LoadClustersAsync();
-        foreach (var cluster in clusters)
-        {
-            Clusters.Add(cluster);
-        }
-        clusters.CollectionChanged += (sender, args) =>
-        {
-            if (args.NewItems != null)
-            {
-                foreach (ClusterViewModel cluster in args.NewItems)
-                {
-                    Clusters.Add(cluster);
-                }
-            }
-        };
     }
+
+    public async Task LoadClusters()
+    {
+        if (Clusters != null)
+        {
+            Clusters.CollectionChanged -= OnClustersChanged;
+        }
+        Clusters = await clusterFactory.LoadClustersAsync();
+        openClusterMenuItems.Clear();
+        foreach (var cluster in Clusters)
+        {
+            AddClusterToMenu(cluster);
+        }
+
+        Clusters.CollectionChanged += OnClustersChanged;
+        CreateMenuItems();
+    }
+
+    private void OnClustersChanged(object sender, NotifyCollectionChangedEventArgs args)
+    {
+        if (args.OldItems != null)
+        {
+            foreach (ClusterViewModel item in args.OldItems)
+            {
+                openClusterMenuItems.Remove(openClusterMenuItems.First(x => x.Header == item.Name));
+            }
+        }
+        if (args.NewItems != null)
+        {
+            foreach (ClusterViewModel item in args.NewItems)
+            {
+                AddClusterToMenu(item);
+            }
+        }
+    }
+
     #endregion Init
 
     #region Menus
     private void CreateMenuItems()
     {
-        menuItems.Add(CreateClusterMenu());
-        menuItems.Add(CreateHelpMenu());
+        MenuItems = new ObservableCollection<MenuItemViewModel>
+        {
+            CreateClusterMenu(),
+            CreateHelpMenu()
+        };
     }
 
     private MenuItemViewModel CreateClusterMenu()
     {
+        openMenu = CreateOpenMenu();
         return new MenuItemViewModel
         {
             Header = "Cluster",
-            Items = new []
+            Items = new()
             {
                 new MenuItemViewModel
                 {
-                    Header = "Add Cluster",
-                    Command = AddClusterCommand,
+                    Header = "Edit Clusters",
+                    Command = EditClustersCommand,
                 },
-                CreateOpenMenu(),
+                openMenu,
                 new MenuItemViewModel
                 {
                     Header = "Open Saved Messages",
@@ -139,7 +160,7 @@ public partial class MainViewModel: ViewModelBase
         };
     }
 
-    private void UpdateMenuItems(ClusterViewModel cluster)
+    private void AddClusterToMenu(ClusterViewModel cluster)
     {
         openClusterMenuItems.Add(CreateOpenMenuItem(cluster));
     }
@@ -157,7 +178,6 @@ public partial class MainViewModel: ViewModelBase
 
     private MenuItemViewModel CreateOpenMenu()
     {
-        openClusterMenuItems = new ObservableCollection<MenuItemViewModel>();
         return new MenuItemViewModel
         {
             Header = "Open Cluster",
@@ -170,7 +190,7 @@ public partial class MainViewModel: ViewModelBase
         return new MenuItemViewModel
         {
             Header = "Help",
-            Items = new []
+            Items = new ()
             {
                 new MenuItemViewModel
                 {
@@ -223,10 +243,9 @@ public partial class MainViewModel: ViewModelBase
         return clusterViewModel;
     }
 
-    private void AddClusterAsync()
+    private void EditClustersAsync()
     {
-        // var openedCluster = new OpenedClusterViewModel(settingsService, clusterService, clusterViewModel, newName);
-        // alreadyOpened.Add(openedCluster);
+        ShowEditClustersDialog();
     }
 
     private void CloseCurrentTab()
