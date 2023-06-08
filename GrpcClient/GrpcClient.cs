@@ -17,7 +17,6 @@ public class GrpcClient : IKafkaLensClient
     #region fields
 
     private readonly KafkaApi.KafkaApiClient client;
-    private readonly string name;
     private readonly string url;
 
     #endregion
@@ -25,13 +24,13 @@ public class GrpcClient : IKafkaLensClient
     #region Constructor
     public GrpcClient(string name, string url)
     {
-        this.name = name;
+        Name = name;
         this.url = url;
         var channel = GrpcChannel.ForAddress(url);
         client = new KafkaApi.KafkaApiClient(channel);
     }
 
-    public string Name => "gRPC";
+    public string Name { get; }
 
     public Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {
@@ -58,8 +57,8 @@ public class GrpcClient : IKafkaLensClient
         try
         {
             var response = await client.GetAllClustersAsync(
-                new Empty(), 
-                null, 
+                new Empty(),
+                null,
                 DateTime.UtcNow.AddSeconds(5));
             return response.Clusters.Select(ToClusterModel);
         }
@@ -68,7 +67,7 @@ public class GrpcClient : IKafkaLensClient
             Log.Error($"Failed to connect to grpc server: {url}", e);
             return new List<KafkaCluster>()
             {
-                new KafkaCluster(Guid.NewGuid().ToString(), name, url)
+                new KafkaCluster(Guid.NewGuid().ToString(), Name, url)
                 {
                     IsConnected = false
                 }
