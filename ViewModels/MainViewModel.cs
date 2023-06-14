@@ -54,7 +54,7 @@ public partial class MainViewModel: ViewModelBase
         AppConfig appConfig,
         IClusterFactory clusterFactory,
         ISettingsService settingsService,
-        // ISavedMessagesClient? savedMessagesClient,
+        ISavedMessagesClient savedMessagesClient,
         IClusterInfoRepository clusterInfoRepository,
         FormatterFactory formatterFactory)
     {
@@ -62,7 +62,7 @@ public partial class MainViewModel: ViewModelBase
         Log.Information("Creating MainViewModel");
         this.clusterFactory = clusterFactory;
         this.settingsService = settingsService;
-        // this.savedMessagesClient = savedMessagesClient;
+        this.savedMessagesClient = savedMessagesClient;
         OpenedClusterViewModel.FormatterFactory = formatterFactory;
 
         EditClustersCommand = new RelayCommand(EditClustersAsync);

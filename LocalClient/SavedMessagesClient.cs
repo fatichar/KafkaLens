@@ -1,37 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Threading.Tasks;
-using KafkaLens.Clients;
+﻿using System.Diagnostics.CodeAnalysis;
 using KafkaLens.Core.Services;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
 using KafkaLens.Shared.Entities;
 using KafkaLens.Shared.Models;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Serilog;
 
-namespace KafkaLens;
+namespace KafkaLens.Clients;
 
 public class SavedMessagesClient : ISavedMessagesClient
 {
-    private readonly ILogger<LocalClient> logger;
-    private readonly IServiceScopeFactory scopeFactory;
-
     // key = clusterInfo id, value = kafka clusterInfo
     private readonly Dictionary<string, ClusterInfo> clusters = new();
 
     // key = clusterInfo id, value = kafka consumer
     private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
-    public SavedMessagesClient(
-        [NotNull] ILogger<LocalClient> logger,
-        [NotNull] IServiceScopeFactory scopeFactory)
+    public SavedMessagesClient()
     {
-        this.logger = logger;
-        this.scopeFactory = scopeFactory;
     }
 
     #region Create
@@ -63,7 +49,7 @@ public class SavedMessagesClient : ISavedMessagesClient
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to create consumer", clusterInfo);
+            Log.Error(e, "Failed to create consumer", clusterInfo);
             throw;
         }
     }
