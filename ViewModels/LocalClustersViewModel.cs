@@ -8,7 +8,7 @@ public class LocalClustersViewModel
 {
     private IClusterInfoRepository Repository { get; }
     public ObservableCollection<ClusterInfo> Clusters { get; }
-    
+
     public LocalClustersViewModel(IClusterInfoRepository clusterInfoRepository)
     {
         Repository = clusterInfoRepository;
@@ -21,9 +21,9 @@ public class LocalClustersViewModel
         Repository.AddAll(Clusters);
     }
 
-    public void Add(ClusterInfo clusterInfo)
+    public void Add(string name, string address)
     {
-        Repository.Add(clusterInfo);
+        var clusterInfo = Repository.Add(name, address);
         Clusters.Add(clusterInfo);
     }
 

@@ -18,13 +18,19 @@ public partial class EditClustersDialog : Window
 #endif
     }
 
-    private void AddButton_Click(object? sender, RoutedEventArgs e)
+    private void AddClusterButton_Click(object? sender, RoutedEventArgs e)
     {
-        var clusterInfo = new ClusterInfo(CreateNewId(NameBox.Text), NameBox.Text, AddressBox.Text, "");
-        Context.Add(clusterInfo);
+        try
+        {
+            Context.Add(NameBox.Text, AddressBox.Text);
         
-        NameBox.Clear();
-        AddressBox.Clear();
+            NameBox.Clear();
+            AddressBox.Clear();
+        }
+        catch (Exception ex)
+        {
+            ErrorLabel.Content = ex.Message;
+        }
     }
 
     private static string CreateNewId(string? nameBoxText)
@@ -55,5 +61,22 @@ public partial class EditClustersDialog : Window
     private void OnClose(object? sender, WindowClosingEventArgs e)
     {
         Save();
+    }
+
+    private void NameBox_OnTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        UpdateUi();
+    }
+
+    private void AddressBox_OnTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        UpdateUi();   
+    }
+
+    private void UpdateUi()
+    {
+        ErrorLabel.Content = string.Empty;
+        AddClusterButton.IsEnabled = !string.IsNullOrWhiteSpace(NameBox.Text) &&
+                                      !string.IsNullOrWhiteSpace(AddressBox.Text);
     }
 }

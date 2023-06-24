@@ -11,13 +11,21 @@
         xmlns:entities="clr-namespace:KafkaLens.Shared.Entities;assembly=KafkaLens.Shared"
         x:DataType="vm:LocalClustersViewModel"
         Closing="OnClose">
-    <Grid Margin="20, 10" RowDefinitions="Auto,*,Auto,*">
-        <Grid Grid.Row="0" RowDefinitions="*,*" ColumnDefinitions="*,3*,*" Margin="10, 30">
+    <Grid Margin="10, 10" RowDefinitions="Auto,*,Auto,*">
+        <Grid Grid.Row="0" RowDefinitions="*,*,*" ColumnDefinitions="3*,9*,*" Margin="0, 10">
             <Label Grid.Row="0" Grid.Column="0" Margin="0, 0, 0, 0">Cluster Name</Label>
-            <Label Grid.Row="0" Grid.Column="1" Margin="5, 0, 0, 0">Address</Label>
-            <TextBox Grid.Row="1" Grid.Column="0" Name="NameBox" Margin="0, 0"/>
-            <TextBox Grid.Row="1" Grid.Column="1" Name="AddressBox" Margin="5, 0, 0, 0"/>
-            <Button Grid.Row="1" Grid.Column="2" Content="Add" Click="AddButton_Click"  Margin="5, 0"/>
+            <Label Grid.Row="0" Grid.Column="1" Margin="5, 0, 0, 0">Bootstrap Servers</Label>
+            <TextBox Grid.Row="1" Grid.Column="0" Name="NameBox" Margin="0, 0"
+                     Watermark="name of your choice"
+                     TextChanged="NameBox_OnTextChanged" />
+            <TextBox Grid.Row="1" Grid.Column="1" Name="AddressBox" Margin="5, 0, 0, 0"
+                     Watermark="address:port"
+                     TextChanged="AddressBox_OnTextChanged"/>
+            <Button Grid.Row="1" Grid.Column="2" Name="AddClusterButton" Content="Add"
+                    Click="AddClusterButton_Click"  Margin="5, 0" IsEnabled="False"
+                    />
+            <Label Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Name="ErrorLabel"
+                   Foreground="Red"/>
         </Grid>
         <DataGrid Name="ClustersGrid" Grid.Row="1" Margin="0,5"
                   Height="NaN"
@@ -37,13 +45,6 @@
                 <DataGridTextColumn x:DataType="entities:ClusterInfo" Header="Address"
                                     Width="3*"
                                     Binding="{Binding Address }" />
-                <!-- <DataGridTemplateColumn> -->
-                <!--     <DataGridTemplateColumn.CellTemplate> -->
-                <!--         <DataTemplate> -->
-                <!--             <Button Content="Remove" Click="RemoveButton_Click" /> -->
-                <!--         </DataTemplate> -->
-                <!--     </DataGridTemplateColumn.CellTemplate> -->
-                <!-- </DataGridTemplateColumn> -->
             </DataGrid.Columns>
         </DataGrid>
 

@@ -18,10 +18,10 @@
         </ContextMenu>
     </UserControl.Resources>
     <Grid RowDefinitions="*, 3, *">
-        <DockPanel>
+        <DockPanel Margin="0">
             <views:MessagesToolbar x:Name="MessagesToolbar" DockPanel.Dock="Top"
                                    HorizontalAlignment="Stretch"
-                                   Background="LightSteelBlue" BorderThickness="1">
+                                   Background="LightSteelBlue" BorderThickness="0">
             </views:MessagesToolbar>
 
             <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"

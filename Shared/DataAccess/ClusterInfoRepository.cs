@@ -48,6 +48,22 @@ public class ClusterInfoRepository : IClusterInfoRepository
         return clusters[id];
     }
 
+    public ClusterInfo Add(string name, string address)
+    {
+        if (clusters.Values.Any(cluster => cluster.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new Exception($"Cluster with name \"{name}\" already exists. Names are not case sensitive.");
+        }
+        
+        var clusterInfo = new ClusterInfo(
+            Guid.NewGuid().ToString(),
+            name,
+            address
+        );
+        Add(clusterInfo);
+        return clusterInfo;
+    }
+
     private void ValidateClusterById(string id)
     {
         if (string.IsNullOrEmpty(id))
