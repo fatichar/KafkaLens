@@ -35,17 +35,16 @@ public sealed partial class MessageViewModel : ViewModelBase
         get => formatterName;
         set
         {
-            if (value != null && value != formatterName)
-            {
-                SetProperty(ref formatterName, value);
-                formatter = FormatterFactory.Instance.GetFormatter(value);
-                DecodedMessage = formatter.Format(message.Value ?? Array.Empty<byte>(), false) ?? message.ValueText;
-                int limit = Math.Min(MaxSummaryLen, message.ValueText.Length);
-                Summary = DecodedMessage[..limit].ReplaceLineEndings(" ") +
-                          (limit < message.ValueText.Length ? "..." : "");
+            if (value == formatterName) return;
 
-                UpdateText();
-            }
+            SetProperty(ref formatterName, value);
+            formatter = FormatterFactory.Instance.GetFormatter(value);
+            DecodedMessage = formatter.Format(message.Value ?? Array.Empty<byte>(), false) ?? message.ValueText;
+            var limit = Math.Min(MaxSummaryLen, DecodedMessage.Length);
+            Summary = DecodedMessage[..limit].ReplaceLineEndings(" ")
+                      + (limit < DecodedMessage.Length ? "..." : "");
+
+            UpdateText();
         }
     }
 
