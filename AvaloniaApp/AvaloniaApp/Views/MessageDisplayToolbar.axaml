@@ -18,7 +18,7 @@
 		<WrapPanel Grid.Column="2" VerticalAlignment="Center">
 			<Label Content="Format" VerticalAlignment="Center"/>
 			<ComboBox x:Name="FormatterCombo" Margin="5" Width="200" VerticalAlignment="Center"
-			          Items="{Binding FormatterNames}"
+			          ItemsSource="{Binding FormatterNames}"
 			          SelectedItem="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=OneWay}"
 			/>
 		</WrapPanel>

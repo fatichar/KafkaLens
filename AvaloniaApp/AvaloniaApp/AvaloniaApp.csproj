@@ -9,8 +9,9 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.0.0-preview5" />
-    <PackageReference Include="AvaloniaEdit.TextMate" Version="11.0.0-preview5" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="AvaloniaEdit.TextMate" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="HyperText.Avalonia" Version="11.0.0-night" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="7.0.0" />
@@ -28,8 +29,7 @@
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-    <PackageReference Include="TextMateSharp.Grammars" Version="1.0.52" />
-    <PackageReference Include="XamlNameReferenceGenerator" Version="1.6.1" />
+    <PackageReference Include="TextMateSharp.Grammars" />
   </ItemGroup>
 
   <ItemGroup>

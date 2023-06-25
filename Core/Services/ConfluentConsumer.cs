@@ -200,21 +200,38 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         {
             while (requiredCount > 0)
             {
-                var result = consumer.Consume(consumeTimeout);
-                if (result == null)
+                try
                 {
-                    Log.Information("Got null message. Must be timed out");
+                    var result = consumer.Consume(consumeTimeout);
+                    if (result == null)
+                    {
+                        Log.Information("Got null message. Must be timed out");
+                        break;
+                    }
+
+                    if (result.IsPartitionEOF)
+                    {
+                        Log.Information("End of partition reached");
+                        break;
+                    }
+
+                    messages.Messages.Add(CreateMessage(result));
+                    --requiredCount;
+                }
+                catch (ConsumeException e)
+                {
+                    Log.Error(e, "Error while consuming message");
                     break;
                 }
-
-                if (result.IsPartitionEOF)
+                catch (Exception e)
                 {
-                    Log.Information("End of partition reached");
+                    Log.Error(e, "Error while consuming message");
                     break;
                 }
-
-                messages.Messages.Add(CreateMessage(result));
-                --requiredCount;
+                finally
+                {
+                    
+                }
             }
         }
 

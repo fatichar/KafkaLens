@@ -12,5 +12,6 @@
         <TextBlock/>
         <TextBlock Text="Author: Pravin Chaudhary" />
         <TextBlock Text="www.KafkaLens.com" />
+        <!-- <controls:Hyperlink Url="www.KafkaLens.com" Alias=""/> -->
     </StackPanel>
 </Window>

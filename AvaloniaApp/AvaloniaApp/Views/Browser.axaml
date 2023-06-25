@@ -32,7 +32,7 @@
                       CanUserSortColumns="True"
                       RowHeaderWidth="50"
                       IsReadOnly="True"
-                      Items="{Binding CurrentMessages.Filtered}"
+                      ItemsSource="{Binding CurrentMessages.Filtered}"
                       SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
                       SelectionChanged="MessagesGrid_OnSelectionChanged"
                       ContextMenu="{StaticResource MessageGridContextMenu}">

@@ -29,7 +29,7 @@
         </Grid>
         <DataGrid Name="ClustersGrid" Grid.Row="1" Margin="0,5"
                   Height="NaN"
-                  Items="{Binding Clusters}"
+                  ItemsSource="{Binding Clusters}"
                   CanUserReorderColumns="True"
                   CanUserResizeColumns="True"
                   CanUserSortColumns="True"

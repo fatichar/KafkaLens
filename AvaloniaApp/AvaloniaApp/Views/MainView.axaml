@@ -8,21 +8,21 @@
              x:Class="AvaloniaApp.Views.MainView"
              x:DataType="vm:MainViewModel">
     <DockPanel Margin="0">
-        <Menu x:Name="MenuBar" DockPanel.Dock="Top" Items="{Binding MenuItems}">
+        <Menu x:Name="MenuBar" DockPanel.Dock="Top" ItemsSource="{Binding MenuItems}">
             <Menu.Styles>
                 <Style Selector="MenuItem" x:DataType="vm:MenuItemViewModel">
                     <Design.DataContext>
                         <vm:MenuItemViewModel />
                     </Design.DataContext>
                     <Setter Property="Header" Value="{Binding Header}"/>
-                    <Setter Property="Items" Value="{Binding Items}"/>
+                    <Setter Property="ItemsSource" Value="{Binding Items}"/>
                     <Setter Property="Command" Value="{Binding Command}"/>
                     <Setter Property="CommandParameter" Value="{Binding CommandParameter}"/>
                     <Setter Property="IsEnabled" Value="{Binding IsEnabled}"/>
                 </Style>
             </Menu.Styles>
         </Menu>
-        <TabControl Items="{Binding OpenedClusters}"
+        <TabControl ItemsSource="{Binding OpenedClusters}"
                     SelectedIndex="{Binding SelectedIndex}"
                     Padding="0"
                     BorderThickness="0,2,0,0">
