@@ -29,14 +29,15 @@ public class ClientInfoRepository : IClientInfoRepository
         }
         this.filePath = filePath;
 
-        LoadClients(filePath);
+        LoadClients();
     }
 
-    private void LoadClients(string filePath)
+    private void LoadClients()
     {
         if (!File.Exists(filePath))
         {
-            throw new IOException($"File {filePath} does not exist");
+            Log.Error("File {FilePath} does not exist", filePath);
+            File.CreateText(filePath);
         }
 
         var configFile = File.ReadAllText(filePath);

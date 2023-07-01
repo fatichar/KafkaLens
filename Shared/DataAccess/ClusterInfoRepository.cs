@@ -27,14 +27,15 @@ public class ClusterInfoRepository : IClusterInfoRepository
         }
         this.filePath = filePath;
 
-        LoadClusters(filePath);
+        LoadClusters();
     }
 
-    private void LoadClusters(string filePath)
+    private void LoadClusters()
     {
         if (!File.Exists(filePath))
         {
-            throw new IOException($"File {filePath} does not exist");
+            Log.Error("File {FilePath} does not exist", filePath);
+            File.CreateText(filePath);
         }
 
         var configFile = File.ReadAllText(filePath);

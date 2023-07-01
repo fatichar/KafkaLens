@@ -15,7 +15,7 @@ using Serilog;
 
 namespace KafkaLens.ViewModels;
 
-public partial class MainViewModel: ViewModelBase
+public partial class MainViewModel : ViewModelBase
 {
     public IClusterInfoRepository ClusterInfoRepository { get; }
 
@@ -104,14 +104,14 @@ public partial class MainViewModel: ViewModelBase
 
     private void OnClustersChanged(object sender, NotifyCollectionChangedEventArgs args)
     {
-        if (args.OldItems != null)
+        if (args?.OldItems != null)
         {
             foreach (ClusterViewModel item in args.OldItems)
             {
                 openClusterMenuItems.Remove(openClusterMenuItems.First(x => x.Header == item.Name));
             }
         }
-        if (args.NewItems != null)
+        if (args?.NewItems != null)
         {
             foreach (ClusterViewModel item in args.NewItems)
             {
@@ -190,7 +190,7 @@ public partial class MainViewModel: ViewModelBase
         return new MenuItemViewModel
         {
             Header = "Help",
-            Items = new ()
+            Items = new()
             {
                 new MenuItemViewModel
                 {
