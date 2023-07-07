@@ -13,6 +13,10 @@ public class ClusterInfo
         Protocol = protocol;
     }
 
+    public ClusterInfo()
+    {
+    }
+
     [Required]
     [JsonPropertyName("id")]
     public string Id { get; set; }
@@ -24,7 +28,7 @@ public class ClusterInfo
     [Required]
     [JsonPropertyName("address")]
     public string Address { get; set; }
-    
+
     [Required]
     [JsonPropertyName("protocol")]
     public string? Protocol { get; set; }

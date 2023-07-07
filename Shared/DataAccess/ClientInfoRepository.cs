@@ -15,7 +15,7 @@ public class ClientInfoRepository : IClientInfoRepository
 {
     private const string DEFAULT_FILE_PATH = "client_info.json";
     private readonly string filePath;
-    private Dictionary<string, ClientInfo> clients;
+    private Dictionary<string, ClientInfo> clients = new();
     public ReadOnlyDictionary<string, ClientInfo> GetAll() => new(clients);
 
     public ClientInfoRepository(string filePath)
@@ -37,7 +37,7 @@ public class ClientInfoRepository : IClientInfoRepository
         if (!File.Exists(filePath))
         {
             Log.Error("File {FilePath} does not exist", filePath);
-            File.CreateText(filePath);
+            SaveClients();
         }
 
         var configFile = File.ReadAllText(filePath);
@@ -94,7 +94,7 @@ public class ClientInfoRepository : IClientInfoRepository
         clients[clientInfo.Id] = clientInfo;
         SaveClients();
     }
-    
+
     public void Delete(string id)
     {
         ValidateClientById(id);

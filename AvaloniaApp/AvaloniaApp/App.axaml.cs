@@ -41,9 +41,10 @@ namespace AvaloniaApp
 
             var services = new ServiceCollection();
             services.AddSingleton(config);
-            
+
             var appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             appDataDir = Path.Combine(appDataDir, "KafkaLens");
+            Directory.CreateDirectory(appDataDir);
 
             var clusterRepo = new ClusterInfoRepository(Path.Combine(appDataDir, config.ClusterInfoFilePath));
             services.AddSingleton<IClusterInfoRepository>(clusterRepo);

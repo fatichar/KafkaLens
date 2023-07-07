@@ -13,7 +13,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
 {
     private const string DEFAULT_FILE_PATH = "cluster_info.json";
     private readonly string filePath;
-    private Dictionary<string, ClusterInfo> clusters;
+    private Dictionary<string, ClusterInfo> clusters = new();
     public ReadOnlyDictionary<string, ClusterInfo> GetAll() => new(clusters);
 
     public ClusterInfoRepository(string filePath)
@@ -35,7 +35,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
         if (!File.Exists(filePath))
         {
             Log.Error("File {FilePath} does not exist", filePath);
-            File.CreateText(filePath);
+            SaveClusters();
         }
 
         var configFile = File.ReadAllText(filePath);
@@ -55,7 +55,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
         {
             throw new Exception($"Cluster with name \"{name}\" already exists. Names are not case sensitive.");
         }
-        
+
         var clusterInfo = new ClusterInfo(
             Guid.NewGuid().ToString(),
             name,
@@ -122,7 +122,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
         clusters[clusterInfo.Id] = clusterInfo;
         SaveClusters();
     }
-    
+
     public void Delete(string id)
     {
         ValidateClusterById(id);
