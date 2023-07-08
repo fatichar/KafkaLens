@@ -13,10 +13,6 @@ public class ClusterInfo
         Protocol = protocol;
     }
 
-    public ClusterInfo()
-    {
-    }
-
     [Required]
     [JsonPropertyName("id")]
     public string Id { get; set; }
