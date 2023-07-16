@@ -13,7 +13,6 @@ using System.IO;
 using System.Reflection;
 using Avalonia.Logging;
 using KafkaLens.Clients;
-using KafkaLens.Core.DataAccess;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.ViewModels.Config;
 using Serilog;
@@ -42,33 +41,41 @@ namespace AvaloniaApp
             var services = new ServiceCollection();
             services.AddSingleton(config);
 
-            var appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            appDataDir = Path.Combine(appDataDir, "KafkaLens");
-            Directory.CreateDirectory(appDataDir);
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            appDataPath = Path.Combine(appDataPath, "KafkaLens");
 
-            var clusterRepo = new ClusterInfoRepository(Path.Combine(appDataDir, config.ClusterInfoFilePath));
+            var clusterRepo = new ClusterInfoRepository(Path.Combine(appDataPath, config.ClusterInfoFilePath));
             services.AddSingleton<IClusterInfoRepository>(clusterRepo);
 
-            var clientRepo = new ClientInfoRepository(Path.Combine(appDataDir, config.ClientInfoFilePath));
+            var clientRepo = new ClientInfoRepository(Path.Combine(appDataPath, config.ClientInfoFilePath));
             services.AddSingleton<IClientInfoRepository>(clientRepo);
 
             services.AddSingleton<ISettingsService, SettingsService>();
 
-            AddConditionalDependencies(services, clusterRepo);
+            var pluginsPath = Path.Combine(appDataPath, "Plugins");
+            var pluginsDir = Directory.CreateDirectory(pluginsPath);
+            AddLocalDependencies(services, clusterRepo, pluginsDir);
+
+            var formatterFactory = new FormatterFactory(pluginsPath);
+            services.AddSingleton(formatterFactory);
 
             // services.AddSingleton<ConsumerFactory>();
             services.AddSingleton<IClusterFactory, ClusterFactory>();
             services.AddSingleton<IClientFactory, ClientFactory>();
             services.AddSingleton<MainViewModel>();
-            services.AddSingleton<FormatterFactory>();
+
             services.AddLogging();
             ConfigureLogging();
 
             return services.BuildServiceProvider();
         }
 
-        private static void AddConditionalDependencies(IServiceCollection services, IClusterInfoRepository clusterRepo)
+        private static void AddLocalDependencies(
+            IServiceCollection services,
+            IClusterInfoRepository clusterRepo,
+            DirectoryInfo pluginsDir)
         {
+            AddPlugins(services, pluginsDir);
             var localClientsAssembly = LoadLocalClientsAssembly();
             if (localClientsAssembly == null)
             {
@@ -87,6 +94,20 @@ namespace AvaloniaApp
                 services.AddSingleton(savedMessagesClient);
             }
         }
+
+        private static void AddPlugins(IServiceCollection services, DirectoryInfo pluginsDir)
+        {
+            // var pluginLoader = new PluginLoader(pluginsDir);
+            // var plugins = pluginLoader.LoadPlugins();
+            // foreach (var plugin in plugins)
+            // {
+            //     services.AddSingleton(plugin);
+            // }
+
+            var formattersPath = Path.Combine(pluginsDir.FullName, "Formatters");
+            var formattersDir = Directory.CreateDirectory(formattersPath);
+        }
+
 
         private static IKafkaLensClient? CreateLocalClient(Assembly assembly, IClusterInfoRepository clusterRepo)
         {

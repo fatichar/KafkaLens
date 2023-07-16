@@ -6,7 +6,6 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 using System.Net;
-using KafkaLens.Core.DataAccess;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.DataAccess;
 

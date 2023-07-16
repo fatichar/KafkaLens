@@ -5,11 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using KafkaLens.Clients.Entities;
-using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Entities;
 using Serilog;
 
-namespace KafkaLens.Core.DataAccess;
+namespace KafkaLens.Shared.DataAccess;
 
 public class ClientInfoRepository : IClientInfoRepository
 {
