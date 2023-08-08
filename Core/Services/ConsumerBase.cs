@@ -5,23 +5,38 @@ namespace KafkaLens.Core.Services;
 
 public abstract class ConsumerBase : IKafkaConsumer
 {
+    protected readonly TimeSpan MaxRefreshInterval = TimeSpan.FromMinutes(60);
     protected Dictionary<string, Topic> Topics { get; set; } = new();
+
+    protected DateTime LastRefreshTime { get; set; } = DateTime.Now;
 
     public virtual List<Topic> GetTopics()
     {
-        if (Topics.Count == 0)
+        // if topics were loaded in the last 5 minutes, return them
+        // otherwise, refresh the topics
+        if (!RecentlyRefreshed())
         {
-            try
-            {
-                LoadTopics();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw new Exception("Failed to load topics", e);
-            }
+            Topics.Clear();
+        }
+        if (Topics.Count != 0)
+        {
+            return Topics.Values.ToList();
+        }
+        try
+        {
+            LoadTopics();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw new Exception("Failed to load topics", e);
         }
         return Topics.Values.ToList();
+    }
+
+    private bool RecentlyRefreshed()
+    {
+        return (DateTime.Now - LastRefreshTime) < MaxRefreshInterval;
     }
 
     protected void LoadTopics()

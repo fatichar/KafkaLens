@@ -19,8 +19,8 @@ public class SavedMessagesConsumer : ConsumerBase
         {
             Topics.Clear();
         }
-        LoadTopics();
-        return Topics.Values.ToList();
+
+        return base.GetTopics();
     }
 
     protected override List<Topic> FetchTopics()
