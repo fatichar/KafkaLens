@@ -9,15 +9,14 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia.AvaloniaEdit" Version="$(AvaloniaVersion)" />
-    <PackageReference Include="AvaloniaEdit.TextMate" Version="$(AvaloniaVersion)" />
-    <PackageReference Include="HyperText.Avalonia" Version="11.0.0-night" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.0.1" />
+    <PackageReference Include="AvaloniaEdit.TextMate" Version="11.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-    <PackageReference Include="Serilog" Version="2.12.0" />
+    <PackageReference Include="Serilog" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
   </ItemGroup>
@@ -29,7 +28,7 @@
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-    <PackageReference Include="TextMateSharp.Grammars" />
+    <PackageReference Include="TextMateSharp.Grammars" Version="1.0.55" />
   </ItemGroup>
 
   <ItemGroup>
