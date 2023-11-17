@@ -18,7 +18,7 @@ public partial class MainViewModel : ViewModelBase
     public IClusterInfoRepository ClusterInfoRepository { get; }
 
     // data
-    private string? Title { get; }
+    public string? Title { get; private set; }
 
     public ObservableCollection<ClusterViewModel> Clusters { get; set; }
 
@@ -67,7 +67,7 @@ public partial class MainViewModel : ViewModelBase
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
         OpenSavedMessagesCommand = new RelayCommand(() => ShowFolderOpenDialog());
 
-        Title = $"Main - {appConfig?.Title ?? ""}";
+        Title = appConfig?.Title ?? "";
 
         IsActive = true;
 

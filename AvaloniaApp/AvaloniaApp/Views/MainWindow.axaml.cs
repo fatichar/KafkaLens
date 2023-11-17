@@ -1,12 +1,19 @@
+using System;
 using Avalonia.Controls;
+using KafkaLens.ViewModels;
 
-namespace AvaloniaApp.Views
+namespace AvaloniaApp.Views;
+
+public partial class MainWindow : Window
 {
-    public partial class MainWindow : Window
+    public MainWindow()
     {
-        public MainWindow()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+    }
+
+    protected override void OnDataContextChanged(EventArgs args)
+    {
+        var dataContext = DataContext as MainViewModel;
+        Title = dataContext?.Title ?? "KafkaLens";
     }
 }
