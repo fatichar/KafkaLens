@@ -29,6 +29,11 @@ public class LocalClustersViewModel
 
     public void Remove(ClusterInfo? clusterInfo)
     {
+        if (clusterInfo is null)
+        {
+            return;
+        }
+        Repository.Delete(clusterInfo.Id);
         Clusters.Remove(clusterInfo);
     }
 }

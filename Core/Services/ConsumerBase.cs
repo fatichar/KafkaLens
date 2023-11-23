@@ -39,7 +39,7 @@ public abstract class ConsumerBase : IKafkaConsumer
         return (DateTime.Now - LastRefreshTime) < MaxRefreshInterval;
     }
 
-    protected void LoadTopics()
+    private void LoadTopics()
     {
         Log.Information("Loading topics...");
         var topics = FetchTopics();

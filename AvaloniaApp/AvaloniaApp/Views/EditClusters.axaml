@@ -40,7 +40,8 @@
                       RowHeaderWidth="50"
                       IsReadOnly="True"
                       BorderBrush="Gray"
-                      BorderThickness="1">
+                      BorderThickness="1"
+                      SelectionChanged="ClustersGrid_OnSelectionChanged">
                 <DataGrid.Columns>
                     <DataGridTextColumn x:DataType="entities:ClusterInfo" Header="Name"
                                         Width="*"
@@ -51,7 +52,7 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <Button Grid.Row="2" HorizontalAlignment="Center" Content="Remove Selected" Click="RemoveButton_Click" />
+            <Button Grid.Row="2" Name="RemoveButton" HorizontalAlignment="Center" Content="Remove Selected" Click="RemoveButton_Click" />
         </Grid>
     </DockPanel>
 </Window>
