@@ -16,6 +16,8 @@ namespace KafkaLens.ViewModels;
 
 public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 {
+    const int SELECTED_ITEM_DELAY_MS = 3;
+
     private readonly ISettingsService settingsService;
     private readonly ClusterViewModel cluster;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
@@ -235,7 +237,17 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         get => selectedNode;
         set
         {
-            if (SetProperty(ref selectedNode, value))
+            if (value == null && selectedNode != null)
+            {
+                var oldValue = selectedNode;
+                SetProperty(ref selectedNode, value);
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await Task.Delay(SELECTED_ITEM_DELAY_MS);
+                    SetProperty(ref selectedNode, oldValue);
+                });
+            }
+            else if (SetProperty(ref selectedNode, value))
             {
                 SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.NONE;
 

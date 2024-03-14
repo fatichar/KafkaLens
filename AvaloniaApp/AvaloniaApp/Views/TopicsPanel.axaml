@@ -4,7 +4,8 @@
 	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
 	x:DataType="vm:OpenedClusterViewModel">
 	<TreeView ItemsSource="{Binding Children}"
-	          SelectedItem="{Binding SelectedNode}">
+	          SelectedItem="{Binding SelectedNode}"
+	          >
 		<TreeView.ItemTemplate>
 			<TreeDataTemplate x:DataType="vm:ITreeNode"
 			                  ItemsSource="{Binding Children}">
