@@ -44,6 +44,19 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private int selectedIndex = -1;
 
+    partial void OnSelectedIndexChanging(int oldValue, int newValue)
+    {
+        if (oldValue >= 0)
+        {
+            OpenedClusters[oldValue].IsCurrent = false;
+        }
+    }
+    
+    partial void OnSelectedIndexChanged(int value)
+    {
+        OpenedClusters[value].IsCurrent = true;
+    }
+
     private readonly ObservableCollection<MenuItemViewModel> openClusterMenuItems = new();
     private MenuItemViewModel openMenu;
 

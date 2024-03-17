@@ -13,7 +13,7 @@ public interface ITreeNode
     }
     string Name { get; }
     NodeType Type { get; }
-    public bool IsExpanded { get; }
+    bool IsExpanded { get; set; }
     bool IsSelected { get; set; }
     ObservableCollection<ITreeNode> Children { get; }
 }

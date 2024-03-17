@@ -8,7 +8,7 @@ using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 
-public class PartitionViewModel: ViewModelBase, IMessageSource {
+public partial class PartitionViewModel: ViewModelBase, IMessageSource {
     private readonly Partition partition;
     public int Id => partition.Id;
     public string Name => partition.Name;
@@ -16,8 +16,10 @@ public class PartitionViewModel: ViewModelBase, IMessageSource {
 
     public string TopicName => topic.Name;
     public bool IsExpandable => false;
-    public bool IsExpanded { get; set; }
-    public bool IsSelected { get; set; }
+    [ObservableProperty]
+    private bool isSelected;
+    [ObservableProperty]
+    private bool isExpanded;
     public ObservableCollection<ITreeNode> Children { get; } = new();
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.PARTITION;

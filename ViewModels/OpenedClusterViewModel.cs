@@ -14,7 +14,7 @@ using Xunit;
 
 namespace KafkaLens.ViewModels;
 
-public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
+public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 {
     const int SELECTED_ITEM_DELAY_MS = 3;
 
@@ -24,6 +24,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     public static IList<string> FetchPositionsForTopic { get; } = new List<string>();
     public static IList<string> FetchPositionsForPartition { get; } = new List<string>();
     public IList<string> fetchPositions = new List<string>();
+
     public IList<string> FetchPositions
     {
         get => fetchPositions;
@@ -32,9 +33,9 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.CLUSTER;
 
-    public bool IsSelected { get; set; }
-    public ObservableCollection<ITreeNode> Children { get; }  = new();
-    public bool IsExpanded { get; set; }
+    [ObservableProperty] private bool isSelected;
+    [ObservableProperty] private bool isExpanded;
+    public ObservableCollection<ITreeNode> Children { get; } = new();
 
     [ObservableProperty] public List<IMessageFormatter> formatters;
 
@@ -57,9 +58,8 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     public MessagesViewModel CurrentMessages { get; } = new();
     private readonly List<MessageViewModel> pendingMessages = new();
 
-    private ITreeNode? selectedNode;
-
     private ITreeNode.NodeType selectedNodeType = ITreeNode.NodeType.NONE;
+
     public ITreeNode.NodeType SelectedNodeType
     {
         get => selectedNodeType;
@@ -87,18 +87,17 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         }
     }
 
-    [ObservableProperty]
-    public DateTime startTime;
+    [ObservableProperty] public DateTime startTime;
 
     private int fontSize = 14;
+
     public int FontSize
     {
         get => fontSize;
         set => SetProperty(ref fontSize, value, true);
     }
 
-    [ObservableProperty]
-    private string? fetchPosition = null;
+    [ObservableProperty] private string? fetchPosition = null;
 
     static OpenedClusterViewModel()
     {
@@ -152,7 +151,9 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     }
 
     #region SAVE MESSAGES
+
     private const string SAVE_MESSAGES_DIR = "saved_messages";
+
     private async Task SaveAllMessagesAsRaw()
     {
         await SaveAsync(CurrentMessages.Messages, false);
@@ -210,6 +211,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     {
         return formatted ? ".txt" : ".klm";
     }
+
     #endregion
 
     private async Task UpdateFormatterAsync()
@@ -232,6 +234,10 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
 
     private IMessageFormatter DefaultFormatter { get; set; }
 
+    private ITreeNode? lastSelectedNode;
+
+    private ITreeNode? selectedNode;
+
     public ITreeNode? SelectedNode
     {
         get => selectedNode;
@@ -239,15 +245,15 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         {
             if (value == null && selectedNode != null)
             {
-                var oldValue = selectedNode;
+                lastSelectedNode = selectedNode;
                 SetProperty(ref selectedNode, value);
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
                     await Task.Delay(SELECTED_ITEM_DELAY_MS);
-                    SetProperty(ref selectedNode, oldValue);
+                    SetProperty(ref selectedNode, lastSelectedNode);
                 });
             }
-            else if (SetProperty(ref selectedNode, value))
+            if (SetProperty(ref selectedNode, value))
             {
                 SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.NONE;
 
@@ -258,7 +264,10 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
                 // FetchPosition = FetchPositions[0];
                 if (selectedNode is { Type: ITreeNode.NodeType.PARTITION } or { Type: ITreeNode.NodeType.TOPIC })
                 {
-                    FetchMessagesCommand.Execute(null);
+                    if (IsCurrent)
+                    {
+                        FetchMessagesCommand.Execute(null);
+                    }
                 }
             }
         }
@@ -267,9 +276,10 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
     public string ClusterId => cluster.Id;
     public static FormatterFactory FormatterFactory { get; set; }
     public IList<MessageViewModel> SelectedMessages { get; set; }
+    public bool IsCurrent { get; set; }
 
     MessageStream? messages = null;
-    private List<IMessageLoadListener> messageLoadListeners = new();
+    private readonly List<IMessageLoadListener> messageLoadListeners = new();
 
     private void FetchMessages()
     {
@@ -312,6 +322,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         {
             return;
         }
+
         if (node.FormatterName == null)
         {
             Assert.True(e.NewItems?.Count > 0);
@@ -319,6 +330,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
             var formatter = GuessFormatter(message);
             node.FormatterName = formatter?.Name ?? DefaultFormatter.Name;
         }
+
         //var formatter = node?.FormatterName ?? DefaultFormatter.Name;
         lock (pendingMessages)
         {
@@ -330,6 +342,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
                 viewModel.Topic = GetCurrentTopicName();
                 pendingMessages.Add(viewModel);
             }
+
             Dispatcher.UIThread.InvokeAsync(UpdateMessages);
             Log.Debug("Pending messages = {Count}", pendingMessages.Count);
         }
@@ -348,17 +361,21 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
         }
     }
 
-    private IMessageFormatter? GuessFormatter(Message message) {
+    private IMessageFormatter? GuessFormatter(Message message)
+    {
         IMessageFormatter best = null;
         int maxLength = 0;
-        foreach (var formatter in Formatters) {
+        foreach (var formatter in Formatters)
+        {
             var text = formatter.Format(message.Value, true);
             if (text == null) continue;
-            if (text.Length > maxLength) {
+            if (text.Length > maxLength)
+            {
                 maxLength = text.Length;
                 best = formatter;
             }
         }
+
         return best;
     }
 
@@ -421,6 +438,7 @@ public partial class OpenedClusterViewModel: ViewModelBase, ITreeNode
             default:
                 throw new Exception("Invalid fetch position " + FetchPosition);
         }
+
         var fetchOptions = new FetchOptions(start, end);
         fetchOptions.Limit = FetchCount;
         return fetchOptions;

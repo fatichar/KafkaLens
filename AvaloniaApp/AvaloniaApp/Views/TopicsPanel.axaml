@@ -1,18 +1,21 @@
 ﻿<UserControl x:Class="AvaloniaApp.Views.TopicsPanel"
-	xmlns="https://github.com/avaloniaui"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
-	x:DataType="vm:OpenedClusterViewModel">
-	<TreeView ItemsSource="{Binding Children}"
-	          SelectedItem="{Binding SelectedNode}"
-	          >
-		<TreeView.ItemTemplate>
-			<TreeDataTemplate x:DataType="vm:ITreeNode"
-			                  ItemsSource="{Binding Children}">
-				<TextBlock Text="{Binding Name}"
-				           Margin="0"
-				           FontSize="12"/>
-			</TreeDataTemplate>
-		</TreeView.ItemTemplate>
-	</TreeView>
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             xmlns:av="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
+             x:DataType="vm:OpenedClusterViewModel">
+    <TreeView Name="TopicsTree" ItemsSource="{Binding Children}"
+              SelectedItem="{Binding SelectedNode}">
+        <TreeView.Styles>
+            <Style Selector="av|TreeViewItem" x:DataType="vm:ITreeNode">
+                <Setter Property="IsSelected" Value="{Binding IsSelected}"/>
+                <Setter Property="IsExpanded" Value="{Binding IsExpanded}"/>
+            </Style>
+        </TreeView.Styles>
+        <TreeView.ItemTemplate>
+            <TreeDataTemplate x:DataType="vm:ITreeNode" ItemsSource="{Binding Children}">
+                <TextBlock Text="{Binding Name}" Margin="0" FontSize="12"/>
+            </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+    </TreeView>
 </UserControl>
