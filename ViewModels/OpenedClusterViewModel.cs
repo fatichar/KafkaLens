@@ -140,7 +140,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
         formatters = FormatterFactory.GetFormatters();
         FormatterNames = formatters.ConvertAll(f => f.Name);
-        DefaultFormatter = Formatters.FirstOrDefault();
+        DefaultFormatter = Formatters.FirstOrDefault() ?? new TextFormatter();
 
         IsActive = true;
     }
@@ -363,9 +363,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     private IMessageFormatter? GuessFormatter(Message message)
     {
-        IMessageFormatter best = null;
+        IMessageFormatter? best = null;
         int maxLength = 0;
-        foreach (var formatter in Formatters)
+        foreach (IMessageFormatter formatter in Formatters)
         {
             var text = formatter.Format(message.Value, true);
             if (text == null) continue;

@@ -44,8 +44,10 @@ public partial class MainView : UserControl
     private async void OnShowFolderOpenDialog()
     {
         var mainWindow = GetMainWindow();
-        var dialog = new OpenFolderDialog();
-        dialog.Title = "Select a folder";
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Select a folder"
+        };
         var result = dialog.ShowAsync(mainWindow);
         var path = await result;
         if (path == null)
