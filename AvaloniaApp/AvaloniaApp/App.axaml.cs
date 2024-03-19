@@ -43,22 +43,24 @@ public partial class App : Application
         services.AddSingleton(config);
 
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        appDataPath = Path.Combine(appDataPath, "KafkaLens");
+        var kafkaLensDataPath = Path.Combine(appDataPath, "KafkaLens");
+        // Create the directory if it doesn't exist
+        Directory.CreateDirectory(kafkaLensDataPath);
 
-        var clusterRepo = new ClusterInfoRepository(Path.Combine(appDataPath, config.ClusterInfoFilePath));
+        var clusterRepo = new ClusterInfoRepository(Path.Combine(kafkaLensDataPath, config.ClusterInfoFilePath));
         services.AddSingleton<IClusterInfoRepository>(clusterRepo);
 
-        var clientRepo = new ClientInfoRepository(Path.Combine(appDataPath, config.ClientInfoFilePath));
+        var clientRepo = new ClientInfoRepository(Path.Combine(kafkaLensDataPath, config.ClientInfoFilePath));
         services.AddSingleton<IClientInfoRepository>(clientRepo);
 
         services.AddSingleton<ISettingsService, SettingsService>();
 
-        var pluginsPath = Path.Combine(appDataPath, "Plugins");
+        var pluginsPath = Path.Combine(kafkaLensDataPath, "Plugins");
         var pluginsDir = Directory.CreateDirectory(pluginsPath);
         AddLocalDependencies(services, clusterRepo, pluginsDir);
 
-        var formatterFactory = new FormatterFactory(pluginsPath);
-        services.AddSingleton(formatterFactory);
+        FormatterFactory.AddFromPath(pluginsPath);
+        services.AddSingleton(FormatterFactory.Instance);
 
         // services.AddSingleton<ConsumerFactory>();
         services.AddSingleton<IClusterFactory, ClusterFactory>();

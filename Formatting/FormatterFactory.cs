@@ -5,19 +5,25 @@ namespace KafkaLens.Formatting;
 
 public class FormatterFactory
 {
-    public static FormatterFactory Instance { get; private set; }
+    public static FormatterFactory Instance { get; }
     private readonly IDictionary<string, IMessageFormatter> formatters = new Dictionary<string, IMessageFormatter>();
 
-    public FormatterFactory(string pluginsPath)
+    static FormatterFactory()
+    {
+        Instance = new FormatterFactory();
+    }
+
+    private FormatterFactory()
     {
         formatters.Add("Json", new JsonFormatter());
         formatters.Add("Text", new TextFormatter());
+    }
 
+    public static void AddFromPath(string pluginsPath)
+    {
         var formattersPath = Path.Combine(pluginsPath, "Formatters");
         var formattersDir = Directory.CreateDirectory(formattersPath);
-        AddFormatters(formattersDir);
-
-        Instance = this;
+        Instance.AddFormatters(formattersDir);
     }
 
     public IMessageFormatter GetFormatter(string name)
@@ -25,7 +31,7 @@ public class FormatterFactory
         return formatters[name];
     }
 
-    public void AddFormatter(IMessageFormatter formatter)
+    private void AddFormatter(IMessageFormatter formatter)
     {
         formatters.Add(formatter.Name, formatter);
     }
