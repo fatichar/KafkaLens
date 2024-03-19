@@ -12,7 +12,7 @@ AppPublisher=Pravin Chaudhary
 AppPublisherURL=https://www.kafkalens.com/
 AppSupportURL=https://www.kafkalens.com/
 AppUpdatesURL=https://www.kafkalens.com/
-DefaultDirName={autopf}\KafkaLens
+DefaultDirName={pf64}\KafkaLens
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
@@ -39,4 +39,3 @@ Name: "{autodesktop}\KafkaLens"; Filename: "{app}\KafkaLensApp.exe"; Tasks: desk
 
 [Run]
 Filename: "{app}\KafkaLensApp.exe"; Description: "{cm:LaunchProgram,KafkaLens}"; Flags: nowait postinstall skipifsilent
-
