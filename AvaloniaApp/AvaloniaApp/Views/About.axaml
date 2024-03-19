@@ -2,16 +2,36 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+        xmlns:actipro="http://schemas.actiprosoftware.com/avaloniaui"
         mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
         x:Class="AvaloniaApp.Views.About"
         Title="About KafkaLens"
-        Width="300" Height="400" Position="500, 500">
+        x:DataType="vm:MainViewModel"
+        Width="250" Height="200" Position="500, 500">
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
     <StackPanel HorizontalAlignment="Center" Spacing="10">
-        <TextBlock FontSize="24" Text="KafkaLens" />
-        <TextBlock Text="Version: 0.1.0" />
-        <TextBlock/>
-        <TextBlock Text="Author: Pravin Chaudhary" />
-        <TextBlock Text="www.KafkaLens.com" />
-        <!-- <controls:Hyperlink Url="www.KafkaLens.com" Alias=""/> -->
+        <TextBlock FontSize="24" Text="KafkaLens" HorizontalAlignment="Center"/>
+        <TextBlock Text="Version: 0.2.0" HorizontalAlignment="Center"/>
+        <TextBlock />
+        <TextBlock Text="Copyright © 2024: Pravin Chaudhary" HorizontalAlignment="Center"/>
+        <actipro:HyperlinkTextBlock x:Name="ProductUrl" HorizontalAlignment="Center"
+                                    Text="Product Page ↗"
+                                    Click="Url_OnClick"
+                                    CommandParameter="https://www.KafkaLens.com"
+                                    Cursor="Hand"
+                                    TextDecorations="Underline"
+                                    Foreground="RoyalBlue"
+                                    x:CompileBindings="False"/>
+        <actipro:HyperlinkTextBlock x:Name="ProjectUrl" HorizontalAlignment="Center"
+                                    Text="GitHub Page ↗"
+                                    Click="Url_OnClick"
+                                    CommandParameter="https://github.com/fatichar/KafkaLens"
+                                    Cursor="Hand"
+                                    TextDecorations="Underline"
+                                    Foreground="RoyalBlue"
+                                    x:CompileBindings="False"/>
     </StackPanel>
 </Window>
