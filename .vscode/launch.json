@@ -6,10 +6,10 @@
             "name": ".NET Core Launch (console)",
             "type": "coreclr",
             "request": "launch",
-            // "preLaunchTask": "build",
-            "program": "${workspaceFolder}/KafkaLens.Skia.Gtk/bin/Debug/net6.0/KafkaLens.Skia.Gtk.dll",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/AvaloniaApp/AvaloniaApp.Desktop/bin/Debug/net8.0/win-x64/KafkaLensApp.exe",
             "args": [],
-            "cwd": "${workspaceFolder}/KafkaLens.Skia.Gtk/bin/Debug/net6.0/",
+            "cwd": "${workspaceFolder}/AvaloniaApp/AvaloniaApp.Desktop/bin/Debug/net8.0/win-x64",
             "stopAtEntry": false,
             "console": "internalConsole"
         }
