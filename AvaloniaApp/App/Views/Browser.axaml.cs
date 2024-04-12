@@ -41,7 +41,7 @@ public partial class Browser : UserControl
 
     private void MessagesGrid_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        var grid = (DataGrid)sender;
+        var grid = (DataGrid)sender!;
         dataContext.SelectedMessages = grid.SelectedItems.Cast<MessageViewModel>().ToList();
         var message = (MessageViewModel?)grid.SelectedItem;
         if (message != null)
@@ -52,6 +52,7 @@ public partial class Browser : UserControl
         {
             SetText("");
         }
+        MessagesGrid.ScrollIntoView(grid.SelectedItem, null);
     }
 
     private void SetText(string message)
