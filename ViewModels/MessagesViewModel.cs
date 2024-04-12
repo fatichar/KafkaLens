@@ -8,8 +8,8 @@ public sealed class MessagesViewModel: ViewModelBase
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
     public ObservableCollection<MessageViewModel> Filtered { get; } = new();
 
-    private MessageViewModel currentMessage;
-    public MessageViewModel CurrentMessage
+    private MessageViewModel? currentMessage;
+    public MessageViewModel? CurrentMessage
     {
         get => currentMessage;
         set
@@ -95,7 +95,7 @@ public sealed class MessagesViewModel: ViewModelBase
 
         foreach (var message in Messages)
         {
-            if (FilterAccepts(message.DecodedMessage))
+            if (FilterAccepts(message.DisplayText))
             {
                 Filtered.Add(message);
             }

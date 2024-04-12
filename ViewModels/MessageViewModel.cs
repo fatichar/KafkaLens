@@ -16,7 +16,6 @@ public sealed partial class MessageViewModel : ViewModelBase
     public string? Key => message.KeyText;
     public string Summary { get; set; }
     public string DecodedMessage { get; set; }
-    public string FormattedMessage { get; set; }
 
     public string Timestamp
     {
@@ -56,7 +55,8 @@ public sealed partial class MessageViewModel : ViewModelBase
         IsActive = true;
     }
 
-    [ObservableProperty] private string displayText;
+    [ObservableProperty]
+    private string displayText;
 
     private string lineFilter = "";
 
