@@ -23,9 +23,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrpcClient", "GrpcClient\Gr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Formatting", "Formatting\Formatting.csproj", "{705EE6D1-ADAE-418B-8BE4-964CB3EC2571}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaApp", "AvaloniaApp\AvaloniaApp\AvaloniaApp.csproj", "{744399A2-40EA-423E-8071-A9D9D60D27E7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "App", "AvaloniaApp\App\App.csproj", "{744399A2-40EA-423E-8071-A9D9D60D27E7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaApp.Desktop", "AvaloniaApp\AvaloniaApp.Desktop\AvaloniaApp.Desktop.csproj", "{08CF47D2-8FA0-4723-9E7D-6250829C1565}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopApp", "AvaloniaApp\DesktopApp\DesktopApp.csproj", "{08CF47D2-8FA0-4723-9E7D-6250829C1565}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
