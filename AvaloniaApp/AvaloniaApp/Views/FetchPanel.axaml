@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AvaloniaApp.Views.FetchPanel"
+<UserControl x:Class="AvaloniaApp.Views.FetchPanel"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
@@ -7,10 +7,11 @@
     <UserControl.Resources>
         <avaloniaApp:FetchPositionConverter x:Key="IsTimestampPosition" />
     </UserControl.Resources>
-    <Grid Margin="5" RowDefinitions="1*, 1*, 1*, 1*, *" ColumnDefinitions="2*, 5*"
+    <Grid Margin="5" RowDefinitions="Auto, Auto, Auto, Auto, *" ColumnDefinitions="Auto, *"
           VerticalAlignment="Top">
         <Label Grid.Row="0" Grid.Column="0"
-               Width="NaN" HorizontalAlignment="Stretch" Margin="5">
+               VerticalAlignment="Center"
+               Margin="5">
             From
         </Label>
         <ComboBox Grid.Row="0" Grid.Column="1" Margin="5"
@@ -19,12 +20,25 @@
                   SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
         </ComboBox>
 
-        <TextBox Grid.Row="1" Grid.Column="1"
-                       HorizontalAlignment="Stretch"
-                       Margin="5" IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}}"
-                       Text="{Binding StartTimeText}" />
+        <StackPanel Grid.Row="1" Grid.Column="1" 
+                  Orientation="Vertical" Spacing="8"
+                  IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}}"
+                  MinWidth="160"
+                  Margin="5">
+            <CalendarDatePicker Name="StartDatePicker"
+                              SelectedDate="{Binding StartTime, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch"
+                              MinWidth="160"/>
+            <TextBox Name="TimeTextBox"
+                    Text="{Binding StartTimeText}"
+                    Watermark="HH:mm:ss"
+                    MinWidth="80"
+                    HorizontalAlignment="Stretch"/>
+        </StackPanel>
 
-        <Label Grid.Row="2" Grid.Column="0" Margin="5">Count</Label>
+        <Label Grid.Row="2" Grid.Column="0" 
+               VerticalAlignment="Center"
+               Margin="5">Count</Label>
         <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="0"
                   ItemsSource="{Binding FetchCounts}" Margin="5"
                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"

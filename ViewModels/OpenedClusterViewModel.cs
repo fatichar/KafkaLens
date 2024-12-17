@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
@@ -39,7 +39,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     [ObservableProperty] public List<IMessageFormatter> formatters;
 
-
     [ObservableProperty] public ICollection<string> formatterNames;
 
     public RelayCommand FetchMessagesCommand { get; }
@@ -79,15 +78,33 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         {
             if (SetProperty(ref startTimeText, value))
             {
-                if (DateTime.TryParse(startTimeText, out DateTime time))
+                if (TimeSpan.TryParse(startTimeText, out TimeSpan time))
                 {
-                    StartTime = time;
+                    StartTime = StartTime.Date + time;
                 }
             }
         }
     }
 
-    [ObservableProperty] public DateTime startTime;
+    private DateTime startTime;
+    public DateTime StartTime
+    {
+        get => startTime;
+        set
+        {
+            var currentTime = startTime.TimeOfDay;
+            if (SetProperty(ref startTime, value))
+            {
+                // Preserve the time when date changes
+                startTime = value.Date + currentTime;
+            }
+        }
+    }
+
+    // partial void OnStartTimeChanged(DateTime value)
+    // {
+    //     StartTimeText = value.ToString("HH:mm:ss");
+    // }
 
     private int fontSize = 14;
 
@@ -147,7 +164,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     private void UpdateStartTimeText()
     {
-        StartTimeText = StartTime.ToShortDateString() + " " + StartTime.ToLongTimeString();
+        StartTimeText = StartTime.ToString("HH:mm:ss");
     }
 
     #region SAVE MESSAGES

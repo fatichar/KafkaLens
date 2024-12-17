@@ -15,7 +15,7 @@
         <Button Name="OpenSettingsButton" DockPanel.Dock="Bottom" HorizontalAlignment="Right"
                 Click="OpenSettingsButton_OnClick">Open Settings dir...</Button>
         <Grid Margin="10, 10" RowDefinitions="Auto,*,Auto,*">
-            <Grid Grid.Row="0" RowDefinitions="*,*,*" ColumnDefinitions="3*,9*,*" Margin="0, 10">
+            <Grid Grid.Row="0" RowDefinitions="*,*,*" ColumnDefinitions="2*,7*,*" Margin="0, 10">
                 <Label Grid.Row="0" Grid.Column="0" Margin="0, 0, 0, 0">Cluster Name</Label>
                 <Label Grid.Row="0" Grid.Column="1" Margin="5, 0, 0, 0">Bootstrap Servers</Label>
                 <TextBox Grid.Row="1" Grid.Column="0" Name="NameBox" Margin="0, 0"
