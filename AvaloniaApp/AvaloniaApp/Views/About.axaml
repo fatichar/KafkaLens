@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -8,30 +8,62 @@
         x:Class="AvaloniaApp.Views.About"
         Title="About KafkaLens"
         x:DataType="vm:MainViewModel"
-        Width="250" Height="200" Position="500, 500">
+        Width="400" Height="300"
+        WindowStartupLocation="CenterOwner"
+        Background="#f8f9fa"
+        CanResize="False">
     <Design.DataContext>
         <vm:MainViewModel />
     </Design.DataContext>
-    <StackPanel HorizontalAlignment="Center" Spacing="10">
-        <TextBlock FontSize="24" Text="KafkaLens" HorizontalAlignment="Center"/>
-        <TextBlock Text="Version: 0.2.0" HorizontalAlignment="Center"/>
-        <TextBlock />
-        <TextBlock Text="Copyright © 2024: Pravin Chaudhary" HorizontalAlignment="Center"/>
-        <actipro:HyperlinkTextBlock x:Name="ProductUrl" HorizontalAlignment="Center"
-                                    Text="Product Page ↗"
-                                    Click="Url_OnClick"
-                                    CommandParameter="https://www.KafkaLens.com"
-                                    Cursor="Hand"
-                                    TextDecorations="Underline"
-                                    Foreground="RoyalBlue"
-                                    x:CompileBindings="False"/>
-        <actipro:HyperlinkTextBlock x:Name="ProjectUrl" HorizontalAlignment="Center"
-                                    Text="GitHub Page ↗"
-                                    Click="Url_OnClick"
-                                    CommandParameter="https://github.com/fatichar/KafkaLens"
-                                    Cursor="Hand"
-                                    TextDecorations="Underline"
-                                    Foreground="RoyalBlue"
-                                    x:CompileBindings="False"/>
-    </StackPanel>
+    <Border Padding="20">
+        <StackPanel HorizontalAlignment="Center" Spacing="15">
+            <!-- Logo/Icon -->
+            <Viewbox Width="64" Height="64">
+                <Image Source="/Assets/logo.png" />
+            </Viewbox>
+            
+            <!-- App Title -->
+            <TextBlock FontSize="28" 
+                     FontWeight="SemiBold" 
+                     Text="KafkaLens" 
+                     HorizontalAlignment="Center"
+                     Foreground="#212529"/>
+            
+            <!-- Version -->
+            <TextBlock Text="Version: 0.2.0" 
+                     HorizontalAlignment="Center" 
+                     Opacity="0.8"
+                     Margin="0,0,0,10"/>
+            
+            <!-- Links -->
+            <StackPanel Spacing="8">
+                <actipro:HyperlinkTextBlock x:Name="ProductUrl" 
+                                        HorizontalAlignment="Center"
+                                        Text="Product Page ↗"
+                                        Click="Url_OnClick"
+                                        CommandParameter="https://www.KafkaLens.com"
+                                        Cursor="Hand"
+                                        FontSize="14"
+                                        Foreground="#0d6efd"
+                                        x:CompileBindings="False"/>
+                
+                <actipro:HyperlinkTextBlock x:Name="ProjectUrl" 
+                                        HorizontalAlignment="Center"
+                                        Text="GitHub Page ↗"
+                                        Click="Url_OnClick"
+                                        CommandParameter="https://github.com/fatichar/KafkaLens"
+                                        Cursor="Hand"
+                                        FontSize="14"
+                                        Foreground="#0d6efd"
+                                        x:CompileBindings="False"/>
+            </StackPanel>
+            
+            <!-- Copyright -->
+            <TextBlock Text="Copyright 2024: Pravin Chaudhary" 
+                     HorizontalAlignment="Center"
+                     Margin="0,10,0,0"
+                     Opacity="0.7"
+                     FontSize="12"/>
+        </StackPanel>
+    </Border>
 </Window>

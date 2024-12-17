@@ -5,7 +5,7 @@
         xmlns:views="clr-namespace:AvaloniaApp.Views"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="AvaloniaApp.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/logo.png"
         Title="KafkaLens">
         <views:MainView />
 </Window>
