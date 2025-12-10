@@ -9,7 +9,7 @@ namespace AvaloniaApp.Views;
 
 public partial class Browser : UserControl
 {
-    private OpenedClusterViewModel dataContext => (OpenedClusterViewModel)DataContext;
+    private OpenedClusterViewModel Context => (OpenedClusterViewModel)DataContext!;
     private string messageTablePositiveFilter = "";
     private string messageTableNegativeFilter = "";
 
@@ -21,7 +21,7 @@ public partial class Browser : UserControl
 
         MessageDisplayToolbar.FilterBox.TextChanged += (s, e) =>
         {
-            var message = dataContext?.CurrentMessages?.CurrentMessage;
+            var message = Context.CurrentMessages.CurrentMessage;
             if (message != null)
             {
                 SetText(message.DisplayText);
@@ -30,10 +30,20 @@ public partial class Browser : UserControl
 
         MessageDisplayToolbar.FormatterCombo.SelectionChanged += (s, e) =>
         {
-            var message = dataContext?.CurrentMessages?.CurrentMessage;
+            var message = Context?.CurrentMessages?.CurrentMessage;
             if (message != null && MessageDisplayToolbar.FormatterCombo.SelectedItem != null)
             {
                 message.FormatterName = MessageDisplayToolbar.FormatterCombo.SelectedItem.ToString();
+                SetText(message.DisplayText);
+            }
+        };
+
+        MessageDisplayToolbar.ObjectFilterCheckBox.IsCheckedChanged += (s, e) =>
+        {
+            var message = Context?.CurrentMessages?.CurrentMessage;
+            if (message != null)
+            {
+                message.UseObjectFilter = MessageDisplayToolbar.ObjectFilterCheckBox.IsChecked ?? false;
                 SetText(message.DisplayText);
             }
         };
@@ -42,7 +52,7 @@ public partial class Browser : UserControl
     private void MessagesGrid_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         var grid = (DataGrid)sender;
-        dataContext.SelectedMessages = grid.SelectedItems.Cast<MessageViewModel>().ToList();
+        Context.SelectedMessages = grid.SelectedItems.Cast<MessageViewModel>().ToList();
         var message = (MessageViewModel?)grid.SelectedItem;
         if (message != null)
         {

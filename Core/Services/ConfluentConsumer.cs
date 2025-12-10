@@ -8,7 +8,7 @@ namespace KafkaLens.Core.Services;
 
 class ConfluentConsumer : ConsumerBase, IDisposable
 {
-    private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(5);
+    private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(10);
     private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
     private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(5);
 
@@ -243,7 +243,18 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         lock(Consumer)
         {
             Log.Debug("Querying watermark offsets for {TopicPartitions}", tps);
-            return tps.ConvertAll(tp => Consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout));
+            return tps.ConvertAll(tp =>
+            {
+                try
+                {
+                    return Consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            });
         }
     }
 

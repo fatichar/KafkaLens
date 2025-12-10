@@ -92,7 +92,7 @@ public partial class MainViewModel : ViewModelBase
 
         if (Clusters.Count > 0)
         {
-            OpenCluster(Clusters[0].Id);
+            // OpenCluster(Clusters[0].Id);
         }
     }
 

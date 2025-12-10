@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using KafkaLens.Shared.Models;
 using KafkaLens.Formatting;
 
@@ -58,14 +58,25 @@ public sealed partial class MessageViewModel : ViewModelBase
 
     [ObservableProperty] private string displayText;
 
-    private string lineFilter = "";
+    private string filterText = "";
+    private bool useObjectFilter = true;
+
+    public bool UseObjectFilter
+    {
+        get => useObjectFilter;
+        set
+        {
+            useObjectFilter = value;
+            UpdateText();
+        }
+    }
 
     public string LineFilter
     {
-        get => lineFilter;
+        get => filterText;
         set
         {
-            lineFilter = value;
+            filterText = value;
             UpdateText();
         }
     }
@@ -74,7 +85,7 @@ public sealed partial class MessageViewModel : ViewModelBase
 
     private void UpdateText()
     {
-        DisplayText = formatter.Format(message.Value, lineFilter) ?? DecodedMessage;
+        DisplayText = formatter.Format(message.Value ?? [], filterText, useObjectFilter) ?? DecodedMessage;
     }
 
     public void PrettyFormat()

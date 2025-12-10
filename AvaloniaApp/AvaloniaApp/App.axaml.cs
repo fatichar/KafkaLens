@@ -62,6 +62,12 @@ public partial class App : Application
         FormatterFactory.AddFromPath(pluginsPath);
         services.AddSingleton(FormatterFactory.Instance);
 
+        services.AddSingleton(new MessageViewOptions
+            {
+                FormatterName = FormatterFactory.Instance.DefaultFormatter.Name
+            }
+        );
+
         // services.AddSingleton<ConsumerFactory>();
         services.AddSingleton<IClusterFactory, ClusterFactory>();
         services.AddSingleton<IClientFactory, ClientFactory>();

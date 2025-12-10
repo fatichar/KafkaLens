@@ -9,7 +9,7 @@ public class JsonFormatter : IMessageFormatter
     const char INDENT_CHAR = ' ';
     const int INDENT_SIZE = 4;
 
-    public string? Format(byte[] data, string searchText)
+    public string? Format(byte[] data, string searchText, bool useObjectFilter = true)
     {
         if (string.IsNullOrWhiteSpace(searchText))
         {
@@ -24,6 +24,11 @@ public class JsonFormatter : IMessageFormatter
 
         try
         {
+            if (!useObjectFilter)
+            {
+                return FilterLines(text, searchText);
+            }
+
             var jObject = JObject.Parse(text);
             StringWriter stringWriter = new StringWriter();
             using (StringWriter sw = stringWriter)
@@ -34,8 +39,8 @@ public class JsonFormatter : IMessageFormatter
                     jw.IndentChar = INDENT_CHAR;
                     jw.Indentation = INDENT_SIZE;
 
-                    Filter(jObject, searchText);
-                    
+                    FilterObjects(jObject, searchText);
+
                     jObject.WriteTo(jw);
                 }
             }
@@ -50,7 +55,23 @@ public class JsonFormatter : IMessageFormatter
         }
     }
 
-    private void Filter(JObject jObject, string searchText)
+    private string? FilterLines(string text, string searchText)
+    {
+        try
+        {
+            var jObject = JObject.Parse(text);
+            var formatted = jObject.ToString(Newtonsoft.Json.Formatting.Indented);
+            var lines = formatted.Split('\n');
+            var filteredLines = lines.Where(line => line.ToLowerInvariant().Contains(searchText));
+            return string.Join("\n", filteredLines);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private void FilterObjects(JObject jObject, string searchText)
     {
         var tokens = GetTokens(jObject);
 
@@ -70,7 +91,7 @@ public class JsonFormatter : IMessageFormatter
             }
             else if (pair.Value is JObject jObj)
             {
-                Filter(jObj, searchText);
+                FilterObjects(jObj, searchText);
                 if (jObj.Count == 0)
                 {
                     jObject.Remove(pair.Key);
@@ -131,7 +152,7 @@ public class JsonFormatter : IMessageFormatter
         {
             if (item is JObject jObj)
             {
-                Filter(jObj, searchText);
+                FilterObjects(jObj, searchText);
                 if (jObj.Count == 0)
                 {
                     jArray.Remove(item);

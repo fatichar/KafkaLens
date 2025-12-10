@@ -1,4 +1,4 @@
-﻿namespace KafkaLens.Formatting;
+namespace KafkaLens.Formatting;
 
 public interface IMessageFormatter
 {
@@ -6,5 +6,5 @@ public interface IMessageFormatter
 
     public string? Format(byte[] data, bool prettyPrint);
     // public string? Format(string objBody);
-    string? Format(byte[] data, string searchText);
+    string? Format(byte[] data, string searchText, bool useObjectFilter = true);
 }

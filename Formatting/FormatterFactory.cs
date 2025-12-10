@@ -7,6 +7,8 @@ public class FormatterFactory
 {
     public static FormatterFactory Instance { get; }
     private readonly IDictionary<string, IMessageFormatter> formatters = new Dictionary<string, IMessageFormatter>();
+    private const string Json = "Json";
+    private const string Text = "Text";
 
     static FormatterFactory()
     {
@@ -15,9 +17,11 @@ public class FormatterFactory
 
     private FormatterFactory()
     {
-        formatters.Add("Json", new JsonFormatter());
-        formatters.Add("Text", new TextFormatter());
+        formatters.Add(Json, new JsonFormatter());
+        formatters.Add(Text, new TextFormatter());
     }
+
+    public IMessageFormatter DefaultFormatter => formatters[Json];
 
     public static void AddFromPath(string pluginsPath)
     {

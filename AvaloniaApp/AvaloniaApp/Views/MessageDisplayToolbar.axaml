@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AvaloniaApp.Views.MessageDisplayToolbar"
+<UserControl x:Class="AvaloniaApp.Views.MessageDisplayToolbar"
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
@@ -14,13 +14,14 @@
 			<Label Content="Filter" VerticalAlignment="Center"/>
 			<TextBox x:Name="FilterBox" MinWidth="300" VerticalAlignment="Center"
 			         Text="{Binding CurrentMessages.LineFilter, Mode=TwoWay}" />
+			<CheckBox Name="ObjectFilterCheckBox" Content="Use Object Filter" Margin="5,0,0,0" VerticalAlignment="Center"
+			          IsChecked="{Binding CurrentMessages.CurrentMessage.UseObjectFilter, Mode=OneWay}"/>
 		</WrapPanel>
 		<WrapPanel Grid.Column="2" VerticalAlignment="Center">
 			<Label Content="Format" VerticalAlignment="Center"/>
 			<ComboBox x:Name="FormatterCombo" Margin="5" Width="200" VerticalAlignment="Center"
 			          ItemsSource="{Binding FormatterNames}"
-			          SelectedItem="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=OneWay}"
-			/>
+			          SelectedItem="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=OneWay}"/>
 		</WrapPanel>
 		<WrapPanel Grid.Column="3" VerticalAlignment="Center">
 			<Label Content="Zoom" VerticalAlignment="Center"/>
