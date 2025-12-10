@@ -16,10 +16,6 @@ public class SavedMessagesClient : ISavedMessagesClient
     // key = clusterInfo id, value = kafka consumer
     private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
 
-    public SavedMessagesClient()
-    {
-    }
-
     #region Create
 
     public string Name { get; } = "Saved Messages";

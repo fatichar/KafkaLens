@@ -26,14 +26,16 @@ public partial class About : Window
             OpenUrl(url);
         }
     }
-    
-    public void OpenUrl(object urlObj)
+
+    private void OpenUrl(object urlObj)
     {
         var url = urlObj as string;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             //https://stackoverflow.com/a/2796367/241446
-            using var proc = new Process { StartInfo = { UseShellExecute = true, FileName = url } };
+            using var proc = new Process();
+            proc.StartInfo.UseShellExecute = true;
+            proc.StartInfo.FileName = url;
             proc.Start();
 
             return;
@@ -45,8 +47,12 @@ public partial class About : Window
             return;
         }
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) throw new ArgumentException("invalid url: " + url);
-        Process.Start("open", url);
-        return;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Process.Start("open", url);
+            return;
+        }
+
+        throw new ArgumentException("invalid url: " + url);
     }
 }
