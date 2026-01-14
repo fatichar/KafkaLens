@@ -57,62 +57,47 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public MessagesViewModel CurrentMessages { get; } = new();
     private readonly List<MessageViewModel> pendingMessages = new();
 
-    private ITreeNode.NodeType selectedNodeType = ITreeNode.NodeType.NONE;
-
     public ITreeNode.NodeType SelectedNodeType
     {
-        get => selectedNodeType;
-        set => SetProperty(ref selectedNodeType, value);
-    }
+        get;
+        set => SetProperty(ref field, value);
+    } = ITreeNode.NodeType.NONE;
 
     public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
     public int FetchCount { get; set; } = 10;
     public string? StartOffset { get; }
 
-    private string startTimeText;
+    private TimeOnly startTime;
+    [ObservableProperty]
+    private bool isStartTimeValid = true;
 
     public string StartTimeText
     {
-        get => startTimeText;
+        get;
         set
         {
-            if (SetProperty(ref startTimeText, value))
+            if (SetProperty(ref field, value))
             {
-                if (TimeSpan.TryParse(startTimeText, out TimeSpan time))
+                IsStartTimeValid = TimeOnly.TryParse(field, out TimeOnly time);
+                if (IsStartTimeValid)
                 {
-                    StartTime = StartTime.Date + time;
+                    startTime = time;
+                    UpdateStartTimeText();
                 }
             }
         }
     }
 
-    private DateTime startTime;
-    public DateTime StartTime
-    {
-        get => startTime;
-        set
-        {
-            var currentTime = startTime.TimeOfDay;
-            if (SetProperty(ref startTime, value))
-            {
-                // Preserve the time when date changes
-                startTime = value.Date + currentTime;
-            }
-        }
-    }
+    [ObservableProperty]
+    private DateTime startDate;
 
-    // partial void OnStartTimeChanged(DateTime value)
-    // {
-    //     StartTimeText = value.ToString("HH:mm:ss");
-    // }
-
-    private int fontSize = 14;
+    private DateTime StartDateTime => StartDate.Date + startTime.ToTimeSpan();
 
     public int FontSize
     {
-        get => fontSize;
-        set => SetProperty(ref fontSize, value, true);
-    }
+        get;
+        set => SetProperty(ref field, value, true);
+    } = 14;
 
     [ObservableProperty] private string? fetchPosition = null;
 
@@ -149,7 +134,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         IsSelected = true;
         IsExpanded = true;
 
-        StartTime = DateTime.Now;
+        StartDate = DateTime.Now.Date;
+        startTime = TimeOnly.FromDateTime(DateTime.Now);
         UpdateStartTimeText();
 
         FetchPositions = FetchPositionsForTopic;
@@ -164,7 +150,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     private void UpdateStartTimeText()
     {
-        StartTimeText = StartTime.ToString("HH:mm:ss");
+        var updated = startTime.ToString("HH:mm:ss");
+        if (!updated.Equals(StartTimeText))
+        {
+            StartTimeText = updated;
+        }
     }
 
     #region SAVE MESSAGES
@@ -251,8 +241,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     private IMessageFormatter DefaultFormatter { get; set; }
 
-    private ITreeNode? lastSelectedNode;
-
     private ITreeNode? selectedNode;
 
     public ITreeNode? SelectedNode
@@ -262,12 +250,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         {
             if (value == null && selectedNode != null)
             {
-                lastSelectedNode = selectedNode;
+                field = selectedNode;
                 SetProperty(ref selectedNode, value);
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
                     await Task.Delay(SELECTED_ITEM_DELAY_MS);
-                    SetProperty(ref selectedNode, lastSelectedNode);
+                    SetProperty(ref selectedNode, field);
                 });
             }
             if (SetProperty(ref selectedNode, value))
@@ -445,8 +433,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                 start = Shared.Models.FetchPosition.START;
                 break;
             case "Timestamp":
-                var timeStamp = StartTime;
-                var epochMs = (long)(timeStamp.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
+                var epochMs = (long)(StartDateTime.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
                 start = new(PositionType.TIMESTAMP, epochMs);
                 break;
             case "Offset":

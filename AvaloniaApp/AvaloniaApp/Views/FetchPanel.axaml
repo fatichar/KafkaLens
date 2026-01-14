@@ -20,23 +20,36 @@
                   SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
         </ComboBox>
 
-        <StackPanel Grid.Row="1" Grid.Column="1" 
+        <StackPanel Grid.Row="1" Grid.Column="1"
                   Orientation="Vertical" Spacing="8"
                   IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}}"
                   MinWidth="160"
                   Margin="5">
             <CalendarDatePicker Name="StartDatePicker"
-                              SelectedDate="{Binding StartTime, Mode=TwoWay}"
+                              SelectedDate="{Binding StartDate, Mode=TwoWay}"
                               HorizontalAlignment="Stretch"
                               MinWidth="160"/>
-            <TextBox Name="TimeTextBox"
-                    Text="{Binding StartTimeText}"
-                    Watermark="HH:mm:ss"
-                    MinWidth="80"
-                    HorizontalAlignment="Stretch"/>
+            <StackPanel Orientation="Vertical" Spacing="4">
+                <TextBox Name="TimeTextBox"
+                         Text="{Binding StartTimeText}"
+                         Watermark="HH:mm:ss"
+                         MinWidth="80"
+                         HorizontalAlignment="Stretch">
+                    <TextBox.Styles>
+                        <Style Selector="TextBox.error">
+                            <Setter Property="BorderBrush" Value="#FF4444"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                        </Style>
+                    </TextBox.Styles>
+                </TextBox>
+                <TextBlock Text="Invalid time format (HH:mm:ss)"
+                           Foreground="#FF4444"
+                           FontSize="11"
+                           IsVisible="{Binding !IsStartTimeValid}"/>
+            </StackPanel>
         </StackPanel>
 
-        <Label Grid.Row="2" Grid.Column="0" 
+        <Label Grid.Row="2" Grid.Column="0"
                VerticalAlignment="Center"
                Margin="5">Count</Label>
         <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="0"
