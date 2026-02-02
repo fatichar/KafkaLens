@@ -7,9 +7,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/AvaloniaApp/AvaloniaApp.Desktop/bin/Debug/net8.0/win-x64/KafkaLensApp.exe",
+            "program": "${workspaceFolder}/AvaloniaApp/AvaloniaApp.Desktop/bin/Debug/net10.0/win-x64/KafkaLensApp.exe",
             "args": [],
-            "cwd": "${workspaceFolder}/AvaloniaApp/AvaloniaApp.Desktop/bin/Debug/net8.0/win-x64",
+            "cwd": "${workspaceFolder}/AvaloniaApp/AvaloniaApp.Desktop/bin/Debug/net10.0/win-x64",
             "stopAtEntry": false,
             "console": "internalConsole"
         }

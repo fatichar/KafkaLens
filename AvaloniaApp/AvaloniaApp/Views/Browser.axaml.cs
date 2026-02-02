@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
 using AvaloniaEdit.Document;
@@ -9,9 +10,10 @@ namespace AvaloniaApp.Views;
 
 public partial class Browser : UserControl
 {
-    private OpenedClusterViewModel Context => (OpenedClusterViewModel)DataContext!;
+    private OpenedClusterViewModel? Context => (OpenedClusterViewModel?)DataContext;
     private string messageTablePositiveFilter = "";
     private string messageTableNegativeFilter = "";
+    private MessageViewModel? subscribedMessage;
 
     public Browser()
     {
@@ -19,49 +21,66 @@ public partial class Browser : UserControl
 
         UpdateHighlighting();
 
-        MessageDisplayToolbar.FilterBox.TextChanged += (s, e) =>
+        // Subscribe to CurrentMessage changes to update TextEditor
+        this.PropertyChanged += (s, e) =>
         {
-            var message = Context.CurrentMessages.CurrentMessage;
-            if (message != null)
+            if (e.Property.Name == nameof(DataContext))
             {
-                SetText(message.DisplayText);
-            }
-        };
-
-        MessageDisplayToolbar.FormatterCombo.SelectionChanged += (s, e) =>
-        {
-            var message = Context?.CurrentMessages?.CurrentMessage;
-            if (message != null && MessageDisplayToolbar.FormatterCombo.SelectedItem != null)
-            {
-                message.FormatterName = MessageDisplayToolbar.FormatterCombo.SelectedItem.ToString();
-                SetText(message.DisplayText);
-            }
-        };
-
-        MessageDisplayToolbar.ObjectFilterCheckBox.IsCheckedChanged += (s, e) =>
-        {
-            var message = Context?.CurrentMessages?.CurrentMessage;
-            if (message != null)
-            {
-                message.UseObjectFilter = MessageDisplayToolbar.ObjectFilterCheckBox.IsChecked ?? false;
-                SetText(message.DisplayText);
+                OnDataContextChanged();
             }
         };
     }
 
+    private void OnDataContextChanged()
+    {
+        if (Context != null)
+        {
+            Context.CurrentMessages.PropertyChanged += OnCurrentMessagesChanged;
+        }
+    }
+
+    private void OnCurrentMessagesChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Context.CurrentMessages.CurrentMessage))
+        {
+            // Unsubscribe from previous message
+            if (subscribedMessage != null)
+            {
+                subscribedMessage.PropertyChanged -= OnCurrentMessagePropertyChanged;
+            }
+
+            var message = Context?.CurrentMessages?.CurrentMessage;
+            if (message != null)
+            {
+                // Subscribe to DisplayText changes
+                subscribedMessage = message;
+                message.PropertyChanged += OnCurrentMessagePropertyChanged;
+                SetText(message.DisplayText);
+            }
+            else
+            {
+                subscribedMessage = null;
+            }
+        }
+    }
+
+    private void OnCurrentMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MessageViewModel.DisplayText))
+        {
+            if (sender is MessageViewModel message && message == subscribedMessage)
+            {
+                SetText(message.DisplayText);
+            }
+        }
+    }
+
     private void MessagesGrid_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (sender is null || Context is null) return;
+
         var grid = (DataGrid)sender;
         Context.SelectedMessages = grid.SelectedItems.Cast<MessageViewModel>().ToList();
-        var message = (MessageViewModel?)grid.SelectedItem;
-        if (message != null)
-        {
-            SetText(message.DisplayText);
-        }
-        else
-        {
-            SetText("");
-        }
     }
 
     private void SetText(string message)

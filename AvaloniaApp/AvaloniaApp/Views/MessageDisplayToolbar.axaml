@@ -15,13 +15,13 @@
 			<TextBox x:Name="FilterBox" MinWidth="300" VerticalAlignment="Center"
 			         Text="{Binding CurrentMessages.LineFilter, Mode=TwoWay}" />
 			<CheckBox Name="ObjectFilterCheckBox" Content="Use Object Filter" Margin="5,0,0,0" VerticalAlignment="Center"
-			          IsChecked="{Binding CurrentMessages.CurrentMessage.UseObjectFilter, Mode=OneWay}"/>
+			          IsChecked="{Binding CurrentMessages.UseObjectFilter, Mode=TwoWay}"/>
 		</WrapPanel>
 		<WrapPanel Grid.Column="2" VerticalAlignment="Center">
 			<Label Content="Format" VerticalAlignment="Center"/>
 			<ComboBox x:Name="FormatterCombo" Margin="5" Width="200" VerticalAlignment="Center"
 			          ItemsSource="{Binding FormatterNames}"
-			          SelectedItem="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=OneWay}"/>
+			          SelectedItem="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=TwoWay}"/>
 		</WrapPanel>
 		<WrapPanel Grid.Column="3" VerticalAlignment="Center">
 			<Label Content="Zoom" VerticalAlignment="Center"/>

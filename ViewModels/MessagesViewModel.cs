@@ -8,8 +8,21 @@ public sealed class MessagesViewModel: ViewModelBase
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
     public ObservableCollection<MessageViewModel> Filtered { get; } = new();
 
-    private MessageViewModel currentMessage;
-    public MessageViewModel CurrentMessage
+    private bool useObjectFilter = true;
+    public bool UseObjectFilter
+    {
+        get => useObjectFilter;
+        set
+        {
+            if (SetProperty(ref useObjectFilter, value) && currentMessage != null)
+            {
+                currentMessage.UseObjectFilter = value;
+            }
+        }
+    }
+
+    private MessageViewModel? currentMessage;
+    public MessageViewModel? CurrentMessage
     {
         get => currentMessage;
         set
@@ -23,26 +36,29 @@ public sealed class MessagesViewModel: ViewModelBase
                 if (currentMessage != null)
                 {
                     currentMessage.LineFilter = lineFilter;
+                    currentMessage.UseObjectFilter = UseObjectFilter;
                 }
             }
         }
     }
 
-    private int selectedIndex;
+    private int field = -1;
     public int SelectedIndex
     {
-        get => selectedIndex;
+        get => field;
         set
         {
             if (value < 0)
             {
+                field = -1;
                 return;
             }
-            if (SetProperty(ref selectedIndex, value))
+
+            if (SetProperty(ref field, value))
             {
-                if (selectedIndex >= 0 && selectedIndex < Filtered.Count)
+                if (field >= 0 && field < Filtered.Count)
                 {
-                    CurrentMessage = Filtered[selectedIndex];
+                    CurrentMessage = Filtered[field];
                 }
             }
         }
@@ -130,6 +146,7 @@ public sealed class MessagesViewModel: ViewModelBase
     {
         Messages.Clear();
         Filtered.Clear();
+        SelectedIndex = -1;
     }
 
     internal void Add(MessageViewModel message)
