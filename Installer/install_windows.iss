@@ -6,13 +6,13 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{99DB910F-94D0-4923-8F30-759C962F5B48}
 AppName=KafkaLens
-AppVersion=0.2
-;AppVerName=KafkaLens 0.2
+AppVersion=0.3
+;AppVerName=KafkaLens 0.3
 AppPublisher=Pravin Chaudhary
 AppPublisherURL=https://www.kafkalens.com/
 AppSupportURL=https://www.kafkalens.com/
 AppUpdatesURL=https://www.kafkalens.com/
-DefaultDirName={pf64}\KafkaLens
+DefaultDirName={commonpf64}\KafkaLens
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
@@ -29,13 +29,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "P:\Projects\KafkaLens\Releases\KafkaLens_win\KafkaLensApp.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "P:\Projects\KafkaLens\Releases\KafkaLens_win\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\Releases\KafkaLens_win\KafkaLens.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Releases\KafkaLens_win\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{autoprograms}\KafkaLens"; Filename: "{app}\KafkaLensApp.exe"
-Name: "{autodesktop}\KafkaLens"; Filename: "{app}\KafkaLensApp.exe"; Tasks: desktopicon
+Name: "{autoprograms}\KafkaLens"; Filename: "{app}\KafkaLens.exe"
+Name: "{autodesktop}\KafkaLens"; Filename: "{app}\KafkaLens.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\KafkaLensApp.exe"; Description: "{cm:LaunchProgram,KafkaLens}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\KafkaLens.exe"; Description: "{cm:LaunchProgram,KafkaLens}"; Flags: nowait postinstall skipifsilent

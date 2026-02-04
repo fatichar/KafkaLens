@@ -1,0 +1,24 @@
+{
+    "event_type": "update_user",
+    "timestamp": "2023-04-24T12:15:00Z",
+    "user": {
+        "user_id": "12346",
+        "user_name": "Rajesh Singh",
+        "email": "rajesh.acm@example.com",
+        "role": "customer"
+    },
+    "updated_by": "admin",
+    "updated_at": "2026-01-24T12:15:00Z"
+}
+{
+  "event_type": "update_user",
+  "timestamp": "2023-04-24T12:15:00Z",
+  "user": {
+    "user_id": "10983",
+    "user_name": "Meeta Kumari",
+    "email": "meeta7985z@example.com",
+    "role": "customer"
+  },
+  "updated_by": "self",
+  "updated_at": "2026-01-24T12:15:00Z"
+}

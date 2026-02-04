@@ -14,8 +14,9 @@ All your Kafka clusters at your fingertips!
 
 Download the latest release for your operating system:
 
-- [Windows](https://github.com/fatichar/KafkaLens/releases/download/0.2.0/KafkaLensSetup-0.2.0.exe)
-- [Linux](https://github.com/fatichar/KafkaLens/releases/download/0.2.0/KafkaLens-0.2.0_linux.zip)
+- [Windows](https://github.com/fatichar/KafkaLens/releases/download/0.3/KafkaLens-0.3-win-x64-installer.exe)
+- [Linux](https://github.com/fatichar/KafkaLens/releases/download/0.3/KafkaLens-0.3-linux-x64.zip)
+- [MacOS](https://github.com/fatichar/KafkaLens/releases/download/0.3/KafkaLens-0.3-macos-arm64.zip)
 
 ## Buy Me a Coffee
 
