@@ -100,7 +100,7 @@ public partial class App : Application
         ISavedMessagesClient? savedMessagesClient = CreateSavedMessagesClient(localClientsAssembly);
         if (savedMessagesClient != null)
         {
-            services.AddSingleton(savedMessagesClient);
+            services.AddSingleton<ISavedMessagesClient>(savedMessagesClient);
         }
     }
 
@@ -161,11 +161,13 @@ public partial class App : Application
         Assembly? assembly = null;
         try
         {
-            assembly = Assembly.LoadFrom("./KafkaLens.LocalClient.dll");
+            var baseDir = AppContext.BaseDirectory;
+            var dllPath = Path.Combine(baseDir, "KafkaLens.LocalClient.dll");
+            assembly = Assembly.LoadFrom(dllPath);
         }
         catch (Exception e)
         {
-            Log.Error("Could not load KafkaLens.LocalClient.dll");
+            Log.Error(e, "Could not load KafkaLens.LocalClient.dll");
         }
 
         return assembly;
