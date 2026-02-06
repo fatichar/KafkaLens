@@ -3,8 +3,8 @@
              xmlns:local="using:AvaloniaApp"
              xmlns:hyperlink="clr-namespace:HyperText.Avalonia;assembly=HyperText.Avalonia"
              x:Class="AvaloniaApp.App"
-             RequestedThemeVariant="Default">
-    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Light">
+    <!-- Always use light theme regardless of OS setting. -->
 
     <Application.DataTemplates>
         <local:ViewLocator />
