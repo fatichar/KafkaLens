@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -42,6 +43,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     [ObservableProperty] public ICollection<string> formatterNames;
 
     public RelayCommand FetchMessagesCommand { get; }
+    public RelayCommand StopLoadingCommand { get; }
     public IAsyncRelayCommand ChangeFormatterCommand { get; }
     public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
     public AsyncRelayCommand SaveSelectedAsFormattedCommand { get; set; }
@@ -65,7 +67,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
     public int FetchCount { get; set; } = 10;
-    public string? StartOffset { get; }
+    [ObservableProperty] private string? startOffset;
 
     private TimeOnly startTime;
     [ObservableProperty]
@@ -105,12 +107,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     {
         FetchPositionsForTopic.Add("End");
         FetchPositionsForTopic.Add("Timestamp");
-        //FetchPositionsForTopic.Add("Start");
+        FetchPositionsForTopic.Add("Start");
 
         FetchPositionsForPartition.Add("End");
         FetchPositionsForPartition.Add("Timestamp");
-        //FetchPositionsForPartition.Add("Offset");
-        //FetchPositionsForPartition.Add("Start");
+        FetchPositionsForPartition.Add("Offset");
+        FetchPositionsForPartition.Add("Start");
     }
 
     public OpenedClusterViewModel(
@@ -123,6 +125,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         Name = name;
 
         FetchMessagesCommand = new RelayCommand(FetchMessages);
+        StopLoadingCommand = new RelayCommand(StopLoading);
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
         SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw);
@@ -285,6 +288,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     MessageStream? messages = null;
     private readonly List<IMessageLoadListener> messageLoadListeners = new();
+    private CancellationTokenSource? fetchCts;
+
+    private void StopLoading()
+    {
+        fetchCts?.Cancel();
+    }
 
     private void FetchMessages()
     {
@@ -292,6 +301,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         {
             return;
         }
+
+        fetchCts?.Cancel();
+        fetchCts = new CancellationTokenSource();
 
         if (messages != null)
         {
@@ -306,10 +318,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         messages = selectedNode switch
         {
             TopicViewModel topic => KafkaLensClient.GetMessageStream(cluster.Id, topic.Name,
-                fetchOptions),
+                fetchOptions, fetchCts.Token),
 
             PartitionViewModel partition => KafkaLensClient.GetMessageStream(cluster.Id,
-                partition.TopicName, partition.Id, fetchOptions),
+                partition.TopicName, partition.Id, fetchOptions, fetchCts.Token),
 
             _ => null
         };

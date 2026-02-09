@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using KafkaLens.Core.Services;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
@@ -98,39 +99,43 @@ public class SavedMessagesClient : ISavedMessagesClient
     public MessageStream GetMessageStream(
         string clusterId,
         string topic,
-        FetchOptions options)
+        FetchOptions options,
+        CancellationToken cancellationToken = default)
     {
         var consumer = GetConsumer(clusterId);
-        return consumer.GetMessageStream(topic, options);
+        return consumer.GetMessageStream(topic, options, cancellationToken);
     }
 
     public async Task<List<Message>> GetMessagesAsync(
         string clusterId,
         string topic,
-        FetchOptions options)
+        FetchOptions options,
+        CancellationToken cancellationToken = default)
     {
         var consumer = GetConsumer(clusterId);
-        return await consumer.GetMessagesAsync(topic, options);
+        return await consumer.GetMessagesAsync(topic, options, cancellationToken);
     }
 
     public MessageStream GetMessageStream(
         string clusterId,
         string topic,
         int partition,
-        FetchOptions options)
+        FetchOptions options,
+        CancellationToken cancellationToken = default)
     {
         var consumer = GetConsumer(clusterId);
-        return consumer.GetMessageStream(topic, partition, options);
+        return consumer.GetMessageStream(topic, partition, options, cancellationToken);
     }
 
     public async Task<List<Message>> GetMessagesAsync(
         string clusterId,
         string topic,
         int partition,
-        FetchOptions options)
+        FetchOptions options,
+        CancellationToken cancellationToken = default)
     {
         var consumer = GetConsumer(clusterId);
-        return await consumer.GetMessagesAsync(topic, partition, options);
+        return await consumer.GetMessagesAsync(topic, partition, options, cancellationToken);
     }
     #endregion Read
 

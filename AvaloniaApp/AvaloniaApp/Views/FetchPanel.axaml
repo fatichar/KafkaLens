@@ -22,7 +22,7 @@
 
         <StackPanel Grid.Row="1" Grid.Column="1"
                   Orientation="Vertical" Spacing="8"
-                  IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}}"
+                  IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}, ConverterParameter=Timestamp}"
                   MinWidth="160"
                   Margin="5">
             <CalendarDatePicker Name="StartDatePicker"
@@ -49,6 +49,18 @@
             </StackPanel>
         </StackPanel>
 
+        <StackPanel Grid.Row="1" Grid.Column="1"
+                    Orientation="Vertical" Spacing="8"
+                    IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}, ConverterParameter=Offset}"
+                    MinWidth="160"
+                    Margin="5">
+            <TextBox Name="OffsetTextBox"
+                     Text="{Binding StartOffset}"
+                     Watermark="Offset"
+                     MinWidth="80"
+                     HorizontalAlignment="Stretch"/>
+        </StackPanel>
+
         <Label Grid.Row="2" Grid.Column="0"
                VerticalAlignment="Center"
                Margin="5">Count</Label>
@@ -65,10 +77,16 @@
             </ComboBox.Styles>
         </ComboBox>
 
-        <Button Content="Fetch Messages" Command="{Binding FetchMessagesCommand}"
-                Grid.Row="3" Grid.Column="1"
-                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                Height="30" Margin="5" />
+        <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*, Auto" Margin="5">
+            <Button Content="Fetch Messages" Command="{Binding FetchMessagesCommand}"
+                    Grid.Column="0"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Height="30" Margin="0,0,5,0" />
+            <Button Content="Stop" Command="{Binding StopLoadingCommand}"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Height="30" />
+        </Grid>
     </Grid>
 
 </UserControl>

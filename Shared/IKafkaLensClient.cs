@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using KafkaLens.Shared.Models;
 
@@ -23,12 +24,12 @@ public interface IKafkaLensClient
 
     Task<IList<Topic>> GetTopicsAsync(string clusterId);
 
-    MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options);
+    MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default);
 
-    Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options);
+    Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default);
 
-    MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options);
-    Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options);
+    MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default);
+    Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default);
     #endregion read
 
     #region update
