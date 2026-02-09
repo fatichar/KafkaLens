@@ -1,3 +1,4 @@
+using System.Threading;
 ﻿using System.Net.NetworkInformation;
 using Confluent.Kafka;
 using KafkaLens.Shared.Models;
@@ -68,11 +69,11 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     }
 
     protected override void GetMessages(string topicName, int partition, FetchOptions options,
-        MessageStream messages)
+        MessageStream messages, CancellationToken cancellationToken)
     {
         Log.Information("Fetching {MessageCount} messages for partition {Topic}:{Partition}", options.Limit, topicName, partition);
         var tp = ValidateTopicPartition(topicName, partition);
-        GetMessages(new List<Confluent.Kafka.TopicPartition>(){tp}, options, messages);
+        GetMessages(new List<Confluent.Kafka.TopicPartition>(){tp}, options, messages, cancellationToken);
         Log.Information("Fetched {MessageCount} messages for partition {Topic}:{Partition}", messages.Messages.Count, topicName, partition);
     }
 
@@ -86,7 +87,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return new Confluent.Kafka.TopicPartition(topicName, partition);
     }
 
-    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages)
+    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
     {
         Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topicName);
 
@@ -94,12 +95,12 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         var topic = Topics[topicName];
         var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id)).ToList();
 
-        GetMessages(tps, options, messages);
+        GetMessages(tps, options, messages, cancellationToken);
         Log.Information("Fetched {MessageCount} messages for topic {Topic}", messages.Messages.Count, topicName);
     }
 
     private void GetMessages(List<TopicPartition> tps, FetchOptions options,
-        MessageStream messages)
+        MessageStream messages, CancellationToken cancellationToken)
     {
         var watermarks = QueryWatermarkOffsets(tps);
         var partitionOptions = CreateOptionsForPartition(tps, options);
@@ -111,26 +112,26 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             var tpoLimit = (Tpo: tpos[i], Limit: partitionOptions[i].Limit);
             tpoLimits.Add(tpoLimit);
         }
-        FetchMessages(tpoLimits, messages);
+        FetchMessages(tpoLimits, messages, cancellationToken);
     }
 
     private void FetchMessages(IReadOnlyList<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
-        MessageStream messages)
+        MessageStream messages, CancellationToken cancellationToken)
     {
         // var messages = new ConcurrentBag<Message>();
         if (tpoLimits.Count == 1)
         {
             Consumer.Assign(tpoLimits[0].Tpo);
-            FetchMessages(Consumer, messages, tpoLimits[0].Limit);
+            FetchMessages(Consumer, messages, tpoLimits[0].Limit, cancellationToken);
             Consumer.Unassign();
         }
         else
         {
-            tpoLimits.AsParallel().ForAll(tpoLimit =>
+            tpoLimits.AsParallel().WithCancellation(cancellationToken).ForAll(tpoLimit =>
             {
                 using var consumer = CreateConsumer();
                 consumer.Assign(tpoLimit.Tpo);
-                FetchMessages(consumer, messages, tpoLimit.Limit);
+                FetchMessages(consumer, messages, tpoLimit.Limit, cancellationToken);
             });
         }
 
@@ -190,7 +191,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return partitionOptions;
     }
 
-    private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount)
+    private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount, CancellationToken cancellationToken)
     {
         if (requiredCount <= 0)
         {
@@ -198,7 +199,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         }
         lock (Consumer)
         {
-            while (requiredCount > 0)
+            while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
             {
                 try
                 {

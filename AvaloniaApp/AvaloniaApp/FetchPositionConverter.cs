@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 
 using Avalonia;
 using Avalonia.Data.Converters;
@@ -17,8 +17,14 @@ public class FetchPositionConverter : IValueConverter
         try
         {
             var value = position.ToString();
+            var target = parameter?.ToString();
 
-            return value is "Timestamp";
+            if (target == null)
+            {
+                return value is "Timestamp";
+            }
+
+            return value.Equals(target, StringComparison.OrdinalIgnoreCase);
         }
         catch (Exception)
         {
