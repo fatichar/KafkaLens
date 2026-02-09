@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using KafkaLens.Clients;
 using KafkaLens.Shared;
@@ -45,22 +44,22 @@ public class RestClient : IKafkaLensClient
         throw new NotImplementedException();
     }
 
-    public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
+    public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options)
     {
         throw new NotImplementedException();
     }
 
-    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
+    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options)
     {
         throw new NotImplementedException();
     }
 
-    public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
+    public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options)
     {
         throw new NotImplementedException();
     }
 
-    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
+    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options)
     {
         throw new NotImplementedException();
     }

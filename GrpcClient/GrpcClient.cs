@@ -1,4 +1,3 @@
-using System.Threading;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -92,7 +91,7 @@ public class GrpcClient : IKafkaLensClient
         return response.Topics.Select(ToTopicModel).ToList();
     }
 
-    public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
+    public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options)
     {
         var request = new GetTopicMessagesRequest
         {
@@ -100,17 +99,17 @@ public class GrpcClient : IKafkaLensClient
             TopicName = topic,
             FetchOptions = ToGrpcFetchOptions(options)
         };
-        var response = client.GetTopicMessages(request, cancellationToken: cancellationToken);
+        var response = client.GetTopicMessages(request);
 
-        return ToStream(response, cancellationToken);
+        return ToStream(response);
     }
 
-    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
+    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options)
     {
         throw new NotImplementedException();
     }
 
-    public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
+    public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options)
     {
         var request = new GetPartitionMessagesRequest
         {
@@ -119,34 +118,27 @@ public class GrpcClient : IKafkaLensClient
             Partition = (uint)partition,
             FetchOptions = ToGrpcFetchOptions(options)
         };
-        var response = client.GetPartitionMessages(request, cancellationToken: cancellationToken);
-        return ToStream(response, cancellationToken);
+        var response = client.GetPartitionMessages(request);
+        return ToStream(response);
     }
 
-    private static MessageStream ToStream(global::Grpc.Core.AsyncServerStreamingCall<Grpc.Message> response, CancellationToken cancellationToken)
+    private static MessageStream ToStream(global::Grpc.Core.AsyncServerStreamingCall<Grpc.Message> response)
     {
         var stream = new MessageStream();
-        Task.Run(async () =>
+        Task.Run(() =>
         {
-            try
+            while (response.ResponseStream.MoveNext(CancellationToken.None).Result)
             {
-                while (await response.ResponseStream.MoveNext(cancellationToken))
-                {
-                    var message = response.ResponseStream.Current;
-                    stream.Messages.Add(ToMessageModel(message));
-                }
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "Error reading stream");
+                var message = response.ResponseStream.Current;
+                stream.Messages.Add(ToMessageModel(message));
             }
             stream.HasMore = false;
-        }, cancellationToken);
+        });
 
         return stream;
     }
 
-    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
+    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options)
     {
         throw new NotImplementedException();
     }

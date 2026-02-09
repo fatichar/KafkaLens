@@ -1,4 +1,3 @@
-using System.Threading;
 ﻿using KafkaLens.Shared.Models;
 using Serilog;
 
@@ -50,38 +49,38 @@ public abstract class ConsumerBase : IKafkaConsumer
 
     protected abstract List<Topic> FetchTopics();
 
-    public MessageStream GetMessageStream(string topic, FetchOptions options, CancellationToken cancellationToken = default)
+    public MessageStream GetMessageStream(string topic, FetchOptions options)
     {
         var messages = new MessageStream();
-        Task.Run(() => GetMessages(topic, options, messages, cancellationToken), cancellationToken);
+        Task.Run(() => GetMessages(topic, options, messages));
         return messages;
     }
 
-    public MessageStream GetMessageStream(string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
+    public MessageStream GetMessageStream(string topic, int partition, FetchOptions options)
     {
         var messages = new MessageStream();
-        Task.Run(() => GetMessages(topic, partition, options, messages, cancellationToken), cancellationToken);
+        Task.Run(() => GetMessages(topic, partition, options, messages));
         return messages;
     }
 
-    public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options, CancellationToken cancellationToken = default)
+    public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options)
     {
         var messages = new MessageStream();
-        await Task.Run(() => GetMessages(topic, options, messages, cancellationToken), cancellationToken);
+        await Task.Run(() => GetMessages(topic, options, messages));
         return messages.Messages.ToList();
     }
 
-    public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
+    public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options)
     {
         var messages = new MessageStream();
-        await Task.Run(() => GetMessages(topic, partition, options, messages, cancellationToken), cancellationToken);
+        await Task.Run(() => GetMessages(topic, partition, options, messages));
         return messages.Messages.ToList();
     }
 
-    protected abstract void GetMessages(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken);
+    protected abstract void GetMessages(string topicName, FetchOptions options, MessageStream messages);
 
     protected abstract void GetMessages(string topicName, int partition, FetchOptions options,
-        MessageStream messages, CancellationToken cancellationToken);
+        MessageStream messages);
 
     protected Topic ValidateTopic(string topicName)
     {
