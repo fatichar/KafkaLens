@@ -34,6 +34,16 @@ public class KafkaService : KafkaApi.KafkaApiBase
         var cluster = await kafkaLensClient.AddAsync(new Models.NewKafkaCluster(request.Name, request.BootstrapServers));
         return ToClusterResponse(cluster);
     }
+
+    public override async Task<ValidateConnectionResponse> ValidateConnection(ValidateConnectionRequest request, ServerCallContext context)
+    {
+        var isConnected = await kafkaLensClient.ValidateConnectionAsync(request.BootstrapServers);
+        return new ValidateConnectionResponse
+        {
+            IsConnected = isConnected,
+            Message = isConnected ? "Connected" : "Failed to connect"
+        };
+    }
     #endregion Create
 
     #region Read
@@ -125,7 +135,8 @@ public class KafkaService : KafkaApi.KafkaApiBase
         {
             Id = cluster.Id,
             Name = cluster.Name,
-            BootstrapServers = cluster.Address
+            BootstrapServers = cluster.Address,
+            IsConnected = cluster.IsConnected
         };
     }
 

@@ -7,7 +7,7 @@ using KafkaLens.Shared;
 
 namespace KafkaLens.ViewModels;
 
-public sealed class ClusterViewModel: ViewModelBase
+public sealed partial class ClusterViewModel: ViewModelBase
 {
     public IKafkaLensClient Client { get; }
     public IAsyncRelayCommand LoadTopicsCommand { get; }
@@ -27,7 +27,15 @@ public sealed class ClusterViewModel: ViewModelBase
         LoadTopicsCommand = new AsyncRelayCommand(LoadTopicsAsync);
     }
 
-    public bool IsConnected { get; set; }
+    [ObservableProperty]
+    private bool isConnected;
+
+    public string StatusColor => IsConnected ? "Green" : "Red";
+
+    partial void OnIsConnectedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(StatusColor));
+    }
 
     private async Task LoadTopicsAsync()
     {

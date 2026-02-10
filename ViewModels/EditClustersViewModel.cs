@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using KafkaLens.Clients.Entities;
+using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Entities;
 
@@ -11,26 +12,80 @@ public class EditClustersViewModel
 {
     private IClusterInfoRepository ClusterRepository { get; }
     private IClientInfoRepository ClientRepository { get; }
+    private IClientFactory ClientFactory { get; }
 
-    public ObservableCollection<ClusterInfo> Clusters { get; }
-    public ObservableCollection<ClientInfo> Clients { get; }
+    public ObservableCollection<ClusterInfoViewModel> Clusters { get; }
+    public ObservableCollection<ClientInfoViewModel> Clients { get; }
 
     public EditClustersViewModel(
         IClusterInfoRepository clusterInfoRepository,
-        IClientInfoRepository clientInfoRepository)
+        IClientInfoRepository clientInfoRepository,
+        IClientFactory clientFactory)
     {
         ClusterRepository = clusterInfoRepository;
         ClientRepository = clientInfoRepository;
+        ClientFactory = clientFactory;
 
-        Clusters = new ObservableCollection<ClusterInfo>(ClusterRepository.GetAll().Values);
-        Clients = new ObservableCollection<ClientInfo>(ClientRepository.GetAll().Values);
+        Clusters = new ObservableCollection<ClusterInfoViewModel>(ClusterRepository.GetAll().Values.Select(c => new ClusterInfoViewModel(c)));
+        Clients = new ObservableCollection<ClientInfoViewModel>(ClientRepository.GetAll().Values.Select(c => new ClientInfoViewModel(c)));
+
+        CheckConnectionsAsync();
+    }
+
+    private async void CheckConnectionsAsync()
+    {
+        var localClient = ClientFactory.GetClient("Local");
+        foreach (var cluster in Clusters)
+        {
+            _ = CheckClusterConnectionAsync(localClient, cluster);
+        }
+        foreach (var client in Clients)
+        {
+            _ = CheckClientConnectionAsync(client);
+        }
+    }
+
+    private async Task CheckClusterConnectionAsync(IKafkaLensClient localClient, ClusterInfoViewModel cluster)
+    {
+        cluster.IsConnected = await localClient.ValidateConnectionAsync(cluster.Address);
+    }
+
+    private async Task CheckClientConnectionAsync(ClientInfoViewModel client)
+    {
+        try
+        {
+            var kafkaClient = ClientFactory.GetClient(client.Name);
+            var clusters = await kafkaClient.GetAllClustersAsync();
+            // If GrpcClient fails to connect, it returns a single cluster with IsConnected=false
+            if (clusters.Count() == 1 && !clusters.First().IsConnected)
+            {
+                 client.IsConnected = false;
+            }
+            else
+            {
+                client.IsConnected = true;
+            }
+        }
+        catch (Exception)
+        {
+            client.IsConnected = false;
+        }
+    }
+
+    public async Task<bool> ValidateConnectionAsync(string address)
+    {
+        var localClient = ClientFactory.GetClient("Local");
+        return await localClient.ValidateConnectionAsync(address);
     }
 
     // Clusters
     public void AddCluster(string name, string address)
     {
         var clusterInfo = ClusterRepository.Add(name, address);
-        Clusters.Add(clusterInfo);
+        var vm = new ClusterInfoViewModel(clusterInfo);
+        Clusters.Add(vm);
+        var localClient = ClientFactory.GetClient("Local");
+        _ = CheckClusterConnectionAsync(localClient, vm);
     }
 
     public void UpdateCluster(ClusterInfo updated)
@@ -40,11 +95,14 @@ public class EditClustersViewModel
         if (existing != null)
         {
             var index = Clusters.IndexOf(existing);
-            Clusters[index] = updated;
+            var vm = new ClusterInfoViewModel(updated);
+            Clusters[index] = vm;
+            var localClient = ClientFactory.GetClient("Local");
+            _ = CheckClusterConnectionAsync(localClient, vm);
         }
     }
 
-    public void RemoveCluster(ClusterInfo? clusterInfo)
+    public void RemoveCluster(ClusterInfoViewModel? clusterInfo)
     {
         if (clusterInfo == null) return;
         ClusterRepository.Delete(clusterInfo.Id);
@@ -57,7 +115,9 @@ public class EditClustersViewModel
         var id = Guid.NewGuid().ToString();
         var clientInfo = new ClientInfo(id, name, address, protocol);
         ClientRepository.Add(clientInfo);
-        Clients.Add(clientInfo);
+        var vm = new ClientInfoViewModel(clientInfo);
+        Clients.Add(vm);
+        _ = CheckClientConnectionAsync(vm);
     }
 
     public void UpdateClient(ClientInfo updated)
@@ -67,11 +127,13 @@ public class EditClustersViewModel
         if (existing != null)
         {
             var index = Clients.IndexOf(existing);
-            Clients[index] = updated;
+            var vm = new ClientInfoViewModel(updated);
+            Clients[index] = vm;
+            _ = CheckClientConnectionAsync(vm);
         }
     }
 
-    public void RemoveClient(ClientInfo? clientInfo)
+    public void RemoveClient(ClientInfoViewModel? clientInfo)
     {
         if (clientInfo == null) return;
         ClientRepository.Delete(clientInfo.Id);

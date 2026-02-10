@@ -33,9 +33,20 @@ public class GrpcClient : IKafkaLensClient
 
     public string Name { get; }
 
-    public Task<bool> ValidateConnectionAsync(string bootstrapServers)
+    public async Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var response = await client.ValidateConnectionAsync(new ValidateConnectionRequest
+            {
+                BootstrapServers = bootstrapServers
+            });
+            return response.IsConnected;
+        }
+        catch (RpcException)
+        {
+            return false;
+        }
     }
     #endregion Constructor
 
@@ -169,7 +180,12 @@ public class GrpcClient : IKafkaLensClient
     #region Convertors
     private static KafkaCluster ToClusterModel(Cluster cluster)
     {
-        return new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
+        var model = new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
+        if (cluster.HasIsConnected)
+        {
+            model.IsConnected = cluster.IsConnected;
+        }
+        return model;
     }
 
     private static Topic ToTopicModel(Grpc.Topic topic)

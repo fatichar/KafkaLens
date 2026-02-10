@@ -58,6 +58,19 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
     #region Read
 
+    public override bool ValidateConnection()
+    {
+        try
+        {
+            var metadata = AdminClient.GetMetadata(queryTopicsTimeout);
+            return metadata.OriginatingBrokerId != -1;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     protected override List<Topic> FetchTopics()
     {
         var metadata = AdminClient.GetMetadata(queryTopicsTimeout);
@@ -299,9 +312,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     #endregion Read
 
     #region IDisposable implemenatation
-    public void Dispose()
+    public override void Dispose()
     {
         Consumer.Dispose();
+        base.Dispose();
     }
     #endregion IDisposable implemenatation
 }
