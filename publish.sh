@@ -2,6 +2,6 @@
 
 cd AvaloniaApp/AvaloniaApp.Desktop/
 
-./windows.sh
-./linux.sh
-./macos.sh
+./publish_windows.sh
+./publish_linux.sh
+./publish_macos.sh
