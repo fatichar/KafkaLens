@@ -120,6 +120,20 @@ public partial class MainViewModel : ViewModelBase
 
         Clusters.CollectionChanged += OnClustersChanged;
         CreateMenuItems();
+
+        UpdateOpenedClusters();
+    }
+
+    private void UpdateOpenedClusters()
+    {
+        foreach (var openedCluster in OpenedClusters)
+        {
+            var cluster = Clusters.FirstOrDefault(c => c.Id == openedCluster.ClusterId);
+            if (cluster != null)
+            {
+                openedCluster.Name = cluster.Name;
+            }
+        }
     }
 
     private void OnClustersChanged(object sender, NotifyCollectionChangedEventArgs args)

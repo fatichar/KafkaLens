@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="AvaloniaApp.Views.AddEditClusterDialog"
         Title="Add/Edit Cluster"
-        Width="400" Height="250"
+        Width="400" Height="300"
         WindowStartupLocation="CenterOwner">
     <StackPanel Margin="20" Spacing="10">
         <Label Content="Cluster Name"/>
@@ -10,6 +10,8 @@
 
         <Label Content="Bootstrap Servers"/>
         <TextBox Name="AddressBox" Watermark="e.g. localhost:9092"/>
+
+        <TextBlock Name="ErrorTextBlock" Foreground="Red" TextWrapping="Wrap" Margin="0,10,0,0"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
             <Button Name="OkButton" Content="OK" IsDefault="True" Click="OkButton_Click"/>
