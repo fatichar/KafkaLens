@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using KafkaLens.Clients;
 using KafkaLens.Shared;
@@ -24,7 +25,7 @@ public class RestClient : IKafkaLensClient
         throw new NotImplementedException();
     }
 
-    public async Task<IEnumerable<KafkaCluster>> GetAllClusters()
+    public async Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
         return await client.GetAllClustersAsync();
     }
@@ -44,22 +45,22 @@ public class RestClient : IKafkaLensClient
         throw new NotImplementedException();
     }
 
-    public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options)
+    public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options)
+    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options)
+    public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options)
+    public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
@@ -70,6 +71,26 @@ public class RestClient : IKafkaLensClient
     }
 
     public Task<KafkaCluster> RemoveClusterByIdAsync(string clusterId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<KafkaCluster> GetClusterByIdAsync(string clusterId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<KafkaCluster> GetClusterByNameAsync(string name)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IList<Topic>> GetTopicsAsync(string clusterId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
         throw new NotImplementedException();
     }

@@ -1,4 +1,5 @@
-﻿using KafkaLens.Core.Services;
+using System.Threading;
+using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
 
 namespace KafkaLens;
@@ -41,42 +42,27 @@ public class SavedMessagesConsumer : ConsumerBase
         return topics.ToList();
     }
 
-    public MessageStream GetMessageStream(string topic, int partition, FetchOptions options)
-    {
-        var messages = new MessageStream();
-        Task.Run(() =>
-            GetMessages(topic, partition, options, messages));
-        return messages;
-    }
-
-    public MessageStream GetMessageStream(string topic, FetchOptions options)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options)
-    {
-        var partitionDir = Path.Combine(clusterDir, topic, partition.ToString());
-        return null;
-    }
-
-    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages)
+    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
     {
         var topicDir = Path.Combine(clusterDir, topicName);
         var partitionDirs = Directory.GetDirectories(topicDir);
         Array.ForEach(partitionDirs, partitionDir =>
         {
             var partition = int.Parse(Path.GetFileName(partitionDir));
-            GetMessages(topicName, partition, options, messages);
+            GetMessages(topicName, partition, options, messages, cancellationToken);
         });
     }
 
-    protected override void GetMessages(string topicName, int partition, FetchOptions options, MessageStream stream)
+    protected override void GetMessages(string topicName, int partition, FetchOptions options, MessageStream stream, CancellationToken cancellationToken)
     {
         var partitionDir = Path.Combine(clusterDir, topicName, partition.ToString());
         var messageFiles = Directory.GetFiles(partitionDir, "*.klm");
         Array.ForEach(messageFiles, s =>
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
             var message = CreateMessage(s);
             message.Partition = partition;
             stream.Messages.Add(message);

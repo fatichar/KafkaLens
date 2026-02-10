@@ -1,4 +1,5 @@
-﻿using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Models;
+using System.Threading;
 
 namespace KafkaLens.Core.Services;
 
@@ -8,8 +9,8 @@ namespace KafkaLens.Core.Services;
 public interface IKafkaConsumer
 {
     List<Topic> GetTopics();
-    MessageStream GetMessageStream(string topic, int partition, FetchOptions options);
-    MessageStream GetMessageStream(string topic, FetchOptions options);
-    Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options);
-    Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options);
+    MessageStream GetMessageStream(string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default);
+    MessageStream GetMessageStream(string topic, FetchOptions options, CancellationToken cancellationToken = default);
+    Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default);
+    Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options, CancellationToken cancellationToken = default);
 }

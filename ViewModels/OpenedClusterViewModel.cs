@@ -65,7 +65,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
     public int FetchCount { get; set; } = 10;
-    public string? StartOffset { get; }
+    [ObservableProperty] private string? startOffset;
 
     private TimeOnly startTime;
     [ObservableProperty]
@@ -109,7 +109,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
         FetchPositionsForPartition.Add("End");
         FetchPositionsForPartition.Add("Timestamp");
-        //FetchPositionsForPartition.Add("Offset");
+        FetchPositionsForPartition.Add("Offset");
         FetchPositionsForPartition.Add("Start");
     }
 

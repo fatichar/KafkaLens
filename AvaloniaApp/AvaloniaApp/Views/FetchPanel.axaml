@@ -22,7 +22,7 @@
 
         <StackPanel Grid.Row="1" Grid.Column="1"
                   Orientation="Vertical" Spacing="8"
-                  IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}}"
+                  IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}, ConverterParameter=Timestamp}"
                   MinWidth="160"
                   Margin="5">
             <CalendarDatePicker Name="StartDatePicker"
@@ -47,6 +47,18 @@
                            FontSize="11"
                            IsVisible="{Binding !IsStartTimeValid}"/>
             </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Grid.Column="1"
+                    Orientation="Vertical" Spacing="8"
+                    IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}, ConverterParameter=Offset}"
+                    MinWidth="160"
+                    Margin="5">
+            <TextBox Name="OffsetTextBox"
+                     Text="{Binding StartOffset}"
+                     Watermark="Offset"
+                     MinWidth="80"
+                     HorizontalAlignment="Stretch"/>
         </StackPanel>
 
         <Label Grid.Row="2" Grid.Column="0"
