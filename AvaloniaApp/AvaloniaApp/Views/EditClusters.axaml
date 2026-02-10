@@ -4,55 +4,71 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="AvaloniaApp.Views.EditClustersDialog"
-        Title="Edit Clusters"
+        Title="Edit Clusters &amp; Clients"
         Width="800"
         Height="600"
         xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
         xmlns:entities="clr-namespace:KafkaLens.Shared.Entities;assembly=KafkaLens.Shared"
-        x:DataType="vm:LocalClustersViewModel"
-        Closing="OnClose">
+        xmlns:clientEntities="clr-namespace:KafkaLens.Clients.Entities;assembly=KafkaLens.Shared"
+        x:DataType="vm:EditClustersViewModel">
+
     <DockPanel Margin="10">
         <Button Name="OpenSettingsButton" DockPanel.Dock="Bottom" HorizontalAlignment="Right"
                 Click="OpenSettingsButton_OnClick">Open Settings dir...</Button>
-        <Grid Margin="10, 10" RowDefinitions="Auto,*,Auto,*">
-            <Grid Grid.Row="0" RowDefinitions="*,*,*" ColumnDefinitions="2*,7*,*" Margin="0, 10">
-                <Label Grid.Row="0" Grid.Column="0" Margin="0, 0, 0, 0">Cluster Name</Label>
-                <Label Grid.Row="0" Grid.Column="1" Margin="5, 0, 0, 0">Bootstrap Servers</Label>
-                <TextBox Grid.Row="1" Grid.Column="0" Name="NameBox" Margin="0, 0"
-                         Watermark="Friendly name"
-                         TextChanged="NameBox_OnTextChanged" />
-                <TextBox Grid.Row="1" Grid.Column="1" Name="AddressBox" Margin="5, 0, 0, 0"
-                         Watermark="address:port"
-                         TextChanged="AddressBox_OnTextChanged"/>
-                <Button Grid.Row="1" Grid.Column="2" Name="AddClusterButton" Content="Add"
-                        Click="AddClusterButton_Click"  Margin="5, 0" IsEnabled="False"
-                        />
-                <Label Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Name="ErrorLabel"
-                       Foreground="Red"/>
-            </Grid>
-            <DataGrid Name="ClustersGrid" Grid.Row="1" Margin="0,5"
-                      Height="NaN"
-                      ItemsSource="{Binding Clusters}"
-                      CanUserReorderColumns="True"
-                      CanUserResizeColumns="True"
-                      CanUserSortColumns="True"
-                      SelectionMode="Single"
-                      RowHeaderWidth="50"
-                      IsReadOnly="True"
-                      BorderBrush="Gray"
-                      BorderThickness="1"
-                      SelectionChanged="ClustersGrid_OnSelectionChanged">
-                <DataGrid.Columns>
-                    <DataGridTextColumn x:DataType="entities:ClusterInfo" Header="Name"
-                                        Width="*"
-                                        Binding="{Binding Name }" />
-                    <DataGridTextColumn x:DataType="entities:ClusterInfo" Header="Address"
-                                        Width="3*"
-                                        Binding="{Binding Address }" />
-                </DataGrid.Columns>
-            </DataGrid>
 
-            <Button Grid.Row="2" Name="RemoveButton" HorizontalAlignment="Center" Content="Remove Selected" Click="RemoveButton_Click" />
-        </Grid>
+        <TabControl>
+            <!-- DIRECT CLUSTERS TAB -->
+            <TabItem Header="Direct Clusters">
+                <Grid RowDefinitions="*,Auto" Margin="10">
+                    <DataGrid Name="ClustersGrid" Grid.Row="0"
+                              ItemsSource="{Binding Clusters}"
+                              CanUserReorderColumns="True"
+                              CanUserResizeColumns="True"
+                              CanUserSortColumns="True"
+                              SelectionMode="Single"
+                              IsReadOnly="True"
+                              BorderBrush="Gray"
+                              BorderThickness="1">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn x:DataType="entities:ClusterInfo" Header="Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn x:DataType="entities:ClusterInfo" Header="Address" Binding="{Binding Address}" Width="2*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10" Margin="0,10,0,0">
+                        <Button Content="Add" Click="AddCluster_Click"/>
+                        <Button Content="Edit" Click="EditCluster_Click" IsEnabled="{Binding #ClustersGrid.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <Button Content="Remove" Click="RemoveCluster_Click" IsEnabled="{Binding #ClustersGrid.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- KAFKALENS CLIENTS TAB -->
+            <TabItem Header="KafkaLens Clients">
+                <Grid RowDefinitions="*,Auto" Margin="10">
+                    <DataGrid Name="ClientsGrid" Grid.Row="0"
+                              ItemsSource="{Binding Clients}"
+                              CanUserReorderColumns="True"
+                              CanUserResizeColumns="True"
+                              CanUserSortColumns="True"
+                              SelectionMode="Single"
+                              IsReadOnly="True"
+                              BorderBrush="Gray"
+                              BorderThickness="1">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn x:DataType="clientEntities:ClientInfo" Header="Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn x:DataType="clientEntities:ClientInfo" Header="Address" Binding="{Binding Address}" Width="2*"/>
+                            <DataGridTextColumn x:DataType="clientEntities:ClientInfo" Header="Protocol" Binding="{Binding Protocol}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10" Margin="0,10,0,0">
+                        <Button Content="Add" Click="AddClient_Click"/>
+                        <Button Content="Edit" Click="EditClient_Click" IsEnabled="{Binding #ClientsGrid.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <Button Content="Remove" Click="RemoveClient_Click" IsEnabled="{Binding #ClientsGrid.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </Window>

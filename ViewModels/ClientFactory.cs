@@ -33,11 +33,24 @@ public class ClientFactory : IClientFactory
             Log.Information("Found client: {ClientName} in config", clientInfosKey.Name);
         }
 
+        var toRemove = clients.Keys
+            .Where(k => !clientInfos.Values.Any(ci => ci.Name == k) && k != "Local")
+            .ToList();
+
+        foreach (var key in toRemove)
+        {
+            clients.Remove(key);
+        }
+
         foreach (var clientInfo in clientInfos.Values)
         {
             Log.Information("Loading client: {ClientName}", clientInfo.Name);
             try
             {
+                if (clients.ContainsKey(clientInfo.Name))
+                {
+                    clients.Remove(clientInfo.Name);
+                }
                 var client = CreateClient(clientInfo);
                 clients.Add(client.Name, client);
             }

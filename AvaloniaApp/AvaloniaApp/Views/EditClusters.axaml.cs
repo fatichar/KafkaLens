@@ -3,19 +3,20 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using KafkaLens.Clients.Entities;
 using KafkaLens.Shared.Entities;
 using KafkaLens.ViewModels;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
 
 namespace AvaloniaApp.Views;
 
 public partial class EditClustersDialog : Window
 {
     private string fileExplorerCommand = "";
-    private ClusterInfo? selectedItem;
     private string AppDataPath { get; set; }
 
     public EditClustersDialog()
@@ -26,100 +27,128 @@ public partial class EditClustersDialog : Window
         InitPlatform();
 
         InitializeComponent();
-#if DEBUG
-        this.AttachDevTools();
-#endif
     }
 
-    private void AddClusterButton_Click(object? sender, RoutedEventArgs e)
+    private EditClustersViewModel Context => DataContext as EditClustersViewModel;
+
+    #region Direct Clusters
+    private async void AddCluster_Click(object? sender, RoutedEventArgs e)
     {
         try
         {
-            if (EditMode)
+            var existingNames = Context.Clusters.Select(c => c.Name).ToList();
+            var dialog = new AddEditClusterDialog(existingNames);
+            var result = await dialog.ShowDialog<ClusterInfo?>(this);
+
+            if (result != null)
             {
-                SelectedItem!.Name = NameBox.Text;
-                SelectedItem!.Address = AddressBox.Text;
-                Save();
+                Context.AddCluster(result.Name, result.Address);
             }
-            else
-            {
-                Context.Add(NameBox.Text, AddressBox.Text);
-                ClearInput();
-            }
-            UpdateUi();
         }
         catch (Exception ex)
         {
-            ErrorLabel.Content = ex.Message;
+            await ShowError(ex.Message);
         }
     }
 
-    private void ClearInput()
+    private async void EditCluster_Click(object? sender, RoutedEventArgs e)
     {
-        NameBox.Clear();
-        AddressBox.Clear();
-    }
-
-    private static string CreateNewId(string? nameBoxText)
-    {
-        return Guid.NewGuid().ToString();
-    }
-
-    private LocalClustersViewModel Context => DataContext as LocalClustersViewModel;
-
-    private void SaveButton_Click(object? sender, RoutedEventArgs e)
-    {
-        Save();
-    }
-
-    private void Save()
-    {
-        Context.Save();
-        var old = Context;
-        DataContext = null;
-        DataContext = old;
-    }
-
-    private void RemoveButton_Click(object? sender, RoutedEventArgs e)
-    {
-        if (SelectedItem != null)
+        try
         {
-            Context.Remove(SelectedItem);
+            var selected = ClustersGrid.SelectedItem as ClusterInfo;
+            if (selected == null) return;
+
+            var existingNames = Context.Clusters.Select(c => c.Name).ToList();
+            var dialog = new AddEditClusterDialog(selected, existingNames);
+            var result = await dialog.ShowDialog<ClusterInfo?>(this);
+
+            if (result != null)
+            {
+                Context.UpdateCluster(result);
+            }
         }
-    }
-
-    private void OnClose(object? sender, WindowClosingEventArgs e)
-    {
-        Save();
-    }
-
-    private void NameBox_OnTextChanged(object? sender, TextChangedEventArgs e)
-    {
-        UpdateUi();
-    }
-
-    private void AddressBox_OnTextChanged(object? sender, TextChangedEventArgs e)
-    {
-        UpdateUi();
-    }
-
-    private void UpdateUi()
-    {
-        ErrorLabel.Content = string.Empty;
-
-        AddClusterButton.Content = EditMode ? "Update" : "Add";
-        var validValues = !string.IsNullOrWhiteSpace(NameBox.Text) &&
-                                      !string.IsNullOrWhiteSpace(AddressBox.Text);
-        if (EditMode)
+        catch (Exception ex)
         {
-            validValues = validValues && (SelectedItem?.Name != NameBox.Text || SelectedItem?.Address != AddressBox.Text);
+            await ShowError(ex.Message);
         }
-        AddClusterButton.IsEnabled = validValues;
-
-        RemoveButton.IsEnabled = SelectedItem != null;
     }
 
-    private bool EditMode => SelectedItem != null;
+    private async void RemoveCluster_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var selected = ClustersGrid.SelectedItem as ClusterInfo;
+            Context.RemoveCluster(selected);
+        }
+        catch (Exception ex)
+        {
+            await ShowError(ex.Message);
+        }
+    }
+    #endregion
+
+    #region KafkaLens Clients
+    private async void AddClient_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var existingNames = Context.Clients.Select(c => c.Name).ToList();
+            var dialog = new AddEditClientDialog(existingNames);
+            var result = await dialog.ShowDialog<ClientInfo?>(this);
+
+            if (result != null)
+            {
+                Context.AddClient(result.Name, result.Address, result.Protocol);
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowError(ex.Message);
+        }
+    }
+
+    private async void EditClient_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var selected = ClientsGrid.SelectedItem as ClientInfo;
+            if (selected == null) return;
+
+            var existingNames = Context.Clients.Select(c => c.Name).ToList();
+            var dialog = new AddEditClientDialog(selected, existingNames);
+            var result = await dialog.ShowDialog<ClientInfo?>(this);
+
+            if (result != null)
+            {
+                Context.UpdateClient(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowError(ex.Message);
+        }
+    }
+
+    private async void RemoveClient_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var selected = ClientsGrid.SelectedItem as ClientInfo;
+            Context.RemoveClient(selected);
+        }
+        catch (Exception ex)
+        {
+            await ShowError(ex.Message);
+        }
+    }
+    #endregion
+
+    private async System.Threading.Tasks.Task ShowError(string message)
+    {
+         var box = MessageBoxManager
+            .GetMessageBoxStandard("Error", message, ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error);
+         await box.ShowAsync();
+    }
 
     private void OpenSettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -142,25 +171,6 @@ public partial class EditClustersDialog : Window
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             fileExplorerCommand = "xdg-open";
-        }
-    }
-
-    private void ClustersGrid_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        var item = ClustersGrid.SelectedItem as ClusterInfo;
-        SelectedItem = item == null ? null : Context.Clusters.FirstOrDefault(cluster => cluster.Id == item.Id);
-
-        UpdateUi();
-    }
-
-    private ClusterInfo? SelectedItem
-    {
-        get => selectedItem;
-        set
-        {
-            selectedItem = value;
-            NameBox.Text = selectedItem?.Name ?? string.Empty;
-            AddressBox.Text = selectedItem?.Address ?? string.Empty;
         }
     }
 }

@@ -50,7 +50,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public AsyncRelayCommand SaveAllAsRawCommand { get; set; }
     public AsyncRelayCommand SaveAllAsFormattedCommand { get; set; }
 
-    public string Name { get; }
+    [ObservableProperty]
+    private string name;
+
     public string Address => cluster.Address;
 
     public ObservableCollection<ITreeNode> Nodes { get; } = new();
