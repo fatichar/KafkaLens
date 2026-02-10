@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AvaloniaApp.Views.AddEditClusterDialog"
+        Title="Add/Edit Cluster"
+        Width="400" Height="250"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20" Spacing="10">
+        <Label Content="Cluster Name"/>
+        <TextBox Name="NameBox" Watermark="e.g. Production"/>
+
+        <Label Content="Bootstrap Servers"/>
+        <TextBox Name="AddressBox" Watermark="e.g. localhost:9092"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
+            <Button Name="OkButton" Content="OK" IsDefault="True" Click="OkButton_Click"/>
+            <Button Name="CancelButton" Content="Cancel" IsCancel="True" Click="CancelButton_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

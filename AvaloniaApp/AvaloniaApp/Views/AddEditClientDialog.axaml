@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AvaloniaApp.Views.AddEditClientDialog"
+        Title="Add/Edit Client"
+        Width="400" Height="300"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20" Spacing="10">
+        <Label Content="Client Name"/>
+        <TextBox Name="NameBox" Watermark="e.g. MyClient"/>
+
+        <Label Content="Address"/>
+        <TextBox Name="AddressBox" Watermark="e.g. localhost:5000"/>
+
+        <Label Content="Protocol"/>
+        <ComboBox Name="ProtocolBox" SelectedIndex="0">
+            <ComboBoxItem Content="grpc"/>
+        </ComboBox>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
+            <Button Name="OkButton" Content="OK" IsDefault="True" Click="OkButton_Click"/>
+            <Button Name="CancelButton" Content="Cancel" IsCancel="True" Click="CancelButton_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

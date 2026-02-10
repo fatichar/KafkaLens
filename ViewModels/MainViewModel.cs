@@ -19,6 +19,7 @@ namespace KafkaLens.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     public IClusterInfoRepository ClusterInfoRepository { get; }
+    public IClientInfoRepository ClientInfoRepository { get; }
 
     // data
     public string? Title { get; private set; }
@@ -73,9 +74,11 @@ public partial class MainViewModel : ViewModelBase
         ISettingsService settingsService,
         ISavedMessagesClient savedMessagesClient,
         IClusterInfoRepository clusterInfoRepository,
+        IClientInfoRepository clientInfoRepository,
         FormatterFactory formatterFactory)
     {
         ClusterInfoRepository = clusterInfoRepository;
+        ClientInfoRepository = clientInfoRepository;
         Log.Information("Creating MainViewModel");
         this.clusterFactory = clusterFactory;
         this.settingsService = settingsService;
