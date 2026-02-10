@@ -27,6 +27,13 @@ public sealed class MessagesViewModel: ViewModelBase
         get => currentMessage;
         set
         {
+            // Ignore null when there's already a selection and messages exist
+            // This prevents tab switching from clearing the selection
+            if (value == null && currentMessage != null && Filtered.Contains(currentMessage))
+            {
+                return;
+            }
+
             if (currentMessage != null && currentMessage != value)
             {
                 currentMessage.Cleanup();
@@ -37,28 +44,6 @@ public sealed class MessagesViewModel: ViewModelBase
                 {
                     currentMessage.LineFilter = lineFilter;
                     currentMessage.UseObjectFilter = UseObjectFilter;
-                }
-            }
-        }
-    }
-
-    private int field = -1;
-    public int SelectedIndex
-    {
-        get => field;
-        set
-        {
-            if (value < 0)
-            {
-                field = -1;
-                return;
-            }
-
-            if (SetProperty(ref field, value))
-            {
-                if (field >= 0 && field < Filtered.Count)
-                {
-                    CurrentMessage = Filtered[field];
                 }
             }
         }
@@ -146,7 +131,7 @@ public sealed class MessagesViewModel: ViewModelBase
     {
         Messages.Clear();
         Filtered.Clear();
-        SelectedIndex = -1;
+        CurrentMessage = null;
     }
 
     internal void Add(MessageViewModel message)

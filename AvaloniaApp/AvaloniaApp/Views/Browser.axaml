@@ -33,7 +33,7 @@
                       RowHeaderWidth="50"
                       IsReadOnly="True"
                       ItemsSource="{Binding CurrentMessages.Filtered}"
-                      SelectedIndex="{Binding CurrentMessages.SelectedIndex, Mode=TwoWay}"
+                      SelectedItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
                       SelectionChanged="MessagesGrid_OnSelectionChanged"
                       ContextMenu="{StaticResource MessageGridContextMenu}">
                 <DataGrid.Columns>

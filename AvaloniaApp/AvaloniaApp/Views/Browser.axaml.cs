@@ -36,6 +36,15 @@ public partial class Browser : UserControl
         if (Context != null)
         {
             Context.CurrentMessages.PropertyChanged += OnCurrentMessagesChanged;
+
+            // Restore display if there's already a selected message
+            var message = Context.CurrentMessages.CurrentMessage;
+            if (message != null)
+            {
+                subscribedMessage = message;
+                message.PropertyChanged += OnCurrentMessagePropertyChanged;
+                SetText(message.DisplayText);
+            }
         }
     }
 
