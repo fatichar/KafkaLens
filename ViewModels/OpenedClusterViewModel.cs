@@ -240,7 +240,27 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         {
             var viewModel = new TopicViewModel(topic, null);
             Topics.Add(viewModel);
-            Children.Add(viewModel);
+        }
+        FilterTopics();
+    }
+
+    [ObservableProperty]
+    private string filterText = "";
+
+    partial void OnFilterTextChanged(string value)
+    {
+        FilterTopics();
+    }
+
+    private void FilterTopics()
+    {
+        Children.Clear();
+        foreach (var topic in Topics)
+        {
+            if (string.IsNullOrWhiteSpace(FilterText) || topic.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase))
+            {
+                Children.Add(topic);
+            }
         }
     }
 

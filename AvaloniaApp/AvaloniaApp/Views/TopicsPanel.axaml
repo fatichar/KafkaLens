@@ -4,18 +4,21 @@
              xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              xmlns:av="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
              x:DataType="vm:OpenedClusterViewModel">
-    <TreeView Name="TopicsTree" ItemsSource="{Binding Children}"
-              SelectedItem="{Binding SelectedNode}">
-        <TreeView.Styles>
-            <Style Selector="av|TreeViewItem" x:DataType="vm:ITreeNode">
-                <Setter Property="IsSelected" Value="{Binding IsSelected}"/>
-                <Setter Property="IsExpanded" Value="{Binding IsExpanded}"/>
-            </Style>
-        </TreeView.Styles>
-        <TreeView.ItemTemplate>
-            <TreeDataTemplate x:DataType="vm:ITreeNode" ItemsSource="{Binding Children}">
-                <TextBlock Text="{Binding Name}" Margin="0" FontSize="12"/>
-            </TreeDataTemplate>
-        </TreeView.ItemTemplate>
-    </TreeView>
+    <Grid RowDefinitions="Auto,*">
+        <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Watermark="Filter topics..." Margin="5"/>
+        <TreeView Grid.Row="1" Name="TopicsTree" ItemsSource="{Binding Children}"
+                  SelectedItem="{Binding SelectedNode}">
+            <TreeView.Styles>
+                <Style Selector="av|TreeViewItem" x:DataType="vm:ITreeNode">
+                    <Setter Property="IsSelected" Value="{Binding IsSelected}"/>
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded}"/>
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate x:DataType="vm:ITreeNode" ItemsSource="{Binding Children}">
+                    <TextBlock Text="{Binding Name}" Margin="0" FontSize="12"/>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </Grid>
 </UserControl>
