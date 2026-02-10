@@ -3,5 +3,6 @@
     <Nullable>enable</Nullable>
     <AvaloniaVersion>11.0.10</AvaloniaVersion>
     <Version>0.4</Version>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
 </Project>
