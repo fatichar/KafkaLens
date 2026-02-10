@@ -18,6 +18,10 @@ Download the latest release for your operating system:
 - [Linux](https://github.com/fatichar/KafkaLens/releases/download/0.3/KafkaLens-0.3-linux-x64.zip)
 - [MacOS](https://github.com/fatichar/KafkaLens/releases/download/0.3/KafkaLens-0.3-macos-arm64.zip)
 
+## License
+
+This project is licensed under the AGPLv3 License - see the [LICENSE](../LICENSE) file for details.
+
 ## Buy Me a Coffee
 
 If you find KafkaLens useful, please consider buying me a coffee!
