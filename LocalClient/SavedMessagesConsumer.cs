@@ -1,4 +1,5 @@
 using System.Threading;
+using Serilog;
 ﻿using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
 
@@ -63,30 +64,23 @@ public class SavedMessagesConsumer : ConsumerBase
             {
                 return;
             }
-            var message = CreateMessage(s);
-            message.Partition = partition;
-            stream.Messages.Add(message);
+            try
+            {
+                var message = CreateMessage(s);
+                message.Partition = partition;
+                stream.Messages.Add(message);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Failed to load message {File}", s);
+            }
         });
     }
 
     private Message CreateMessage(string messageFile)
     {
-        var data = File.ReadAllBytes(messageFile);
-        var message = new Message(
-            0,
-            new Dictionary<string, byte[]>(),
-            null,
-            data)
-        {
-            Offset = GetOffset(messageFile)
-        };
-        return message;
-    }
-
-    private static long GetOffset(string messageFile)
-    {
-        var fileName = Path.GetFileNameWithoutExtension(messageFile);
-        return long.TryParse(fileName, out var offset) ? offset : -1;
+        using var fs = File.OpenRead(messageFile);
+        return Message.Deserialize(fs);
     }
 
     #endregion Read

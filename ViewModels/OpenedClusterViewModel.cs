@@ -164,7 +164,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     #region SAVE MESSAGES
 
-    private const string SAVE_MESSAGES_DIR = "saved_messages";
+    private static readonly string SAVE_MESSAGES_DIR = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KafkaLens",
+        "SavedMessages");
 
     private async Task SaveAllMessagesAsRaw()
     {
@@ -209,7 +212,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         // save as binary
         if (!formatted)
         {
-            await File.WriteAllBytesAsync(filePath, msg.message.Value);
+            await Task.Run(() =>
+            {
+                using var fileStream = File.Create(filePath);
+                msg.message.Serialize(fileStream);
+            });
         }
         else
         {
