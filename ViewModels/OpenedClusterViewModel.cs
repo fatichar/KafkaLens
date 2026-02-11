@@ -64,8 +64,16 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public ITreeNode.NodeType SelectedNodeType
     {
         get;
-        set => SetProperty(ref field, value);
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(IsFetchOptionsEnabled));
+            }
+        }
     } = ITreeNode.NodeType.NONE;
+
+    public bool IsFetchOptionsEnabled => SelectedNodeType == ITreeNode.NodeType.TOPIC || SelectedNodeType == ITreeNode.NodeType.PARTITION;
 
     public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
     public int FetchCount { get; set; } = 10;

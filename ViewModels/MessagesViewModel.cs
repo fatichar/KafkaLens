@@ -40,6 +40,7 @@ public sealed class MessagesViewModel: ViewModelBase
             }
             if (SetProperty(ref currentMessage, value))
             {
+                OnPropertyChanged(nameof(IsMessageSelected));
                 if (currentMessage != null)
                 {
                     currentMessage.LineFilter = lineFilter;
@@ -48,6 +49,8 @@ public sealed class MessagesViewModel: ViewModelBase
             }
         }
     }
+
+    public bool IsMessageSelected => CurrentMessage != null;
 
     private string positiveFilter = "";
     public string PositiveFilter
