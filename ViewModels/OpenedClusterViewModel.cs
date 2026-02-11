@@ -222,7 +222,23 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         {
             // save as formatted
             msg.PrettyFormat();
-            await File.WriteAllTextAsync(filePath, msg.DisplayText);
+            var text = new System.Text.StringBuilder();
+            text.AppendLine($"Key: {msg.Key}");
+            text.AppendLine($"Timestamp: {msg.Timestamp}");
+            text.AppendLine($"Partition: {msg.Partition}");
+            text.AppendLine($"Offset: {msg.Offset}");
+            if (msg.message.Headers.Count > 0)
+            {
+                text.AppendLine("Headers:");
+                foreach (var header in msg.message.Headers)
+                {
+                    text.AppendLine($"  {header.Key}: {System.Text.Encoding.UTF8.GetString(header.Value)}");
+                }
+            }
+            text.AppendLine();
+            text.AppendLine(msg.DisplayText);
+
+            await File.WriteAllTextAsync(filePath, text.ToString());
         }
     }
 
