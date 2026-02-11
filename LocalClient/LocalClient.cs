@@ -213,17 +213,6 @@ public class LocalClient : IKafkaLensClient
         return cluster;
     }
 
-    private ClusterInfo validateClusterName(string name)
-    {
-        var cluster = Clusters.Values
-            .FirstOrDefault(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
-        if (cluster == null)
-        {
-            throw new ArgumentException($"Cluster with name {name} does not exist", nameof(name));
-        }
-        return cluster;
-    }
-
     private IKafkaConsumer GetConsumer(string clusterId)
     {
         lock (consumers)
