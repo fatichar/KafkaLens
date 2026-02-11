@@ -8,7 +8,8 @@
         <avaloniaApp:FetchPositionConverter x:Key="IsTimestampPosition" />
     </UserControl.Resources>
     <Grid Margin="5" RowDefinitions="Auto, Auto, Auto, Auto, *" ColumnDefinitions="Auto, *"
-          VerticalAlignment="Top">
+          VerticalAlignment="Top"
+          IsEnabled="{Binding IsFetchOptionsEnabled}">
         <Label Grid.Row="0" Grid.Column="0"
                VerticalAlignment="Center"
                Margin="5">
