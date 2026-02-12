@@ -35,7 +35,33 @@ public class SharedClient : IKafkaLensClient
     #region Create
     public Task<bool> ValidateConnectionAsync(string address)
     {
-        return Task.FromResult(false);
+        return Task.Run(() =>
+        {
+            try
+            {
+                var consumer = GetOrCreateConsumerByAddress(address);
+                return consumer.ValidateConnection();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        });
+    }
+
+    private IKafkaConsumer GetOrCreateConsumerByAddress(string address)
+    {
+        var cluster = Clusters.Values.FirstOrDefault(c => c.Address == address);
+        if (cluster != null)
+        {
+            if (consumers.TryGetValue(cluster.Id, out var consumer))
+            {
+                return consumer;
+            }
+            return Connect(cluster);
+        }
+        // Address not associated with any known cluster, create a temporary consumer
+        return consumerFactory.CreateNew(address);
     }
 
     public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
@@ -89,13 +115,29 @@ public class SharedClient : IKafkaLensClient
     public Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
         Log.Information("Get all clusters");
-        return Task.FromResult(Clusters.Values.Select(ToModel));
+        return Task.Run(() => Clusters.Values.Select(c =>
+        {
+            var model = ToModel(c);
+            if (consumers.TryGetValue(c.Id, out var consumer))
+            {
+                try
+                {
+                    model.IsConnected = consumer.ValidateConnection();
+                }
+                catch (Exception e)
+                {
+                    Log.Debug("ValidateConnection failed for cluster {ClusterName}: {Message}", c.Name, e.Message);
+                    model.IsConnected = false;
+                }
+            }
+            return model;
+        }).AsEnumerable());
     }
 
     public Task<KafkaCluster> GetClusterByIdAsync(string clusterId)
     {
         var cluster = ValidateClusterId(clusterId);
-        return Task.FromResult(ToModel(cluster));
+        return Task.Run(() => ToModel(cluster));
     }
 
     Task<KafkaCluster> IKafkaLensClient.GetClusterByNameAsync(string name)

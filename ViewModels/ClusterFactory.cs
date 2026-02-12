@@ -38,7 +38,7 @@ public class ClusterFactory : IClusterFactory
         try
         {
             Log.Information("Loading clusters for client: {ClientName}", client.Name);
-            var clusters = await client.GetAllClustersAsync();
+            var clusters = (await client.GetAllClustersAsync()).ToList();
             Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateClusters(client, clusters));
         }
         catch (Exception e)
@@ -49,25 +49,27 @@ public class ClusterFactory : IClusterFactory
 
     private void UpdateClusters(IKafkaLensClient client, IEnumerable<Shared.Models.KafkaCluster> clusters)
     {
-        var toCheck = new List<ClusterViewModel>();
+        var newClusters = new List<ClusterViewModel>();
         foreach (var cluster in clusters)
         {
             var existing = Clusters.FirstOrDefault(c => c.Id == cluster.Id && c.Client.Name == client.Name);
             if (existing != null)
             {
-                // existing.IsConnected = cluster.IsConnected; // Don't rely on initial value
-                toCheck.Add(existing);
+                existing.IsConnected = cluster.IsConnected;
             }
             else
             {
                 var newVm = new ClusterViewModel(cluster, client);
                 Clusters.Add(newVm);
-                toCheck.Add(newVm);
+                newClusters.Add(newVm);
             }
         }
 
-        // Fire and forget connection check
-        _ = CheckConnections(toCheck);
+        // Validate connection for newly discovered clusters
+        if (newClusters.Count > 0)
+        {
+            _ = Task.WhenAll(newClusters.Select(c => c.CheckConnectionAsync()));
+        }
 
         // Handle removals if necessary
         var toRemove = Clusters.Where(c => c.Client.Name == client.Name && !clusters.Any(newC => newC.Id == c.Id)).ToList();
@@ -75,11 +77,5 @@ public class ClusterFactory : IClusterFactory
         {
             Clusters.Remove(item);
         }
-    }
-
-    private async Task CheckConnections(List<ClusterViewModel> clusters)
-    {
-        // Check connections in parallel
-        await Task.WhenAll(clusters.Select(cluster => cluster.CheckConnectionAsync()));
     }
 }

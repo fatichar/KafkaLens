@@ -287,15 +287,22 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     internal async Task LoadTopicsAsync()
     {
-        await cluster.LoadTopicsCommand.ExecuteAsync(null);
-        Topics.Clear();
-        foreach (var topic in cluster.Topics)
+        try
         {
-            var viewModel = new TopicViewModel(topic, null);
-            Topics.Add(viewModel);
-        }
+            await cluster.LoadTopicsCommand.ExecuteAsync(null);
+            Topics.Clear();
+            foreach (var topic in cluster.Topics)
+            {
+                var viewModel = new TopicViewModel(topic, null);
+                Topics.Add(viewModel);
+            }
 
-        FilterTopics();
+            FilterTopics();
+        }
+        catch (Exception e)
+        {
+            Serilog.Log.Error(e, "Failed to load topics for opened cluster {ClusterName}", Name);
+        }
     }
 
     [ObservableProperty] private string filterText = "";

@@ -33,7 +33,7 @@ public partial class MainView : UserControl
         var dialog = new EditClustersDialog();
         var dataContext = DataContext as MainViewModel;
         dialog.DataContext = new EditClustersViewModel(dataContext.Clusters, dataContext.ClusterInfoRepository, dataContext.ClientInfoRepository, dataContext.ClientFactory);
-        dialog.ShowDialog(mainWindow).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => dataContext.LoadClusters()));
+        dialog.ShowDialog(mainWindow);
     }
 
     private Window? GetMainWindow()

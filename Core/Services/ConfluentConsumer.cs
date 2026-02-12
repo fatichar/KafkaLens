@@ -74,7 +74,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     {
         try
         {
-            var metadata = AdminClient.GetMetadata(TimeSpan.FromSeconds(2));
+            var metadata = AdminClient.GetMetadata(TimeSpan.FromSeconds(3));
             return metadata.OriginatingBrokerId != -1;
         }
         catch (Exception e)

@@ -12,5 +12,5 @@ public class KafkaCluster
     public string Id { get; set; }
     public string Name { get; set; }
     public string Address { get; set; }
-    public bool IsConnected { get; set; } = true;
+    public bool IsConnected { get; set; } = false;
 }

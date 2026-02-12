@@ -46,9 +46,14 @@ public class GrpcClient : IKafkaLensClient
             });
             return response.IsConnected;
         }
-        catch (RpcException)
+        catch (RpcException e)
         {
-            return false;
+             if (e.Status.StatusCode == StatusCode.Unimplemented)
+             {
+                 return true;
+             }
+
+             return false;
         }
     }
     #endregion Constructor
@@ -75,7 +80,18 @@ public class GrpcClient : IKafkaLensClient
                 new Empty(),
                 null,
                 DateTime.UtcNow.AddSeconds(5));
-            return response.Clusters.Select(ToClusterModel);
+            var clusters = response.Clusters.Select(ToClusterModel).ToList();
+
+            // For clusters where the server didn't provide IsConnected,
+            // try ValidateConnectionAsync as a fallback
+            var needsCheck = clusters.Where(c => !response.Clusters
+                .First(rc => rc.Id == c.Id).HasIsConnected).ToList();
+            await Task.WhenAll(needsCheck.Select(async c =>
+            {
+                c.IsConnected = await ValidateConnectionAsync(c.Address);
+            }));
+
+            return clusters;
         }
         catch (RpcException e)
         {
