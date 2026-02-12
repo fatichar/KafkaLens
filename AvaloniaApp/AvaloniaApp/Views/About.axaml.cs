@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using ActiproSoftware.UI.Avalonia.Controls;
 using Avalonia;
@@ -11,8 +12,15 @@ namespace AvaloniaApp.Views;
 
 public partial class About : Window
 {
+    private const string AUTHOR = "Pravin Chaudhary";
+    public string AppVersion { get; }
+    public string Copyright { get; } = $"Copyright {DateTime.Now.Year}: " + AUTHOR;
+
     public About()
     {
+        var version = Assembly.GetEntryAssembly()?.GetName().Version;
+        AppVersion = version != null ? $"Version: {version.ToString(2)}" : "Version: unknown";
+        DataContext = this;
         InitializeComponent();
 #if DEBUG
         this.AttachDevTools();
