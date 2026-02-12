@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
     <PropertyGroup>
-        <TargetFramework>net7.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
@@ -15,9 +15,9 @@
     <ItemGroup>
         <PackageReference Include="Blazor.Extensions.Logging" Version="2.0.4" />
         <PackageReference Include="Blazority" Version="0.12.3" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.8" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="6.0.8" PrivateAssets="all" />
-        <PackageReference Include="System.Net.Http.Json" Version="6.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" PrivateAssets="all" />
+        <PackageReference Include="System.Net.Http.Json" Version="10.0.0" />
     </ItemGroup>
 
     <ItemGroup>
