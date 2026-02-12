@@ -14,6 +14,7 @@ public partial class Browser : UserControl
     private string messageTablePositiveFilter = "";
     private string messageTableNegativeFilter = "";
     private MessageViewModel? subscribedMessage;
+    private OpenedClusterViewModel? previousContext;
 
     public Browser()
     {
@@ -33,6 +34,19 @@ public partial class Browser : UserControl
 
     private void OnDataContextChanged()
     {
+        // Unsubscribe from previous context
+        if (previousContext != null)
+        {
+            previousContext.CurrentMessages.PropertyChanged -= OnCurrentMessagesChanged;
+        }
+        if (subscribedMessage != null)
+        {
+            subscribedMessage.PropertyChanged -= OnCurrentMessagePropertyChanged;
+            subscribedMessage = null;
+        }
+
+        previousContext = Context;
+
         if (Context != null)
         {
             Context.CurrentMessages.PropertyChanged += OnCurrentMessagesChanged;
@@ -45,6 +59,14 @@ public partial class Browser : UserControl
                 message.PropertyChanged += OnCurrentMessagePropertyChanged;
                 SetText(message.DisplayText);
             }
+            else
+            {
+                SetText("");
+            }
+        }
+        else
+        {
+            SetText("");
         }
     }
 
