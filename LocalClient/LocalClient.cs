@@ -96,24 +96,10 @@ public class LocalClient : IKafkaLensClient
     #endregion Create
 
     #region Read
-    public async Task<IEnumerable<Shared.Models.KafkaCluster>> GetAllClustersAsync()
+    public Task<IEnumerable<Shared.Models.KafkaCluster>> GetAllClustersAsync()
     {
         Log.Information("Get all Clusters");
-        var tasks = Clusters.Values.Select(async c =>
-        {
-            var cluster = ToModel(c);
-            try
-            {
-                var consumer = GetConsumer(cluster.Id);
-                cluster.IsConnected = await Task.Run(() => consumer.ValidateConnection());
-            }
-            catch (Exception)
-            {
-                cluster.IsConnected = false;
-            }
-            return cluster;
-        });
-        return await Task.WhenAll(tasks);
+        return Task.FromResult(Clusters.Values.Select(ToModel));
     }
 
     public Task<Shared.Models.KafkaCluster> GetClusterByIdAsync(string clusterId)

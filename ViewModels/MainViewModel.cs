@@ -270,11 +270,17 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        if (!cluster.IsConnected)
+        if (cluster.IsConnected != true)
         {
-            cluster.LoadTopicsCommand.Execute(null);
+            cluster.LoadTopicsCommand.ExecuteAsync(null).ContinueWith(t =>
+            {
+                if (cluster.IsConnected == true)
+                {
+                     Dispatcher.UIThread.Post(() => OpenCluster(cluster));
+                }
+            });
         }
-        if (cluster.IsConnected)
+        else
         {
             OpenCluster(cluster);
         }

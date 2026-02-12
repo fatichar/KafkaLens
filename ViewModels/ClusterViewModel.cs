@@ -7,7 +7,7 @@ using KafkaLens.Shared;
 
 namespace KafkaLens.ViewModels;
 
-public sealed partial class ClusterViewModel: ViewModelBase
+public sealed partial class ClusterViewModel: ConnectionViewModelBase
 {
     public IKafkaLensClient Client { get; }
     public IAsyncRelayCommand LoadTopicsCommand { get; }
@@ -27,23 +27,27 @@ public sealed partial class ClusterViewModel: ViewModelBase
         LoadTopicsCommand = new AsyncRelayCommand(LoadTopicsAsync);
     }
 
-    [ObservableProperty]
-    private bool isConnected;
-
-    public string StatusColor => IsConnected ? "Green" : "Red";
-
-    partial void OnIsConnectedChanged(bool value)
+    public async Task CheckConnectionAsync()
     {
-        OnPropertyChanged(nameof(StatusColor));
+        IsConnected = await Client.ValidateConnectionAsync(Address);
     }
 
     private async Task LoadTopicsAsync()
     {
-        Topics.Clear();
-        var topics = await Client.GetTopicsAsync(cluster.Id);
-        foreach (var topic in topics)
+        try
         {
-            Topics.Add(topic);
+            Topics.Clear();
+            var topics = await Client.GetTopicsAsync(cluster.Id);
+            foreach (var topic in topics)
+            {
+                Topics.Add(topic);
+            }
+            IsConnected = true;
+        }
+        catch (Exception e)
+        {
+            Serilog.Log.Error(e, "Failed to load topics for cluster {ClusterName}", Name);
+            IsConnected = false;
         }
     }
 }

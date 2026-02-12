@@ -49,23 +49,37 @@ public class ClusterFactory : IClusterFactory
 
     private void UpdateClusters(IKafkaLensClient client, IEnumerable<Shared.Models.KafkaCluster> clusters)
     {
+        var toCheck = new List<ClusterViewModel>();
         foreach (var cluster in clusters)
         {
             var existing = Clusters.FirstOrDefault(c => c.Id == cluster.Id && c.Client.Name == client.Name);
             if (existing != null)
             {
-                existing.IsConnected = cluster.IsConnected;
+                // existing.IsConnected = cluster.IsConnected; // Don't rely on initial value
+                toCheck.Add(existing);
             }
             else
             {
-                Clusters.Add(new ClusterViewModel(cluster, client));
+                var newVm = new ClusterViewModel(cluster, client);
+                Clusters.Add(newVm);
+                toCheck.Add(newVm);
             }
         }
+
+        // Fire and forget connection check
+        _ = CheckConnections(toCheck);
+
         // Handle removals if necessary
         var toRemove = Clusters.Where(c => c.Client.Name == client.Name && !clusters.Any(newC => newC.Id == c.Id)).ToList();
         foreach (var item in toRemove)
         {
             Clusters.Remove(item);
         }
+    }
+
+    private async Task CheckConnections(List<ClusterViewModel> clusters)
+    {
+        // Check connections in parallel
+        await Task.WhenAll(clusters.Select(cluster => cluster.CheckConnectionAsync()));
     }
 }

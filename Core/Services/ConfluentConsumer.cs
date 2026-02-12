@@ -62,11 +62,13 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     {
         try
         {
-            var metadata = AdminClient.GetMetadata(queryTopicsTimeout);
+            var metadata = AdminClient.GetMetadata(TimeSpan.FromSeconds(2));
             return metadata.OriginatingBrokerId != -1;
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            // Logging only the message to avoid stack trace clutter for expected timeouts
+            Log.Debug("Connection validation failed: {Message}", e.Message);
             return false;
         }
     }
