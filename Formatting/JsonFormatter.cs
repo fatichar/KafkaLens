@@ -182,7 +182,7 @@ public class JsonFormatter : IMessageFormatter
         var text = Encoding.UTF8.GetString(data);
         if (text.Length < data.Length)
         {
-            return null;
+            // return null;
         }
 
         try
