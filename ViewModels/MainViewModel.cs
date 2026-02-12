@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Avalonia.Threading;
 using HyperText.Avalonia.Models;
 using KafkaLens.Shared;
 using KafkaLens.Formatting;
@@ -20,6 +21,7 @@ public partial class MainViewModel : ViewModelBase
 {
     public IClusterInfoRepository ClusterInfoRepository { get; }
     public IClientInfoRepository ClientInfoRepository { get; }
+    public IClientFactory ClientFactory { get; }
 
     // data
     public string? Title { get; private set; }
@@ -34,6 +36,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly IClusterFactory clusterFactory;
     private readonly ISettingsService settingsService;
     private readonly ISavedMessagesClient savedMessagesClient;
+    private DispatcherTimer timer;
 
     // commands
     public IRelayCommand EditClustersCommand { get; }
@@ -75,10 +78,12 @@ public partial class MainViewModel : ViewModelBase
         ISavedMessagesClient savedMessagesClient,
         IClusterInfoRepository clusterInfoRepository,
         IClientInfoRepository clientInfoRepository,
+        IClientFactory clientFactory,
         FormatterFactory formatterFactory)
     {
         ClusterInfoRepository = clusterInfoRepository;
         ClientInfoRepository = clientInfoRepository;
+        ClientFactory = clientFactory;
         Log.Information("Creating MainViewModel");
         this.clusterFactory = clusterFactory;
         this.settingsService = settingsService;
@@ -93,7 +98,14 @@ public partial class MainViewModel : ViewModelBase
 
         IsActive = true;
 
-        if (Clusters.Count > 0)
+        timer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(appConfig.ClusterRefreshIntervalSeconds > 0 ? appConfig.ClusterRefreshIntervalSeconds : 60)
+        };
+        timer.Tick += (s, e) => LoadClusters();
+        timer.Start();
+
+        if (Clusters != null && Clusters.Count > 0)
         {
             // OpenCluster(Clusters[0].Id);
         }
@@ -102,24 +114,28 @@ public partial class MainViewModel : ViewModelBase
     protected override async void OnActivated()
     {
         await LoadClusters();
-        CreateMenuItems();
     }
 
     public async Task LoadClusters()
     {
-        if (Clusters != null)
+        if (Clusters == null)
         {
-            Clusters.CollectionChanged -= OnClustersChanged;
-        }
-        Clusters = await clusterFactory.LoadClustersAsync();
-        openClusterMenuItems.Clear();
-        foreach (var cluster in Clusters)
-        {
-            AddClusterToMenu(cluster);
-        }
+            Clusters = clusterFactory.GetAllClusters();
+            Clusters.CollectionChanged += OnClustersChanged;
 
-        Clusters.CollectionChanged += OnClustersChanged;
-        CreateMenuItems();
+            openClusterMenuItems.Clear();
+            foreach (var cluster in Clusters)
+            {
+                AddClusterToMenu(cluster);
+            }
+            CreateMenuItems();
+
+            await clusterFactory.LoadClustersAsync();
+        }
+        else
+        {
+            await clusterFactory.LoadClustersAsync();
+        }
 
         UpdateOpenedClusters();
     }
@@ -201,12 +217,22 @@ public partial class MainViewModel : ViewModelBase
 
     private MenuItemViewModel CreateOpenMenuItem(ClusterViewModel c)
     {
+        var statusIcon = new StatusIconViewModel { Color = c.StatusColor };
+        c.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(ClusterViewModel.StatusColor))
+            {
+                statusIcon.Color = c.StatusColor;
+            }
+        };
+
         return new MenuItemViewModel
         {
             Header = c.Name,
             Command = OpenClusterCommand,
             CommandParameter = c.Id,
-            IsEnabled = c.IsConnected
+            IsEnabled = true,
+            Icon = statusIcon
         };
     }
 
@@ -246,14 +272,7 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        if (!cluster.IsConnected)
-        {
-            cluster.LoadTopicsCommand.Execute(null);
-        }
-        if (cluster.IsConnected)
-        {
-            OpenCluster(cluster);
-        }
+        OpenCluster(cluster);
     }
 
     public async void OpenSavedMessages(string path)

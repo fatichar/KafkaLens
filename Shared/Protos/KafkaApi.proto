@@ -11,6 +11,7 @@ package KafkaLens.Grpc;
 service KafkaApi {
   // Create
   rpc AddCluster(AddClusterRequest) returns (Cluster);
+  rpc ValidateConnection(ValidateConnectionRequest) returns (ValidateConnectionResponse);
 
   // Read
   rpc GetAllClusters (google.protobuf.Empty) returns (GetClustersResponse);
@@ -45,6 +46,16 @@ message Cluster {
   string id = 1;
   string name = 2;
   string bootstrap_servers = 3;
+  optional bool is_connected = 4;
+}
+
+message ValidateConnectionRequest {
+  string bootstrap_servers = 1;
+}
+
+message ValidateConnectionResponse {
+  bool is_connected = 1;
+  string message = 2;
 }
 
 message GetTopicsRequest {

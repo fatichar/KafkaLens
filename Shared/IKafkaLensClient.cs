@@ -8,6 +8,9 @@ namespace KafkaLens.Shared;
 public interface IKafkaLensClient
 {
     public string Name { get; }
+    
+    public bool CanEditClusters { get; }
+    
     public bool CanSaveMessages { get; }
 
     #region create

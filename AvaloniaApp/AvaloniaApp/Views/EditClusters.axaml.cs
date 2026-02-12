@@ -37,12 +37,13 @@ public partial class EditClustersDialog : Window
         try
         {
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
-            var dialog = new AddEditClusterDialog(existingNames);
+            var validator = new Func<string, System.Threading.Tasks.Task<bool>>(Context.ValidateConnectionAsync);
+            var dialog = new AddEditClusterDialog(existingNames, validator);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
             if (result != null)
             {
-                Context.AddCluster(result.Name, result.Address);
+                await Context.AddClusterAsync(result.Name, result.Address);
             }
         }
         catch (Exception ex)
@@ -55,16 +56,18 @@ public partial class EditClustersDialog : Window
     {
         try
         {
-            var selected = ClustersGrid.SelectedItem as ClusterInfo;
+            var selected = ClustersGrid.SelectedItem as ClusterViewModel;
             if (selected == null) return;
 
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
-            var dialog = new AddEditClusterDialog(selected, existingNames);
+            var validator = new Func<string, System.Threading.Tasks.Task<bool>>(Context.ValidateConnectionAsync);
+            var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address);
+            var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
             if (result != null)
             {
-                Context.UpdateCluster(result);
+                await Context.UpdateClusterAsync(selected, result.Name, result.Address);
             }
         }
         catch (Exception ex)
@@ -77,7 +80,7 @@ public partial class EditClustersDialog : Window
     {
         try
         {
-            var selected = ClustersGrid.SelectedItem as ClusterInfo;
+            var selected = ClustersGrid.SelectedItem as ClusterViewModel;
             Context.RemoveCluster(selected);
         }
         catch (Exception ex)
@@ -111,11 +114,11 @@ public partial class EditClustersDialog : Window
     {
         try
         {
-            var selected = ClientsGrid.SelectedItem as ClientInfo;
+            var selected = ClientsGrid.SelectedItem as ClientInfoViewModel;
             if (selected == null) return;
 
             var existingNames = Context.Clients.Select(c => c.Name).ToList();
-            var dialog = new AddEditClientDialog(selected, existingNames);
+            var dialog = new AddEditClientDialog(selected.Info, existingNames);
             var result = await dialog.ShowDialog<ClientInfo?>(this);
 
             if (result != null)
@@ -133,7 +136,7 @@ public partial class EditClustersDialog : Window
     {
         try
         {
-            var selected = ClientsGrid.SelectedItem as ClientInfo;
+            var selected = ClientsGrid.SelectedItem as ClientInfoViewModel;
             Context.RemoveClient(selected);
         }
         catch (Exception ex)

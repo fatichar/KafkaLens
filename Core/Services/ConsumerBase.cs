@@ -11,6 +11,8 @@ public abstract class ConsumerBase : IKafkaConsumer
 
     protected DateTime LastRefreshTime { get; set; } = DateTime.Now;
 
+    public abstract bool ValidateConnection();
+
     public virtual List<Topic> GetTopics()
     {
         // if topics were loaded in the last 5 minutes, return them
@@ -94,5 +96,9 @@ public abstract class ConsumerBase : IKafkaConsumer
             return topic;
         }
         throw new Exception($"Topic {topicName} does not exist.");
+    }
+
+    public virtual void Dispose()
+    {
     }
 }

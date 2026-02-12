@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -14,6 +15,7 @@ public partial class AddEditClusterDialog : Window
     private readonly string? _originalName = null;
     private readonly string? _originalId = null;
     private readonly HashSet<string> _existingNames;
+    private readonly Func<string, Task<bool>>? _connectionValidator;
 
     public AddEditClusterDialog()
     {
@@ -21,12 +23,14 @@ public partial class AddEditClusterDialog : Window
         _existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
-    public AddEditClusterDialog(IEnumerable<string> existingNames) : this()
+    public AddEditClusterDialog(IEnumerable<string> existingNames, Func<string, Task<bool>>? connectionValidator = null) : this()
     {
         _existingNames = new HashSet<string>(existingNames, StringComparer.OrdinalIgnoreCase);
+        _connectionValidator = connectionValidator;
+        UpdateTestButton();
     }
 
-    public AddEditClusterDialog(ClusterInfo existing, IEnumerable<string> existingNames) : this(existingNames)
+    public AddEditClusterDialog(ClusterInfo existing, IEnumerable<string> existingNames, Func<string, Task<bool>>? connectionValidator = null) : this(existingNames, connectionValidator)
     {
         _originalName = existing.Name;
         _originalId = existing.Id;
@@ -35,8 +39,51 @@ public partial class AddEditClusterDialog : Window
         Title = "Edit Cluster";
     }
 
+    private void UpdateTestButton()
+    {
+        if (TestButton != null)
+        {
+            TestButton.IsVisible = _connectionValidator != null;
+        }
+    }
+
+    private async void TestButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(AddressBox.Text) || _connectionValidator == null) return;
+
+        TestButton.IsEnabled = false;
+        StatusTextBlock.Text = "Testing connection...";
+        StatusTextBlock.Foreground = Brushes.Blue;
+        ErrorTextBlock.Text = "";
+
+        try
+        {
+            bool connected = await _connectionValidator(AddressBox.Text.Trim());
+            if (connected)
+            {
+                StatusTextBlock.Text = "Connected successfully.";
+                StatusTextBlock.Foreground = Brushes.Green;
+            }
+            else
+            {
+                StatusTextBlock.Text = "";
+                ErrorTextBlock.Text = "Failed to connect.";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusTextBlock.Text = "";
+            ErrorTextBlock.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            TestButton.IsEnabled = true;
+        }
+    }
+
     private void OkButton_Click(object? sender, RoutedEventArgs e)
     {
+        StatusTextBlock.Text = "";
         ErrorTextBlock.Text = "";
 
         if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(AddressBox.Text))

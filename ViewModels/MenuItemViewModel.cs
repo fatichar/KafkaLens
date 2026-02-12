@@ -10,4 +10,5 @@ public class MenuItemViewModel
     public object CommandParameter { get; set; }
     public ObservableCollection<MenuItemViewModel> Items { get; set; }
     public bool IsEnabled { get; set; } = true;
+    public object Icon { get; set; }
 }

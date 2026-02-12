@@ -55,6 +55,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public string Address => cluster.Address;
 
+    public string StatusColor => cluster.StatusColor;
+
     public ObservableCollection<ITreeNode> Nodes { get; } = new();
     public ObservableCollection<TopicViewModel> Topics { get; } = new();
 
@@ -132,6 +134,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     {
         this.settingsService = settingsService;
         this.cluster = cluster;
+        this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
 
         FetchMessagesCommand = new RelayCommand(FetchMessages);
@@ -167,6 +170,21 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         if (!updated.Equals(StartTimeText))
         {
             StartTimeText = updated;
+        }
+    }
+
+    private void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ClusterViewModel.StatusColor))
+        {
+            OnPropertyChanged(nameof(StatusColor));
+        }
+        else if (e.PropertyName == nameof(ClusterViewModel.IsConnected))
+        {
+            if (cluster.IsConnected == true && Topics.Count == 0)
+            {
+                _ = LoadTopicsAsync();
+            }
         }
     }
 

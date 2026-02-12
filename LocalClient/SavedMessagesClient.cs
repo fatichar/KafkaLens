@@ -20,6 +20,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     #region Create
 
     public string Name { get; } = "Saved Messages";
+    public bool CanEditClusters => false;
     public bool CanSaveMessages => false;
 
     public Task<bool> ValidateConnectionAsync(string BootstrapServers)

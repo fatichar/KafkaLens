@@ -15,6 +15,11 @@ public class SavedMessagesConsumer : ConsumerBase
     }
 
     #region Read
+    public override bool ValidateConnection()
+    {
+        return Directory.Exists(clusterDir);
+    }
+
     public override List<Topic> GetTopics()
     {
         if (Topics.Count > 0)
