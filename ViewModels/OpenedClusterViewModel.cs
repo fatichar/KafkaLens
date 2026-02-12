@@ -138,10 +138,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         StopLoadingCommand = new RelayCommand(StopLoading);
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
-        SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw);
-        SaveSelectedAsFormattedCommand = new AsyncRelayCommand(SaveSelectedMessagesAsFormatted);
-        SaveAllAsRawCommand = new AsyncRelayCommand(SaveAllMessagesAsRaw);
-        SaveAllAsFormattedCommand = new AsyncRelayCommand(SaveAllMessagesAsFormatted);
+        SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw, CanSaveMessages);
+        SaveSelectedAsFormattedCommand = new AsyncRelayCommand(SaveSelectedMessagesAsFormatted, CanSaveMessages);
+        SaveAllAsRawCommand = new AsyncRelayCommand(SaveAllMessagesAsRaw, CanSaveMessages);
+        SaveAllAsFormattedCommand = new AsyncRelayCommand(SaveAllMessagesAsFormatted, CanSaveMessages);
 
         Nodes.Add(this);
         IsSelected = true;
@@ -172,7 +172,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     #region SAVE MESSAGES
 
-    private const string SAVE_MESSAGES_DIR = "saved_messages";
+    private static readonly string SAVE_MESSAGES_DIR = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KafkaLens",
+        "SavedMessages");
+
+    private bool CanSaveMessages()
+    {
+        return cluster.Client.CanSaveMessages;
+    }
 
     private async Task SaveAllMessagesAsRaw()
     {
@@ -217,13 +225,33 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         // save as binary
         if (!formatted)
         {
-            await File.WriteAllBytesAsync(filePath, msg.message.Value);
+            await Task.Run(() =>
+            {
+                using var fileStream = File.Create(filePath);
+                msg.message.Serialize(fileStream);
+            });
         }
         else
         {
             // save as formatted
             msg.PrettyFormat();
-            await File.WriteAllTextAsync(filePath, msg.DisplayText);
+            var text = new System.Text.StringBuilder();
+            text.AppendLine($"Key: {msg.Key}");
+            text.AppendLine($"Timestamp: {msg.Timestamp}");
+            text.AppendLine($"Partition: {msg.Partition}");
+            text.AppendLine($"Offset: {msg.Offset}");
+            if (msg.message.Headers.Count > 0)
+            {
+                text.AppendLine("Headers:");
+                foreach (var header in msg.message.Headers)
+                {
+                    text.AppendLine($"  {header.Key}: {System.Text.Encoding.UTF8.GetString(header.Value)}");
+                }
+            }
+            text.AppendLine();
+            text.AppendLine(msg.DisplayText);
+
+            await File.WriteAllTextAsync(filePath, text.ToString());
         }
     }
 
