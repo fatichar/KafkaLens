@@ -15,6 +15,7 @@ public class LocalClient : IKafkaLensClient
 {
     public string Name { get; } = "Local";
     public bool CanEditClusters => true;
+    public bool CanSaveMessages => true;
 
     private readonly IClusterInfoRepository infoRepository;
     private readonly ConsumerFactory consumerFactory;

@@ -15,6 +15,8 @@ public class SharedClient : IKafkaLensClient
     public string Name => "Shared";
     public bool CanEditClusters => false;
     
+    public bool CanSaveMessages => true;
+
     private readonly IClusterInfoRepository infoRepository;
     private readonly ConsumerFactory consumerFactory;
 
