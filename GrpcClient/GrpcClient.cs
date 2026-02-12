@@ -26,12 +26,14 @@ public class GrpcClient : IKafkaLensClient
     public GrpcClient(string name, string url)
     {
         Name = name;
+        CanSaveMessages = true;
         this.url = url;
         var channel = GrpcChannel.ForAddress(url);
         client = new KafkaApi.KafkaApiClient(channel);
     }
 
     public string Name { get; }
+    public bool CanSaveMessages { get; }
 
     public Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {

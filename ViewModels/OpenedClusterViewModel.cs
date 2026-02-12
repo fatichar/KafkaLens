@@ -171,7 +171,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     private bool CanSaveMessages()
     {
-        return !(cluster.Client is ISavedMessagesClient);
+        return cluster.Client.CanSaveMessages;
     }
 
     private async Task SaveAllMessagesAsRaw()
