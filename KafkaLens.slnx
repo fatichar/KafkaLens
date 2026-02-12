@@ -1,0 +1,21 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="arm64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj" />
+  <Project Path="AvaloniaApp/AvaloniaApp/AvaloniaApp.csproj" />
+  <Project Path="Core/Core.csproj" />
+  <Project Path="Formatting/Formatting.csproj" />
+  <Project Path="GrpcApi.Tests/GrpcApi.Tests.csproj" />
+  <Project Path="GrpcApi/GrpcApi.csproj" />
+  <Project Path="GrpcClient/GrpcClient.csproj" />
+  <Project Path="LocalClient/LocalClient.csproj" />
+  <Project Path="Shared/Shared.csproj" />
+  <Project Path="ViewModels/ViewModels.csproj" />
+</Solution>

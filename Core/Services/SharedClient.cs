@@ -14,9 +14,7 @@ public class SharedClient : IKafkaLensClient
 {
     public string Name => "Shared";
     public bool CanEditClusters => false;
-    
     public bool CanSaveMessages => true;
-
     private readonly IClusterInfoRepository infoRepository;
     private readonly ConsumerFactory consumerFactory;
 
@@ -199,17 +197,6 @@ public class SharedClient : IKafkaLensClient
         if (cluster == null)
         {
             throw new ArgumentException("", nameof(id));
-        }
-        return cluster;
-    }
-
-    private Shared.Entities.ClusterInfo validateClusterName(string name)
-    {
-        var cluster = Clusters.Values
-            .FirstOrDefault(cluster => cluster.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
-        if (cluster == null)
-        {
-            throw new ArgumentException($"Cluster with name {name} does not exist", nameof(name));
         }
         return cluster;
     }
