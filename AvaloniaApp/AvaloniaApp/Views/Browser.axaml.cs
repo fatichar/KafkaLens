@@ -2,9 +2,13 @@ using System;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Styling;
 using AvaloniaEdit.Document;
-using AvaloniaEdit.Highlighting;
+using AvaloniaEdit.TextMate;
+using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.ViewModels;
+using KafkaLens.ViewModels.Messages;
+using TextMateSharp.Grammars;
 
 namespace AvaloniaApp.Views;
 
@@ -15,12 +19,14 @@ public partial class Browser : UserControl
     private string messageTableNegativeFilter = "";
     private MessageViewModel? subscribedMessage;
     private OpenedClusterViewModel? previousContext;
+    private TextMate.Installation? _textMateInstallation;
+    private RegistryOptions? _registryOptions;
 
     public Browser()
     {
         InitializeComponent();
 
-        UpdateHighlighting();
+        SetupTextMateHighlighting();
 
         // Subscribe to CurrentMessage changes to update TextEditor
         this.PropertyChanged += (s, e) =>
@@ -30,6 +36,11 @@ public partial class Browser : UserControl
                 OnDataContextChanged();
             }
         };
+
+        WeakReferenceMessenger.Default.Register<ThemeChangedMessage>(this, (r, m) =>
+        {
+            ApplyTextMateTheme(m.Value);
+        });
     }
 
     private void OnDataContextChanged()
@@ -127,9 +138,57 @@ public partial class Browser : UserControl
         }
     }
 
-    private void UpdateHighlighting()
+    private void SetupTextMateHighlighting()
     {
-        MessageViewer.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
+        var currentTheme = GetCurrentTextMateTheme();
+        _registryOptions = new RegistryOptions(currentTheme);
+        _textMateInstallation = MessageViewer.InstallTextMate(_registryOptions);
+
+        var jsonLanguage = _registryOptions.GetLanguageByExtension(".json");
+        if (jsonLanguage != null)
+        {
+            _textMateInstallation.SetGrammar(_registryOptions.GetScopeByLanguageId(jsonLanguage.Id));
+        }
+    }
+
+    private void ApplyTextMateTheme(string themeName)
+    {
+        var textMateTheme = themeName switch
+        {
+            "Dark" => ThemeName.DarkPlus,
+            "Light" => ThemeName.LightPlus,
+            _ => GetSystemTextMateTheme()
+        };
+
+        _registryOptions = new RegistryOptions(textMateTheme);
+        _textMateInstallation?.Dispose();
+        _textMateInstallation = MessageViewer.InstallTextMate(_registryOptions);
+
+        var jsonLanguage = _registryOptions.GetLanguageByExtension(".json");
+        if (jsonLanguage != null)
+        {
+            _textMateInstallation.SetGrammar(_registryOptions.GetScopeByLanguageId(jsonLanguage.Id));
+        }
+    }
+
+    private ThemeName GetCurrentTextMateTheme()
+    {
+        var app = Avalonia.Application.Current;
+        if (app?.ActualThemeVariant == ThemeVariant.Dark)
+        {
+            return ThemeName.DarkPlus;
+        }
+        return ThemeName.LightPlus;
+    }
+
+    private static ThemeName GetSystemTextMateTheme()
+    {
+        var app = Avalonia.Application.Current;
+        if (app?.ActualThemeVariant == ThemeVariant.Dark)
+        {
+            return ThemeName.DarkPlus;
+        }
+        return ThemeName.LightPlus;
     }
 
     private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
