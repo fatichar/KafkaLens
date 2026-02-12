@@ -40,7 +40,7 @@ public partial class PartitionViewModel: ViewModelBase, IMessageSource {
     public IAsyncRelayCommand LoadMessagesCommand { get; }
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
-    public string FormatterName
+    public string? FormatterName
     {
         get => topic.FormatterName;
         set => topic.FormatterName = value;

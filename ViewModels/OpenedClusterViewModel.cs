@@ -50,8 +50,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public AsyncRelayCommand SaveAllAsRawCommand { get; set; }
     public AsyncRelayCommand SaveAllAsFormattedCommand { get; set; }
 
-    [ObservableProperty]
-    private string name;
+    [ObservableProperty] private string name;
 
     public string Address => cluster.Address;
 
@@ -75,15 +74,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         }
     } = ITreeNode.NodeType.NONE;
 
-    public bool IsFetchOptionsEnabled => SelectedNodeType == ITreeNode.NodeType.TOPIC || SelectedNodeType == ITreeNode.NodeType.PARTITION;
+    public bool IsFetchOptionsEnabled => SelectedNodeType == ITreeNode.NodeType.TOPIC ||
+                                         SelectedNodeType == ITreeNode.NodeType.PARTITION;
 
     public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
     public int FetchCount { get; set; } = 10;
     [ObservableProperty] private string? startOffset;
 
     private TimeOnly startTime;
-    [ObservableProperty]
-    private bool isStartTimeValid = true;
+    [ObservableProperty] private bool isStartTimeValid = true;
 
     public string StartTimeText
     {
@@ -102,8 +101,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         }
     }
 
-    [ObservableProperty]
-    private DateTime startDate;
+    [ObservableProperty] private DateTime startDate;
 
     private DateTime StartDateTime => StartDate.Date + startTime.ToTimeSpan();
 
@@ -266,6 +264,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                     text.AppendLine($"  {header.Key}: {System.Text.Encoding.UTF8.GetString(header.Value)}");
                 }
             }
+
             text.AppendLine();
             text.AppendLine(msg.DisplayText);
 
@@ -295,11 +294,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             var viewModel = new TopicViewModel(topic, null);
             Topics.Add(viewModel);
         }
+
         FilterTopics();
     }
 
-    [ObservableProperty]
-    private string filterText = "";
+    [ObservableProperty] private string filterText = "";
 
     partial void OnFilterTextChanged(string value)
     {
@@ -311,7 +310,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         Children.Clear();
         foreach (var topic in Topics)
         {
-            if (string.IsNullOrWhiteSpace(FilterText) || topic.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(FilterText) ||
+                topic.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase))
             {
                 Children.Add(topic);
             }
@@ -337,6 +337,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                     SetProperty(ref selectedNode, field);
                 });
             }
+
             if (SetProperty(ref selectedNode, value))
             {
                 SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.NONE;
@@ -421,10 +422,24 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             Assert.True(e.NewItems?.Count > 0);
             var message = (Message)e.NewItems[0];
             var formatter = GuessFormatter(message);
+            var topicName = node.Type switch
+            {
+                ITreeNode.NodeType.TOPIC => node.Name,
+                ITreeNode.NodeType.PARTITION => (node as PartitionViewModel).TopicName,
+                _ => node.Name
+            };
+            if (formatter != null)
+            {
+                Log.Information("Guessed formatter {Formatter} for topic {Topic}", formatter.Name, topicName);
+            }
+            else
+            {
+                Log.Warning("Unable to guess formatter for topic {Topic}", topicName);
+            }
+
             node.FormatterName = formatter?.Name ?? DefaultFormatter.Name;
         }
 
-        //var formatter = node?.FormatterName ?? DefaultFormatter.Name;
         lock (pendingMessages)
         {
             Log.Debug("Pending messages = {Count}", pendingMessages.Count);
@@ -458,15 +473,34 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     {
         IMessageFormatter? best = null;
         int maxLength = 0;
-        foreach (IMessageFormatter formatter in Formatters)
+
+        // Disable console output, as some formatters may write to it.
+        var originalOut = Console.Out;
+        Console.SetOut(TextWriter.Null);
+        try
         {
-            var text = formatter.Format(message.Value, true);
-            if (text == null) continue;
-            if (text.Length > maxLength)
+            foreach (IMessageFormatter formatter in Formatters)
             {
-                maxLength = text.Length;
-                best = formatter;
+                try
+                {
+                    var text = formatter.Format(message.Value, true);
+                    if (text == null) continue;
+                    if (text.Length > maxLength)
+                    {
+                        maxLength = text.Length;
+                        best = formatter;
+                    }
+                }
+                catch
+                {
+                    // Formatter doesn't support this message type — skip silently
+                }
             }
+        }
+        finally
+        {
+            // Restore console output.
+            Console.SetOut(originalOut);
         }
 
         return best;

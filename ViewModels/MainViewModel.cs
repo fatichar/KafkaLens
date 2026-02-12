@@ -105,7 +105,7 @@ public partial class MainViewModel : ViewModelBase
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
         OpenSavedMessagesCommand = new RelayCommand(() => ShowFolderOpenDialog());
 
-        Title = appConfig?.Title ?? "";
+        Title = appConfig.Title;
 
         currentTheme = settingsService.GetValue("Theme") ?? "System";
 
@@ -115,10 +115,10 @@ public partial class MainViewModel : ViewModelBase
         {
             Interval = TimeSpan.FromSeconds(appConfig.ClusterRefreshIntervalSeconds > 0 ? appConfig.ClusterRefreshIntervalSeconds : 60)
         };
-        timer.Tick += (s, e) => LoadClusters();
+        timer.Tick += (s, e) => _ = LoadClusters();
         timer.Start();
 
-        if (Clusters != null && Clusters.Count > 0)
+        if (Clusters is { Count: > 0 })
         {
             // OpenCluster(Clusters[0].Id);
         }

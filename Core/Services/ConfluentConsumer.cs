@@ -32,9 +32,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
     private IConsumer<byte[], byte[]> CreateConsumer()
     {
-        return new ConsumerBuilder<byte[], byte[]>(Config).SetLogHandler((c, m) =>
-        {
-        }).Build();
+        return new ConsumerBuilder<byte[], byte[]>(Config)
+            .SetLogHandler((c, m) => { })
+            .SetErrorHandler((c, e) => { })
+            .Build();
     }
 
     private static ConsumerConfig CreateConsumerConfig(String url)
@@ -58,7 +59,11 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         {
             BootstrapServers = url
         };
-        return new AdminClientBuilder(config).Build();
+        config.Set("log_level", "0");
+        return new AdminClientBuilder(config)
+            .SetLogHandler((c, m) => { })
+            .SetErrorHandler((c, e) => { })
+            .Build();
     }
 
     #endregion Create

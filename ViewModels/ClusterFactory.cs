@@ -11,12 +11,12 @@ public class ClusterFactory : IClusterFactory
     private readonly IClientFactory clientFactory;
 
     private ObservableCollection<ClusterViewModel> Clusters { get; } = new();
-    
+
     public ClusterFactory(IClientFactory clientFactory)
     {
         this.clientFactory = clientFactory;
     }
-    
+
     public ObservableCollection<ClusterViewModel> GetAllClusters()
     {
         return Clusters;
@@ -28,8 +28,8 @@ public class ClusterFactory : IClusterFactory
         var clients = clientFactory.GetAllClients();
 
         // call LoadClustersAsync for each client in parallel
-        await Task.WhenAll(clients.Select(client => LoadClustersAsync(client)));
-        
+        await Task.WhenAll(clients.Select(LoadClustersAsync));
+
         return Clusters;
     }
 
