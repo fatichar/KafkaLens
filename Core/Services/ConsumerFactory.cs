@@ -2,7 +2,7 @@
 
 public class ConsumerFactory
 {
-    public IKafkaConsumer CreateNew(string url)
+    public virtual IKafkaConsumer CreateNew(string url)
     {
         return new ConfluentConsumer(url);
     }

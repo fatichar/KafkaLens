@@ -1,6 +1,7 @@
 using System.Threading;
-﻿using System.Net.NetworkInformation;
+using System.Net.NetworkInformation;
 using Confluent.Kafka;
+using KafkaLens.Core.Utils;
 using KafkaLens.Shared.Models;
 using Serilog;
 using TopicPartition = Confluent.Kafka.TopicPartition;
@@ -173,7 +174,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
         for (var i = 0; i < tps.Count; ++i)
         {
-            UpdateForWatermarks(partitionOptions[i], watermarks[i]);
+            WatermarkHelper.UpdateForWatermarks(partitionOptions[i], watermarks[i]);
             var tpo = new TopicPartitionOffset(tps[i], partitionOptions[i].Start.Offset);
             tpos.Add(tpo);
         }
@@ -252,7 +253,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                         break;
                     }
 
-                    messages.Messages.Add(CreateMessage(result));
+                    messages.Messages.Add(MessageConverter.CreateMessage(result));
                     --requiredCount;
                 }
                 catch (ConsumeException e)
@@ -292,46 +293,6 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                 }
             });
         }
-    }
-
-    private static void UpdateForWatermarks(FetchOptions fetchOptions, WatermarkOffsets watermarks)
-    {
-        var position = fetchOptions.Start;
-        var offset = position.Offset;
-        if (offset < 0)
-        {
-            // if options.Start.Offset = -1 => offset = watermarks.High
-            // means no message will be returned
-            offset = watermarks.High.Value + 1 + offset;
-        }
-
-        if (offset < watermarks.Low.Value)
-        {
-            offset = watermarks.Low.Value;
-        }
-        else if (offset > watermarks.High.Value)
-        {
-            offset = watermarks.High.Value;
-        }
-
-        position.SetOffset(offset);
-        if (position.Offset + fetchOptions.Limit > watermarks.High.Value)
-        {
-            fetchOptions.Limit = (int)(watermarks.High.Value - position.Offset);
-        }
-    }
-
-    private static Message CreateMessage(ConsumeResult<byte[], byte[]> result)
-    {
-        var epochMillis = result.Message.Timestamp.UnixTimestampMs;
-        var headers = result.Message.Headers.ToDictionary(header =>
-            header.Key, header => header.GetValueBytes());
-
-        return new Message(epochMillis, headers, result.Message.Key, result.Message.Value)
-        {
-            Partition = result.Partition.Value,
-            Offset = result.Offset.Value
-        };
     }
 
     #endregion Read
