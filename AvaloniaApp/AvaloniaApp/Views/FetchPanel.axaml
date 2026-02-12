@@ -78,14 +78,12 @@
             </ComboBox.Styles>
         </ComboBox>
 
-        <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*, Auto" Margin="5">
-            <Button Content="Fetch Messages" Command="{Binding FetchMessagesCommand}"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+        <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="Auto, Auto" Margin="5" HorizontalAlignment="Right">
+            <Button Grid.Column="0" Content="Fetch Messages" Command="{Binding FetchMessagesCommand}"
+                    HorizontalContentAlignment="Center"
                     Height="30" Margin="0,0,5,0" />
-            <Button Content="Stop" Command="{Binding StopLoadingCommand}"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+            <Button Grid.Column="1" Content="Stop" Command="{Binding StopLoadingCommand}"
+                    HorizontalContentAlignment="Center"
                     Height="30" />
         </Grid>
     </Grid>
