@@ -14,6 +14,8 @@ namespace KafkaLens.RestClient;
 
 public class RestClient : IKafkaLensClient
 {
+    public string Name { get; } = "Rest";
+    public bool CanEditClusters => false;
     private KLRestClient client;
     public Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {

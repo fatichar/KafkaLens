@@ -19,6 +19,7 @@ public class GrpcClient : IKafkaLensClient
 
     private readonly KafkaApi.KafkaApiClient client;
     private readonly string url;
+    public bool CanEditClusters => false;
 
     #endregion
 

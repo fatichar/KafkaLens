@@ -13,6 +13,7 @@ namespace KafkaLens.Core.Services;
 public class SharedClient : IKafkaLensClient
 {
     public string Name => "Shared";
+    public bool CanEditClusters => false;
     
     private readonly IClusterInfoRepository infoRepository;
     private readonly ConsumerFactory consumerFactory;

@@ -43,7 +43,7 @@ public partial class EditClustersDialog : Window
 
             if (result != null)
             {
-                Context.AddCluster(result.Name, result.Address);
+                await Context.AddClusterAsync(result.Name, result.Address);
             }
         }
         catch (Exception ex)
@@ -56,17 +56,18 @@ public partial class EditClustersDialog : Window
     {
         try
         {
-            var selected = ClustersGrid.SelectedItem as ClusterInfoViewModel;
+            var selected = ClustersGrid.SelectedItem as ClusterViewModel;
             if (selected == null) return;
 
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
             var validator = new Func<string, System.Threading.Tasks.Task<bool>>(Context.ValidateConnectionAsync);
-            var dialog = new AddEditClusterDialog(selected.Info, existingNames, validator);
+            var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address);
+            var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
             if (result != null)
             {
-                Context.UpdateCluster(result);
+                await Context.UpdateClusterAsync(selected, result.Name, result.Address);
             }
         }
         catch (Exception ex)
@@ -79,7 +80,7 @@ public partial class EditClustersDialog : Window
     {
         try
         {
-            var selected = ClustersGrid.SelectedItem as ClusterInfoViewModel;
+            var selected = ClustersGrid.SelectedItem as ClusterViewModel;
             Context.RemoveCluster(selected);
         }
         catch (Exception ex)

@@ -9,6 +9,11 @@ public interface IKafkaLensClient
 {
     public string Name { get; }
     
+    /// <summary>
+    /// Indicates whether clusters from this client can be added, edited, or removed by the user.
+    /// </summary>
+    public bool CanEditClusters { get; }
+    
     #region create
     Task<bool> ValidateConnectionAsync(string bootstrapServers);
 

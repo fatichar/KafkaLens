@@ -14,6 +14,7 @@ namespace KafkaLens.Clients;
 public class LocalClient : IKafkaLensClient
 {
     public string Name { get; } = "Local";
+    public bool CanEditClusters => true;
 
     private readonly IClusterInfoRepository infoRepository;
     private readonly ConsumerFactory consumerFactory;
@@ -108,17 +109,17 @@ public class LocalClient : IKafkaLensClient
         return Task.FromResult(ToModel(cluster));
     }
 
-    Task<Shared.Models.KafkaCluster> IKafkaLensClient.GetClusterByNameAsync(string name)
+    public async Task<Shared.Models.KafkaCluster> GetClusterByNameAsync(string name)
     {
         var cluster = ValidateClusterId(name);
-        return Task.FromResult(ToModel(cluster));
+        return ToModel(cluster);
     }
 
-    public Task<IList<Topic>> GetTopicsAsync(string clusterId)
+    public async Task<IList<Topic>> GetTopicsAsync(string clusterId)
     {
         var consumer = GetConsumer(clusterId);
 
-        return Task.Run(() =>
+        return await Task.Run(() =>
         {
             var topics = consumer.GetTopics();
             topics.Sort(Helper.CompareTopics);

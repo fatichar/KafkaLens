@@ -9,9 +9,9 @@ namespace KafkaLens.ViewModels;
 public class ClientFactory : IClientFactory
 {
     private const string HTTP_PROTOCOL_PREFIX = "http://";
-    
+
     private readonly IClientInfoRepository infoRepository;
-    
+
     private readonly IDictionary<string, IKafkaLensClient> clients = new Dictionary<string, IKafkaLensClient>();
 
     public ClientFactory(IClientInfoRepository infoRepository, IKafkaLensClient localClient)
@@ -25,7 +25,7 @@ public class ClientFactory : IClientFactory
         this.infoRepository = infoRepository;
     }
 
-    public async Task LoadClientsAsync()
+    public Task LoadClientsAsync()
     {
         var clientInfos = infoRepository.GetAll();
         foreach (var clientInfosKey in clientInfos.Values)
@@ -34,7 +34,7 @@ public class ClientFactory : IClientFactory
         }
 
         var toRemove = clients.Keys
-            .Where(k => !clientInfos.Values.Any(ci => ci.Name == k) && k != "Local")
+            .Where(k => clientInfos.Values.All(ci => ci.Name != k) && k != "Local")
             .ToList();
 
         foreach (var key in toRemove)
@@ -47,18 +47,17 @@ public class ClientFactory : IClientFactory
             Log.Information("Loading client: {ClientName}", clientInfo.Name);
             try
             {
-                if (clients.ContainsKey(clientInfo.Name))
-                {
-                    clients.Remove(clientInfo.Name);
-                }
+                clients.Remove(clientInfo.Name);
                 var client = CreateClient(clientInfo);
                 clients.Add(client.Name, client);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 Log.Error("Failed to load client {}", clientInfo.Name);
             }
         }
+
+        return Task.CompletedTask;
     }
 
     public List<IKafkaLensClient> GetAllClients()
@@ -68,9 +67,9 @@ public class ClientFactory : IClientFactory
 
     public IKafkaLensClient GetClient(string clientId)
     {
-        if (clients.ContainsKey(clientId))
+        if (clients.TryGetValue(clientId, out var client))
         {
-            return clients[clientId];
+            return client;
         }
         throw new ArgumentException($"Client with Id {clientId} not found");
     }
