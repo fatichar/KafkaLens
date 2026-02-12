@@ -2,18 +2,62 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:AvaloniaApp"
              xmlns:hyperlink="clr-namespace:HyperText.Avalonia;assembly=HyperText.Avalonia"
-             x:Class="AvaloniaApp.App"
-             RequestedThemeVariant="Light">
-    <!-- Always use light theme regardless of OS setting. -->
+             x:Class="AvaloniaApp.App">
 
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="ThemeBackgroundBrush">#FFFFFF</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeForegroundBrush">#000000</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeAccentBrush">#0d6efd</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeToolbarBackgroundBrush">LightSteelBlue</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeGridSplitterBrush">LightSteelBlue</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeBorderBrush">LightGray</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeAboutBackgroundBrush">#f8f9fa</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeErrorBrush">#FF4444</SolidColorBrush>
+                    <SolidColorBrush x:Key="StatusConnectedBrush">Green</SolidColorBrush>
+                    <SolidColorBrush x:Key="StatusDisconnectedBrush">Red</SolidColorBrush>
+                    <SolidColorBrush x:Key="StatusUnknownBrush">Gray</SolidColorBrush>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="ThemeBackgroundBrush">#1e1e1e</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeForegroundBrush">#d4d4d4</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeAccentBrush">#3794ff</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeToolbarBackgroundBrush">#2d2d2d</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeGridSplitterBrush">#3f3f46</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeBorderBrush">#444444</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeAboutBackgroundBrush">#252526</SolidColorBrush>
+                    <SolidColorBrush x:Key="ThemeErrorBrush">#F44747</SolidColorBrush>
+                    <SolidColorBrush x:Key="StatusConnectedBrush">#4EC9B0</SolidColorBrush>
+                    <SolidColorBrush x:Key="StatusDisconnectedBrush">#F44747</SolidColorBrush>
+                    <SolidColorBrush x:Key="StatusUnknownBrush">#808080</SolidColorBrush>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />
         <hyperlink:HyperLinkStyle/>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+
+        <Style Selector="Ellipse.status">
+            <Setter Property="Fill" Value="{DynamicResource StatusUnknownBrush}"/>
+        </Style>
+        <Style Selector="Ellipse.status[Tag=Green]">
+            <Setter Property="Fill" Value="{DynamicResource StatusConnectedBrush}"/>
+        </Style>
+        <Style Selector="Ellipse.status[Tag=Red]">
+            <Setter Property="Fill" Value="{DynamicResource StatusDisconnectedBrush}"/>
+        </Style>
+        <Style Selector="Ellipse.status[Tag=Gray]">
+            <Setter Property="Fill" Value="{DynamicResource StatusUnknownBrush}"/>
+        </Style>
     </Application.Styles>
 </Application>

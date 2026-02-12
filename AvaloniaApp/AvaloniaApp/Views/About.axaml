@@ -10,7 +10,7 @@
         x:DataType="vm:MainViewModel"
         Width="400" Height="300"
         WindowStartupLocation="CenterOwner"
-        Background="#f8f9fa"
+        Background="{DynamicResource ThemeAboutBackgroundBrush}"
         CanResize="False">
     <Design.DataContext>
         <vm:MainViewModel />
@@ -27,7 +27,7 @@
                      FontWeight="SemiBold" 
                      Text="KafkaLens" 
                      HorizontalAlignment="Center"
-                     Foreground="#212529"/>
+                     Foreground="{DynamicResource ThemeForegroundBrush}"/>
             
             <!-- Version -->
             <TextBlock Text="Version: 0.2.0" 
@@ -44,7 +44,7 @@
                                         CommandParameter="https://www.KafkaLens.com"
                                         Cursor="Hand"
                                         FontSize="14"
-                                        Foreground="#0d6efd"
+                                        Foreground="{DynamicResource ThemeAccentBrush}"
                                         x:CompileBindings="False"/>
                 
                 <actipro:HyperlinkTextBlock x:Name="ProjectUrl" 
@@ -54,7 +54,7 @@
                                         CommandParameter="https://github.com/fatichar/KafkaLens"
                                         Cursor="Hand"
                                         FontSize="14"
-                                        Foreground="#0d6efd"
+                                        Foreground="{DynamicResource ThemeAccentBrush}"
                                         x:CompileBindings="False"/>
             </StackPanel>
             

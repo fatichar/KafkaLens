@@ -21,7 +21,7 @@
         <DockPanel Margin="0">
             <views:MessagesToolbar x:Name="MessagesToolbar" DockPanel.Dock="Top"
                                    HorizontalAlignment="Stretch"
-                                   Background="LightSteelBlue" BorderThickness="0">
+                                   Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="0">
             </views:MessagesToolbar>
 
             <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"
@@ -49,12 +49,12 @@
             </DataGrid>
         </DockPanel>
 
-        <GridSplitter Grid.Row="1" Background="LightSteelBlue" />
+        <GridSplitter Grid.Row="1" Background="{DynamicResource ThemeGridSplitterBrush}" />
 
         <DockPanel Grid.Row="2">
             <views:MessageDisplayToolbar x:Name="MessageDisplayToolbar" DockPanel.Dock="Bottom"
                                          VerticalAlignment="Center" HorizontalAlignment="Stretch"
-                                         Background="LightSteelBlue" BorderThickness="1" BorderBrush="LightSteelBlue">
+                                         Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderBrush}">
             </views:MessageDisplayToolbar>
             <avaloniaEdit:TextEditor
                 Name="MessageViewer"
