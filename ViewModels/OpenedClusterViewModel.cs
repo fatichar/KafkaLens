@@ -171,13 +171,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         {
             OnPropertyChanged(nameof(StatusColor));
         }
-        else if (e.PropertyName == nameof(ClusterViewModel.IsConnected))
-        {
-            if (cluster.IsConnected == true && Topics.Count == 0)
-            {
-                _ = LoadTopicsAsync();
-            }
-        }
     }
 
     #region SAVE MESSAGES

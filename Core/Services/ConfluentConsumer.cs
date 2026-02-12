@@ -20,20 +20,16 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     private IAdminClient AdminClient { get; }
 
     #region Create
-
     internal ConfluentConsumer(string url)
     {
         Config = CreateConsumerConfig(url);
-        Config.Set("log_level", "0");
         AdminClient = CreateAdminClient(Config.BootstrapServers);
         Consumer = CreateConsumer();
     }
 
     private IConsumer<byte[], byte[]> CreateConsumer()
     {
-        return new ConsumerBuilder<byte[], byte[]>(Config).SetLogHandler((c, m) =>
-        {
-        }).Build();
+        return new ConsumerBuilder<byte[], byte[]>(Config).Build();
     }
 
     private static ConsumerConfig CreateConsumerConfig(String url)
@@ -46,8 +42,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             EnableAutoOffsetStore = false,
             EnableAutoCommit = false,
             FetchMaxBytes = 2_000_000,
-            StatisticsIntervalMs = 30_000,
-            LogQueue = true
+            StatisticsIntervalMs = 30_000
         };
     }
 
@@ -59,7 +54,6 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         };
         return new AdminClientBuilder(config).Build();
     }
-
     #endregion Create
 
     #region Read
@@ -92,12 +86,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     protected override void GetMessages(string topicName, int partition, FetchOptions options,
         MessageStream messages, CancellationToken cancellationToken)
     {
-        Log.Information("Fetching {MessageCount} messages for partition {Topic}:{Partition}", options.Limit, topicName,
-            partition);
+        Log.Information("Fetching {MessageCount} messages for partition {Topic}:{Partition}", options.Limit, topicName, partition);
         var tp = ValidateTopicPartition(topicName, partition);
-        GetMessages(new List<Confluent.Kafka.TopicPartition>() { tp }, options, messages, cancellationToken);
-        Log.Information("Fetched {MessageCount} messages for partition {Topic}:{Partition}", messages.Messages.Count,
-            topicName, partition);
+        GetMessages(new List<Confluent.Kafka.TopicPartition>(){tp}, options, messages, cancellationToken);
+        Log.Information("Fetched {MessageCount} messages for partition {Topic}:{Partition}", messages.Messages.Count, topicName, partition);
     }
 
     private Confluent.Kafka.TopicPartition ValidateTopicPartition(string topicName, int partition)
@@ -107,19 +99,16 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         {
             throw new ArgumentException($"Invalid partition {partition} for topic {topicName}");
         }
-
         return new Confluent.Kafka.TopicPartition(topicName, partition);
     }
 
-    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages,
-        CancellationToken cancellationToken)
+    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
     {
         Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topicName);
 
         ValidateTopic(topicName);
         var topic = Topics[topicName];
-        var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id))
-            .ToList();
+        var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id)).ToList();
 
         GetMessages(tps, options, messages, cancellationToken);
         Log.Information("Fetched {MessageCount} messages for topic {Topic}", messages.Messages.Count, topicName);
@@ -138,7 +127,6 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             var tpoLimit = (Tpo: tpos[i], Limit: partitionOptions[i].Limit);
             tpoLimits.Add(tpoLimit);
         }
-
         FetchMessages(tpoLimits, messages, cancellationToken);
     }
 
@@ -165,9 +153,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         messages.HasMore = false;
     }
 
-    private List<Confluent.Kafka.TopicPartitionOffset> CreateTopicPartitionOffsets(
-        List<Confluent.Kafka.TopicPartition> tps, List<WatermarkOffsets> watermarks,
-        List<FetchOptions> partitionOptions)
+    private List<Confluent.Kafka.TopicPartitionOffset> CreateTopicPartitionOffsets(List<Confluent.Kafka.TopicPartition> tps, List<WatermarkOffsets> watermarks, List<FetchOptions> partitionOptions)
     {
         var tpos = new List<Confluent.Kafka.TopicPartitionOffset>();
 
@@ -177,7 +163,6 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             var tpo = new TopicPartitionOffset(tps[i], partitionOptions[i].Start.Offset);
             tpos.Add(tpo);
         }
-
         return tpos;
     }
 
@@ -201,7 +186,6 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     var tpo = tpos[i];
                     partitionOptions.Add(new(new FetchPosition(PositionType.OFFSET, tpo.Offset.Value), limit));
                 }
-
                 break;
             case PositionType.OFFSET:
                 for (var i = 0; i < tps.Count; i++)
@@ -211,28 +195,23 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     var offset = options.Start.Offset;
                     if (offset < 0)
                     {
-                        offset = -1 - limit;
+                        offset = -1 -limit;
                     }
-
                     partitionOptions.Add(new(new(PositionType.OFFSET, offset), limit));
                 }
-
                 break;
             default:
                 break;
         }
-
         return partitionOptions;
     }
 
-    private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount,
-        CancellationToken cancellationToken)
+    private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount, CancellationToken cancellationToken)
     {
         if (requiredCount <= 0)
         {
             return 0;
         }
-
         lock (Consumer)
         {
             while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
@@ -267,6 +246,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                 }
                 finally
                 {
+
                 }
             }
         }
@@ -276,7 +256,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
     private List<WatermarkOffsets> QueryWatermarkOffsets(List<Confluent.Kafka.TopicPartition> tps)
     {
-        lock (Consumer)
+        lock(Consumer)
         {
             Log.Debug("Querying watermark offsets for {TopicPartitions}", tps);
             return tps.ConvertAll(tp =>
@@ -304,7 +284,6 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             // means no message will be returned
             offset = watermarks.High.Value + 1 + offset;
         }
-
         if (offset < watermarks.Low.Value)
         {
             offset = watermarks.Low.Value;
@@ -313,7 +292,6 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         {
             offset = watermarks.High.Value;
         }
-
         position.SetOffset(offset);
         if (position.Offset + fetchOptions.Limit > watermarks.High.Value)
         {
@@ -333,16 +311,13 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             Offset = result.Offset.Value
         };
     }
-
     #endregion Read
 
     #region IDisposable implemenatation
-
     public override void Dispose()
     {
         Consumer.Dispose();
         base.Dispose();
     }
-
     #endregion IDisposable implemenatation
 }

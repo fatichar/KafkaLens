@@ -120,7 +120,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (Clusters == null)
         {
-            Clusters = clusterFactory.GetAllClusters();
+            Clusters = await clusterFactory.LoadClustersAsync();
             Clusters.CollectionChanged += OnClustersChanged;
 
             openClusterMenuItems.Clear();
@@ -129,8 +129,6 @@ public partial class MainViewModel : ViewModelBase
                 AddClusterToMenu(cluster);
             }
             CreateMenuItems();
-
-            await clusterFactory.LoadClustersAsync();
         }
         else
         {
@@ -272,7 +270,20 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        OpenCluster(cluster);
+        if (cluster.IsConnected != true)
+        {
+            cluster.LoadTopicsCommand.ExecuteAsync(null).ContinueWith(t =>
+            {
+                if (cluster.IsConnected == true)
+                {
+                     Dispatcher.UIThread.Post(() => OpenCluster(cluster));
+                }
+            });
+        }
+        else
+        {
+            OpenCluster(cluster);
+        }
     }
 
     public async void OpenSavedMessages(string path)

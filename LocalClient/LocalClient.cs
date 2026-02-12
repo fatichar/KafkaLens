@@ -108,17 +108,17 @@ public class LocalClient : IKafkaLensClient
         return Task.FromResult(ToModel(cluster));
     }
 
-    public async Task<Shared.Models.KafkaCluster> GetClusterByNameAsync(string name)
+    Task<Shared.Models.KafkaCluster> IKafkaLensClient.GetClusterByNameAsync(string name)
     {
         var cluster = ValidateClusterId(name);
-        return ToModel(cluster);
+        return Task.FromResult(ToModel(cluster));
     }
 
-    public async Task<IList<Topic>> GetTopicsAsync(string clusterId)
+    public Task<IList<Topic>> GetTopicsAsync(string clusterId)
     {
         var consumer = GetConsumer(clusterId);
 
-        return await Task.Run(() =>
+        return Task.Run(() =>
         {
             var topics = consumer.GetTopics();
             topics.Sort(Helper.CompareTopics);
