@@ -15,10 +15,12 @@ public class ClientInfoRepository : IClientInfoRepository
     private const string DEFAULT_FILE_PATH = "client_info.json";
     private readonly string filePath;
     private Dictionary<string, ClientInfo> clients = new();
-    public ReadOnlyDictionary<string, ClientInfo> GetAll() => new(clients);
+    private ReadOnlyDictionary<string, ClientInfo> readOnlyClients;
+    public ReadOnlyDictionary<string, ClientInfo> GetAll() => readOnlyClients;
 
     public ClientInfoRepository(string filePath)
     {
+        readOnlyClients = new(clients);
         if (string.IsNullOrEmpty(filePath))
         {
             Log.Warning("Clients config file path not specified, using default: {DefaultPath}",
@@ -41,7 +43,10 @@ public class ClientInfoRepository : IClientInfoRepository
 
         var configFile = File.ReadAllText(filePath);
         var clientConfig = JsonSerializer.Deserialize<ClientConfig>(configFile);
-        clients = clientConfig.Clients.ToDictionary(client => client.Id);
+        foreach (var client in clientConfig.Clients)
+        {
+            clients.Add(client.Id, client);
+        }
     }
 
     public ClientInfo GetById(string id)

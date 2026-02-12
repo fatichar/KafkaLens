@@ -14,10 +14,12 @@ public class ClusterInfoRepository : IClusterInfoRepository
     private const string DEFAULT_FILE_PATH = "cluster_info.json";
     private readonly string filePath;
     private Dictionary<string, ClusterInfo> clusters = new();
-    public ReadOnlyDictionary<string, ClusterInfo> GetAll() => new(clusters);
+    private ReadOnlyDictionary<string, ClusterInfo> readOnlyClusters;
+    public ReadOnlyDictionary<string, ClusterInfo> GetAll() => readOnlyClusters;
 
     public ClusterInfoRepository(string filePath)
     {
+        readOnlyClusters = new(clusters);
         if (string.IsNullOrEmpty(filePath))
         {
             Log.Warning("Clusters config file path not specified, using default: {DefaultPath}",
@@ -40,7 +42,10 @@ public class ClusterInfoRepository : IClusterInfoRepository
 
         var configFile = File.ReadAllText(filePath);
         var clusterConfig = JsonSerializer.Deserialize<ClusterConfig>(configFile);
-        clusters = clusterConfig.Clusters.ToDictionary(cluster => cluster.Id);
+        foreach (var cluster in clusterConfig.Clusters)
+        {
+            clusters.Add(cluster.Id, cluster);
+        }
     }
 
     public ClusterInfo GetById(string id)
