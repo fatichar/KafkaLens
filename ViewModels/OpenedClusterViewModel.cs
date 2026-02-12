@@ -130,10 +130,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         StopLoadingCommand = new RelayCommand(StopLoading);
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
 
-        SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw);
-        SaveSelectedAsFormattedCommand = new AsyncRelayCommand(SaveSelectedMessagesAsFormatted);
-        SaveAllAsRawCommand = new AsyncRelayCommand(SaveAllMessagesAsRaw);
-        SaveAllAsFormattedCommand = new AsyncRelayCommand(SaveAllMessagesAsFormatted);
+        SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw, CanSaveMessages);
+        SaveSelectedAsFormattedCommand = new AsyncRelayCommand(SaveSelectedMessagesAsFormatted, CanSaveMessages);
+        SaveAllAsRawCommand = new AsyncRelayCommand(SaveAllMessagesAsRaw, CanSaveMessages);
+        SaveAllAsFormattedCommand = new AsyncRelayCommand(SaveAllMessagesAsFormatted, CanSaveMessages);
 
         Nodes.Add(this);
         IsSelected = true;
@@ -168,6 +168,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "KafkaLens",
         "SavedMessages");
+
+    private bool CanSaveMessages()
+    {
+        return !(cluster.Client is ISavedMessagesClient);
+    }
 
     private async Task SaveAllMessagesAsRaw()
     {
