@@ -13,6 +13,8 @@ using KafkaLens.Formatting;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
 using KafkaLens.ViewModels.Config;
+using KafkaLens.ViewModels.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 using Serilog;
 
 namespace KafkaLens.ViewModels;
@@ -50,6 +52,15 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private int selectedIndex = -1;
+
+    [ObservableProperty]
+    private string currentTheme;
+
+    partial void OnCurrentThemeChanged(string value)
+    {
+        settingsService.SetValue("Theme", value);
+        WeakReferenceMessenger.Default.Send(new ThemeChangedMessage(value));
+    }
 
     partial void OnSelectedIndexChanging(int oldValue, int newValue)
     {
@@ -95,6 +106,8 @@ public partial class MainViewModel : ViewModelBase
         OpenSavedMessagesCommand = new RelayCommand(() => ShowFolderOpenDialog());
 
         Title = appConfig?.Title ?? "";
+
+        currentTheme = settingsService.GetValue("Theme") ?? "System";
 
         IsActive = true;
 
@@ -178,7 +191,29 @@ public partial class MainViewModel : ViewModelBase
         MenuItems = new ObservableCollection<MenuItemViewModel>
         {
             CreateClusterMenu(),
+            CreateViewMenu(),
             CreateHelpMenu()
+        };
+    }
+
+    private MenuItemViewModel CreateViewMenu()
+    {
+        return new MenuItemViewModel
+        {
+            Header = "View",
+            Items = new()
+            {
+                new MenuItemViewModel
+                {
+                    Header = "Theme",
+                    Items = new()
+                    {
+                        new MenuItemViewModel { Header = "Light", Command = new RelayCommand(() => CurrentTheme = "Light") },
+                        new MenuItemViewModel { Header = "Dark", Command = new RelayCommand(() => CurrentTheme = "Dark") },
+                        new MenuItemViewModel { Header = "System", Command = new RelayCommand(() => CurrentTheme = "System") }
+                    }
+                }
+            }
         };
     }
 

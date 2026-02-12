@@ -12,9 +12,12 @@ using System;
 using System.IO;
 using System.Reflection;
 using Avalonia.Logging;
+using Avalonia.Styling;
+using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Clients;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.ViewModels.Config;
+using KafkaLens.ViewModels.Messages;
 using Serilog;
 
 namespace AvaloniaApp;
@@ -53,7 +56,8 @@ public partial class App : Application
         var clientRepo = new ClientInfoRepository(Path.Combine(kafkaLensDataPath, config.ClientInfoFilePath));
         services.AddSingleton<IClientInfoRepository>(clientRepo);
 
-        services.AddSingleton<ISettingsService, SettingsService>();
+        var settingsFilePath = Path.Combine(kafkaLensDataPath, "settings.json");
+        services.AddSingleton<ISettingsService>(new SettingsService(settingsFilePath));
 
         var pluginsPath = Path.Combine(kafkaLensDataPath, "Plugins");
         var pluginsDir = Directory.CreateDirectory(pluginsPath);
@@ -192,8 +196,27 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
+    private void ApplyTheme(string themeName)
+    {
+        RequestedThemeVariant = themeName switch
+        {
+            "Light" => ThemeVariant.Light,
+            "Dark" => ThemeVariant.Dark,
+            _ => ThemeVariant.Default
+        };
+    }
+
     public override void OnFrameworkInitializationCompleted()
     {
+        var settingsService = Services.GetRequiredService<ISettingsService>();
+        var theme = settingsService.GetValue("Theme") ?? "System";
+        ApplyTheme(theme);
+
+        WeakReferenceMessenger.Default.Register<ThemeChangedMessage>(this, (r, m) =>
+        {
+            ApplyTheme(m.Value);
+        });
+
         var viewModel = Services.GetRequiredService<MainViewModel>();
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

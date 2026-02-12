@@ -38,13 +38,13 @@
                          HorizontalAlignment="Stretch">
                     <TextBox.Styles>
                         <Style Selector="TextBox.error">
-                            <Setter Property="BorderBrush" Value="#FF4444"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource ThemeErrorBrush}"/>
                             <Setter Property="BorderThickness" Value="2"/>
                         </Style>
                     </TextBox.Styles>
                 </TextBox>
                 <TextBlock Text="Invalid time format (HH:mm:ss)"
-                           Foreground="#FF4444"
+                           Foreground="{DynamicResource ThemeErrorBrush}"
                            FontSize="11"
                            IsVisible="{Binding !IsStartTimeValid}"/>
             </StackPanel>
