@@ -345,7 +345,7 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private void CloseTab(OpenedClusterViewModel openedCluster)
+    internal void CloseTab(OpenedClusterViewModel openedCluster)
     {
         Log.Information("Closing tab: {TabName}", openedCluster.Name);
         var openedList = openedClustersMap[openedCluster.ClusterId];
@@ -357,7 +357,7 @@ public partial class MainViewModel : ViewModelBase
         OpenedClusters.Remove(openedCluster);
     }
 
-    private void OpenCluster(ClusterViewModel clusterViewModel)
+    internal void OpenCluster(ClusterViewModel clusterViewModel)
     {
         Log.Information("Opening cluster: {ClusterName}", clusterViewModel.Name);
         var newName = clusterViewModel.Name;
@@ -380,7 +380,7 @@ public partial class MainViewModel : ViewModelBase
         SelectedIndex = OpenedClusters.Count - 1;
     }
 
-    private static string GenerateNewName(string clusterName, List<OpenedClusterViewModel> alreadyOpened)
+    internal static string GenerateNewName(string clusterName, List<OpenedClusterViewModel> alreadyOpened)
     {
         var existingNames = alreadyOpened.ConvertAll(c => c.Name);
         var suffixes = existingNames.ConvertAll(n => n.Length > clusterName.Length + 1 ? n.Substring(clusterName.Length + 1) : "");
