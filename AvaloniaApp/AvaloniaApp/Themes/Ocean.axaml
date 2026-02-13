@@ -1,0 +1,11 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="ThemeBackgroundBrush">#F0F8FF</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeForegroundBrush">#0D47A1</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeAccentBrush">#0077BE</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeToolbarBackgroundBrush">#E3F2FD</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeGridSplitterBrush">#2196F3</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeBorderBrush">#64B5F6</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeAboutBackgroundBrush">#E1F5FE</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeErrorBrush">#E53935</SolidColorBrush>
+</ResourceDictionary>

@@ -1,9 +1,10 @@
-
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using KafkaLens.Shared;
 using KafkaLens.Formatting;
@@ -58,6 +59,7 @@ public partial class MainViewModel : ViewModelBase
     {
         settingsService.SetValue("Theme", value);
         WeakReferenceMessenger.Default.Send(new ThemeChangedMessage(value));
+        UpdateThemeMenuCheckedState();
     }
 
     partial void OnSelectedIndexChanging(int oldValue, int newValue)
@@ -194,6 +196,9 @@ public partial class MainViewModel : ViewModelBase
             CreateViewMenu(),
             CreateHelpMenu()
         };
+        
+        // Ensure the initial theme state is reflected in the menu
+        UpdateThemeMenuCheckedState();
     }
 
     private MenuItemViewModel CreateViewMenu()
@@ -206,15 +211,43 @@ public partial class MainViewModel : ViewModelBase
                 new MenuItemViewModel
                 {
                     Header = "Theme",
-                    Items = new()
-                    {
-                        new MenuItemViewModel { Header = "Light", Command = new RelayCommand(() => CurrentTheme = "Light") },
-                        new MenuItemViewModel { Header = "Dark", Command = new RelayCommand(() => CurrentTheme = "Dark") },
-                        new MenuItemViewModel { Header = "System", Command = new RelayCommand(() => CurrentTheme = "System") }
-                    }
+                    Items = CreateThemeMenuItems()
                 }
             }
         };
+    }
+
+    private ObservableCollection<MenuItemViewModel> CreateThemeMenuItems()
+    {
+        var themes = new[] { "Light", "Bright", "Ocean", "Forest", "Purple", "Dark", "System" };
+        var items = new ObservableCollection<MenuItemViewModel>();
+        
+        foreach (var theme in themes)
+        {
+            items.Add(new MenuItemViewModel 
+            { 
+                Header = theme,
+                Command = new RelayCommand(() => CurrentTheme = theme),
+                ToggleType = MenuItemToggleType.Radio,
+                IsChecked = theme == CurrentTheme
+            });
+        }
+        
+        return items;
+    }
+
+    private void UpdateThemeMenuCheckedState()
+    {
+        var viewMenu = MenuItems?.FirstOrDefault(m => m.Header == "View");
+        var themeMenu = viewMenu?.Items?.FirstOrDefault(m => m.Header == "Theme");
+        
+        if (themeMenu?.Items != null)
+        {
+            foreach (var item in themeMenu.Items)
+            {
+                item.IsChecked = item.Header == CurrentTheme;
+            }
+        }
     }
 
     private MenuItemViewModel CreateClusterMenu()

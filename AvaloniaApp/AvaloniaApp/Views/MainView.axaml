@@ -20,6 +20,8 @@
                     <Setter Property="CommandParameter" Value="{Binding CommandParameter}"/>
                     <Setter Property="IsEnabled" Value="{Binding IsEnabled}"/>
                     <Setter Property="Icon" Value="{Binding Icon}"/>
+                    <Setter Property="ToggleType" Value="{Binding ToggleType}"/>
+                    <Setter Property="IsChecked" Value="{Binding IsChecked}"/>
                 </Style>
             </Menu.Styles>
             <Menu.DataTemplates>

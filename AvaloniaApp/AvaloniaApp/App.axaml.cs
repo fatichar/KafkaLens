@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using AvaloniaApp.Views;
@@ -8,6 +9,7 @@ using KafkaLens.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Avalonia.Styling;
@@ -196,20 +198,92 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
+    private ResourceDictionary? _currentThemeResources;
+    private string _currentThemeName = "";
+
+    private ResourceDictionary? LoadThemeFromFile(string themeName)
+    {
+        // Try embedded resource first (built-in themes)
+        var uri = $"avares://AvaloniaApp/Themes/{themeName}.axaml";
+        Log.Information("Attempting to load theme {ThemeName} from {Uri}", themeName, uri);
+        try
+        {
+            var resourceDict = (ResourceDictionary)AvaloniaXamlLoader.Load(new Uri(uri));
+            Log.Information("Successfully loaded built-in theme {ThemeName}, keys: {Count}", themeName, resourceDict.Count);
+            return resourceDict;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Could not load built-in theme {ThemeName} from {Uri}", themeName, uri);
+        }
+
+        // Try external file (user/store themes)
+        var externalPath = Path.Combine(AppContext.BaseDirectory, "Themes", $"{themeName}.axaml");
+        Log.Information("Trying external theme path: {Path}, exists: {Exists}", externalPath, File.Exists(externalPath));
+        if (File.Exists(externalPath))
+        {
+            try
+            {
+                var xaml = File.ReadAllText(externalPath);
+                var resourceDict = (ResourceDictionary)AvaloniaRuntimeXamlLoader.Load(xaml);
+                Log.Information("Successfully loaded external theme {ThemeName}", themeName);
+                return resourceDict;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Could not load external theme {ThemeName} from {Path}", themeName, externalPath);
+            }
+        }
+
+        Log.Error("Failed to load theme {ThemeName} from any source", themeName);
+        return null;
+    }
+
     private void ApplyTheme(string themeName)
     {
-        RequestedThemeVariant = themeName switch
+        Log.Information("ApplyTheme called with: {ThemeName}", themeName);
+        _currentThemeName = themeName;
+
+        // Remove previously applied theme resources
+        if (_currentThemeResources != null)
         {
-            "Light" => ThemeVariant.Light,
-            "Dark" => ThemeVariant.Dark,
-            _ => ThemeVariant.Default
-        };
+            Resources.MergedDictionaries.Remove(_currentThemeResources);
+            _currentThemeResources = null;
+        }
+
+        // Determine which theme file to load and which base variant to use
+        string themeFileToLoad;
+        if (themeName == "System")
+        {
+            RequestedThemeVariant = ThemeVariant.Default;
+            var isDark = ActualThemeVariant == ThemeVariant.Dark;
+            themeFileToLoad = isDark ? "Dark" : "Light";
+            Log.Information("System theme detected as: {Variant}", themeFileToLoad);
+        }
+        else
+        {
+            RequestedThemeVariant = themeName == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
+            themeFileToLoad = themeName;
+        }
+
+        // Load and apply theme resource dictionary
+        var themeDict = LoadThemeFromFile(themeFileToLoad);
+        if (themeDict != null)
+        {
+            Resources.MergedDictionaries.Add(themeDict);
+            _currentThemeResources = themeDict;
+            Log.Information("Theme {ThemeName} applied. MergedDictionaries count: {Count}", themeName, Resources.MergedDictionaries.Count);
+        }
+        else
+        {
+            Log.Error("Theme {ThemeName} could not be applied - dictionary was null", themeName);
+        }
     }
 
     public override void OnFrameworkInitializationCompleted()
     {
         var settingsService = Services.GetRequiredService<ISettingsService>();
-        var theme = settingsService.GetValue("Theme") ?? "System";
+        var theme = settingsService.GetValue("Theme") ?? "Light";
         ApplyTheme(theme);
 
         WeakReferenceMessenger.Default.Register<ThemeChangedMessage>(this, (r, m) =>
