@@ -3,9 +3,16 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:AvaloniaApp.Views"
+        xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="AvaloniaApp.Views.MainWindow"
         Icon="/Assets/logo.png"
-        Title="KafkaLens">
-        <views:MainView />
+        Title="KafkaLens"
+        x:DataType="vm:MainViewModel">
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+E" Command="{Binding EditClustersCommand}" />
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenSavedMessagesCommand}" />
+        <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseCurrentTabCommand}" />
+    </Window.KeyBindings>
+    <views:MainView />
 </Window>

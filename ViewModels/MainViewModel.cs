@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 using KafkaLens.Shared;
 using KafkaLens.Formatting;
@@ -43,6 +44,11 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand EditClustersCommand { get; }
     public IRelayCommand OpenClusterCommand { get; }
     public IRelayCommand OpenSavedMessagesCommand { get; set; }
+    public IRelayCommand NextTabCommand { get; }
+    public IRelayCommand PreviousTabCommand { get; }
+    public IRelayCommand<string> SelectTabCommand { get; }
+    public IRelayCommand CloseCurrentTabCommand { get; }
+            
     public static Action ShowAboutDialog { get; set; } = () => { };
     public static Action ShowFolderOpenDialog { get; set; } = () => { };
     public static Action ShowEditClustersDialog { get; set; } = () => { };
@@ -80,6 +86,7 @@ public partial class MainViewModel : ViewModelBase
 
     private readonly ObservableCollection<MenuItemViewModel> openClusterMenuItems = new();
     private MenuItemViewModel openMenu = null!;
+    private MenuItemViewModel closeTabMenuItem = null!;
 
     #region Init
     public MainViewModel(
@@ -106,6 +113,12 @@ public partial class MainViewModel : ViewModelBase
         EditClustersCommand = new RelayCommand(EditClustersAsync);
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
         OpenSavedMessagesCommand = new RelayCommand(() => ShowFolderOpenDialog());
+        NextTabCommand = new RelayCommand(NextTab);
+        PreviousTabCommand = new RelayCommand(PreviousTab);
+        SelectTabCommand = new RelayCommand<string>(s => SelectTab(int.Parse(s ?? "1")));
+        CloseCurrentTabCommand = new RelayCommand(CloseCurrentTab);
+
+        OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
 
         Title = appConfig.Title;
 
@@ -205,7 +218,7 @@ public partial class MainViewModel : ViewModelBase
     {
         return new MenuItemViewModel
         {
-            Header = "View",
+            Header = "_View",
             Items = new()
             {
                 new MenuItemViewModel
@@ -253,27 +266,32 @@ public partial class MainViewModel : ViewModelBase
     private MenuItemViewModel CreateClusterMenu()
     {
         openMenu = CreateOpenMenu();
+        closeTabMenuItem = new MenuItemViewModel
+        {
+            Header = "_Close Tab",
+            Command = CloseCurrentTabCommand,
+            Gesture = KeyGesture.Parse("Ctrl+W"),
+            IsEnabled = OpenedClusters.Count > 0
+        };
         return new MenuItemViewModel
         {
-            Header = "Cluster",
+            Header = "_Cluster",
             Items = new()
             {
                 new MenuItemViewModel
                 {
-                    Header = "Edit Clusters",
+                    Header = "_Edit Clusters",
                     Command = EditClustersCommand,
+                    Gesture = KeyGesture.Parse("Ctrl+E")
                 },
                 openMenu,
                 new MenuItemViewModel
                 {
-                    Header = "Open Saved Messages",
+                    Header = "_Open Saved Messages",
                     Command = OpenSavedMessagesCommand,
+                    Gesture = KeyGesture.Parse("Ctrl+O")
                 },
-                new MenuItemViewModel()
-                {
-                    Header = "Close Tab",
-                    Command = new RelayCommand(CloseCurrentTab),
-                }
+                closeTabMenuItem
             }
         };
     }
@@ -308,7 +326,7 @@ public partial class MainViewModel : ViewModelBase
     {
         return new MenuItemViewModel
         {
-            Header = "Open Cluster",
+            Header = "_Open Cluster",
             Items = openClusterMenuItems
         };
     }
@@ -317,16 +335,24 @@ public partial class MainViewModel : ViewModelBase
     {
         return new MenuItemViewModel
         {
-            Header = "Help",
+            Header = "_Help",
             Items = new()
             {
                 new MenuItemViewModel
                 {
-                    Header = "About",
+                    Header = "_About",
                     Command = new RelayCommand(() => ShowAboutDialog()),
                 },
             }
         };
+    }
+
+    private void UpdateCloseTabEnabled()
+    {
+        if (closeTabMenuItem != null)
+        {
+            closeTabMenuItem.IsEnabled = OpenedClusters.Count > 0;
+        }
     }
 
     #endregion Menus
@@ -375,6 +401,30 @@ public partial class MainViewModel : ViewModelBase
         {
             var openedCluster = OpenedClusters[SelectedIndex];
             CloseTab(openedCluster);
+        }
+    }
+
+    private void NextTab()
+    {
+        if (OpenedClusters.Count > 1)
+        {
+            SelectedIndex = (SelectedIndex + 1) % OpenedClusters.Count;
+        }
+    }
+
+    private void PreviousTab()
+    {
+        if (OpenedClusters.Count > 1)
+        {
+            SelectedIndex = (SelectedIndex - 1 + OpenedClusters.Count) % OpenedClusters.Count;
+        }
+    }
+
+    private void SelectTab(int index)
+    {
+        if (index > 0 && index <= OpenedClusters.Count)
+        {
+            SelectedIndex = index - 1;
         }
     }
 

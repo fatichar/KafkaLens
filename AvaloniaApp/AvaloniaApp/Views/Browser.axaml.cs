@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Linq;
+using Avalonia.Input;
 using Avalonia.Controls;
 using Avalonia.Styling;
 using AvaloniaEdit.Document;
@@ -27,6 +28,9 @@ public partial class Browser : UserControl
         InitializeComponent();
 
         SetupTextMateHighlighting();
+
+        // Use tunnel routing so Ctrl+F is intercepted before TextEditor's built-in find
+        AddHandler(KeyDownEvent, UserControl_KeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
         // Subscribe to CurrentMessage changes to update TextEditor
         this.PropertyChanged += (s, e) =>
@@ -194,5 +198,15 @@ public partial class Browser : UserControl
     private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
         e.Row.Header = 1 + e.Row.Index;
+    }
+
+    private void UserControl_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.F)
+        {
+            var positiveFilterBox = MessagesToolbar.FindControl<TextBox>("PositiveFilterBox");
+            positiveFilterBox?.Focus();
+            e.Handled = true;
+        }
     }
 }

@@ -81,7 +81,7 @@
             </ComboBox>
             <Button Grid.Column="1" Grid.Row="4" Margin="5" HorizontalAlignment="Center"
                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                    Command="{Binding ToggleFetchCommand}"
+                    Command="{Binding RefreshCommand}"
                     IsEnabled="{Binding IsFetchOptionsEnabled}">
                 <Panel>
                     <TextBlock Text="Fetch Messages" IsVisible="{Binding !IsLoading}" />

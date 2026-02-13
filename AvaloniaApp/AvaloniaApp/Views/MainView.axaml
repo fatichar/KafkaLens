@@ -7,6 +7,19 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaApp.Views.MainView"
              x:DataType="vm:MainViewModel">
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Ctrl+Tab" Command="{Binding NextTabCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+Tab" Command="{Binding PreviousTabCommand}" />
+        <KeyBinding Gesture="Ctrl+1" Command="{Binding SelectTabCommand}" CommandParameter="1" />
+        <KeyBinding Gesture="Ctrl+2" Command="{Binding SelectTabCommand}" CommandParameter="2" />
+        <KeyBinding Gesture="Ctrl+3" Command="{Binding SelectTabCommand}" CommandParameter="3" />
+        <KeyBinding Gesture="Ctrl+4" Command="{Binding SelectTabCommand}" CommandParameter="4" />
+        <KeyBinding Gesture="Ctrl+5" Command="{Binding SelectTabCommand}" CommandParameter="5" />
+        <KeyBinding Gesture="Ctrl+6" Command="{Binding SelectTabCommand}" CommandParameter="6" />
+        <KeyBinding Gesture="Ctrl+7" Command="{Binding SelectTabCommand}" CommandParameter="7" />
+        <KeyBinding Gesture="Ctrl+8" Command="{Binding SelectTabCommand}" CommandParameter="8" />
+        <KeyBinding Gesture="Ctrl+9" Command="{Binding SelectTabCommand}" CommandParameter="9" />
+    </UserControl.KeyBindings>
     <DockPanel Margin="0">
         <Menu x:Name="MenuBar" DockPanel.Dock="Top" ItemsSource="{Binding MenuItems}">
             <Menu.Styles>
@@ -18,6 +31,7 @@
                     <Setter Property="ItemsSource" Value="{Binding Items}"/>
                     <Setter Property="Command" Value="{Binding Command}"/>
                     <Setter Property="CommandParameter" Value="{Binding CommandParameter}"/>
+                    <Setter Property="InputGesture" Value="{Binding Gesture}"/>
                     <Setter Property="IsEnabled" Value="{Binding IsEnabled}"/>
                     <Setter Property="Icon" Value="{Binding Icon}"/>
                     <Setter Property="ToggleType" Value="{Binding ToggleType}"/>

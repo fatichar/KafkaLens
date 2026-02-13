@@ -7,10 +7,12 @@
 		<Label Grid.Column="0" VerticalAlignment="Center" Margin="0,0,5,0">Contains</Label>
 		<TextBox Grid.Column="1" x:Name="PositiveFilterBox"
 		         VerticalContentAlignment="Center" VerticalAlignment="Center"
-		         Text="{Binding CurrentMessages.PositiveFilter}"/>
+		         Text="{Binding CurrentMessages.PositiveFilter}"
+		         Watermark="Filter (Ctrl+F)"/>
 		<Label Grid.Column="2" Content="But not" VerticalAlignment="Center" Margin="10,0,5,0"/>
 		<TextBox Grid.Column="3" x:Name="NegativeFilterBox"
 		         VerticalContentAlignment="Center" VerticalAlignment="Center"
-		         Text="{Binding Path=CurrentMessages.NegativeFilter}"/>
+		         Text="{Binding Path=CurrentMessages.NegativeFilter}"
+		         Watermark="Exclude"/>
 	</Grid>
 </UserControl>

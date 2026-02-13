@@ -42,6 +42,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     [ObservableProperty] private IList<string> keyFormatterNames;
 
     public RelayCommand ToggleFetchCommand { get; }
+    public RelayCommand RefreshCommand { get; }
     public IAsyncRelayCommand ChangeFormatterCommand { get; }
     public IAsyncRelayCommand SaveTopicSettingsCommand { get; }
     public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
@@ -137,7 +138,16 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
 
-        ToggleFetchCommand = new RelayCommand(() => { if (IsLoading) StopLoading(); else FetchMessages(); });
+        ToggleFetchCommand = new RelayCommand(() =>
+        {
+            if (IsLoading) StopLoading();
+            else FetchMessages();
+        });
+        RefreshCommand = new RelayCommand(() =>
+        {
+            if (IsLoading) StopLoading();
+            FetchMessages();
+        });
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
         SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
 
@@ -555,6 +565,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         {
             return numberFormatter;
         }
+
         return FormatterFactory.Instance.GetFormatter("Text");
     }
 

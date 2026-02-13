@@ -6,6 +6,9 @@
              xmlns:avaloniaApp="clr-namespace:AvaloniaApp"
              xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit"
              x:DataType="vm:OpenedClusterViewModel">
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}" />
+    </UserControl.KeyBindings>
     <UserControl.Resources>
         <ContextMenu x:Key="MessageGridContextMenu">
             <MenuItem Header="Save Selected">
