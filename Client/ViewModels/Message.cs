@@ -10,7 +10,7 @@ public class Message
 
     public string Key { get; }
     public string Body { get; }
-    public string Summary => Body?.Substring(0, 50);
+    public string Summary => Body?.Length > 50 ? Body.Substring(0, 50) : Body ?? string.Empty;
     public int Partition { get; set; }
     public long Offset { get; set; }
     public System.DateTime TimeStamp { get; set; }

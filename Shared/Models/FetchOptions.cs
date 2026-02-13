@@ -15,7 +15,7 @@ public class FetchOptions
     }
 
     public FetchPosition Start { get; set; } = FetchPosition.END;
-    public FetchPosition? End { get; set; }
+    public FetchPosition? End { get; private set; }
     public int Limit { get; set; } = 10;
 
     public override string ToString() => $"Start = {Start}, End = {End}, Limit = {Limit}";

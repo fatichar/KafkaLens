@@ -16,7 +16,7 @@ public class RestClient : IKafkaLensClient
 {
     public string Name { get; } = "Rest";
     public bool CanEditClusters => false;
-    private KLRestClient client;
+    private readonly KLRestClient client;
     public Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {
         throw new NotImplementedException();

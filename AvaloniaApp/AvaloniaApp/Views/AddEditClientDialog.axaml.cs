@@ -9,8 +9,8 @@ namespace AvaloniaApp.Views;
 public partial class AddEditClientDialog : Window
 {
     public ClientInfo? Result { get; private set; }
-    private readonly string? _originalName = null;
-    private readonly string? _originalId = null;
+    private readonly string? _originalName;
+    private readonly string? _originalId;
     private readonly HashSet<string> _existingNames;
 
     public AddEditClientDialog()

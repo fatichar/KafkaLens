@@ -8,7 +8,9 @@ public sealed partial class MessageViewModel : ViewModelBase
 {
     const int MaxSummaryLen = 100;
 
-    public readonly Message message;
+    private readonly Message message;
+    
+    public Message Message => message;
     private IMessageFormatter formatter = null!;
     private IMessageFormatter keyFormatter = null!;
 
@@ -29,16 +31,14 @@ public sealed partial class MessageViewModel : ViewModelBase
         }
     }
 
-    private string formatterName = null!;
-
     public string FormatterName
     {
-        get => formatterName;
+        get;
         set
         {
-            if (value == formatterName) return;
+            if (value == field) return;
 
-            SetProperty(ref formatterName, value);
+            SetProperty(ref field, value);
             formatter = FormatterFactory.Instance.GetFormatter(value);
             DecodedMessage = formatter.Format(message.Value ?? Array.Empty<byte>(), false) ?? message.ValueText;
             var limit = Math.Min(MaxSummaryLen, DecodedMessage.Length);
@@ -47,22 +47,20 @@ public sealed partial class MessageViewModel : ViewModelBase
 
             UpdateText();
         }
-    }
-
-    private string keyFormatterName = null!;
+    } = null!;
 
     public string KeyFormatterName
     {
-        get => keyFormatterName;
+        get;
         set
         {
-            if (value == keyFormatterName) return;
+            if (value == field) return;
 
-            SetProperty(ref keyFormatterName, value);
+            SetProperty(ref field, value);
             keyFormatter = FormatterFactory.Instance.GetFormatter(value);
             Key = keyFormatter.Format(message.Key ?? Array.Empty<byte>(), false) ?? message.KeyText;
         }
-    }
+    } = null!;
 
     public MessageViewModel(Message message, string formatterName, string keyFormatterName)
     {

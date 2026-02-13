@@ -17,18 +17,16 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 {
     const int SELECTED_ITEM_DELAY_MS = 3;
 
-    private readonly ISettingsService settingsService;
     private readonly ITopicSettingsService topicSettingsService;
     private readonly ClusterViewModel cluster;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
-    public static IList<string> FetchPositionsForTopic { get; } = new List<string>();
-    public static IList<string> FetchPositionsForPartition { get; } = new List<string>();
-    public IList<string> fetchPositions = new List<string>();
+    private static IList<string> FetchPositionsForTopic { get; } = new List<string>();
+    private static IList<string> FetchPositionsForPartition { get; } = new List<string>();
 
     public IList<string> FetchPositions
     {
-        get => fetchPositions;
-        set => SetProperty(ref fetchPositions, value);
+        get;
+        set => SetProperty(ref field, value);
     }
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.CLUSTER;
@@ -113,7 +111,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         set => SetProperty(ref field, value, true);
     } = 14;
 
-    [ObservableProperty] private string? fetchPosition = null;
+    [ObservableProperty] private string? fetchPosition;
 
     static OpenedClusterViewModel()
     {
@@ -133,7 +131,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         ClusterViewModel cluster,
         string name)
     {
-        this.settingsService = settingsService;
         this.topicSettingsService = topicSettingsService;
         this.cluster = cluster;
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
@@ -256,7 +253,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             await Task.Run(() =>
             {
                 using var fileStream = File.Create(filePath);
-                msg.message.Serialize(fileStream);
+                msg.Message.Serialize(fileStream);
             });
         }
         else
@@ -268,10 +265,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             text.AppendLine($"Timestamp: {msg.Timestamp}");
             text.AppendLine($"Partition: {msg.Partition}");
             text.AppendLine($"Offset: {msg.Offset}");
-            if (msg.message.Headers.Count > 0)
+            if (msg.Message.Headers.Count > 0)
             {
                 text.AppendLine("Headers:");
-                foreach (var header in msg.message.Headers)
+                foreach (var header in msg.Message.Headers)
                 {
                     text.AppendLine($"  {header.Key}: {System.Text.Encoding.UTF8.GetString(header.Value)}");
                 }

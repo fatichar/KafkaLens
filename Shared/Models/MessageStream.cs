@@ -4,21 +4,20 @@ namespace KafkaLens.Shared.Models;
 
 public sealed class MessageStream
 {
-    private bool hasMore = true;
     public ObservableCollection<Message> Messages { get; set; } = new ObservableCollection<Message>();
 
     public bool HasMore
     {
-        get => hasMore;
+        get;
         set
         {
-            hasMore = value;
-            if (!hasMore)
+            field = value;
+            if (!field)
             {
                 Finished?.Invoke();
             }
         }
-    }
+    } = true;
 
     public delegate void FinishedEventHandler();
 

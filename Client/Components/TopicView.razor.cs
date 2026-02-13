@@ -27,7 +27,7 @@ public partial class TopicView : ComponentBase
     private List<Message> _messages;
     private List<IMessageFormatter> _formatters;
 
-    public bool HidePartitionColumn = false;
+    private bool HidePartitionColumn = false;
     private Message selectedMessage;
 
     public Message SelectedMessage

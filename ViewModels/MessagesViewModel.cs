@@ -8,18 +8,17 @@ public sealed class MessagesViewModel: ViewModelBase
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
     public ObservableCollection<MessageViewModel> Filtered { get; } = new();
 
-    private bool useObjectFilter = true;
     public bool UseObjectFilter
     {
-        get => useObjectFilter;
+        get;
         set
         {
-            if (SetProperty(ref useObjectFilter, value) && currentMessage != null)
+            if (SetProperty(ref field, value) && currentMessage != null)
             {
                 currentMessage.UseObjectFilter = value;
             }
         }
-    }
+    } = true;
 
     private MessageViewModel? currentMessage;
     public MessageViewModel? CurrentMessage
