@@ -20,6 +20,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     const int SELECTED_ITEM_DELAY_MS = 3;
 
     private readonly ISettingsService settingsService;
+    private readonly ITopicSettingsService topicSettingsService;
     private readonly ClusterViewModel cluster;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
     public static IList<string> FetchPositionsForTopic { get; } = new List<string>();
@@ -41,10 +42,13 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     [ObservableProperty] public List<IMessageFormatter> formatters;
 
     [ObservableProperty] public ICollection<string> formatterNames;
+    [ObservableProperty] public ICollection<string> topicFormatterNames;
+    [ObservableProperty] public ICollection<string> keyFormatterNames;
 
     public RelayCommand FetchMessagesCommand { get; }
     public RelayCommand StopLoadingCommand { get; }
     public IAsyncRelayCommand ChangeFormatterCommand { get; }
+    public IAsyncRelayCommand SaveTopicSettingsCommand { get; }
     public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
     public AsyncRelayCommand SaveSelectedAsFormattedCommand { get; set; }
     public AsyncRelayCommand SaveAllAsRawCommand { get; set; }
@@ -127,10 +131,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public OpenedClusterViewModel(
         ISettingsService settingsService,
+        ITopicSettingsService topicSettingsService,
         ClusterViewModel cluster,
         string name)
     {
         this.settingsService = settingsService;
+        this.topicSettingsService = topicSettingsService;
         this.cluster = cluster;
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
@@ -138,6 +144,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         FetchMessagesCommand = new RelayCommand(FetchMessages);
         StopLoadingCommand = new RelayCommand(StopLoading);
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
+        SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
 
         SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw, CanSaveMessages);
         SaveSelectedAsFormattedCommand = new AsyncRelayCommand(SaveSelectedMessagesAsFormatted, CanSaveMessages);
@@ -157,7 +164,14 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
         formatters = FormatterFactory.GetFormatters();
         FormatterNames = formatters.ConvertAll(f => f.Name);
+
+        var topicNames = new List<string>(FormatterNames);
+        topicNames.Insert(0, "Auto");
+        TopicFormatterNames = topicNames;
+
         DefaultFormatter = Formatters.FirstOrDefault() ?? new TextFormatter();
+
+        KeyFormatterNames = new List<string> { "Auto", "Text", "Number" };
 
         IsActive = true;
     }
@@ -293,7 +307,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             Topics.Clear();
             foreach (var topic in cluster.Topics)
             {
-                var viewModel = new TopicViewModel(topic, null);
+                var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
+                var viewModel = new TopicViewModel(topic, settings.ValueFormatter, settings.KeyFormatter);
                 Topics.Add(viewModel);
             }
 
@@ -424,27 +439,36 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             return;
         }
 
-        if (node.FormatterName == null)
+        bool settingsChanged = false;
+        var topicName = GetCurrentTopicName();
+
+        if (node.FormatterName == null || node.FormatterName == "Auto")
         {
             Assert.True(e.NewItems?.Count > 0);
             var message = (Message)e.NewItems![0]!;
-            var formatter = GuessFormatter(message);
-            var topicName = node.Type switch
-            {
-                ITreeNode.NodeType.TOPIC => node.Name,
-                ITreeNode.NodeType.PARTITION => ((PartitionViewModel)node).TopicName,
-                _ => node.Name
-            };
-            if (formatter != null)
-            {
-                Log.Information("Guessed formatter {Formatter} for topic {Topic}", formatter.Name, topicName);
-            }
-            else
-            {
-                Log.Warning("Unable to guess formatter for topic {Topic}", topicName);
-            }
-
+            var formatter = GuessValueFormatter(message);
             node.FormatterName = formatter?.Name ?? DefaultFormatter.Name;
+            settingsChanged = true;
+            Log.Information("Guessed value formatter {Formatter} for topic {Topic}", node.FormatterName, topicName);
+        }
+
+        if (node.KeyFormatterName == null || node.KeyFormatterName == "Auto")
+        {
+            Assert.True(e.NewItems?.Count > 0);
+            var message = (Message)e.NewItems![0]!;
+            var formatter = GuessKeyFormatter(message);
+            node.KeyFormatterName = formatter.Name;
+            settingsChanged = true;
+            Log.Information("Guessed key formatter {Formatter} for topic {Topic}", node.KeyFormatterName, topicName);
+        }
+
+        if (settingsChanged)
+        {
+            topicSettingsService.SetSettings(cluster.Id, topicName, new TopicSettings
+            {
+                KeyFormatter = node.KeyFormatterName,
+                ValueFormatter = node.FormatterName
+            });
         }
 
         lock (pendingMessages)
@@ -453,8 +477,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             Log.Debug("Received {Count} messages", e.NewItems?.Count);
             foreach (var msg in e.NewItems ?? new List<Message>())
             {
-                var viewModel = new MessageViewModel((Message)msg, node.FormatterName);
-                viewModel.Topic = GetCurrentTopicName();
+                var viewModel = new MessageViewModel((Message)msg, node.FormatterName, node.KeyFormatterName);
+                viewModel.Topic = topicName;
                 pendingMessages.Add(viewModel);
             }
 
@@ -476,7 +500,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         }
     }
 
-    private IMessageFormatter? GuessFormatter(Message message)
+    private IMessageFormatter? GuessValueFormatter(Message message)
     {
         IMessageFormatter? best = null;
         int maxLength = 0;
@@ -511,6 +535,39 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         }
 
         return best;
+    }
+
+    private IMessageFormatter GuessKeyFormatter(Message message)
+    {
+        // Try NumberFormatter first
+        var numberFormatter = FormatterFactory.Instance.GetFormatter("Number");
+        if (numberFormatter.Format(message.Key ?? Array.Empty<byte>(), false) != null)
+        {
+            return numberFormatter;
+        }
+        return FormatterFactory.Instance.GetFormatter("Text");
+    }
+
+    [ObservableProperty] private bool applyToAllClusters;
+
+    private async Task SaveTopicSettingsAsync()
+    {
+        if (SelectedNode is not IMessageSource node) return;
+
+        var topicName = GetCurrentTopicName();
+        var settings = new TopicSettings
+        {
+            KeyFormatter = node.KeyFormatterName ?? "Auto",
+            ValueFormatter = node.FormatterName ?? "Auto"
+        };
+        topicSettingsService.SetSettings(cluster.Id, topicName, settings, ApplyToAllClusters);
+
+        // Re-format existing messages
+        foreach (var msg in CurrentMessages.Messages)
+        {
+            msg.FormatterName = settings.ValueFormatter;
+            msg.KeyFormatterName = settings.KeyFormatter;
+        }
     }
 
     public void UpdateMessages()

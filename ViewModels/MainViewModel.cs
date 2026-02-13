@@ -37,6 +37,7 @@ public partial class MainViewModel : ViewModelBase
     // services
     private readonly IClusterFactory clusterFactory;
     private readonly ISettingsService settingsService;
+    private readonly ITopicSettingsService topicSettingsService;
     private readonly ISavedMessagesClient savedMessagesClient;
     private DispatcherTimer timer;
 
@@ -86,6 +87,7 @@ public partial class MainViewModel : ViewModelBase
         AppConfig appConfig,
         IClusterFactory clusterFactory,
         ISettingsService settingsService,
+        ITopicSettingsService topicSettingsService,
         ISavedMessagesClient savedMessagesClient,
         IClusterInfoRepository clusterInfoRepository,
         IClientInfoRepository clientInfoRepository,
@@ -98,6 +100,7 @@ public partial class MainViewModel : ViewModelBase
         Log.Information("Creating MainViewModel");
         this.clusterFactory = clusterFactory;
         this.settingsService = settingsService;
+        this.topicSettingsService = topicSettingsService;
         this.savedMessagesClient = savedMessagesClient;
         OpenedClusterViewModel.FormatterFactory = formatterFactory;
 
@@ -373,7 +376,7 @@ public partial class MainViewModel : ViewModelBase
             newName = GenerateNewName(clusterViewModel.Name, alreadyOpened);
         }
 
-        var openedCluster = new OpenedClusterViewModel(settingsService, clusterViewModel, newName);
+        var openedCluster = new OpenedClusterViewModel(settingsService, topicSettingsService, clusterViewModel, newName);
         alreadyOpened.Add(openedCluster);
         OpenedClusters.Add(openedCluster);
         _ = openedCluster.LoadTopicsAsync();

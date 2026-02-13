@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             x:Class="AvaloniaApp.Views.PartitionConfigView"
+             x:DataType="vm:OpenedClusterViewModel">
+    <StackPanel Margin="20" Spacing="10">
+        <TextBlock Text="Partition Configuration" FontSize="18" FontWeight="Bold"/>
+
+        <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto" Margin="0,10,0,0">
+            <Label Grid.Row="0" Grid.Column="0" Content="Partition:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedNode.Name}" VerticalAlignment="Center"/>
+        </Grid>
+
+        <TextBlock Text="No configuration available for partitions." Margin="0,20,0,0" FontStyle="Italic"/>
+    </StackPanel>
+</UserControl>
