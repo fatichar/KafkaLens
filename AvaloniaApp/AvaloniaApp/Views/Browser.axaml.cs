@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Linq;
+using Avalonia.Input;
 using Avalonia.Controls;
 using Avalonia.Styling;
 using AvaloniaEdit.Document;
@@ -194,5 +195,15 @@ public partial class Browser : UserControl
     private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
         e.Row.Header = 1 + e.Row.Index;
+    }
+
+    private void UserControl_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.F)
+        {
+            var positiveFilterBox = MessagesToolbar.FindControl<TextBox>("PositiveFilterBox");
+            positiveFilterBox?.Focus();
+            e.Handled = true;
+        }
     }
 }

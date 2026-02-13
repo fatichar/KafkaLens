@@ -8,6 +8,7 @@ public class MenuItemViewModel
     public string Header { get; set; } = "";
     public ICommand? Command { get; set; }
     public object? CommandParameter { get; set; }
+    public string? Gesture { get; set; }
     public ObservableCollection<MenuItemViewModel>? Items { get; set; }
     public bool IsEnabled { get; set; } = true;
     public object? Icon { get; set; }
