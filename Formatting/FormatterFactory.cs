@@ -7,9 +7,9 @@ public class FormatterFactory
 {
     public static FormatterFactory Instance { get; }
     private readonly IDictionary<string, IMessageFormatter> formatters = new Dictionary<string, IMessageFormatter>();
-    private const string Json = "Json";
-    private const string Text = "Text";
-    private const string Number = "Number";
+    private const string JSON = "Json";
+    private const string TEXT = "Text";
+    private const string NUMBER = "Number";
 
     static FormatterFactory()
     {
@@ -18,12 +18,12 @@ public class FormatterFactory
 
     private FormatterFactory()
     {
-        formatters.Add(Json, new JsonFormatter());
-        formatters.Add(Text, new TextFormatter());
-        formatters.Add(Number, new NumberFormatter());
+        formatters.Add(JSON, new JsonFormatter());
+        formatters.Add(TEXT, new TextFormatter());
+        formatters.Add(NUMBER, new NumberFormatter());
     }
 
-    public IMessageFormatter DefaultFormatter => formatters[Json];
+    public IMessageFormatter DefaultFormatter => formatters[JSON];
 
     public static void AddFromPath(string pluginsPath)
     {
@@ -94,8 +94,7 @@ public class FormatterFactory
         var loadedFormatters = new List<IMessageFormatter>();
         foreach (var formatterType in formatterTypes)
         {
-            var formatter = Activator.CreateInstance(formatterType) as IMessageFormatter;
-            if (formatter != null)
+            if (Activator.CreateInstance(formatterType) is IMessageFormatter formatter)
             {
                 loadedFormatters.Add(formatter);
             }

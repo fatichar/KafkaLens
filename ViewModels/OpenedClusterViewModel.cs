@@ -39,11 +39,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     [ObservableProperty] private bool isExpanded;
     public ObservableCollection<ITreeNode> Children { get; } = new();
 
-    [ObservableProperty] public List<IMessageFormatter> formatters;
+    [ObservableProperty] private List<IMessageFormatter> formatters;
 
-    [ObservableProperty] public ICollection<string> formatterNames;
-    [ObservableProperty] public ICollection<string> topicFormatterNames;
-    [ObservableProperty] public ICollection<string> keyFormatterNames;
+    [ObservableProperty] private IList<string> formatterNames;
+    [ObservableProperty] private IList<string> valueFormatterNames;
+    [ObservableProperty] private IList<string> keyFormatterNames;
 
     public RelayCommand FetchMessagesCommand { get; }
     public RelayCommand StopLoadingCommand { get; }
@@ -165,9 +165,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         formatters = FormatterFactory.GetFormatters();
         FormatterNames = formatters.ConvertAll(f => f.Name);
 
-        var topicNames = new List<string>(FormatterNames);
-        topicNames.Insert(0, "Auto");
-        TopicFormatterNames = topicNames;
+        var names = new List<string>(FormatterNames);
+        names.Insert(0, "Auto");
+        ValueFormatterNames = names;
 
         DefaultFormatter = Formatters.FirstOrDefault() ?? new TextFormatter();
 
@@ -308,7 +308,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             foreach (var topic in cluster.Topics)
             {
                 var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
-                var viewModel = new TopicViewModel(topic, settings.ValueFormatter, settings.KeyFormatter);
+                var valueFormatter = NormalizeFormatterName(settings.ValueFormatter, ValueFormatterNames);
+                var keyFormatter = NormalizeFormatterName(settings.KeyFormatter, KeyFormatterNames);
+                var viewModel = new TopicViewModel(topic, valueFormatter, keyFormatter);
                 Topics.Add(viewModel);
             }
 
@@ -548,6 +550,25 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         return FormatterFactory.Instance.GetFormatter("Text");
     }
 
+    private static string NormalizeFormatterName(string? formatterName, IList<string> allowedNames)
+    {
+        if (string.IsNullOrWhiteSpace(formatterName) || formatterName == "Auto")
+        {
+            return "Auto";
+        }
+
+        return allowedNames.Contains(formatterName)
+            ? formatterName
+            : "Auto";
+    }
+
+    private static bool CanApplyFormatterToLoadedMessages(string? formatterName, IList<string> allowedNames)
+    {
+        return !string.IsNullOrWhiteSpace(formatterName) &&
+               formatterName != "Auto" &&
+               allowedNames.Contains(formatterName);
+    }
+
     [ObservableProperty] private bool applyToAllClusters;
 
     private async Task SaveTopicSettingsAsync()
@@ -565,8 +586,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         // Re-format existing messages
         foreach (var msg in CurrentMessages.Messages)
         {
-            msg.FormatterName = settings.ValueFormatter;
-            msg.KeyFormatterName = settings.KeyFormatter;
+            if (CanApplyFormatterToLoadedMessages(settings.ValueFormatter, ValueFormatterNames))
+            {
+                msg.FormatterName = settings.ValueFormatter;
+            }
+
+            if (CanApplyFormatterToLoadedMessages(settings.KeyFormatter, KeyFormatterNames))
+            {
+                msg.KeyFormatterName = settings.KeyFormatter;
+            }
         }
     }
 
@@ -578,7 +606,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             if (pendingMessages.Count > 0)
             {
                 pendingMessages.ForEach(CurrentMessages.Add);
-                Log.Information("UI: Loaded {Count} messages", pendingMessages.Count);
+                Log.Debug("UI: Loaded {Count} messages", pendingMessages.Count);
                 pendingMessages.Clear();
             }
         }
