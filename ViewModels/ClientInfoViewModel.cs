@@ -1,4 +1,3 @@
-using CommunityToolkit.Mvvm.ComponentModel;
 using KafkaLens.Clients.Entities;
 
 namespace KafkaLens.ViewModels;

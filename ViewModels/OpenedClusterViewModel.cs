@@ -1,8 +1,6 @@
-using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -571,9 +569,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     [ObservableProperty] private bool applyToAllClusters;
 
-    private async Task SaveTopicSettingsAsync()
+    private Task SaveTopicSettingsAsync()
     {
-        if (SelectedNode is not IMessageSource node) return;
+        if (SelectedNode is not IMessageSource node) return Task.CompletedTask;
 
         var topicName = GetCurrentTopicName();
         var settings = new TopicSettings
@@ -596,6 +594,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                 msg.KeyFormatterName = settings.KeyFormatter;
             }
         }
+
+        return Task.CompletedTask;
     }
 
     public void UpdateMessages()

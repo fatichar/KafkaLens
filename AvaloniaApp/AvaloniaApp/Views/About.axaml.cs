@@ -6,7 +6,6 @@ using ActiproSoftware.UI.Avalonia.Controls;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 
 namespace AvaloniaApp.Views;
 

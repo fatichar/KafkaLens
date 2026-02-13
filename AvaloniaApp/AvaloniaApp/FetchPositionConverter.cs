@@ -1,10 +1,6 @@
-using Avalonia.Controls;
-
-using Avalonia;
 using Avalonia.Data.Converters;
 using System;
 using System.Globalization;
-using KafkaLens.Shared.Models;
 
 namespace AvaloniaApp;
 public class FetchPositionConverter : IValueConverter

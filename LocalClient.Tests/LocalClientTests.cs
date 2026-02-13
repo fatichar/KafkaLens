@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using KafkaLens.Core.Services;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Entities;
 using KafkaLens.Shared.Models;

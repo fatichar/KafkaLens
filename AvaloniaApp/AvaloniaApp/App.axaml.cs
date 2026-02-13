@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -11,10 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
 using System.Reflection;
-using Avalonia.Logging;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.Messaging;
-using KafkaLens.Clients;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Messages;

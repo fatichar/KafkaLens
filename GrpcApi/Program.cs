@@ -1,10 +1,7 @@
-using Confluent.Kafka;
 using GrpcApi.Config;
 using GrpcApi.Services;
 using KafkaLens.Shared;
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.Extensions.Options;
 using System.Net;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.DataAccess;

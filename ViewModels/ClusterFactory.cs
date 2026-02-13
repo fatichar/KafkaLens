@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using KafkaLens.Clients;
-using KafkaLens.Clients.Entities;
 using KafkaLens.Shared;
 using Serilog;
 

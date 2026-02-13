@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared.Entities;
 using KafkaLens.ViewModels;

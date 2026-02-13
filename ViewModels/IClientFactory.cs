@@ -1,6 +1,4 @@
-using KafkaLens.Clients.Entities;
 using KafkaLens.Shared;
-using KafkaLens.Shared.Entities;
 
 namespace KafkaLens.ViewModels;
 

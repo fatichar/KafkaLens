@@ -1,11 +1,9 @@
-using System.Collections.Concurrent;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using KafkaLens.Grpc;
 using KafkaLens.Shared;
-using Serilog;
 using Models = KafkaLens.Shared.Models;
 using Topic = KafkaLens.Grpc.Topic;
 

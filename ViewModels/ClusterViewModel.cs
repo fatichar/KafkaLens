@@ -1,7 +1,5 @@
 ﻿using System.Collections.ObjectModel;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared;
 

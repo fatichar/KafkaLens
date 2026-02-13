@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using KafkaLens.Shared.Models;
-using KafkaLens.Formatting;
 
 namespace KafkaLens.ViewModels;
 

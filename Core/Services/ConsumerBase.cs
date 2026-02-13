@@ -1,5 +1,4 @@
-using System.Threading;
-﻿using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Models;
 using Serilog;
 
 namespace KafkaLens.Core.Services;

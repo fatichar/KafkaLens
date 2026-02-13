@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Net.NetworkInformation;
 using Confluent.Kafka;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared.Models;
