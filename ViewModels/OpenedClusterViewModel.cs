@@ -41,8 +41,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     [ObservableProperty] private IList<string> valueFormatterNames;
     [ObservableProperty] private IList<string> keyFormatterNames;
 
-    public RelayCommand FetchMessagesCommand { get; }
-    public RelayCommand StopLoadingCommand { get; }
+    public RelayCommand ToggleFetchCommand { get; }
     public IAsyncRelayCommand ChangeFormatterCommand { get; }
     public IAsyncRelayCommand SaveTopicSettingsCommand { get; }
     public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
@@ -111,6 +110,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         set => SetProperty(ref field, value, true);
     } = 14;
 
+    [ObservableProperty] private bool isLoading;
+
     [ObservableProperty] private string? fetchPosition;
 
     static OpenedClusterViewModel()
@@ -136,8 +137,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
 
-        FetchMessagesCommand = new RelayCommand(FetchMessages);
-        StopLoadingCommand = new RelayCommand(StopLoading);
+        ToggleFetchCommand = new RelayCommand(() => { if (IsLoading) StopLoading(); else FetchMessages(); });
         ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
         SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
 
@@ -370,7 +370,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                 {
                     if (IsCurrent)
                     {
-                        FetchMessagesCommand.Execute(null);
+                        FetchMessages();
                     }
                 }
             }
@@ -386,9 +386,19 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     private readonly List<IMessageLoadListener> messageLoadListeners = new();
     private CancellationTokenSource? fetchCts;
 
+    private void OnStreamFinished()
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            IsLoading = false;
+            messageLoadListeners.ForEach(listener => listener.MessageLoadingFinished());
+        });
+    }
+
     private void StopLoading()
     {
         fetchCts?.Cancel();
+        IsLoading = false;
     }
 
     internal void FetchMessages()
@@ -404,9 +414,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         if (messages != null)
         {
             messages.Messages.CollectionChanged -= OnMessagesChanged;
+            messages.Finished -= OnStreamFinished;
         }
 
         CurrentMessages.Clear();
+        IsLoading = true;
 
         var fetchOptions = CreateFetchOptions();
         messageLoadListeners.ForEach(listener => listener.MessageLoadingStarted());
@@ -425,6 +437,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         if (messages != null)
         {
             messages.Messages.CollectionChanged += OnMessagesChanged;
+            messages.Finished += OnStreamFinished;
         }
     }
 
@@ -611,6 +624,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         if (!messages?.HasMore ?? false)
         {
             Log.Debug("UI: No more messages");
+            IsLoading = false;
         }
     }
 

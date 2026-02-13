@@ -7,85 +7,86 @@
     <UserControl.Resources>
         <avaloniaApp:FetchPositionConverter x:Key="IsTimestampPosition" />
     </UserControl.Resources>
-    <Grid Margin="5" RowDefinitions="Auto, Auto, Auto, Auto, *" ColumnDefinitions="Auto, *"
+    <Grid Margin="5" RowDefinitions="Auto, Auto, Auto, 25, *" ColumnDefinitions="Auto, *"
           VerticalAlignment="Top"
-          IsEnabled="{Binding IsFetchOptionsEnabled}">
-        <Label Grid.Row="0" Grid.Column="0"
-               VerticalAlignment="Center"
-               Margin="5">
-            From
-        </Label>
-        <ComboBox Grid.Row="0" Grid.Column="1" Margin="5"
-                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                  ItemsSource="{Binding FetchPositions}"
-                  SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
-        </ComboBox>
+              IsEnabled="{Binding IsFetchOptionsEnabled}">
+            <Label Grid.Row="0" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Margin="5">
+                From
+            </Label>
+            <ComboBox Grid.Row="0" Grid.Column="1" Margin="5"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                      ItemsSource="{Binding FetchPositions}"
+                      SelectedItem="{Binding FetchPosition, Mode=TwoWay}">
+            </ComboBox>
 
-        <StackPanel Grid.Row="1" Grid.Column="1"
-                  Orientation="Vertical" Spacing="8"
-                  IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}, ConverterParameter=Timestamp}"
-                  MinWidth="160"
-                  Margin="5">
-            <CalendarDatePicker Name="StartDatePicker"
-                              SelectedDate="{Binding StartDate, Mode=TwoWay}"
-                              HorizontalAlignment="Stretch"
-                              MinWidth="160"/>
-            <StackPanel Orientation="Vertical" Spacing="4">
-                <TextBox Name="TimeTextBox"
-                         Text="{Binding StartTimeText}"
-                         Watermark="HH:mm:ss"
-                         MinWidth="80"
-                         HorizontalAlignment="Stretch">
-                    <TextBox.Styles>
-                        <Style Selector="TextBox.error">
-                            <Setter Property="BorderBrush" Value="{DynamicResource ThemeErrorBrush}"/>
-                            <Setter Property="BorderThickness" Value="2"/>
-                        </Style>
-                    </TextBox.Styles>
-                </TextBox>
-                <TextBlock Text="Invalid time format (HH:mm:ss)"
-                           Foreground="{DynamicResource ThemeErrorBrush}"
-                           FontSize="11"
-                           IsVisible="{Binding !IsStartTimeValid}"/>
+            <StackPanel Grid.Row="1" Grid.Column="1"
+                        Orientation="Vertical" Spacing="8"
+                        IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}, ConverterParameter=Timestamp}"
+                        MinWidth="160"
+                        Margin="5">
+                <CalendarDatePicker Name="StartDatePicker"
+                                    SelectedDate="{Binding StartDate, Mode=TwoWay}"
+                                    HorizontalAlignment="Stretch"
+                                    MinWidth="160" />
+                <StackPanel Orientation="Vertical" Spacing="4">
+                    <TextBox Name="TimeTextBox"
+                             Text="{Binding StartTimeText}"
+                             Watermark="HH:mm:ss"
+                             MinWidth="80"
+                             HorizontalAlignment="Stretch">
+                        <TextBox.Styles>
+                            <Style Selector="TextBox.error">
+                                <Setter Property="BorderBrush" Value="{DynamicResource ThemeErrorBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </Style>
+                        </TextBox.Styles>
+                    </TextBox>
+                    <TextBlock Text="Invalid time format (HH:mm:ss)"
+                               Foreground="{DynamicResource ThemeErrorBrush}"
+                               FontSize="11"
+                               IsVisible="{Binding !IsStartTimeValid}" />
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
 
-        <StackPanel Grid.Row="1" Grid.Column="1"
-                    Orientation="Vertical" Spacing="8"
-                    IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}, ConverterParameter=Offset}"
-                    MinWidth="160"
-                    Margin="5">
-            <TextBox Name="OffsetTextBox"
-                     Text="{Binding StartOffset}"
-                     Watermark="Offset"
-                     MinWidth="80"
-                     HorizontalAlignment="Stretch"/>
-        </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="1"
+                        Orientation="Vertical" Spacing="8"
+                        IsVisible="{Binding FetchPosition, Converter={StaticResource IsTimestampPosition}, ConverterParameter=Offset}"
+                        MinWidth="160"
+                        Margin="5">
+                <TextBox Name="OffsetTextBox"
+                         Text="{Binding StartOffset}"
+                         Watermark="Offset"
+                         MinWidth="80"
+                         HorizontalAlignment="Stretch" />
+            </StackPanel>
 
-        <Label Grid.Row="2" Grid.Column="0"
-               VerticalAlignment="Center"
-               Margin="5">Count</Label>
-        <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="0"
-                  ItemsSource="{Binding FetchCounts}" Margin="5"
-                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+            <Label Grid.Row="2" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Margin="5">
+                Count
+            </Label>
+            <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="0"
+                      ItemsSource="{Binding FetchCounts}" Margin="5"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
 
-                  SelectedItem="{Binding FetchCount, Mode=TwoWay}">
-            <ComboBox.Styles>
-                <Style Selector="ComboBox /template/ ContentControl">
-                    <Setter Property="HorizontalContentAlignment" Value="Center" />
-                    <Setter Property="HorizontalAlignment" Value="Stretch" />
-                </Style>
-            </ComboBox.Styles>
-        </ComboBox>
-
-        <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="Auto, Auto" Margin="5" HorizontalAlignment="Right">
-            <Button Grid.Column="0" Content="Fetch Messages" Command="{Binding FetchMessagesCommand}"
-                    HorizontalContentAlignment="Center"
-                    Height="35" Margin="0,0,5,0" />
-            <Button Grid.Column="1" Content="Stop" Command="{Binding StopLoadingCommand}"
-                    HorizontalContentAlignment="Center"
-                    Height="35" />
+                      SelectedItem="{Binding FetchCount, Mode=TwoWay}">
+                <ComboBox.Styles>
+                    <Style Selector="ComboBox /template/ ContentControl">
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                    </Style>
+                </ComboBox.Styles>
+            </ComboBox>
+            <Button Grid.Column="1" Grid.Row="4" Margin="5" HorizontalAlignment="Center"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                    Command="{Binding ToggleFetchCommand}"
+                    IsEnabled="{Binding IsFetchOptionsEnabled}">
+                <Panel>
+                    <TextBlock Text="Fetch Messages" IsVisible="{Binding !IsLoading}" />
+                    <TextBlock Text="Stop" IsVisible="{Binding IsLoading}" />
+                </Panel>
+            </Button>
         </Grid>
-    </Grid>
-
 </UserControl>
