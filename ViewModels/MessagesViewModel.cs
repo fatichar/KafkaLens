@@ -1,10 +1,10 @@
 ﻿using System.Collections.ObjectModel;
+using KafkaLens.ViewModels.Search;
 
 namespace KafkaLens.ViewModels;
 
 public sealed class MessagesViewModel: ViewModelBase
 {
-    private readonly StringComparison comparisonType = StringComparison.OrdinalIgnoreCase;
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
     public ObservableCollection<MessageViewModel> Filtered { get; } = new();
 
@@ -52,6 +52,7 @@ public sealed class MessagesViewModel: ViewModelBase
     public bool IsMessageSelected => CurrentMessage != null;
 
     private string positiveFilter = "";
+    private IFilterExpression positiveExpression = new AllMatchExpression();
     public string PositiveFilter
     {
         get => positiveFilter;
@@ -60,11 +61,13 @@ public sealed class MessagesViewModel: ViewModelBase
             if (positiveFilter == value)
                 return;
             SetProperty(ref positiveFilter, value);
+            positiveExpression = SearchParser.Parse(value);
             ApplyFilter();
         }
     }
 
     private string negativeFilter = "";
+    private IFilterExpression negativeExpression = new NoneMatchExpression();
     public string NegativeFilter
     {
         get => negativeFilter;
@@ -73,6 +76,7 @@ public sealed class MessagesViewModel: ViewModelBase
             if (negativeFilter == value)
                 return;
             SetProperty(ref negativeFilter, value);
+            negativeExpression = SearchParser.Parse(value, false);
             ApplyFilter();
         }
     }
@@ -113,20 +117,12 @@ public sealed class MessagesViewModel: ViewModelBase
 
     private bool PositiveFilterAccepts(string message)
     {
-        if (string.IsNullOrEmpty(positiveFilter))
-        {
-            return true;
-        }
-        return message.Contains(PositiveFilter, comparisonType);
+        return positiveExpression.Matches(message);
     }
 
     private bool NegativeFilterAccepts(string message)
     {
-        if (string.IsNullOrEmpty(negativeFilter))
-        {
-            return true;
-        }
-        return !message.Contains(NegativeFilter, comparisonType);
+        return !negativeExpression.Matches(message);
     }
 
     internal void Clear()
