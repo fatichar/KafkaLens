@@ -9,7 +9,7 @@ using KafkaLens.Shared.Models;
 namespace AvaloniaApp;
 public class FetchPositionConverter : IValueConverter
 {
-    public object Convert(object? position, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? position, Type targetType, object? parameter, CultureInfo culture)
     {
         if (position == null)
             return false;
@@ -24,7 +24,7 @@ public class FetchPositionConverter : IValueConverter
                 return value is "Timestamp";
             }
 
-            return value.Equals(target, StringComparison.OrdinalIgnoreCase);
+            return value?.Equals(target, StringComparison.OrdinalIgnoreCase) ?? false;
         }
         catch (Exception)
         {
@@ -32,7 +32,7 @@ public class FetchPositionConverter : IValueConverter
         }
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }

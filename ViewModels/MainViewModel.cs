@@ -28,7 +28,7 @@ public partial class MainViewModel : ViewModelBase
     // data
     public string? Title { get; private set; }
 
-    public ObservableCollection<ClusterViewModel> Clusters { get; set; }
+    public ObservableCollection<ClusterViewModel> Clusters { get; set; } = null!;
 
     public ObservableCollection<OpenedClusterViewModel> OpenedClusters { get; } = new();
     private readonly IDictionary<string, List<OpenedClusterViewModel>> openedClustersMap
@@ -44,9 +44,9 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand EditClustersCommand { get; }
     public IRelayCommand OpenClusterCommand { get; }
     public IRelayCommand OpenSavedMessagesCommand { get; set; }
-    public static Action ShowAboutDialog { get; set; }
-    public static Action ShowFolderOpenDialog { get; set; }
-    public static Action ShowEditClustersDialog { get; set; }
+    public static Action ShowAboutDialog { get; set; } = () => { };
+    public static Action ShowFolderOpenDialog { get; set; } = () => { };
+    public static Action ShowEditClustersDialog { get; set; } = () => { };
 
     [ObservableProperty] private ObservableCollection<MenuItemViewModel>? menuItems;
 
@@ -79,7 +79,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     private readonly ObservableCollection<MenuItemViewModel> openClusterMenuItems = new();
-    private MenuItemViewModel openMenu;
+    private MenuItemViewModel openMenu = null!;
 
     #region Init
     public MainViewModel(
@@ -165,7 +165,7 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private void OnClustersChanged(object sender, NotifyCollectionChangedEventArgs args)
+    private void OnClustersChanged(object? sender, NotifyCollectionChangedEventArgs args)
     {
         if (args?.OldItems != null)
         {

@@ -42,6 +42,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
 
         var configFile = File.ReadAllText(filePath);
         var clusterConfig = JsonSerializer.Deserialize<ClusterConfig>(configFile);
+        if (clusterConfig == null) return;
         foreach (var cluster in clusterConfig.Clusters)
         {
             clusters.Add(cluster.Id, cluster);

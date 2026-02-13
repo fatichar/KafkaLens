@@ -32,6 +32,7 @@ public partial class MainView : UserControl
         var mainWindow = GetMainWindow();
         var dialog = new EditClustersDialog();
         var dataContext = DataContext as MainViewModel;
+        if (dataContext == null || mainWindow == null) return;
         dialog.DataContext = new EditClustersViewModel(dataContext.Clusters, dataContext.ClusterInfoRepository, dataContext.ClientInfoRepository, dataContext.ClientFactory);
         dialog.ShowDialog(mainWindow);
     }
@@ -48,6 +49,7 @@ public partial class MainView : UserControl
         {
             Title = "Select a folder"
         };
+        if (mainWindow == null) return;
         var result = dialog.ShowAsync(mainWindow);
         var path = await result;
         if (path == null)

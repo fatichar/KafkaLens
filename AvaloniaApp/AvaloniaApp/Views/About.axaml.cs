@@ -38,6 +38,7 @@ public partial class About : Window
     private void OpenUrl(object urlObj)
     {
         var url = urlObj as string;
+        if (string.IsNullOrEmpty(url)) return;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             //https://stackoverflow.com/a/2796367/241446

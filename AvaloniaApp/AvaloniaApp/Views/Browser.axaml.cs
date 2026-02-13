@@ -15,8 +15,9 @@ namespace AvaloniaApp.Views;
 public partial class Browser : UserControl
 {
     private OpenedClusterViewModel? Context => (OpenedClusterViewModel?)DataContext;
-    private string messageTablePositiveFilter = "";
-    private string messageTableNegativeFilter = "";
+    // TODO: Implement message table filtering
+    // private string messageTablePositiveFilter = "";
+    // private string messageTableNegativeFilter = "";
     private MessageViewModel? subscribedMessage;
     private OpenedClusterViewModel? previousContext;
     private TextMate.Installation? _textMateInstallation;
@@ -193,6 +194,6 @@ public partial class Browser : UserControl
 
     private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
-        e.Row.Header = 1 + e.Row.GetIndex();
+        e.Row.Header = 1 + e.Row.Index;
     }
 }

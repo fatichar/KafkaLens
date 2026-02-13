@@ -35,9 +35,9 @@ public partial class AddEditClientDialog : Window
         Title = "Edit Client";
 
         // Pre-select protocol
-        foreach (ComboBoxItem item in ProtocolBox.Items)
+        foreach (var obj in ProtocolBox.Items)
         {
-            if (item.Content.ToString() == existing.Protocol)
+            if (obj is ComboBoxItem item && item.Content?.ToString() == existing.Protocol)
             {
                 ProtocolBox.SelectedItem = item;
                 break;

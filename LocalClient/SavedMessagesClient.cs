@@ -144,7 +144,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     #region update
     public async Task<Shared.Models.KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
-        return null;
+        return null!;
     }
     #endregion update
 

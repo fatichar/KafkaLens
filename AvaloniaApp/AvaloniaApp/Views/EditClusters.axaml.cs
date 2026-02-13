@@ -29,13 +29,14 @@ public partial class EditClustersDialog : Window
         InitializeComponent();
     }
 
-    private EditClustersViewModel Context => DataContext as EditClustersViewModel;
+    private EditClustersViewModel? Context => DataContext as EditClustersViewModel;
 
     #region Direct Clusters
     private async void AddCluster_Click(object? sender, RoutedEventArgs e)
     {
         try
         {
+            if (Context == null) return;
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
             var validator = new Func<string, System.Threading.Tasks.Task<bool>>(Context.ValidateConnectionAsync);
             var dialog = new AddEditClusterDialog(existingNames, validator);
@@ -59,6 +60,7 @@ public partial class EditClustersDialog : Window
             var selected = ClustersGrid.SelectedItem as ClusterViewModel;
             if (selected == null) return;
 
+            if (Context == null) return;
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
             var validator = new Func<string, System.Threading.Tasks.Task<bool>>(Context.ValidateConnectionAsync);
             var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address);
@@ -81,7 +83,7 @@ public partial class EditClustersDialog : Window
         try
         {
             var selected = ClustersGrid.SelectedItem as ClusterViewModel;
-            Context.RemoveCluster(selected);
+            Context?.RemoveCluster(selected);
         }
         catch (Exception ex)
         {
@@ -95,6 +97,7 @@ public partial class EditClustersDialog : Window
     {
         try
         {
+            if (Context == null) return;
             var existingNames = Context.Clients.Select(c => c.Name).ToList();
             var dialog = new AddEditClientDialog(existingNames);
             var result = await dialog.ShowDialog<ClientInfo?>(this);
@@ -117,6 +120,7 @@ public partial class EditClustersDialog : Window
             var selected = ClientsGrid.SelectedItem as ClientInfoViewModel;
             if (selected == null) return;
 
+            if (Context == null) return;
             var existingNames = Context.Clients.Select(c => c.Name).ToList();
             var dialog = new AddEditClientDialog(selected.Info, existingNames);
             var result = await dialog.ShowDialog<ClientInfo?>(this);
@@ -137,7 +141,7 @@ public partial class EditClustersDialog : Window
         try
         {
             var selected = ClientsGrid.SelectedItem as ClientInfoViewModel;
-            Context.RemoveClient(selected);
+            Context?.RemoveClient(selected);
         }
         catch (Exception ex)
         {

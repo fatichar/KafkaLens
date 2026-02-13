@@ -9,14 +9,14 @@ public sealed partial class MessageViewModel : ViewModelBase
     const int MaxSummaryLen = 100;
 
     public readonly Message message;
-    private IMessageFormatter formatter;
+    private IMessageFormatter formatter = null!;
 
     public int Partition => message.Partition;
     public long Offset => message.Offset;
     public string? Key => message.KeyText;
-    public string Summary { get; set; }
-    public string DecodedMessage { get; set; }
-    public string FormattedMessage { get; set; }
+    public string Summary { get; set; } = null!;
+    public string DecodedMessage { get; set; } = null!;
+    public string FormattedMessage { get; set; } = null!;
 
     public string Timestamp
     {
@@ -28,7 +28,7 @@ public sealed partial class MessageViewModel : ViewModelBase
         }
     }
 
-    private string formatterName;
+    private string formatterName = null!;
 
     public string FormatterName
     {
@@ -56,7 +56,7 @@ public sealed partial class MessageViewModel : ViewModelBase
         IsActive = true;
     }
 
-    [ObservableProperty] private string displayText;
+    [ObservableProperty] private string displayText = null!;
 
     private string filterText = "";
     private bool useObjectFilter = true;
@@ -81,7 +81,7 @@ public sealed partial class MessageViewModel : ViewModelBase
         }
     }
 
-    public string Topic { get; set; }
+    public string Topic { get; set; } = null!;
 
     private void UpdateText()
     {

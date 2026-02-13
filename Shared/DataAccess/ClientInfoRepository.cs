@@ -43,6 +43,7 @@ public class ClientInfoRepository : IClientInfoRepository
 
         var configFile = File.ReadAllText(filePath);
         var clientConfig = JsonSerializer.Deserialize<ClientConfig>(configFile);
+        if (clientConfig == null) return;
         foreach (var client in clientConfig.Clients)
         {
             clients.Add(client.Id, client);

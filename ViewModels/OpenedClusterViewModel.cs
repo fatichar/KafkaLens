@@ -86,7 +86,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public string StartTimeText
     {
-        get;
+        get => field ?? "";
         set
         {
             if (SetProperty(ref field, value))
@@ -331,7 +331,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public ITreeNode? SelectedNode
     {
-        get => selectedNode;
+        get => field ?? selectedNode;
         set
         {
             if (value == null && selectedNode != null)
@@ -366,8 +366,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     }
 
     public string ClusterId => cluster.Id;
-    public static FormatterFactory FormatterFactory { get; set; }
-    public IList<MessageViewModel> SelectedMessages { get; set; }
+    public static FormatterFactory FormatterFactory { get; set; } = null!;
+    public IList<MessageViewModel> SelectedMessages { get; set; } = new List<MessageViewModel>();
     public bool IsCurrent { get; set; }
 
     MessageStream? messages = null;
@@ -427,12 +427,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         if (node.FormatterName == null)
         {
             Assert.True(e.NewItems?.Count > 0);
-            var message = (Message)e.NewItems[0];
+            var message = (Message)e.NewItems![0]!;
             var formatter = GuessFormatter(message);
             var topicName = node.Type switch
             {
                 ITreeNode.NodeType.TOPIC => node.Name,
-                ITreeNode.NodeType.PARTITION => (node as PartitionViewModel).TopicName,
+                ITreeNode.NodeType.PARTITION => ((PartitionViewModel)node).TopicName,
                 _ => node.Name
             };
             if (formatter != null)
@@ -490,7 +490,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             {
                 try
                 {
-                    var text = formatter.Format(message.Value, true);
+                    var text = formatter.Format(message.Value ?? Array.Empty<byte>(), true);
                     if (text == null) continue;
                     if (text.Length > maxLength)
                     {
@@ -513,21 +513,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         return best;
     }
 
-    private void OnMessagesFinished()
-    {
-        messageLoadListeners.ForEach(listener => listener.MessageLoadingFinished());
-    }
-
-    public void AddMessageLoadListener(IMessageLoadListener listener)
-    {
-        messageLoadListeners.Add(listener);
-    }
-
-    public void RemoveMessageLoadListener(IMessageLoadListener listener)
-    {
-        messageLoadListeners.Remove(listener);
-    }
-
     public void UpdateMessages()
     {
         lock (pendingMessages)
@@ -543,8 +528,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
         if (!messages?.HasMore ?? false)
         {
-            Log.Information("UI: No more messages");
-            OnMessagesFinished();
+            Log.Debug("UI: No more messages");
         }
     }
 

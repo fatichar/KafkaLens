@@ -139,7 +139,7 @@ public class JsonFormatter : IMessageFormatter
         var tokens = new Dictionary<string, JToken>();
         foreach (var pair in jObject)
         {
-            tokens.Add(pair.Key, pair.Value);
+            tokens.Add(pair.Key, pair.Value!);
         }
 
         return tokens;
@@ -174,7 +174,7 @@ public class JsonFormatter : IMessageFormatter
 
     private static bool Matches(object val, string searchText)
     {
-        return val.ToString().ToLower().Contains(searchText);
+        return val.ToString()?.ToLower().Contains(searchText) ?? false;
     }
 
     public string? Format(byte[] data, bool prettyPrint)
