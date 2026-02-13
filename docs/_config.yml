@@ -1,1 +1,29 @@
-# theme: jekyll-theme-minimal
+title: KafkaLens
+description: The high-performance, cross-platform desktop client for Apache Kafka.
+remote_theme: just-the-docs/just-the-docs
+
+# Site settings
+aux_links:
+  "GitHub":
+    - https://github.com/fatichar/KafkaLens
+  "Buy Me a Coffee":
+    - https://www.buymeacoffee.com/fatichar
+
+# Color scheme support
+# Removing hardcoded dark to allow theme defaults / potentially system preference
+# color_scheme: dark
+
+# Enable search
+search_enabled: true
+
+# Navigation settings
+nav_sort: nav_order
+
+# Enable mermaid
+mermaid:
+  version: "9.1.1"
+
+# Footer content
+last_edit_timestamp: false
+gh_edit_link: false
+footer_content: "© 2026 KafkaLens. Licensed under AGPLv3."

@@ -1,3 +1,7 @@
+---
+nav_exclude: true
+---
+
 # Remaining Build Warnings
 
 ## Fixed (57 → 1)
