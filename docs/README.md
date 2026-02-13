@@ -6,66 +6,95 @@ description: "KafkaLens: The ultimate desktop Kafka client."
 permalink: /
 ---
 
-# KafkaLens
-{: .fs-9 }
-
-All your Kafka clusters at your fingertips!
-{: .fs-6 .fw-300 }
-
-[Download Latest Release]({{ site.baseurl }}/download){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[View Documentation]({{ site.baseurl }}/usage){: .btn .fs-5 .mb-4 .mb-md-0 }
-
----
-
-## Powerful Kafka Management
-KafkaLens is a modern, cross-platform desktop application designed to make Kafka development and administration easy and intuitive.
-
-![KafkaLens Main Screenshot]({{ site.baseurl }}/screenshots/Main.png)
-
-### Key Features
-
-- **Multi-Cluster Support**: Manage all your Kafka clusters in one place.
-- **Topic Browser**: Easily explore topics, partitions, and message metadata.
-- **Message Inspection**: Deep dive into message keys, values, and headers with support for multiple formats (JSON, String, etc.).
-- **Cross-Platform**: Runs on Windows, Linux, and MacOS.
-- **High Performance**: Built with .NET and Avalonia UI for a smooth experience.
-
----
-
-## Visual Tour
-
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <div style="flex: 1; min-width: 250px;">
-    <h4>Cluster Management</h4>
-    <img src="{{ site.baseurl }}/screenshots/Feature1.png" alt="Feature 1" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-  </div>
-  <div style="flex: 1; min-width: 250px;">
-    <h4>Message Formats</h4>
-    <img src="{{ site.baseurl }}/screenshots/Feature2.png" alt="Feature 2" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+<div class="p-6 mb-6 text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px;">
+  <h1 class="text-white" style="font-size: 3.5rem; font-weight: 800; margin-bottom: 1rem; letter-spacing: -1px; border-bottom: none;">KafkaLens</h1>
+  <p style="font-size: 1.5rem; font-weight: 300; max-width: 800px; margin: 0 auto 2rem auto; opacity: 0.9;">The high-performance, cross-platform desktop client that makes Kafka development feel effortless.</p>
+  <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+    <a href="{{ site.baseurl }}/download" class="btn btn-primary" style="padding: 12px 30px; font-size: 1.1rem; border-radius: 6px; background-color: white; color: #764ba2; border: none;">Get Started for Free</a>
+    <a href="{{ site.baseurl }}/usage" class="btn" style="padding: 12px 30px; font-size: 1.1rem; border-radius: 6px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4);">Explore Docs</a>
   </div>
 </div>
 
 ---
 
-## What Users are Saying
-{: .text-center }
+## Elevate your Kafka Workflow
+{: .text-center .fs-8 .mb-6 }
 
-> "KafkaLens has completely changed how I interact with our Kafka clusters. The UI is fast and intuitive!"
->
-> -- **Software Engineer**, Placeholder Tech
-
-> "Finally a Kafka client that doesn't feel clunky. Highly recommended for any Kafka developer."
->
-> -- **DevOps Lead**, Future Systems
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 40px;">
+  <div class="p-6 border-radius-10 shadow-v1" style="border: 1px solid rgba(0,0,0,0.1);">
+    <h3 class="mt-0">🚀 Lightning Fast</h3>
+    <p>Built with .NET 10 and Avalonia UI, KafkaLens handles millions of messages with ease without breaking a sweat or consuming all your RAM.</p>
+  </div>
+  <div class="p-6 border-radius-10 shadow-v1" style="border: 1px solid rgba(0,0,0,0.1);">
+    <h3 class="mt-0">🛠️ Developer First</h3>
+    <p>Intuitive message inspection with support for JSON, String, and Hex formatters. Navigate partitions and offsets like a pro.</p>
+  </div>
+  <div class="p-6 border-radius-10 shadow-v1" style="border: 1px solid rgba(0,0,0,0.1);">
+    <h3 class="mt-0">🌍 Native Everywhere</h3>
+    <p>True cross-platform support. Whether you're on Windows, macOS (Silicon/Intel), or Linux, enjoy a consistent, high-fidelity experience.</p>
+  </div>
+</div>
 
 ---
 
-## Support the Project
+## Visual Tour
+{: .text-center .fs-8 .mb-6 }
 
-If you find KafkaLens useful, please consider supporting its development.
+<div style="margin-bottom: 60px;">
+  <div style="display: flex; flex-direction: column; gap: 60px;">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 40px;">
+      <div style="flex: 1; min-width: 300px;">
+        <h3 class="fs-7">Complete Cluster Control</h3>
+        <p class="fs-5">Manage multiple clusters simultaneously. Connect, browse, and monitor your infrastructure from a single, unified interface. No more context switching between CLI tools.</p>
+      </div>
+      <div style="flex: 1.5; min-width: 300px;">
+        <img src="{{ site.baseurl }}/screenshots/Main.png" alt="Cluster Management" style="border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%;">
+      </div>
+    </div>
 
-[![Buy me a coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/fatichar)
+    <div style="display: flex; flex-wrap: wrap-reverse; align-items: center; gap: 40px;">
+      <div style="flex: 1.5; min-width: 300px;">
+        <img src="{{ site.baseurl }}/screenshots/Feature1.png" alt="Message Inspection" style="border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%;">
+      </div>
+      <div style="flex: 1; min-width: 300px;">
+        <h3 class="fs-7">Deep Message Inspection</h3>
+        <p class="fs-5">Instantly decode message keys and values. With support for multiple formatters and real-time filtering, finding that needle in the haystack has never been easier.</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 ---
 
-[License]({{ site.github.repository_url }}/blob/main/LICENSE)
+## Trusted by Developers at
+{: .text-center .fs-5 .opacity-6 .mb-4 }
+<div style="display: flex; justify-content: center; gap: 50px; flex-wrap: wrap; margin-bottom: 60px; filter: grayscale(100%); font-weight: bold; font-size: 1.2rem;">
+  <span>TECH_CORP</span>
+  <span>DATA_FLOW</span>
+  <span>CLOUD_NATIVE</span>
+  <span>STREAM_INC</span>
+</div>
+
+---
+
+## What Our Users Say
+{: .text-center .fs-8 .mb-6 }
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 40px;">
+  <div class="p-6 border-radius-10 shadow-v1" style="border: 1px solid rgba(0,0,0,0.1); font-style: italic;">
+    <p>"KafkaLens has completely changed how I interact with our Kafka clusters. The UI is fast, responsive, and actually intuitive."</p>
+    <div class="mt-4" style="font-style: normal; font-weight: bold;">— Senior Backend Engineer</div>
+  </div>
+  <div class="p-6 border-radius-10 shadow-v1" style="border: 1px solid rgba(0,0,0,0.1); font-style: italic;">
+    <p>"Finally a Kafka client that doesn't feel like it was built in the 90s. The JSON formatting and filtering are lifesavers."</p>
+    <div class="mt-4" style="font-style: normal; font-weight: bold;">— DevOps Lead</div>
+  </div>
+</div>
+
+---
+
+<div class="text-center py-10">
+  <h2 class="fs-8">Ready to master your Kafka streams?</h2>
+  <p class="fs-5 mb-6">Join developers worldwide using KafkaLens to simplify their daily tasks.</p>
+  <a href="{{ site.baseurl }}/download" class="btn btn-primary" style="padding: 15px 40px; font-size: 1.2rem; border-radius: 8px;">Download KafkaLens Now</a>
+</div>

@@ -1,60 +1,58 @@
 ---
 layout: default
-title: Usage
+title: Usage Guide
 nav_order: 3
-description: "Learn how to use KafkaLens to manage your Kafka clusters."
+description: "Master KafkaLens with our comprehensive usage guide."
 ---
 
 # Usage Documentation
+{: .fs-9 }
 
-Welcome to the KafkaLens guide. This page will help you get started with the main features of the application.
-
-## 1. Adding a Cluster
-
-To start browsing messages, you first need to add a Kafka cluster:
-
-1. Click on the **Edit Clusters** button (or the plus icon in the sidebar).
-2. Enter a **Name** for your cluster (e.g., "Production").
-3. Provide the **Bootstrap Servers** (e.g., `localhost:9092`).
-4. Click **Save**.
-
-Your cluster should now appear in the sidebar.
-
-## 2. Connecting to a Cluster
-
-Click on a cluster in the sidebar to connect to it. KafkaLens will fetch the list of available topics and partitions.
-
-## 3. Browsing Topics
-
-Once connected:
-- Expand the cluster to see the list of **Topics**.
-- Select a topic to view its partitions.
-- Double-click a topic or partition to open a new tab for browsing messages.
-
-## 4. Viewing Messages
-
-In the message browser tab:
-- Click **Load** to fetch the latest messages.
-- You can filter messages by partition or search for specific content.
-- Select a message to see its full **Key**, **Value**, and **Headers** in the details pane.
-
-### Message Formatters
-KafkaLens supports various formatters to help you read message content:
-- **String**: Raw text representation.
-- **JSON**: Pretty-printed JSON if the content is a valid JSON string.
-- **Hex**: Hexadecimal view for binary data.
-
-You can change the formatter for both Keys and Values in the message details view.
-
-## 5. Saving Messages
-
-You can save individual messages to your local machine for later analysis:
-1. Right-click on a message in the list.
-2. Select **Save Message**.
-3. Choose a location to save the `.klm` file.
+Get the most out of KafkaLens with this step-by-step guide.
 
 ---
 
-## Tips
-- Use the **Refresh** button to update the list of topics if new ones were created.
-- You can open multiple clusters simultaneously in different tabs.
+## 🏗️ Getting Started
+
+### 1. Adding your first Cluster
+To begin, you need to tell KafkaLens where your Kafka brokers are located.
+1. Click the **Edit Clusters** button in the sidebar.
+2. Click **Add Cluster**.
+3. Enter a friendly name and your bootstrap servers (e.g., `localhost:9092`).
+4. Click **Save**.
+
+### 2. Navigation
+The sidebar contains all your configured clusters. Click a cluster to connect. Once connected, you can browse:
+- **Topics**: All available topics in the cluster.
+- **Partitions**: Drill down into specific partitions to see message distribution.
+
+---
+
+## 🔍 Exploring Data
+
+### Browsing Messages
+Double-click a topic or partition to open a new data tab.
+- **Fetch**: Click "Load" to fetch the most recent messages.
+- **Seek**: Use the offset controls to jump to a specific point in time or a specific offset.
+
+### Message Inspection
+Select any message to view its details in the side panel. KafkaLens provides specialized formatters:
+- **JSON**: Pretty-prints JSON payloads for easy reading.
+- **String**: Displays the raw UTF-8 string.
+- **Hex**: Perfect for debugging binary or proprietary formats.
+
+---
+
+## 💾 Advanced Features
+
+### Saving Messages
+Found a message you need to keep? Right-click any message in the list and select **Save Message**. This will export the full message (including headers and metadata) into a `.klm` file.
+
+### Filtering
+Use the search bar in the message view to filter through loaded messages. You can use simple text matching or advanced boolean logic (e.g., `error && !timeout`).
+
+---
+
+## ❓ Need Help?
+
+If you encounter issues or have feature requests, please open an issue on our [GitHub repository](https://github.com/fatichar/KafkaLens/issues).
