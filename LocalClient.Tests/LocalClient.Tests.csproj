@@ -4,8 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <AssemblyName>KafkaLens.Core.Tests</AssemblyName>
-    <RootNamespace>KafkaLens.Core</RootNamespace>
+    <AssemblyName>KafkaLens.LocalClient.Tests</AssemblyName>
+    <RootNamespace>KafkaLens.Clients</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,12 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\LocalClient\LocalClient.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Services\" />
+    <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
 </Project>

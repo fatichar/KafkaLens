@@ -19,4 +19,7 @@
   <Project Path="LocalClient/LocalClient.csproj" />
   <Project Path="Shared/Shared.csproj" />
   <Project Path="ViewModels/ViewModels.csproj" />
+  <Project Path="Formatting.Tests/Formatting.Tests.csproj" />
+  <Project Path="LocalClient.Tests/LocalClient.Tests.csproj" />
+  <Project Path="GrpcClient.Tests/GrpcClient.Tests.csproj" />
 </Solution>
