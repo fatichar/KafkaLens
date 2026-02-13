@@ -324,7 +324,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         FilterTopics();
     }
 
-    private void FilterTopics()
+    internal void FilterTopics()
     {
         Children.Clear();
         foreach (var topic in Topics)
@@ -391,7 +391,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         fetchCts?.Cancel();
     }
 
-    private void FetchMessages()
+    internal void FetchMessages()
     {
         if (selectedNode == null)
         {
@@ -545,7 +545,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         return FormatterFactory.Instance.GetFormatter("Text");
     }
 
-    private static string NormalizeFormatterName(string? formatterName, IList<string> allowedNames)
+    internal static string NormalizeFormatterName(string? formatterName, IList<string> allowedNames)
     {
         if (string.IsNullOrWhiteSpace(formatterName) || formatterName == "Auto")
         {
@@ -557,7 +557,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             : "Auto";
     }
 
-    private static bool CanApplyFormatterToLoadedMessages(string? formatterName, IList<string> allowedNames)
+    internal static bool CanApplyFormatterToLoadedMessages(string? formatterName, IList<string> allowedNames)
     {
         return !string.IsNullOrWhiteSpace(formatterName) &&
                formatterName != "Auto" &&
@@ -566,7 +566,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     [ObservableProperty] private bool applyToAllClusters;
 
-    private Task SaveTopicSettingsAsync()
+    internal Task SaveTopicSettingsAsync()
     {
         if (SelectedNode is not IMessageSource node) return Task.CompletedTask;
 
@@ -614,7 +614,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         }
     }
 
-    private FetchOptions CreateFetchOptions()
+    internal FetchOptions CreateFetchOptions()
     {
         FetchPosition start;
         FetchPosition? end = null;

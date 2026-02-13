@@ -1,0 +1,14 @@
+global using System;
+global using System.Linq;
+global using System.Collections.Generic;
+global using System.Threading.Tasks;
+global using Xunit;
+global using AutoFixture;
+global using AutoFixture.Xunit2;
+global using NSubstitute;
+global using FluentAssertions;
+global using KafkaLens.ViewModels;
+global using KafkaLens.Shared.Models;
+global using KafkaLens.Shared.Entities;
+global using KafkaLens.Clients.Entities;
+global using KafkaLens.Formatting;

@@ -22,4 +22,8 @@
 	<ItemGroup>
 	  <Folder Include="DataAccess" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <InternalsVisibleTo Include="KafkaLens.ViewModels.Tests" />
+	</ItemGroup>
 </Project>
