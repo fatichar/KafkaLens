@@ -28,6 +28,10 @@ public partial class PartitionViewModel: ViewModelBase, IMessageSource {
         LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
         this.partition = partition;
         this.topic = topic;
+        this.topic.PropertyChanged += (s, e) => {
+            if (e.PropertyName == nameof(TopicViewModel.FormatterName)) OnPropertyChanged(nameof(FormatterName));
+            if (e.PropertyName == nameof(TopicViewModel.KeyFormatterName)) OnPropertyChanged(nameof(KeyFormatterName));
+        };
 
         IsActive = true;
     }
@@ -44,6 +48,12 @@ public partial class PartitionViewModel: ViewModelBase, IMessageSource {
     {
         get => topic.FormatterName;
         set => topic.FormatterName = value;
+    }
+
+    public string? KeyFormatterName
+    {
+        get => topic.KeyFormatterName;
+        set => topic.KeyFormatterName = value;
     }
 
     private Task LoadMessagesAsync() {

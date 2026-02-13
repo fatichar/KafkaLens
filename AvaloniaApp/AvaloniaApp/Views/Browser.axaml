@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              xmlns:views="clr-namespace:AvaloniaApp.Views"
+             xmlns:avaloniaApp="clr-namespace:AvaloniaApp"
              xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit"
              x:DataType="vm:OpenedClusterViewModel">
     <UserControl.Resources>
@@ -16,52 +17,63 @@
                 <MenuItem Header="As Formatted" Command="{Binding SaveAllAsFormattedCommand}"/>
             </MenuItem>
         </ContextMenu>
+        <avaloniaApp:NodeTypeConverter x:Key="IsNodeType" />
     </UserControl.Resources>
-    <Grid RowDefinitions="*, 3, *">
-        <DockPanel Margin="0">
-            <views:MessagesToolbar x:Name="MessagesToolbar" DockPanel.Dock="Top"
-                                   HorizontalAlignment="Stretch"
-                                   Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="0">
-            </views:MessagesToolbar>
+    <TabControl BorderThickness="0,1,0,0">
+        <TabItem Header="Messages">
+            <Grid RowDefinitions="*, 3, *">
+                <DockPanel Margin="0">
+                    <views:MessagesToolbar x:Name="MessagesToolbar" DockPanel.Dock="Top"
+                                           HorizontalAlignment="Stretch"
+                                           Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="0">
+                    </views:MessagesToolbar>
 
-            <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"
-                      HorizontalAlignment="Stretch"
-                      CanUserReorderColumns="True"
-                      CanUserResizeColumns="True"
-                      LoadingRow="messagesGrid_LoadingRow"
-                      CanUserSortColumns="True"
-                      RowHeaderWidth="50"
-                      IsReadOnly="True"
-                      ItemsSource="{Binding CurrentMessages.Filtered}"
-                      SelectedItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
-                      SelectionChanged="MessagesGrid_OnSelectionChanged"
-                      ContextMenu="{StaticResource MessageGridContextMenu}">
-                <DataGrid.Columns>
-                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition"
-                                        Binding="{Binding Partition }" />
-                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}" />
-                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp"
-                                        Binding="{Binding Timestamp}" />
-                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }" />
-                    <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Body" Binding="{Binding Summary }" />
-                </DataGrid.Columns>
-                <DataGrid.RowDetailsTemplate></DataGrid.RowDetailsTemplate>
-            </DataGrid>
-        </DockPanel>
+                    <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"
+                              HorizontalAlignment="Stretch"
+                              CanUserReorderColumns="True"
+                              CanUserResizeColumns="True"
+                              LoadingRow="messagesGrid_LoadingRow"
+                              CanUserSortColumns="True"
+                              RowHeaderWidth="50"
+                              IsReadOnly="True"
+                              ItemsSource="{Binding CurrentMessages.Filtered}"
+                              SelectedItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
+                              SelectionChanged="MessagesGrid_OnSelectionChanged"
+                              ContextMenu="{StaticResource MessageGridContextMenu}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition"
+                                                Binding="{Binding Partition }" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp"
+                                                Binding="{Binding Timestamp}" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Body" Binding="{Binding Summary }" />
+                        </DataGrid.Columns>
+                        <DataGrid.RowDetailsTemplate></DataGrid.RowDetailsTemplate>
+                    </DataGrid>
+                </DockPanel>
 
-        <GridSplitter Grid.Row="1" Background="{DynamicResource ThemeGridSplitterBrush}" />
+                <GridSplitter Grid.Row="1" Background="{DynamicResource ThemeGridSplitterBrush}" />
 
-        <DockPanel Grid.Row="2">
-            <views:MessageDisplayToolbar x:Name="MessageDisplayToolbar" DockPanel.Dock="Bottom"
-                                         VerticalAlignment="Center" HorizontalAlignment="Stretch"
-                                         Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderBrush}">
-            </views:MessageDisplayToolbar>
-            <avaloniaEdit:TextEditor
-                Name="MessageViewer"
-                FontFamily="Consolas"
-                FontSize="{Binding FontSize}"
-                IsReadOnly="True"
-                />
-        </DockPanel>
-    </Grid>
+                <DockPanel Grid.Row="2">
+                    <views:MessageDisplayToolbar x:Name="MessageDisplayToolbar" DockPanel.Dock="Bottom"
+                                                 VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                                 Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderBrush}">
+                    </views:MessageDisplayToolbar>
+                    <avaloniaEdit:TextEditor
+                        Name="MessageViewer"
+                        FontFamily="Consolas"
+                        FontSize="{Binding FontSize}"
+                        IsReadOnly="True"
+                        />
+                </DockPanel>
+            </Grid>
+        </TabItem>
+        <TabItem Header="Configuration">
+            <Panel>
+                <views:TopicConfigView IsVisible="{Binding SelectedNodeType, Converter={StaticResource IsNodeType}, ConverterParameter=TOPIC}"/>
+                <views:PartitionConfigView IsVisible="{Binding SelectedNodeType, Converter={StaticResource IsNodeType}, ConverterParameter=PARTITION}"/>
+            </Panel>
+        </TabItem>
+    </TabControl>
 </UserControl>

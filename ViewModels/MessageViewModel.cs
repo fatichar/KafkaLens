@@ -10,10 +10,11 @@ public sealed partial class MessageViewModel : ViewModelBase
 
     public readonly Message message;
     private IMessageFormatter formatter = null!;
+    private IMessageFormatter keyFormatter = null!;
 
     public int Partition => message.Partition;
     public long Offset => message.Offset;
-    public string? Key => message.KeyText;
+    [ObservableProperty] private string? key;
     public string Summary { get; set; } = null!;
     public string DecodedMessage { get; set; } = null!;
     public string FormattedMessage { get; set; } = null!;
@@ -48,10 +49,26 @@ public sealed partial class MessageViewModel : ViewModelBase
         }
     }
 
-    public MessageViewModel(Message message, string formatterName)
+    private string keyFormatterName = null!;
+
+    public string KeyFormatterName
+    {
+        get => keyFormatterName;
+        set
+        {
+            if (value == keyFormatterName) return;
+
+            SetProperty(ref keyFormatterName, value);
+            keyFormatter = FormatterFactory.Instance.GetFormatter(value);
+            Key = keyFormatter.Format(message.Key ?? Array.Empty<byte>(), false) ?? message.KeyText;
+        }
+    }
+
+    public MessageViewModel(Message message, string formatterName, string keyFormatterName)
     {
         this.message = message;
         FormatterName = formatterName;
+        KeyFormatterName = keyFormatterName;
 
         IsActive = true;
     }

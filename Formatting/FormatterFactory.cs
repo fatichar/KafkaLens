@@ -9,6 +9,7 @@ public class FormatterFactory
     private readonly IDictionary<string, IMessageFormatter> formatters = new Dictionary<string, IMessageFormatter>();
     private const string Json = "Json";
     private const string Text = "Text";
+    private const string Number = "Number";
 
     static FormatterFactory()
     {
@@ -19,6 +20,7 @@ public class FormatterFactory
     {
         formatters.Add(Json, new JsonFormatter());
         formatters.Add(Text, new TextFormatter());
+        formatters.Add(Number, new NumberFormatter());
     }
 
     public IMessageFormatter DefaultFormatter => formatters[Json];

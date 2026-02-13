@@ -59,6 +59,9 @@ public partial class App : Application
         var settingsFilePath = Path.Combine(kafkaLensDataPath, "settings.json");
         services.AddSingleton<ISettingsService>(new SettingsService(settingsFilePath));
 
+        var topicSettingsFilePath = Path.Combine(kafkaLensDataPath, "topic_settings.json");
+        services.AddSingleton<ITopicSettingsService>(new TopicSettingsService(topicSettingsFilePath));
+
         var pluginsPath = Path.Combine(kafkaLensDataPath, "Plugins");
         var pluginsDir = Directory.CreateDirectory(pluginsPath);
         AddLocalDependencies(services, clusterRepo, pluginsDir);
