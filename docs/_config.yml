@@ -1,1 +1,20 @@
-# theme: jekyll-theme-minimal
+title: KafkaLens
+description: All your Kafka clusters at your fingertips!
+remote_theme: just-the-docs/just-the-docs
+
+# Site settings
+aux_links:
+  "GitHub":
+    - https://github.com/fatichar/KafkaLens
+  "Buy Me a Coffee":
+    - https://www.buymeacoffee.com/fatichar
+
+# Color scheme support
+# just-the-docs supports 'light' and 'dark' or auto.
+color_scheme: dark
+
+# Enable search
+search_enabled: true
+
+# Navigation settings
+nav_sort: nav_order
