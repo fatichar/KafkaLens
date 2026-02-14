@@ -22,7 +22,7 @@
         </ContextMenu>
         <avaloniaApp:NodeTypeConverter x:Key="IsNodeType" />
     </UserControl.Resources>
-    <TabControl BorderThickness="0,1,0,0">
+    <TabControl BorderThickness="0,1,0,0" Padding="0">
         <TabItem Header="Messages">
             <Grid RowDefinitions="*, 3, *">
                 <DockPanel Margin="0">
@@ -56,12 +56,12 @@
                     </DataGrid>
                 </DockPanel>
 
-                <GridSplitter Grid.Row="1" Background="{DynamicResource ThemeGridSplitterBrush}" />
+                <GridSplitter Grid.Row="1" />
 
                 <DockPanel Grid.Row="2">
                     <views:MessageDisplayToolbar x:Name="MessageDisplayToolbar" DockPanel.Dock="Bottom"
-                                                 VerticalAlignment="Center" HorizontalAlignment="Stretch"
-                                                 Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderBrush}">
+                                                 VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                                                 Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ThemeBorderBrush}">
                     </views:MessageDisplayToolbar>
                     <avaloniaEdit:TextEditor
                         Name="MessageViewer"

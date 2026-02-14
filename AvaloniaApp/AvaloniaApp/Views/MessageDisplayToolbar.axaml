@@ -2,8 +2,28 @@
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
-	x:DataType="vm:OpenedClusterViewModel">
-	<Grid IsEnabled="{Binding CurrentMessages.IsMessageSelected}">
+	x:DataType="vm:OpenedClusterViewModel"
+	Padding="0">
+	<UserControl.Resources>
+		<x:Double x:Key="SliderHorizontalHeight">20</x:Double>
+		<GridLength x:Key="SliderPreContentMargin">0</GridLength>
+		<GridLength x:Key="SliderPostContentMargin">0</GridLength>
+		<x:Double x:Key="SliderHorizontalThumbWidth">14</x:Double>
+		<x:Double x:Key="SliderHorizontalThumbHeight">14</x:Double>
+	</UserControl.Resources>
+	<UserControl.Styles>
+		<Style Selector="Slider:horizontal">
+			<Setter Property="MinHeight" Value="{StaticResource SliderHorizontalHeight}" />
+			<Style Selector="^ /template/ Track RepeatButton Border#TrackBackground">
+				<Setter Property="Height" Value="3" />
+			</Style>
+			<Style Selector="^ /template/ Thumb">
+				<Setter Property="Width" Value="{StaticResource SliderHorizontalThumbWidth}" />
+				<Setter Property="Height" Value="{StaticResource SliderHorizontalThumbHeight}" />
+			</Style>
+		</Style>
+	</UserControl.Styles>
+	<Grid IsEnabled="{Binding CurrentMessages.IsMessageSelected}" Margin="5" VerticalAlignment="Center">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="*"/>
@@ -19,13 +39,13 @@
 		</WrapPanel>
 		<WrapPanel Grid.Column="2" VerticalAlignment="Center">
 			<Label Content="Format" VerticalAlignment="Center"/>
-			<ComboBox x:Name="FormatterCombo" Margin="5" Width="200" VerticalAlignment="Center"
+			<ComboBox x:Name="FormatterCombo" Margin="5,0" Width="200" VerticalAlignment="Center"
 			          ItemsSource="{Binding FormatterNames}"
 			          SelectedItem="{Binding  CurrentMessages.CurrentMessage.FormatterName, Mode=TwoWay}"/>
 		</WrapPanel>
 		<WrapPanel Grid.Column="3" VerticalAlignment="Center">
 			<Label Content="Zoom" VerticalAlignment="Center"/>
-			<Slider x:Name="fontSizeSlider" Width="200"
+			<Slider x:Name="fontSizeSlider" Width="200" Margin="0,3,0,0"
 			        VerticalAlignment="Center" HorizontalAlignment="Right"
 			        Minimum="6" Maximum="32" Value="{Binding FontSize, Mode=TwoWay}"/>
 		</WrapPanel>

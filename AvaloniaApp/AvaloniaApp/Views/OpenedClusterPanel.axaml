@@ -7,14 +7,14 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaApp.Views.OpenedClusterPanel"
              x:DataType="vm:OpenedClusterViewModel"
-             BorderThickness="2"
+             BorderThickness="1"
              BorderBrush="{DynamicResource ThemeBorderBrush}"
              Padding="0">
-    <Grid ColumnDefinitions="1*, 3, 5*, 3, 1*" VerticalAlignment="Stretch">
+    <Grid ColumnDefinitions="1*, 3, 5*, 3, 1*" VerticalAlignment="Stretch" Margin="0">
         <views:Navigator Grid.Column="0"/>
-        <GridSplitter Grid.Column="1" Background="{DynamicResource ThemeGridSplitterBrush}" ResizeDirection="Columns" />
+        <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
         <views:Browser Grid.Column="2" Margin="0" VerticalAlignment="Stretch" />
-        <GridSplitter Grid.Column="3" Background="{DynamicResource ThemeGridSplitterBrush}" ResizeDirection="Columns" />
+        <GridSplitter Grid.Column="3" ResizeDirection="Columns" />
         <views:FetchPanel Grid.Column="4" VerticalAlignment="Stretch" />
     </Grid>
 </UserControl>

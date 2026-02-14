@@ -4,8 +4,19 @@
     <SolidColorBrush x:Key="ThemeForegroundBrush">#1B5E20</SolidColorBrush>
     <SolidColorBrush x:Key="ThemeAccentBrush">#388E3C</SolidColorBrush>
     <SolidColorBrush x:Key="ThemeToolbarBackgroundBrush">#E8F5E8</SolidColorBrush>
-    <SolidColorBrush x:Key="ThemeGridSplitterBrush">#4CAF50</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeGridSplitterBrush">#C5E1A5</SolidColorBrush>
     <SolidColorBrush x:Key="ThemeBorderBrush">#81C784</SolidColorBrush>
     <SolidColorBrush x:Key="ThemeAboutBackgroundBrush">#F0F4F0</SolidColorBrush>
     <SolidColorBrush x:Key="ThemeErrorBrush">#C62828</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeSelectionBrush">#33388E3C</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeSelectionForegroundBrush">#1B5E20</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeButtonBackgroundBrush">#388E3C</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeButtonForegroundBrush">#FFFFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="ThemeButtonHoverBrush">#2E7D32</SolidColorBrush>
+    <SolidColorBrush x:Key="TreeViewItemBackgroundSelected">#33388E3C</SolidColorBrush>
+    <SolidColorBrush x:Key="TreeViewItemForegroundSelected">#1B5E20</SolidColorBrush>
+    <SolidColorBrush x:Key="TreeViewItemBackgroundSelectedPointerOver">#44388E3C</SolidColorBrush>
+    <SolidColorBrush x:Key="TreeViewItemForegroundSelectedPointerOver">#1B5E20</SolidColorBrush>
+    <SolidColorBrush x:Key="TreeViewItemBackgroundSelectedPressed">#55388E3C</SolidColorBrush>
+    <SolidColorBrush x:Key="TreeViewItemForegroundSelectedPressed">#1B5E20</SolidColorBrush>
 </ResourceDictionary>

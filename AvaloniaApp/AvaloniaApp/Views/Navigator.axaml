@@ -41,7 +41,7 @@
             <!-- <Setter Property="Background" Value="#f0f0f0" /> -->
         </Style>
     </UserControl.Styles>
-    <TabControl Height="NaN" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TabStripPlacement="Bottom">
+    <TabControl Height="NaN" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TabStripPlacement="Bottom" Padding="0">
         <TabItem Header="Topics" >
             <views:TopicsPanel />
         </TabItem>
