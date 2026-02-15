@@ -6,6 +6,8 @@ using ActiproSoftware.UI.Avalonia.Controls;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using KafkaLens.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AvaloniaApp.Views;
 
@@ -24,6 +26,12 @@ public partial class About : Window
 #if DEBUG
         this.AttachDevTools();
 #endif
+    }
+
+    private void CheckForUpdates_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var mainViewModel = App.Current.Services.GetRequiredService<MainViewModel>();
+        _ = mainViewModel.CheckForUpdatesAsync(false);
     }
 
     private void Url_OnClick(object? sender, RoutedEventArgs e)

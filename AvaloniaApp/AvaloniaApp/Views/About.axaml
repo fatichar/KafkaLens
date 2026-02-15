@@ -28,10 +28,16 @@
                      Foreground="{DynamicResource ThemeForegroundBrush}"/>
             
             <!-- Version -->
-            <TextBlock Text="{Binding AppVersion}" 
-                     HorizontalAlignment="Center" 
-                     Opacity="0.8"
-                     Margin="0,0,0,10"/>
+            <StackPanel HorizontalAlignment="Center" Spacing="5" Margin="0,0,0,10">
+                <TextBlock Text="{Binding AppVersion}"
+                         HorizontalAlignment="Center"
+                         Opacity="0.8"/>
+                <Button Content="Check for Updates"
+                        HorizontalAlignment="Center"
+                        FontSize="11"
+                        Padding="10,2"
+                        Click="CheckForUpdates_OnClick"/>
+            </StackPanel>
             
             <!-- Links -->
             <StackPanel Spacing="8">

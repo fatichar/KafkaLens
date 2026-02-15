@@ -1,0 +1,28 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
+        x:Class="AvaloniaApp.Views.UpdateDialog"
+        x:DataType="vm:UpdateViewModel"
+        Title="New Update Available"
+        Width="500" Height="450"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+    <Grid RowDefinitions="Auto, *, Auto" Margin="20">
+        <StackPanel Spacing="5">
+            <TextBlock Text="A new version of KafkaLens is available!" FontSize="18" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding LatestVersion, StringFormat='Version: {0}'}" Opacity="0.7"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Margin="0,20,0,20" Background="{DynamicResource ThemeAboutBackgroundBrush}">
+            <TextBlock Text="{Binding ReleaseNotes}" TextWrapping="Wrap" Margin="10"/>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="Skip for Now" Command="{Binding SkipCommand}" Width="120" HorizontalContentAlignment="Center"/>
+            <Button Content="Update Now" Command="{Binding UpdateCommand}" Width="120" HorizontalContentAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</Window>

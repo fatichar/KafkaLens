@@ -25,6 +25,7 @@
   <Project Path="ViewModels/ViewModels.csproj" />
   <Project Path="AvaloniaApp/AvaloniaApp/AvaloniaApp.csproj" />
   <Project Path="AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj" />
+  <Project Path="Updater/KafkaLens.Updater/KafkaLens.Updater.csproj" />
   
   <!-- Test Projects -->
   <Project Path="Core.Tests/Core.Tests.csproj" />

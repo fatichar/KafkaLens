@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="180"
+        x:Class="KafkaLens.Updater.MainWindow"
+        Title="KafkaLens Updater"
+        Width="400" Height="220"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        SystemDecorations="Full">
+    <Grid RowDefinitions="Auto, Auto, Auto, Auto" Margin="20" VerticalAlignment="Center">
+        <TextBlock Name="StatusText" Text="Updating KafkaLens..." FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+        <ProgressBar Name="ProgressBar" Grid.Row="1" Height="20" Minimum="0" Maximum="100" Value="0" ShowProgressText="True"/>
+        <TextBlock Name="DetailText" Grid.Row="2" Text="Preparing..." Margin="0,10,0,0" Opacity="0.7"/>
+        <Button Name="CancelButton" Grid.Row="3" Content="Cancel" HorizontalAlignment="Right" Margin="0,20,0,0" Click="Cancel_OnClick" IsVisible="False"/>
+    </Grid>
+</Window>

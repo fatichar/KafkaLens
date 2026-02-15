@@ -17,6 +17,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Messages;
+using KafkaLens.ViewModels.Services;
 using Serilog;
 
 namespace AvaloniaApp;
@@ -77,6 +78,7 @@ public partial class App : Application
         // services.AddSingleton<ConsumerFactory>();
         services.AddSingleton<IClusterFactory, ClusterFactory>();
         services.AddSingleton<IClientFactory, ClientFactory>();
+        services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<MainViewModel>();
 
         services.AddLogging();
