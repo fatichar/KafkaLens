@@ -17,6 +17,7 @@ public class MainViewModelBusinessLogicTests
     private readonly IClusterInfoRepository _clusterInfoRepository;
     private readonly IClientInfoRepository _clientInfoRepository;
     private readonly IClientFactory _clientFactory;
+    private readonly IUpdateService _updateService;
     private readonly IKafkaLensClient _mockClient;
     private readonly AppConfig _appConfig;
 
@@ -29,6 +30,7 @@ public class MainViewModelBusinessLogicTests
         _clusterInfoRepository = Substitute.For<IClusterInfoRepository>();
         _clientInfoRepository = Substitute.For<IClientInfoRepository>();
         _clientFactory = Substitute.For<IClientFactory>();
+        _updateService = Substitute.For<IUpdateService>();
         _mockClient = Substitute.For<IKafkaLensClient>();
         _appConfig = new AppConfig { Title = "Test", ClusterRefreshIntervalSeconds = 100 };
     }
@@ -48,6 +50,7 @@ public class MainViewModelBusinessLogicTests
             _clusterInfoRepository,
             _clientInfoRepository,
             _clientFactory,
+            _updateService,
             FormatterFactory.Instance);
     }
 

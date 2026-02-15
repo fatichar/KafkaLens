@@ -2,8 +2,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -23,6 +25,7 @@ public partial class MainViewModel : ViewModelBase
     public IClusterInfoRepository ClusterInfoRepository { get; }
     public IClientInfoRepository ClientInfoRepository { get; }
     public IClientFactory ClientFactory { get; }
+    public IUpdateService UpdateService { get; }
 
     // data
     public string? Title { get; private set; }
@@ -48,10 +51,13 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand PreviousTabCommand { get; }
     public IRelayCommand<string> SelectTabCommand { get; }
     public IRelayCommand CloseCurrentTabCommand { get; }
+    public IAsyncRelayCommand CheckForUpdatesCommand { get; }
             
     public static Action ShowAboutDialog { get; set; } = () => { };
     public static Action ShowFolderOpenDialog { get; set; } = () => { };
     public static Action ShowEditClustersDialog { get; set; } = () => { };
+    public static Action<UpdateViewModel> ShowUpdateDialog { get; set; } = (vm) => { };
+    public static Action<string, string> ShowMessage { get; set; } = (title, message) => { };
 
     [ObservableProperty] private ObservableCollection<MenuItemViewModel>? menuItems;
 
@@ -60,6 +66,15 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private string currentTheme;
+
+    [ObservableProperty]
+    private bool autoCheckForUpdates;
+
+    partial void OnAutoCheckForUpdatesChanged(bool value)
+    {
+        settingsService.SetValue("AutoCheckForUpdates", value.ToString().ToLower());
+        UpdateAutoCheckMenuCheckedState();
+    }
 
     partial void OnCurrentThemeChanged(string value)
     {
@@ -98,11 +113,13 @@ public partial class MainViewModel : ViewModelBase
         IClusterInfoRepository clusterInfoRepository,
         IClientInfoRepository clientInfoRepository,
         IClientFactory clientFactory,
+        IUpdateService updateService,
         FormatterFactory formatterFactory)
     {
         ClusterInfoRepository = clusterInfoRepository;
         ClientInfoRepository = clientInfoRepository;
         ClientFactory = clientFactory;
+        UpdateService = updateService;
         Log.Information("Creating MainViewModel");
         this.clusterFactory = clusterFactory;
         this.settingsService = settingsService;
@@ -117,12 +134,14 @@ public partial class MainViewModel : ViewModelBase
         PreviousTabCommand = new RelayCommand(PreviousTab);
         SelectTabCommand = new RelayCommand<string>(s => SelectTab(int.Parse(s ?? "1")));
         CloseCurrentTabCommand = new RelayCommand(CloseCurrentTab);
+        CheckForUpdatesCommand = new AsyncRelayCommand(() => CheckForUpdatesAsync(false));
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
 
         Title = appConfig.Title;
 
         currentTheme = settingsService.GetValue("Theme") ?? "System";
+        autoCheckForUpdates = bool.TryParse(settingsService.GetValue("AutoCheckForUpdates") ?? "true", out var autoCheck) && autoCheck;
 
         IsActive = true;
 
@@ -142,6 +161,10 @@ public partial class MainViewModel : ViewModelBase
     protected override async void OnActivated()
     {
         await LoadClusters();
+        if (AutoCheckForUpdates)
+        {
+            _ = CheckForUpdatesAsync(true);
+        }
     }
 
     public async Task LoadClusters()
@@ -211,7 +234,7 @@ public partial class MainViewModel : ViewModelBase
         };
         
         // Ensure the initial theme state is reflected in the menu
-        UpdateThemeMenuCheckedState();
+        UpdateMenuCheckedState();
     }
 
     private MenuItemViewModel CreateViewMenu()
@@ -249,9 +272,15 @@ public partial class MainViewModel : ViewModelBase
         return items;
     }
 
+    private void UpdateMenuCheckedState()
+    {
+        UpdateThemeMenuCheckedState();
+        UpdateAutoCheckMenuCheckedState();
+    }
+
     private void UpdateThemeMenuCheckedState()
     {
-        var viewMenu = MenuItems?.FirstOrDefault(m => m.Header == "View");
+        var viewMenu = MenuItems?.FirstOrDefault(m => m.Header == "_View");
         var themeMenu = viewMenu?.Items?.FirstOrDefault(m => m.Header == "Theme");
         
         if (themeMenu?.Items != null)
@@ -260,6 +289,16 @@ public partial class MainViewModel : ViewModelBase
             {
                 item.IsChecked = item.Header == CurrentTheme;
             }
+        }
+    }
+
+    private void UpdateAutoCheckMenuCheckedState()
+    {
+        var helpMenu = MenuItems?.FirstOrDefault(m => m.Header == "_Help");
+        var autoCheckMenu = helpMenu?.Items?.FirstOrDefault(m => m.Header?.Contains("Auto-check") == true);
+        if (autoCheckMenu != null)
+        {
+            autoCheckMenu.IsChecked = AutoCheckForUpdates;
         }
     }
 
@@ -331,13 +370,25 @@ public partial class MainViewModel : ViewModelBase
         };
     }
 
-    private static MenuItemViewModel CreateHelpMenu()
+    private MenuItemViewModel CreateHelpMenu()
     {
         return new MenuItemViewModel
         {
             Header = "_Help",
             Items = new()
             {
+                new MenuItemViewModel
+                {
+                    Header = "Check for _Updates",
+                    Command = CheckForUpdatesCommand,
+                },
+                new MenuItemViewModel
+                {
+                    Header = "Auto-check for Updates",
+                    Command = new RelayCommand(() => AutoCheckForUpdates = !AutoCheckForUpdates),
+                    ToggleType = MenuItemToggleType.CheckBox,
+                    IsChecked = AutoCheckForUpdates
+                },
                 new MenuItemViewModel
                 {
                     Header = "_About",
@@ -438,6 +489,74 @@ public partial class MainViewModel : ViewModelBase
             openedClustersMap.Remove(openedCluster.ClusterId);
         }
         OpenedClusters.Remove(openedCluster);
+    }
+
+    public async Task CheckForUpdatesAsync(bool silent)
+    {
+        Log.Information("Checking for updates...");
+        var result = await UpdateService.CheckForUpdateAsync();
+        if (result.UpdateAvailable)
+        {
+            if (!UpdateService.IsInstallDirectoryWritable())
+            {
+                if (!silent)
+                {
+                    ShowMessage("Update Available", "A new update is available, but KafkaLens does not have permission to update itself in the current installation directory. Please move the application to a user-writable folder to enable auto-updates.");
+                }
+                return;
+            }
+
+            Log.Information("Update available: {Version}", result.LatestVersion);
+            var updateVm = new UpdateViewModel(result);
+            updateVm.OnUpdate += () => PerformUpdate(result);
+            ShowUpdateDialog(updateVm);
+        }
+        else if (!silent)
+        {
+            Log.Information("No updates available.");
+            ShowMessage("Update Check", "You are already using the latest version of KafkaLens.");
+        }
+    }
+
+    private void PerformUpdate(UpdateCheckResult result)
+    {
+        if (!UpdateService.IsInstallDirectoryWritable())
+        {
+            Log.Warning("Install directory is not writable. Cannot perform auto-update.");
+            return;
+        }
+
+        var appDir = AppContext.BaseDirectory;
+        var updaterPath = Path.Combine(appDir, "updater", "KafkaLens.Updater");
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) updaterPath += ".exe";
+
+        if (!File.Exists(updaterPath))
+        {
+            Log.Error("Updater not found at {UpdaterPath}", updaterPath);
+            return;
+        }
+
+        var currentPid = Environment.ProcessId;
+        var executablePath = Process.GetCurrentProcess().MainModule?.FileName;
+
+        var args = $"--pid {currentPid} " +
+                   $"--url \"{result.DownloadUrl}\" " +
+                   $"--checksum-url \"{result.ChecksumUrl}\" " +
+                   $"--asset-name \"{result.AssetName}\" " +
+                   $"--dest \"{appDir}\" " +
+                   $"--executable \"{executablePath}\"";
+
+        Log.Information("Launching updater: {UpdaterPath} {Args}", updaterPath, args);
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = updaterPath,
+            Arguments = args,
+            UseShellExecute = true
+        });
+
+        // Exit the app
+        Environment.Exit(0);
     }
 
     internal void OpenCluster(ClusterViewModel clusterViewModel)

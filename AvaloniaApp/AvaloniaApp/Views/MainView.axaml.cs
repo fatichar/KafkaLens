@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using KafkaLens.ViewModels;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
 
 namespace AvaloniaApp.Views;
 
@@ -23,6 +25,22 @@ public partial class MainView : UserControl
         MainViewModel.ShowFolderOpenDialog += OnShowFolderOpenDialog;
 
         MainViewModel.ShowEditClustersDialog += OnShowEditClustersDialog;
+
+        MainViewModel.ShowUpdateDialog += (updateVm) =>
+        {
+            var mainWindow = GetMainWindow();
+            if (mainWindow != null)
+            {
+                var dialog = new UpdateDialog { DataContext = updateVm };
+                dialog.ShowDialog(mainWindow);
+            }
+        };
+
+        MainViewModel.ShowMessage += (title, message) =>
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(title, message, ButtonEnum.Ok);
+            box.ShowAsync();
+        };
     }
 
     private void OnShowEditClustersDialog()
