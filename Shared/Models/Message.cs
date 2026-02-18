@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace KafkaLens.Shared.Models;
 
@@ -99,6 +100,16 @@ public class Message
             writer.Write(data.Length);
             writer.Write(data);
         }
+    }
+
+    public static async Task<Message> DeserializeAsync(System.IO.Stream stream)
+    {
+        // Since BinaryReader doesn't support async, we read the stream into memory first.
+        // This is still "async I/O" from the perspective of the caller because it awaits CopyToAsync.
+        using var ms = new System.IO.MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+        return Deserialize(ms);
     }
 
     public static Message Deserialize(System.IO.Stream stream)

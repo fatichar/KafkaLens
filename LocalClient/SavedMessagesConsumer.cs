@@ -1,3 +1,4 @@
+using System.Threading;
 using Serilog;
 ﻿using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
@@ -50,38 +51,72 @@ public class SavedMessagesConsumer : ConsumerBase
     protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
     {
         var topicDir = Path.Combine(clusterDir, topicName);
-        var partitionDirs = Directory.GetDirectories(topicDir);
-        Array.ForEach(partitionDirs, partitionDir =>
+        if (!Directory.Exists(topicDir))
         {
-            var partition = int.Parse(Path.GetFileName(partitionDir));
-            GetMessages(topicName, partition, options, messages, cancellationToken);
-        });
-    }
-
-    protected override void GetMessages(string topicName, int partition, FetchOptions options, MessageStream stream, CancellationToken cancellationToken)
-    {
-        var partitionDir = Path.Combine(clusterDir, topicName, partition.ToString());
-        var messageFiles = Directory.GetFiles(partitionDir, "*.klm");
-        var textFiles = Directory.GetFiles(partitionDir, "*.txt");
-        var allFiles = messageFiles.Concat(textFiles).ToArray();
-
-        Array.ForEach(allFiles, s =>
+            messages.HasMore = false;
+            return;
+        }
+        var partitionDirs = Directory.GetDirectories(topicDir);
+        using var semaphore = new SemaphoreSlim(10);
+        var tasks = partitionDirs.Select(async partitionDir =>
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 return;
             }
+            var partition = int.Parse(Path.GetFileName(partitionDir));
+            await LoadMessagesForPartitionAsync(topicName, partition, options, messages, semaphore, cancellationToken);
+        });
+        Task.WhenAll(tasks).GetAwaiter().GetResult();
+        messages.HasMore = false;
+    }
+
+    protected override void GetMessages(string topicName, int partition, FetchOptions options, MessageStream stream, CancellationToken cancellationToken)
+    {
+        using var semaphore = new SemaphoreSlim(10);
+        LoadMessagesForPartitionAsync(topicName, partition, options, stream, semaphore, cancellationToken).GetAwaiter().GetResult();
+        stream.HasMore = false;
+    }
+
+    private async Task LoadMessagesForPartitionAsync(
+        string topicName,
+        int partition,
+        FetchOptions options,
+        MessageStream stream,
+        SemaphoreSlim semaphore,
+        CancellationToken cancellationToken)
+    {
+        var partitionDir = Path.Combine(clusterDir, topicName, partition.ToString());
+        if (!Directory.Exists(partitionDir))
+        {
+            return;
+        }
+        var messageFiles = Directory.GetFiles(partitionDir, "*.klm");
+        var textFiles = Directory.GetFiles(partitionDir, "*.txt");
+        var allFiles = messageFiles.Concat(textFiles).ToArray();
+
+        var tasks = allFiles.Select(async s =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
             try
             {
-                var message = CreateMessage(s);
+                var message = await CreateMessageAsync(s);
                 message.Partition = partition;
-                stream.Messages.Add(message);
+                lock (stream.Messages)
+                {
+                    stream.Messages.Add(message);
+                }
             }
             catch (Exception e)
             {
                 Log.Error(e, "Failed to load message {File}", s);
             }
+            finally
+            {
+                semaphore.Release();
+            }
         });
+        await Task.WhenAll(tasks);
     }
 
     private Message CreateMessage(string messageFile)
@@ -93,13 +128,27 @@ public class SavedMessagesConsumer : ConsumerBase
         }
         else
         {
-            return CreateMessageFromText(messageFile);
+            var lines = File.ReadAllLines(messageFile);
+            return ParseMessageFromLines(lines);
         }
     }
 
-    private Message CreateMessageFromText(string messageFile)
+    private async Task<Message> CreateMessageAsync(string messageFile)
     {
-        var lines = File.ReadAllLines(messageFile);
+        if (messageFile.EndsWith(".klm", StringComparison.OrdinalIgnoreCase))
+        {
+            using var fs = File.OpenRead(messageFile);
+            return await Message.DeserializeAsync(fs);
+        }
+        else
+        {
+            var lines = await File.ReadAllLinesAsync(messageFile);
+            return ParseMessageFromLines(lines);
+        }
+    }
+
+    private Message ParseMessageFromLines(string[] lines)
+    {
         long epochMillis = 0;
         var headers = new Dictionary<string, byte[]>();
         byte[]? key = null;
