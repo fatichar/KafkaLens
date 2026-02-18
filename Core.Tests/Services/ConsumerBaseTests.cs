@@ -27,7 +27,7 @@ public class ConsumerBaseTests
 
         protected override List<Topic> FetchTopics() => _topics;
 
-        protected override Task GetMessagesAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        protected override Task GetMessagesInternalAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
         {
             if (_messages != null)
             {
@@ -40,7 +40,7 @@ public class ConsumerBaseTests
             return Task.CompletedTask;
         }
 
-        protected override Task GetMessagesAsync(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        protected override Task GetMessagesInternalAsync(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
         {
             if (_messages != null)
             {
@@ -243,12 +243,12 @@ public class ConsumerBaseTests
             throw new InvalidOperationException("Connection failed");
         }
 
-        protected override Task GetMessagesAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        protected override Task GetMessagesInternalAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        protected override Task GetMessagesAsync(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        protected override Task GetMessagesInternalAsync(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }

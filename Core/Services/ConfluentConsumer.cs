@@ -99,7 +99,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return topics;
     }
 
-    protected override async Task GetMessagesAsync(string topicName, int partition, FetchOptions options,
+    protected override async Task GetMessagesInternalAsync(string topicName, int partition, FetchOptions options,
         MessageStream messages, CancellationToken cancellationToken)
     {
         Log.Information("Fetching {MessageCount} messages for partition {Topic}:{Partition}", options.Limit, topicName,
@@ -121,7 +121,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return new Confluent.Kafka.TopicPartition(topicName, partition);
     }
 
-    protected override async Task GetMessagesAsync(string topicName, FetchOptions options, MessageStream messages,
+    protected override async Task GetMessagesInternalAsync(string topicName, FetchOptions options, MessageStream messages,
         CancellationToken cancellationToken)
     {
         Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topicName);

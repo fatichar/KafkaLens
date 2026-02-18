@@ -47,18 +47,18 @@ public class SavedMessagesConsumer : ConsumerBase
         return topics.ToList();
     }
 
-    protected async override Task GetMessagesAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
     {
         var topicDir = Path.Combine(clusterDir, topicName);
         var partitionDirs = Directory.GetDirectories(topicDir);
         Array.ForEach(partitionDirs, partitionDir =>
         {
             var partition = int.Parse(Path.GetFileName(partitionDir));
-            GetMessagesAsync(topicName, partition, options, messages, cancellationToken);
+            GetMessages(topicName, partition, options, messages, cancellationToken);
         });
     }
 
-    protected async override Task GetMessagesAsync(string topicName, int partition, FetchOptions options, MessageStream stream, CancellationToken cancellationToken)
+    protected override void GetMessages(string topicName, int partition, FetchOptions options, MessageStream stream, CancellationToken cancellationToken)
     {
         var partitionDir = Path.Combine(clusterDir, topicName, partition.ToString());
         var messageFiles = Directory.GetFiles(partitionDir, "*.klm");

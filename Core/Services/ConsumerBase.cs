@@ -54,34 +54,34 @@ public abstract class ConsumerBase : IKafkaConsumer
     public MessageStream GetMessageStream(string topic, FetchOptions options, CancellationToken cancellationToken = default)
     {
         var messages = new MessageStream();
-        _ = GetMessagesAsync(topic, options, messages, cancellationToken);
+        Task.Run(() => GetMessagesInternalAsync(topic, options, messages, cancellationToken), cancellationToken);
         return messages;
     }
 
     public MessageStream GetMessageStream(string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
     {
         var messages = new MessageStream();
-        _ = GetMessagesAsync(topic, partition, options, messages, cancellationToken);
+        Task.Run(() => GetMessagesInternalAsync(topic, partition, options, messages, cancellationToken), cancellationToken);
         return messages;
     }
 
     public async Task<List<Message>> GetMessagesAsync(string topic, FetchOptions options, CancellationToken cancellationToken = default)
     {
         var messages = new MessageStream();
-        await GetMessagesAsync(topic, options, messages, cancellationToken);
+        await GetMessagesInternalAsync(topic, options, messages, cancellationToken);
         return messages.Messages.ToList();
     }
 
     public async Task<List<Message>> GetMessagesAsync(string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
     {
         var messages = new MessageStream();
-        await GetMessagesAsync(topic, partition, options, messages, cancellationToken);
+        await GetMessagesInternalAsync(topic, partition, options, messages, cancellationToken);
         return messages.Messages.ToList();
     }
 
-    protected abstract Task GetMessagesAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken);
+    protected abstract Task GetMessagesInternalAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken);
 
-    protected abstract Task GetMessagesAsync(string topicName, int partition, FetchOptions options,
+    protected abstract Task GetMessagesInternalAsync(string topicName, int partition, FetchOptions options,
         MessageStream messages, CancellationToken cancellationToken);
 
     protected Topic ValidateTopic(string topicName)
