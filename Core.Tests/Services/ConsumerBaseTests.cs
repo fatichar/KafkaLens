@@ -27,7 +27,7 @@ public class ConsumerBaseTests
 
         protected override List<Topic> FetchTopics() => _topics;
 
-        protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        protected override Task GetMessagesInternalAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
         {
             if (_messages != null)
             {
@@ -37,9 +37,10 @@ public class ConsumerBaseTests
                 }
             }
             messages.HasMore = false;
+            return Task.CompletedTask;
         }
 
-        protected override void GetMessages(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        protected override Task GetMessagesInternalAsync(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
         {
             if (_messages != null)
             {
@@ -49,6 +50,7 @@ public class ConsumerBaseTests
                 }
             }
             messages.HasMore = false;
+            return Task.CompletedTask;
         }
 
         public void SetLastRefreshTime(DateTime time)
@@ -241,12 +243,14 @@ public class ConsumerBaseTests
             throw new InvalidOperationException("Connection failed");
         }
 
-        protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        protected override Task GetMessagesInternalAsync(string topicName, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
         {
+            return Task.CompletedTask;
         }
 
-        protected override void GetMessages(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        protected override Task GetMessagesInternalAsync(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
         {
+            return Task.CompletedTask;
         }
     }
 }

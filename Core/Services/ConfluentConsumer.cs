@@ -1,4 +1,5 @@
 using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared.Models;
 using Serilog;
@@ -12,11 +13,11 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
     private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(5);
 
-    private IConsumer<byte[], byte[]> Consumer { get; }
+    protected IConsumer<byte[], byte[]> Consumer { get; }
 
-    private ConsumerConfig Config { get; set; }
+    protected ConsumerConfig Config { get; set; }
 
-    private IAdminClient AdminClient { get; }
+    protected IAdminClient AdminClient { get; }
 
     #region Create
 
@@ -28,7 +29,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         Consumer = CreateConsumer();
     }
 
-    private IConsumer<byte[], byte[]> CreateConsumer()
+    protected virtual IConsumer<byte[], byte[]> CreateConsumer()
     {
         return new ConsumerBuilder<byte[], byte[]>(Config)
             .SetLogHandler((c, m) => { })
@@ -51,7 +52,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         };
     }
 
-    private static IAdminClient CreateAdminClient(string url)
+    protected virtual IAdminClient CreateAdminClient(string url)
     {
         var config = new AdminClientConfig
         {
@@ -62,6 +63,11 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             .SetLogHandler((c, m) => { })
             .SetErrorHandler((c, e) => { })
             .Build();
+    }
+
+    protected virtual Task<ListOffsetsResult> ListOffsetsAsync(IEnumerable<TopicPartitionOffsetSpec> topicPartitionOffsets, ListOffsetsOptions options)
+    {
+        return AdminClient.ListOffsetsAsync(topicPartitionOffsets, options);
     }
 
     #endregion Create
@@ -93,13 +99,13 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return topics;
     }
 
-    protected override void GetMessages(string topicName, int partition, FetchOptions options,
+    protected override async Task GetMessagesInternalAsync(string topicName, int partition, FetchOptions options,
         MessageStream messages, CancellationToken cancellationToken)
     {
         Log.Information("Fetching {MessageCount} messages for partition {Topic}:{Partition}", options.Limit, topicName,
             partition);
         var tp = ValidateTopicPartition(topicName, partition);
-        GetMessages(new List<Confluent.Kafka.TopicPartition>() { tp }, options, messages, cancellationToken);
+        await GetMessagesAsync(new List<Confluent.Kafka.TopicPartition>() { tp }, options, messages, cancellationToken);
         Log.Information("Fetched {MessageCount} messages for partition {Topic}:{Partition}", messages.Messages.Count,
             topicName, partition);
     }
@@ -115,24 +121,23 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return new Confluent.Kafka.TopicPartition(topicName, partition);
     }
 
-    protected override void GetMessages(string topicName, FetchOptions options, MessageStream messages,
+    protected override async Task GetMessagesInternalAsync(string topicName, FetchOptions options, MessageStream messages,
         CancellationToken cancellationToken)
     {
         Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topicName);
-
         ValidateTopic(topicName);
         var topic = Topics[topicName];
         var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id))
             .ToList();
 
-        GetMessages(tps, options, messages, cancellationToken);
+        await GetMessagesAsync(tps, options, messages, cancellationToken);
         Log.Information("Fetched {MessageCount} messages for topic {Topic}", messages.Messages.Count, topicName);
     }
 
-    private void GetMessages(List<TopicPartition> tps, FetchOptions options,
+    private async Task GetMessagesAsync(List<TopicPartition> tps, FetchOptions options,
         MessageStream messages, CancellationToken cancellationToken)
     {
-        var watermarks = QueryWatermarkOffsets(tps);
+        var watermarks = await QueryWatermarkOffsetsAsync(tps, cancellationToken);
         var partitionOptions = CreateOptionsForPartition(tps, options);
         var tpos = CreateTopicPartitionOffsets(tps, watermarks, partitionOptions);
 
@@ -237,7 +242,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             return 0;
         }
 
-        lock (Consumer)
+        lock (consumer)
         {
             while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
             {
@@ -256,7 +261,11 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                         break;
                     }
 
-                    messages.Messages.Add(MessageConverter.CreateMessage(result));
+                    var message = MessageConverter.CreateMessage(result);
+                    lock (messages.Messages)
+                    {
+                        messages.Messages.Add(message);
+                    }
                     --requiredCount;
                 }
                 catch (ConsumeException e)
@@ -278,23 +287,65 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return requiredCount;
     }
 
-    private List<WatermarkOffsets> QueryWatermarkOffsets(List<Confluent.Kafka.TopicPartition> tps)
+    private async Task<List<WatermarkOffsets>> QueryWatermarkOffsetsAsync(List<Confluent.Kafka.TopicPartition> tps, CancellationToken cancellationToken)
     {
-        lock (Consumer)
+        Log.Debug("Querying watermark offsets for {TopicPartitions}", tps);
+        if (tps.Count == 0)
         {
-            Log.Debug("Querying watermark offsets for {TopicPartitions}", tps);
+            return new List<WatermarkOffsets>();
+        }
+
+        var earliestSpecs = tps.Select(tp => new TopicPartitionOffsetSpec { TopicPartition = tp, OffsetSpec = OffsetSpec.Earliest() }).ToList();
+        var latestSpecs = tps.Select(tp => new TopicPartitionOffsetSpec { TopicPartition = tp, OffsetSpec = OffsetSpec.Latest() }).ToList();
+
+        try
+        {
+            var earliestTask = ListOffsetsAsync(earliestSpecs, new ListOffsetsOptions());
+            var latestTask = ListOffsetsAsync(latestSpecs, new ListOffsetsOptions());
+
+            await Task.WhenAll(earliestTask, latestTask).WaitAsync(queryWatermarkTimeout, cancellationToken);
+
+            var earliestResults = await earliestTask;
+            var latestResults = await latestTask;
+
+            var resultsMap = new Dictionary<Confluent.Kafka.TopicPartition, (long Low, long High)>();
+
+            foreach (var info in earliestResults.ResultInfos)
+            {
+                var tpoe = info.TopicPartitionOffsetError;
+                if (tpoe.Error.IsError)
+                {
+                    throw new KafkaException(tpoe.Error);
+                }
+                resultsMap[tpoe.TopicPartition] = (tpoe.Offset.Value, -1);
+            }
+
+            foreach (var info in latestResults.ResultInfos)
+            {
+                var tpoe = info.TopicPartitionOffsetError;
+                if (tpoe.Error.IsError)
+                {
+                    throw new KafkaException(tpoe.Error);
+                }
+                if (resultsMap.TryGetValue(tpoe.TopicPartition, out var val))
+                {
+                    resultsMap[tpoe.TopicPartition] = (val.Low, tpoe.Offset.Value);
+                }
+            }
+
             return tps.ConvertAll(tp =>
             {
-                try
+                if (resultsMap.TryGetValue(tp, out var val))
                 {
-                    return Consumer.QueryWatermarkOffsets(tp, queryWatermarkTimeout);
+                    return new WatermarkOffsets(new Offset(val.Low), new Offset(val.High));
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
+                throw new Exception($"Failed to get watermark offsets for {tp}");
             });
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Error querying watermark offsets");
+            throw;
         }
     }
 
@@ -304,7 +355,11 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
     public override void Dispose()
     {
-        Consumer.Dispose();
+        lock (Consumer)
+        {
+            Consumer.Dispose();
+        }
+        AdminClient.Dispose();
         base.Dispose();
     }
 

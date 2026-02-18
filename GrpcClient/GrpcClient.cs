@@ -123,6 +123,7 @@ public class GrpcClient : IKafkaLensClient
 
     public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
     {
+        Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topic);
         var request = new GetTopicMessagesRequest
         {
             ClusterId = clusterId,
@@ -131,7 +132,7 @@ public class GrpcClient : IKafkaLensClient
         };
         var response = client.GetTopicMessages(request, cancellationToken: cancellationToken);
 
-        return ToStream(response, cancellationToken);
+        return ToStream(response, cancellationToken, topic, null);
     }
 
     public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
@@ -141,6 +142,7 @@ public class GrpcClient : IKafkaLensClient
 
     public MessageStream GetMessageStream(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
     {
+        Log.Information("Fetching {MessageCount} messages for topic {Topic} partition {Partition}", options.Limit, topic, partition);
         var request = new GetPartitionMessagesRequest
         {
             ClusterId = clusterId,
@@ -149,10 +151,10 @@ public class GrpcClient : IKafkaLensClient
             FetchOptions = ToGrpcFetchOptions(options)
         };
         var response = client.GetPartitionMessages(request, cancellationToken: cancellationToken);
-        return ToStream(response, cancellationToken);
+        return ToStream(response, cancellationToken, topic, partition);
     }
 
-    private static MessageStream ToStream(global::Grpc.Core.AsyncServerStreamingCall<Grpc.Message> response, CancellationToken cancellationToken)
+    private static MessageStream ToStream(global::Grpc.Core.AsyncServerStreamingCall<Grpc.Message> response, CancellationToken cancellationToken, string topic, int? partition)
     {
         var stream = new MessageStream();
         Task.Run(async () =>
@@ -170,6 +172,16 @@ public class GrpcClient : IKafkaLensClient
                 Log.Error(e, "Error reading stream");
             }
             stream.HasMore = false;
+
+            // Log completion when stream actually finishes
+            if (partition.HasValue)
+            {
+                Log.Information("Fetched {MessageCount} messages for topic {Topic} partition {Partition}", stream.Messages.Count, topic, partition.Value);
+            }
+            else
+            {
+                Log.Information("Fetched {MessageCount} messages for topic {Topic}", stream.Messages.Count, topic);
+            }
         }, cancellationToken);
 
         return stream;
