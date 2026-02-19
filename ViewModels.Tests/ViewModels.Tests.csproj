@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ViewModels\ViewModels.csproj" />
+    <ProjectReference Include="..\AvaloniaApp\AvaloniaApp\AvaloniaApp.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
     <ProjectReference Include="..\Formatting\Formatting.csproj" />
     <ProjectReference Include="..\GrpcClient\GrpcClient.csproj" />

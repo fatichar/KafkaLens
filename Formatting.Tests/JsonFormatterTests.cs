@@ -23,6 +23,18 @@ public class JsonFormatterTests
     }
 
     [Fact]
+    public void Format_ValidJsonWithUnicode_PrettyPrint_ReturnsIndentedJson()
+    {
+        var json = """{"name":"café"}""";
+        var data = Encoding.UTF8.GetBytes(json);
+
+        var result = formatter.Format(data, true);
+
+        Assert.NotNull(result);
+        Assert.Contains("café", result);
+    }
+
+    [Fact]
     public void Format_ValidJson_NoPrettyPrint_ReturnsCompactJson()
     {
         var json = """{"name":"Alice","age":30}""";

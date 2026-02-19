@@ -50,7 +50,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public RelayCommand RefreshCommand { get; }
     public RelayCommand GuessValueFormatterCommand { get; }
     public RelayCommand GuessKeyFormatterCommand { get; }
-    public IAsyncRelayCommand ChangeFormatterCommand { get; }
     public IAsyncRelayCommand SaveTopicSettingsCommand { get; }
     public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
     public AsyncRelayCommand SaveSelectedAsFormattedCommand { get; set; }
@@ -157,7 +156,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         });
         GuessValueFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: false));
         GuessKeyFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: true));
-        ChangeFormatterCommand = new AsyncRelayCommand(UpdateFormatterAsync);
         SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
 
         SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw, CanSaveMessages);
@@ -362,12 +360,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     }
 
     #endregion
-
-    private async Task UpdateFormatterAsync()
-    {
-        //((IMessageSource)SelectedNode).FormatterName = "Json";
-        Console.WriteLine("");
-    }
 
     internal async Task LoadTopicsAsync()
     {

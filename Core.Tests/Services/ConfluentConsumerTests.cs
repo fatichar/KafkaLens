@@ -18,17 +18,18 @@ public class ConfluentConsumerTests
 {
     private class TestConfluentConsumer : ConfluentConsumer
     {
-        private static Func<IConsumer<byte[], byte[]>> _consumerFactory;
-        private static IAdminClient _nextMockAdminClient;
+        private static Func<IConsumer<byte[], byte[]>>? _consumerFactory;
+        private static IAdminClient? _nextMockAdminClient;
 
-        public Func<IEnumerable<TopicPartitionOffsetSpec>, Task<ListOffsetsResult>> ListOffsetsHandler { get; set; }
+        public Func<IEnumerable<TopicPartitionOffsetSpec>, Task<ListOffsetsResult>> ListOffsetsHandler { get; set; } =
+            _ => Task.FromResult(new ListOffsetsResult { ResultInfos = new() });
 
         private TestConfluentConsumer(string url)
             : base(url)
         {
         }
 
-        public static TestConfluentConsumer Create(string url, Func<IConsumer<byte[], byte[]>> consumerFactory, IAdminClient mockAdminClient)
+        public static TestConfluentConsumer Create(string url, Func<IConsumer<byte[], byte[]>>? consumerFactory, IAdminClient mockAdminClient)
         {
             _consumerFactory = consumerFactory;
             _nextMockAdminClient = mockAdminClient;
@@ -40,7 +41,7 @@ public class ConfluentConsumerTests
 
         protected override Task<ListOffsetsResult> ListOffsetsAsync(IEnumerable<TopicPartitionOffsetSpec> topicPartitionOffsets, ListOffsetsOptions options)
         {
-            return ListOffsetsHandler?.Invoke(topicPartitionOffsets) ?? Task.FromResult(new ListOffsetsResult { ResultInfos = new() });
+            return ListOffsetsHandler.Invoke(topicPartitionOffsets);
         }
 
         public async Task PublicGetMessages(List<TopicPartition> tps, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
@@ -51,7 +52,10 @@ public class ConfluentConsumerTests
                 null,
                 new[] { typeof(List<TopicPartition>), typeof(FetchOptions), typeof(MessageStream), typeof(CancellationToken) },
                 null);
-            await (Task)method.Invoke(this, new object[] { tps, options, messages, cancellationToken });
+            Assert.NotNull(method);
+            var task = method.Invoke(this, new object[] { tps, options, messages, cancellationToken }) as Task;
+            Assert.NotNull(task);
+            await task;
         }
 
         public async Task<List<WatermarkOffsets>> PublicQueryWatermarkOffsetsAsync(List<TopicPartition> tps, CancellationToken cancellationToken)
@@ -61,7 +65,10 @@ public class ConfluentConsumerTests
                 null,
                 new[] { typeof(List<TopicPartition>), typeof(CancellationToken) },
                 null);
-            return await (Task<List<WatermarkOffsets>>)method.Invoke(this, new object[] { tps, cancellationToken });
+            Assert.NotNull(method);
+            var task = method.Invoke(this, new object[] { tps, cancellationToken }) as Task<List<WatermarkOffsets>>;
+            Assert.NotNull(task);
+            return await task;
         }
     }
 
@@ -86,7 +93,7 @@ public class ConfluentConsumerTests
                 {
                     Message = new Message<byte[], byte[]>
                     {
-                        Key = null,
+                        Key = Array.Empty<byte>(),
                         Value = Array.Empty<byte>(),
                         Timestamp = new Timestamp(DateTime.Now),
                         Headers = new Headers()
@@ -107,7 +114,7 @@ public class ConfluentConsumerTests
             {
                 ResultInfos = specs.Select(s => new ListOffsetsResultInfo
                 {
-                    TopicPartitionOffsetError = new TopicPartitionOffsetError(s.TopicPartition, new Offset(offset), new Error(ErrorCode.NoError), null)
+                    TopicPartitionOffsetError = new TopicPartitionOffsetError(s.TopicPartition, new Offset(offset), new Error(ErrorCode.NoError), 0)
                 }).ToList()
             });
         };
@@ -155,7 +162,7 @@ public class ConfluentConsumerTests
             {
                 ResultInfos = specs.Select(s => new ListOffsetsResultInfo
                 {
-                    TopicPartitionOffsetError = new TopicPartitionOffsetError(s.TopicPartition, new Offset(100), new Error(ErrorCode.NoError), null)
+                    TopicPartitionOffsetError = new TopicPartitionOffsetError(s.TopicPartition, new Offset(100), new Error(ErrorCode.NoError), 0)
                 }).ToList()
             };
             return result;

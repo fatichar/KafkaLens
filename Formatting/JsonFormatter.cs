@@ -11,6 +11,7 @@ public class JsonFormatter : IMessageFormatter
 {
     const char INDENT_CHAR = ' ';
     const int INDENT_SIZE = 4;
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     public string? Format(byte[] data, string searchText, bool useObjectFilter = true)
     {
@@ -18,8 +19,7 @@ public class JsonFormatter : IMessageFormatter
         {
             return Format(data, true);
         }
-        var text = Encoding.UTF8.GetString(data);
-        if (text.Length < data.Length)
+        if (!TryDecodeUtf8(data, out var text))
         {
             return null;
         }
@@ -181,8 +181,7 @@ public class JsonFormatter : IMessageFormatter
 
     public string? Format(byte[] data, bool prettyPrint)
     {
-        var text = Encoding.UTF8.GetString(data);
-        if (text.Length < data.Length)
+        if (!TryDecodeUtf8(data, out var text))
         {
             return null;
         }
@@ -207,6 +206,20 @@ public class JsonFormatter : IMessageFormatter
         catch (JsonException)
         {
             return null;
+        }
+    }
+
+    private static bool TryDecodeUtf8(byte[] data, out string text)
+    {
+        try
+        {
+            text = StrictUtf8.GetString(data);
+            return true;
+        }
+        catch (DecoderFallbackException)
+        {
+            text = string.Empty;
+            return false;
         }
     }
 
