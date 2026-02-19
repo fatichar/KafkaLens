@@ -1,8 +1,12 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Threading;
+using System.Linq;
+using System.Threading.Tasks;
 using Serilog;
-﻿using KafkaLens.Core.Services;
+using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Utils;
 
 namespace KafkaLens;
 
@@ -95,33 +99,34 @@ public class SavedMessagesConsumer : ConsumerBase
         var topicDir = Path.Combine(clusterDir, topicName);
         if (!Directory.Exists(topicDir))
         {
-            messages.HasMore = false;
             return;
         }
         var partitionDirs = Directory.GetDirectories(topicDir);
 
-        var allFilesWithTimestamp = new List<(string file, int partition, long timestamp)>();
+        var allFilesWithTimestamp = new ConcurrentBag<(string file, int partition, long timestamp)>();
 
-        // This part can be parallelized
-        var discoveryTasks = partitionDirs.Select(async partitionDir =>
+        var parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = 20,
+            CancellationToken = cancellationToken
+        };
+
+        // Scan all partitions in parallel, and files within partitions in parallel
+        await Parallel.ForEachAsync(partitionDirs, parallelOptions, async (partitionDir, ct) =>
         {
             var partition = int.Parse(Path.GetFileName(partitionDir));
             var messageFiles = Directory.GetFiles(partitionDir, "*.klm");
             var textFiles = Directory.GetFiles(partitionDir, "*.txt");
-            var allFiles = messageFiles.Concat(textFiles);
+            var allFiles = messageFiles.Concat(textFiles).ToList();
 
-            var fileTimestamps = new List<(string file, int partition, long timestamp)>();
-            foreach (var file in allFiles)
+            await Parallel.ForEachAsync(allFiles, parallelOptions, async (file, innerCt) =>
             {
-                if (cancellationToken.IsCancellationRequested) break;
                 var timestamp = await GetMessageTimestampAsync(file);
-                fileTimestamps.Add((file, partition, timestamp));
-            }
-            return fileTimestamps;
+                allFilesWithTimestamp.Add((file, partition, timestamp));
+            });
         });
 
-        var results = await Task.WhenAll(discoveryTasks);
-        allFilesWithTimestamp.AddRange(results.SelectMany(x => x));
+        if (cancellationToken.IsCancellationRequested) return;
 
         IOrderedEnumerable<(string file, int partition, long timestamp)> sortedFiles;
 
@@ -147,42 +152,58 @@ public class SavedMessagesConsumer : ConsumerBase
 
         var filesToLoad = filesToProcess.ToList();
 
-        var loadedMessages = new Message[filesToLoad.Count];
+        // Chunked processing to ensure order while loading in parallel
+        const int chunkSize = 100;
 
-        using var semaphore = new SemaphoreSlim(10);
-        var tasks = filesToLoad.Select(async (fileMeta, index) =>
+        for (int i = 0; i < filesToLoad.Count; i += chunkSize)
         {
-            if (cancellationToken.IsCancellationRequested) return;
-            await semaphore.WaitAsync(cancellationToken);
-            try
-            {
-                var message = await CreateMessageAsync(fileMeta.file);
-                message.Partition = fileMeta.partition;
-                loadedMessages[index] = message;
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
+            if (cancellationToken.IsCancellationRequested) break;
 
-        await Task.WhenAll(tasks);
+            var chunk = filesToLoad.Skip(i).Take(chunkSize).ToList();
+            var chunkMessages = new ConcurrentBag<Message>();
 
-        foreach (var msg in loadedMessages)
+            await Parallel.ForEachAsync(chunk, parallelOptions, async (fileMeta, ct) =>
+            {
+                try
+                {
+                    var message = await CreateMessageAsync(fileMeta.file);
+                    message.Partition = fileMeta.partition;
+                    chunkMessages.Add(message);
+                }
+                catch (Exception e)
+                {
+                    Log.Error(e, "Failed to load message {File}", fileMeta.file);
+                }
+            });
+
+            // Flush chunk
+            FlushBatch(messages, chunkMessages);
+        }
+    }
+
+    private void FlushBatch(MessageStream messages, ConcurrentBag<Message> batch)
+    {
+        var items = new List<Message>();
+        while (batch.TryTake(out var msg))
         {
-            if (msg != null)
+            items.Add(msg);
+        }
+
+        if (items.Count > 0)
+        {
+            // Lock required for thread safety of ObservableCollection
+            lock (messages.Messages)
             {
-                messages.Messages.Add(msg);
+                 // Sort by timestamp within the batch to maintain local order
+                 items.Sort((a, b) => a.EpochMillis.CompareTo(b.EpochMillis));
+                 messages.Messages.AddRange(items);
             }
         }
-        messages.HasMore = false;
     }
 
     protected override async Task GetMessagesAsync(string topicName, int partition, FetchOptions options, MessageStream stream, CancellationToken cancellationToken)
     {
-        using var semaphore = new SemaphoreSlim(10);
-        await LoadMessagesForPartitionAsync(topicName, partition, options, stream, semaphore, cancellationToken);
-        stream.HasMore = false;
+        await LoadMessagesForPartitionAsync(topicName, partition, options, stream, cancellationToken);
     }
 
     private async Task LoadMessagesForPartitionAsync(
@@ -190,7 +211,6 @@ public class SavedMessagesConsumer : ConsumerBase
         int partition,
         FetchOptions options,
         MessageStream stream,
-        SemaphoreSlim semaphore,
         CancellationToken cancellationToken)
     {
         var partitionDir = Path.Combine(clusterDir, topicName, partition.ToString());
@@ -269,32 +289,37 @@ public class SavedMessagesConsumer : ConsumerBase
             filesToProcess = fileOffsets.Skip(startIndex).Take(count).Take(options.Limit);
         }
 
-        var tasks = filesToProcess.Select(async s =>
+        var filesToLoad = filesToProcess.ToList();
+        const int chunkSize = 100;
+        var parallelOptions = new ParallelOptions
         {
-            if (cancellationToken.IsCancellationRequested)
+            MaxDegreeOfParallelism = 20,
+            CancellationToken = cancellationToken
+        };
+
+        for (int i = 0; i < filesToLoad.Count; i += chunkSize)
+        {
+            if (cancellationToken.IsCancellationRequested) break;
+
+            var chunk = filesToLoad.Skip(i).Take(chunkSize).ToList();
+            var chunkMessages = new ConcurrentBag<Message>();
+
+            await Parallel.ForEachAsync(chunk, parallelOptions, async (s, ct) =>
             {
-                return;
-            }
-            await semaphore.WaitAsync(cancellationToken);
-            try
-            {
-                var message = await CreateMessageAsync(s.file);
-                message.Partition = partition;
-                lock (stream.Messages)
+                try
                 {
-                    stream.Messages.Add(message);
+                    var message = await CreateMessageAsync(s.file);
+                    message.Partition = partition;
+                    chunkMessages.Add(message);
                 }
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "Failed to load message {File}", s.file);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
-        await Task.WhenAll(tasks);
+                catch (Exception e)
+                {
+                    Log.Error(e, "Failed to load message {File}", s.file);
+                }
+            });
+
+            FlushBatch(stream, chunkMessages);
+        }
     }
 
     private Message CreateMessage(string messageFile)

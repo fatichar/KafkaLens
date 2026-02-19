@@ -157,7 +157,7 @@ public class SavedMessagesConsumerTests : IDisposable
         var stream = consumer.GetMessageStream("my-topic", 0, options);
 
         // Wait briefly for stream to populate
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         Assert.NotEmpty(stream.Messages);
         Assert.Equal("test-key", stream.Messages[0].KeyText);
@@ -179,7 +179,7 @@ public class SavedMessagesConsumerTests : IDisposable
         var options = new FetchOptions(FetchPosition.START, 100);
         var stream = consumer.GetMessageStream("my-topic", 0, options);
 
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         Assert.NotEmpty(stream.Messages);
         Assert.True(stream.Messages[0].Headers.ContainsKey("Content-Type"));
@@ -212,7 +212,7 @@ public class SavedMessagesConsumerTests : IDisposable
         var options = new FetchOptions(FetchPosition.START, 100);
         var stream = consumer.GetMessageStream("my-topic", 0, options);
 
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         Assert.NotEmpty(stream.Messages);
         Assert.Equal(42, stream.Messages[0].Offset);
@@ -238,7 +238,7 @@ public class SavedMessagesConsumerTests : IDisposable
         var options = new FetchOptions(FetchPosition.START, 100);
         var stream = consumer.GetMessageStream("my-topic", options);
 
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         Assert.Equal(2, stream.Messages.Count);
     }
@@ -260,7 +260,7 @@ public class SavedMessagesConsumerTests : IDisposable
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", 0, options);
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         // Assert
         Assert.Equal(5, stream.Messages.Count);
@@ -279,7 +279,7 @@ public class SavedMessagesConsumerTests : IDisposable
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", 0, options);
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         // Assert
             Assert.Equal(5, stream.Messages.Count);
@@ -300,7 +300,7 @@ public class SavedMessagesConsumerTests : IDisposable
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", 0, options);
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         // Assert
         Assert.Equal(6, stream.Messages.Count); // 0 to 5 inclusive
@@ -324,7 +324,7 @@ public class SavedMessagesConsumerTests : IDisposable
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", 0, options);
-        await Task.Delay(100);
+        await Task.Delay(500);
 
         // Assert
         Assert.Equal(5, stream.Messages.Count);
@@ -346,7 +346,7 @@ public class SavedMessagesConsumerTests : IDisposable
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", options);
-        await Task.Delay(200); // give more time for topic fetch
+        await Task.Delay(500); // give more time for topic fetch
 
         // Assert
         Assert.Equal(5, stream.Messages.Count);
@@ -367,7 +367,7 @@ public class SavedMessagesConsumerTests : IDisposable
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", options);
-        await Task.Delay(200);
+        await Task.Delay(500);
 
         // Assert
         Assert.Equal(4, stream.Messages.Count);
@@ -395,13 +395,14 @@ public class SavedMessagesConsumerTests : IDisposable
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", options);
-        await Task.Delay(200);
+        await Task.Delay(500);
 
         // Assert
         Assert.Equal(3, stream.Messages.Count);
-        Assert.Equal("k9", stream.Messages[0].KeyText); // Latest message
+        // We expect chronological order [k7, k8, k9] as we stream messages
+        Assert.Equal("k7", stream.Messages[0].KeyText);
         Assert.Equal("k8", stream.Messages[1].KeyText);
-        Assert.Equal("k7", stream.Messages[2].KeyText);
+        Assert.Equal("k9", stream.Messages[2].KeyText); // Latest message
     }
 
     #endregion

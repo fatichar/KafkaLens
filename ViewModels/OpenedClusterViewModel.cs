@@ -685,7 +685,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             Log.Debug("UI: Pending messages = {Count}", pendingMessages.Count);
             if (pendingMessages.Count > 0)
             {
-                pendingMessages.ForEach(CurrentMessages.Add);
+                CurrentMessages.AddRange(pendingMessages);
                 Log.Debug("UI: Loaded {Count} messages", pendingMessages.Count);
                 pendingMessages.Clear();
             }

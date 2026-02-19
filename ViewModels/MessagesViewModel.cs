@@ -1,12 +1,13 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using KafkaLens.ViewModels.Search;
+using KafkaLens.Shared.Utils;
 
 namespace KafkaLens.ViewModels;
 
 public sealed class MessagesViewModel: ViewModelBase
 {
-    public ObservableCollection<MessageViewModel> Messages { get; } = new();
-    public ObservableCollection<MessageViewModel> Filtered { get; } = new();
+    public ObservableRangeCollection<MessageViewModel> Messages { get; } = new();
+    public ObservableRangeCollection<MessageViewModel> Filtered { get; } = new();
 
     public bool UseObjectFilter
     {
@@ -138,6 +139,20 @@ public sealed class MessagesViewModel: ViewModelBase
         if (FilterAccepts(message.DecodedMessage))
         {
             Filtered.Add(message);
+        }
+    }
+
+    internal void AddRange(IEnumerable<MessageViewModel> messages)
+    {
+        var list = messages.ToList();
+        if (list.Count == 0) return;
+
+        Messages.AddRange(list);
+
+        var filteredList = list.Where(m => FilterAccepts(m.DecodedMessage)).ToList();
+        if (filteredList.Count > 0)
+        {
+            Filtered.AddRange(filteredList);
         }
     }
 }

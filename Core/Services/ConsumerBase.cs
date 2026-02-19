@@ -58,13 +58,22 @@ public abstract class ConsumerBase : IKafkaConsumer
         CancellationToken cancellationToken = default)
     {
         var messages = new MessageStream();
-        Task.Run(() =>
+        _ = Task.Run(async () =>
         {
-            Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topic);
-            GetMessagesAsync(topic, options, messages, cancellationToken)
-                .ContinueWith(
-                    t => Log.Information("Fetched {MessageCount} messages for topic {Topic}", messages.Messages.Count,
-                        topic), cancellationToken);
+            try
+            {
+                Log.Information("Fetching {MessageCount} messages for topic {Topic}", options.Limit, topic);
+                await GetMessagesAsync(topic, options, messages, cancellationToken);
+                Log.Information("Fetched {MessageCount} messages for topic {Topic}", messages.Messages.Count, topic);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Error fetching messages for topic {Topic}", topic);
+            }
+            finally
+            {
+                messages.HasMore = false;
+            }
         }, cancellationToken);
         return messages;
     }
@@ -73,13 +82,24 @@ public abstract class ConsumerBase : IKafkaConsumer
         CancellationToken cancellationToken = default)
     {
         var messages = new MessageStream();
-        Task.Run(() =>
+        _ = Task.Run(async () =>
         {
-            Log.Information("Fetching {MessageCount} messages for topic {Topic} partition {Partition}", options.Limit,
-                topic, partition);
-            GetMessagesAsync(topic, partition, options, messages, cancellationToken);
-            Log.Information("Fetched {MessageCount} messages for topic {Topic} partition {Partition}",
-                messages.Messages.Count, topic, partition);
+            try
+            {
+                Log.Information("Fetching {MessageCount} messages for topic {Topic} partition {Partition}", options.Limit,
+                    topic, partition);
+                await GetMessagesAsync(topic, partition, options, messages, cancellationToken);
+                Log.Information("Fetched {MessageCount} messages for topic {Topic} partition {Partition}",
+                    messages.Messages.Count, topic, partition);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Error fetching messages for topic {Topic} partition {Partition}", topic, partition);
+            }
+            finally
+            {
+                messages.HasMore = false;
+            }
         }, cancellationToken);
         return messages;
     }

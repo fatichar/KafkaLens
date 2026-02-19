@@ -142,30 +142,41 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             tpoLimits.Add(tpoLimit);
         }
 
-        FetchMessages(tpoLimits, messages, cancellationToken);
+        await FetchMessagesAsync(tpoLimits, messages, cancellationToken);
     }
 
-    private void FetchMessages(IReadOnlyList<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
+    private async Task FetchMessagesAsync(IReadOnlyList<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
         MessageStream messages, CancellationToken cancellationToken)
     {
-        // var messages = new ConcurrentBag<Message>();
         if (tpoLimits.Count == 1)
         {
-            Consumer.Assign(tpoLimits[0].Tpo);
-            FetchMessages(Consumer, messages, tpoLimits[0].Limit, cancellationToken);
-            Consumer.Unassign();
+            lock (Consumer)
+            {
+                Consumer.Assign(tpoLimits[0].Tpo);
+                FetchMessages(Consumer, messages, tpoLimits[0].Limit, cancellationToken);
+                Consumer.Unassign();
+            }
         }
         else
         {
-            tpoLimits.AsParallel().WithCancellation(cancellationToken).ForAll(tpoLimit =>
+            // Limit concurrency to avoid resource exhaustion (e.g., too many open connections/files)
+            var parallelOptions = new ParallelOptions
             {
-                using var consumer = CreateConsumer();
-                consumer.Assign(tpoLimit.Tpo);
-                FetchMessages(consumer, messages, tpoLimit.Limit, cancellationToken);
+                MaxDegreeOfParallelism = 20,
+                CancellationToken = cancellationToken
+            };
+
+            await Parallel.ForEachAsync(tpoLimits, parallelOptions, async (tpoLimit, ct) =>
+            {
+                // We wrap blocking Consume calls in Task.Run to ensure we don't block the Parallel.ForEachAsync scheduler
+                await Task.Run(() =>
+                {
+                    using var consumer = CreateConsumer();
+                    consumer.Assign(tpoLimit.Tpo);
+                    FetchMessages(consumer, messages, tpoLimit.Limit, ct);
+                }, ct);
             });
         }
-
-        messages.HasMore = false;
     }
 
     private List<Confluent.Kafka.TopicPartitionOffset> CreateTopicPartitionOffsets(
@@ -236,6 +247,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             return 0;
         }
 
+        var batch = new List<Message>(100);
+        var lastFlushTime = DateTime.Now;
+        var batchInterval = TimeSpan.FromMilliseconds(100);
+
         lock (consumer)
         {
             while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
@@ -256,11 +271,14 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     }
 
                     var message = MessageConverter.CreateMessage(result);
-                    lock (messages.Messages)
-                    {
-                        messages.Messages.Add(message);
-                    }
+                    batch.Add(message);
                     --requiredCount;
+
+                    if (batch.Count >= 100 || DateTime.Now - lastFlushTime >= batchInterval)
+                    {
+                        FlushBatch(messages, batch);
+                        lastFlushTime = DateTime.Now;
+                    }
                 }
                 catch (ConsumeException e)
                 {
@@ -272,13 +290,23 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     Log.Error(e, "Error while consuming message");
                     break;
                 }
-                finally
-                {
-                }
             }
         }
 
+        FlushBatch(messages, batch);
         return requiredCount;
+    }
+
+    private void FlushBatch(MessageStream messages, List<Message> batch)
+    {
+        if (batch.Count > 0)
+        {
+            lock (messages.Messages)
+            {
+                messages.Messages.AddRange(batch);
+            }
+            batch.Clear();
+        }
     }
 
     private async Task<List<WatermarkOffsets>> QueryWatermarkOffsetsAsync(List<Confluent.Kafka.TopicPartition> tps, CancellationToken cancellationToken)
