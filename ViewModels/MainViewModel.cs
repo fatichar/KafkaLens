@@ -264,7 +264,7 @@ public partial class MainViewModel : ViewModelBase
 
     private ObservableCollection<MenuItemViewModel> CreateThemeMenuItems()
     {
-        var themes = new[] { "Light", "Bright", "Ocean", "Forest", "Purple", "Dark", "System" };
+        var themes = new[] { "Light", "Bright", "Ocean", "Forest", "Purple", "Dark", "DarkSoft", "System" };
         var items = new ObservableCollection<MenuItemViewModel>();
 
         foreach (var theme in themes)
@@ -437,6 +437,10 @@ public partial class MainViewModel : ViewModelBase
 
     public async void OpenSavedMessages(string path)
     {
+        if (path.EndsWith('\\') || path.EndsWith('/'))
+        {
+            path = path.Remove(path.Length - 1, 1);
+        };
         var clusterName = Path.GetFileName(path) + "(saved)";
         var clusterViewModel = await AddOrGetCluster(clusterName, path);
         OpenCluster(clusterViewModel);

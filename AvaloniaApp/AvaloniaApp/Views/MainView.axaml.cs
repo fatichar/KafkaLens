@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using KafkaLens.ViewModels;
 using MsBox.Avalonia;
@@ -61,14 +62,21 @@ public partial class MainView : UserControl
     private async void OnShowFolderOpenDialog()
     {
         var mainWindow = GetMainWindow();
-        var dialog = new OpenFolderDialog
-        {
-            Title = "Select a folder"
-        };
         if (mainWindow == null) return;
-        var result = dialog.ShowAsync(mainWindow);
-        var path = await result;
-        if (path == null)
+
+        var folders = await mainWindow.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select a folder",
+            AllowMultiple = false
+        });
+
+        if (folders.Count == 0)
+        {
+            return;
+        }
+
+        var path = folders[0].Path.LocalPath;
+        if (string.IsNullOrEmpty(path))
         {
             return;
         }

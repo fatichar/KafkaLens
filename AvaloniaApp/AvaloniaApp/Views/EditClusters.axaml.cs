@@ -1,10 +1,9 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using AvaloniaApp.Utils;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared.Entities;
 using KafkaLens.ViewModels;
@@ -15,15 +14,12 @@ namespace AvaloniaApp.Views;
 
 public partial class EditClustersDialog : Window
 {
-    private string fileExplorerCommand = "";
     private string AppDataPath { get; set; }
 
     public EditClustersDialog()
     {
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         AppDataPath = Path.Combine(appDataPath, "KafkaLens");
-
-        InitPlatform();
 
         InitializeComponent();
     }
@@ -158,25 +154,6 @@ public partial class EditClustersDialog : Window
 
     private void OpenSettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!string.IsNullOrEmpty(fileExplorerCommand))
-        {
-            Process.Start(fileExplorerCommand, "\"" + AppDataPath + "\"");
-        }
-    }
-
-    private void InitPlatform()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            fileExplorerCommand = "explorer.exe";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            fileExplorerCommand = "open";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            fileExplorerCommand = "xdg-open";
-        }
+        OsUtils.OpenExternal(AppDataPath);
     }
 }
