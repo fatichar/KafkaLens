@@ -7,6 +7,7 @@
         <Nullable>enable</Nullable>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <AssemblyName>KafkaLens</AssemblyName>
+        <ApplicationIcon>Assets\KafkaLens_logo_cyan_512.ico</ApplicationIcon>
     </PropertyGroup>
 
     <PropertyGroup>
