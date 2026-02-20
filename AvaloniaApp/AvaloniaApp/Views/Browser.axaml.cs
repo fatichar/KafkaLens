@@ -148,7 +148,8 @@ public partial class Browser : UserControl
     {
         var textMateTheme = themeName switch
         {
-            "Dark" or "DarkSoft" => ThemeName.DarkPlus,
+            "Dark" => ThemeName.DarkPlus,
+            "Gray" => ThemeName.Dark,
             "Light" => ThemeName.LightPlus,
             _ => GetSystemTextMateTheme()
         };

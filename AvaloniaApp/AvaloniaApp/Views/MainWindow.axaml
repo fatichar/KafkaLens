@@ -8,6 +8,7 @@
         x:Class="AvaloniaApp.Views.MainWindow"
         Icon="avares://KafkaLens/Assets/KafkaLens_logo_cyan_512.png"
         Title="KafkaLens"
+        Background="{DynamicResource ThemeBackgroundBrush}"
         x:DataType="vm:MainViewModel">
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+E" Command="{Binding EditClustersCommand}" />

@@ -11,7 +11,7 @@
         <KeyBinding Gesture="Ctrl+Tab" Command="{Binding NextTabCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+Tab" Command="{Binding PreviousTabCommand}" />
     </UserControl.KeyBindings>
-    <DockPanel Margin="0">
+    <DockPanel Margin="0" Background="{DynamicResource ThemeBackgroundBrush}">
         <Menu x:Name="MenuBar" DockPanel.Dock="Top" ItemsSource="{Binding MenuItems}">
             <Menu.Styles>
                 <Style Selector="MenuItem" x:DataType="vm:MenuItemViewModel">
@@ -37,6 +37,7 @@
         </Menu>
         <TabControl ItemsSource="{Binding OpenedClusters}"
                     SelectedIndex="{Binding SelectedIndex}"
+                    Background="{DynamicResource ThemeBackgroundBrush}"
                     Padding="0"
                     BorderThickness="0,2,0,0">
             <TabControl.ItemTemplate>

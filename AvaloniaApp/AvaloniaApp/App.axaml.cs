@@ -259,7 +259,7 @@ public partial class App : Application
         }
         else
         {
-            RequestedThemeVariant = themeName is "Dark" or "DarkSoft" ? ThemeVariant.Dark : ThemeVariant.Light;
+            RequestedThemeVariant = themeName is "Dark" or "Gray" ? ThemeVariant.Dark : ThemeVariant.Light;
             themeFileToLoad = themeName;
         }
 

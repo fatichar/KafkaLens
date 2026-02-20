@@ -264,7 +264,7 @@ public partial class MainViewModel : ViewModelBase
 
     private ObservableCollection<MenuItemViewModel> CreateThemeMenuItems()
     {
-        var themes = new[] { "Light", "Bright", "Ocean", "Forest", "Purple", "Dark", "DarkSoft", "System" };
+        var themes = new[] { "Light", "Bright", "Ocean", "Forest", "Purple", "Dark", "Gray", "System" };
         var items = new ObservableCollection<MenuItemViewModel>();
 
         foreach (var theme in themes)
