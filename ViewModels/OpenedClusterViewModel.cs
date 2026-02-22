@@ -6,9 +6,11 @@ using System.Threading;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared;
 using KafkaLens.Formatting;
+using KafkaLens.ViewModels.Messages;
 using Newtonsoft.Json;
 using Serilog;
 using Xunit;
@@ -192,6 +194,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         KeyFormatterNames = BuildKeyFormatterNames(settingsService);
 
         IsActive = true;
+        WeakReferenceMessenger.Default.Register<ConfigurationChangedMessage>(this, (r, m) =>
+        {
+            var config = settingsService.GetBrowserConfig();
+            FontSize = config.FontSize;
+        });
     }
 
     private void UpdateStartTimeText()

@@ -192,6 +192,7 @@ public partial class MainViewModel : ViewModelBase
                     OpenCluster(connected.Id);
             }
 #endif
+            RestoreTabs();
         }
         else
         {
@@ -199,6 +200,35 @@ public partial class MainViewModel : ViewModelBase
         }
 
         UpdateOpenedClusters();
+    }
+
+    private void RestoreTabs()
+    {
+        var config = settingsService.GetBrowserConfig();
+        if (config.RestoreTabsOnStartup && config.OpenedClusterIds != null)
+        {
+            foreach (var clusterId in config.OpenedClusterIds)
+            {
+                var cluster = Clusters.FirstOrDefault(c => c.Id == clusterId);
+                if (cluster != null)
+                {
+                    OpenCluster(cluster);
+                }
+            }
+        }
+
+        // Now that we've restored, we can start listening for changes to save
+        OpenedClusters.CollectionChanged += OnOpenedClustersChanged;
+    }
+
+    private void OnOpenedClustersChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        var config = settingsService.GetBrowserConfig();
+        if (config.RestoreTabsOnStartup)
+        {
+            config.OpenedClusterIds = OpenedClusters.Select(c => c.ClusterId).ToList();
+            settingsService.SaveBrowserConfig(config);
+        }
     }
 
     private void UpdateOpenedClusters()

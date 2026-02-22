@@ -75,6 +75,9 @@
 
           <TextBlock Text="Available Fetch Counts (comma separated)"/>
           <TextBox Text="{Binding FetchCountsString}"/>
+
+          <TextBlock Text="Behavior" FontWeight="Bold" Margin="0,10,0,0"/>
+          <CheckBox IsChecked="{Binding BrowserConfig.RestoreTabsOnStartup}" Content="Restore open tabs on startup"/>
         </StackPanel>
       </TabItem>
     </TabControl>

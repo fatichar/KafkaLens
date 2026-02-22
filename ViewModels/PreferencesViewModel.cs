@@ -61,7 +61,8 @@ public partial class PreferencesViewModel : ViewModelBase
         }
         catch
         {
-            // Ideally show validation error
+            MainViewModel.ShowMessage("Invalid Input", "Fetch counts must be a comma-separated list of numbers.");
+            return;
         }
 
         settingsService.SaveKafkaConfig(KafkaConfig);
@@ -69,6 +70,7 @@ public partial class PreferencesViewModel : ViewModelBase
         settingsService.SetValue("Theme", SelectedTheme);
 
         WeakReferenceMessenger.Default.Send(new ThemeChangedMessage(SelectedTheme));
+        WeakReferenceMessenger.Default.Send(new ConfigurationChangedMessage());
 
         CloseAction();
     }
