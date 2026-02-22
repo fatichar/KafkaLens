@@ -53,11 +53,13 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand<string> SelectTabCommand { get; }
     public IRelayCommand CloseCurrentTabCommand { get; }
     public IAsyncRelayCommand CheckForUpdatesCommand { get; }
+    public IRelayCommand ShowPreferencesCommand { get; }
 
     public static Action ShowAboutDialog { get; set; } = () => { };
     public static Action ShowFolderOpenDialog { get; set; } = () => { };
     public static Action ShowEditClustersDialog { get; set; } = () => { };
     public static Action<UpdateViewModel> ShowUpdateDialog { get; set; } = (vm) => { };
+    public static Action<PreferencesViewModel> ShowPreferencesDialog { get; set; } = (vm) => { };
     public static Action<string, string> ShowMessage { get; set; } = (title, message) => { };
 
     [ObservableProperty] private ObservableCollection<MenuItemViewModel>? menuItems;
@@ -134,6 +136,7 @@ public partial class MainViewModel : ViewModelBase
         SelectTabCommand = new RelayCommand<string>(s => SelectTab(int.Parse(s ?? "1")));
         CloseCurrentTabCommand = new RelayCommand(CloseCurrentTab);
         CheckForUpdatesCommand = new AsyncRelayCommand(() => CheckForUpdatesAsync(false));
+        ShowPreferencesCommand = new RelayCommand(ShowPreferences);
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
 
@@ -238,12 +241,29 @@ public partial class MainViewModel : ViewModelBase
         MenuItems = new ObservableCollection<MenuItemViewModel>
         {
             CreateClusterMenu(),
+            CreateEditMenu(),
             CreateViewMenu(),
             CreateHelpMenu()
         };
 
         // Ensure the initial theme state is reflected in the menu
         UpdateThemeMenuCheckedState();
+    }
+
+    private MenuItemViewModel CreateEditMenu()
+    {
+        return new MenuItemViewModel
+        {
+            Header = "_Edit",
+            Items = new()
+            {
+                new MenuItemViewModel
+                {
+                    Header = "_Preferences",
+                    Command = ShowPreferencesCommand
+                }
+            }
+        };
     }
 
     private MenuItemViewModel CreateViewMenu()
@@ -455,6 +475,12 @@ public partial class MainViewModel : ViewModelBase
         var clusterViewModel = new ClusterViewModel(cluster, savedMessagesClient);
         Clusters.Add(clusterViewModel);
         return clusterViewModel;
+    }
+
+    private void ShowPreferences()
+    {
+        var vm = new PreferencesViewModel(settingsService);
+        ShowPreferencesDialog(vm);
     }
 
     private void EditClustersAsync()

@@ -26,6 +26,7 @@ public class OpenedClusterViewModelBusinessLogicTests
 
     private OpenedClusterViewModel CreateViewModel(string clusterId = "c1", string clusterName = "TestCluster")
     {
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var cluster = new KafkaCluster(clusterId, clusterName, "localhost:9092");
         var clusterVm = new ClusterViewModel(cluster, mockClient);
         return new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, clusterName);
@@ -635,6 +636,7 @@ public class OpenedClusterViewModelBusinessLogicTests
     public async Task OnClusterPropertyChanged_WhenConnectedAndNoTopics_ShouldLoadTopics()
     {
         // Arrange
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092");
         var clusterVm = new ClusterViewModel(cluster, mockClient);
         var vm = new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, "TestCluster");

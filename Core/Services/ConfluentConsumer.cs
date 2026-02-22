@@ -9,9 +9,10 @@ namespace KafkaLens.Core.Services;
 
 class ConfluentConsumer : ConsumerBase, IDisposable
 {
-    private readonly TimeSpan queryWatermarkTimeout = TimeSpan.FromSeconds(10);
-    private readonly TimeSpan queryTopicsTimeout = TimeSpan.FromSeconds(5);
-    private readonly TimeSpan consumeTimeout = TimeSpan.FromSeconds(5);
+    private readonly TimeSpan queryWatermarkTimeout;
+    private readonly TimeSpan queryTopicsTimeout;
+    private readonly TimeSpan consumeTimeout;
+    private readonly KafkaConfig kafkaConfig;
 
     protected IConsumer<byte[], byte[]> Consumer { get; }
 
@@ -21,8 +22,13 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
     #region Create
 
-    internal ConfluentConsumer(string url)
+    internal ConfluentConsumer(string url, KafkaConfig kafkaConfig)
     {
+        this.kafkaConfig = kafkaConfig;
+        queryWatermarkTimeout = TimeSpan.FromMilliseconds(kafkaConfig.QueryWatermarkTimeoutMs);
+        queryTopicsTimeout = TimeSpan.FromMilliseconds(kafkaConfig.QueryTopicsTimeoutMs);
+        consumeTimeout = TimeSpan.FromMilliseconds(kafkaConfig.ConsumeTimeoutMs);
+
         Config = CreateConsumerConfig(url);
         Config.Set("log_level", "0");
         AdminClient = CreateAdminClient(Config.BootstrapServers);
@@ -37,17 +43,17 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             .Build();
     }
 
-    private static ConsumerConfig CreateConsumerConfig(String url)
+    private ConsumerConfig CreateConsumerConfig(String url)
     {
         return new ConsumerConfig
         {
-            GroupId = "KafkaLens.Server",
+            GroupId = kafkaConfig.GroupId,
             ClientId = "KafkaLens.Server",
             BootstrapServers = url,
-            EnableAutoOffsetStore = false,
-            EnableAutoCommit = false,
-            FetchMaxBytes = 2_000_000,
-            StatisticsIntervalMs = 30_000,
+            EnableAutoOffsetStore = kafkaConfig.EnableAutoOffsetStore,
+            EnableAutoCommit = kafkaConfig.EnableAutoCommit,
+            FetchMaxBytes = kafkaConfig.FetchMaxBytes,
+            StatisticsIntervalMs = kafkaConfig.StatisticsIntervalMs,
             LogQueue = true
         };
     }
@@ -78,7 +84,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     {
         try
         {
-            var metadata = AdminClient.GetMetadata(TimeSpan.FromSeconds(3));
+            var metadata = AdminClient.GetMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
             return metadata.OriginatingBrokerId != -1;
         }
         catch (Exception e)

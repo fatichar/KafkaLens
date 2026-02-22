@@ -21,7 +21,7 @@ public class LocalClientTests
         repository = Substitute.For<IClusterInfoRepository>();
         repository.GetAll().Returns(new ReadOnlyDictionary<string, ClusterInfo>(
             new Dictionary<string, ClusterInfo>()));
-        client = new LocalClient(repository);
+        client = new LocalClient(repository, new KafkaConfig());
     }
 
     #region Properties

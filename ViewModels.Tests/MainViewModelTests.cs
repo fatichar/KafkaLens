@@ -12,6 +12,7 @@ public class MainViewModelTests
     private OpenedClusterViewModel CreateOpenedCluster(string name)
     {
         var settingsService = Substitute.For<ISettingsService>();
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var topicSettingsService = Substitute.For<ITopicSettingsService>();
         var cluster = new KafkaCluster("1", "MyCluster", "localhost");
         var client = Substitute.For<IKafkaLensClient>();

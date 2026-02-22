@@ -26,6 +26,7 @@ public class MainViewModelBusinessLogicTests
         clusters ??= new ObservableCollection<ClusterViewModel>();
         clusterFactory.GetAllClusters().Returns(clusters);
         clusterFactory.LoadClustersAsync().Returns(Task.FromResult(clusters));
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
 
         return new MainViewModel(
             appConfig,

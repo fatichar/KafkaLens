@@ -9,13 +9,13 @@ using Serilog;
 
 namespace KafkaLens.Clients;
 
-public class LocalClient(IClusterInfoRepository infoRepository) : IKafkaLensClient
+public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafkaConfig) : IKafkaLensClient
 {
     public string Name { get; } = "Local";
     public bool CanEditClusters => true;
     public bool CanSaveMessages => true;
 
-    private readonly ConsumerFactory consumerFactory = new();
+    private readonly ConsumerFactory consumerFactory = new(kafkaConfig);
 
     // key = clusterInfo id, value = kafka clusterInfo
     private ReadOnlyDictionary<string, ClusterInfo> Clusters => infoRepository.GetAll();

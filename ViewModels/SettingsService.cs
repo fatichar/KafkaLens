@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels;
 
@@ -69,6 +70,36 @@ public class SettingsService : ISettingsService
     public void SetValue(string key, string value)
     {
         settings[key] = JValue.CreateString(value);
+        Save();
+    }
+
+    public KafkaConfig GetKafkaConfig()
+    {
+        if (settings.TryGetValue(nameof(KafkaConfig), out var token) && token is JObject obj)
+        {
+            return obj.ToObject<KafkaConfig>() ?? new KafkaConfig();
+        }
+        return new KafkaConfig();
+    }
+
+    public void SaveKafkaConfig(KafkaConfig config)
+    {
+        settings[nameof(KafkaConfig)] = JObject.FromObject(config);
+        Save();
+    }
+
+    public BrowserConfig GetBrowserConfig()
+    {
+        if (settings.TryGetValue(nameof(BrowserConfig), out var token) && token is JObject obj)
+        {
+            return obj.ToObject<BrowserConfig>() ?? new BrowserConfig();
+        }
+        return new BrowserConfig();
+    }
+
+    public void SaveBrowserConfig(BrowserConfig config)
+    {
+        settings[nameof(BrowserConfig)] = JObject.FromObject(config);
         Save();
     }
 }

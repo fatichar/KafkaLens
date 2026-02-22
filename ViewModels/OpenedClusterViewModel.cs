@@ -22,6 +22,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     internal const string KeyFormatterNamesSettingsKey = "KeyFormatterNames";
     internal const string ValueFormatterNamesSettingsKey = "ValueFormatterNames";
 
+    private readonly ISettingsService settingsService;
     private readonly ITopicSettingsService topicSettingsService;
     private readonly ClusterViewModel cluster;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
@@ -84,7 +85,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public bool IsFetchOptionsEnabled => SelectedNodeType == ITreeNode.NodeType.Topic ||
                                          SelectedNodeType == ITreeNode.NodeType.Partition;
 
-    public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
+    public int[] FetchCounts => settingsService.GetBrowserConfig().FetchCounts.ToArray();
     public int FetchCount { get; set; } = 10;
     [ObservableProperty] private string? startOffset;
 
@@ -140,10 +141,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         ClusterViewModel cluster,
         string name)
     {
+        this.settingsService = settingsService;
         this.topicSettingsService = topicSettingsService;
         this.cluster = cluster;
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
+
+        var browserConfig = settingsService.GetBrowserConfig();
+        FetchCount = browserConfig.DefaultFetchCount;
+        FontSize = browserConfig.FontSize;
 
         ToggleFetchCommand = new RelayCommand(() =>
         {
