@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.Contracts;
+using System.Diagnostics.Contracts;
+using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels;
 
@@ -19,4 +20,9 @@ public interface ISettingsService
     /// <param name="key">The key associated to the requested object.</param>
     [Pure]
     string? GetValue(string key);
+
+    KafkaConfig GetKafkaConfig();
+    void SaveKafkaConfig(KafkaConfig config);
+    BrowserConfig GetBrowserConfig();
+    void SaveBrowserConfig(BrowserConfig config);
 }

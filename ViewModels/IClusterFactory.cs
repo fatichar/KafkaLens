@@ -1,9 +1,7 @@
-using System.Collections.ObjectModel;
-
 namespace KafkaLens.ViewModels;
 
 public interface IClusterFactory
 {
-    public Task<ObservableCollection<ClusterViewModel>> LoadClustersAsync();
-    public ObservableCollection<ClusterViewModel> GetAllClusters();
+    public Task<IReadOnlyList<ClusterViewModel>> LoadClustersAsync();
+    public Task<IReadOnlyList<ClusterViewModel>> LoadClustersForClientsAsync(IReadOnlyCollection<string> clientNames);
 }

@@ -1,0 +1,85 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:KafkaLens.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="AvaloniaApp.Views.PreferencesWindow"
+        x:DataType="vm:PreferencesViewModel"
+        Title="Preferences"
+        Width="600" Height="500"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:PreferencesViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="10">
+    <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" HorizontalAlignment="Right" Spacing="10">
+      <Button Command="{Binding SaveCommand}" Content="Save" IsDefault="True"/>
+      <Button Command="{Binding CancelCommand}" Content="Cancel" IsCancel="True"/>
+    </StackPanel>
+
+    <TabControl>
+      <TabItem Header="General">
+        <StackPanel Spacing="10" Margin="10">
+          <TextBlock Text="Theme" FontWeight="Bold"/>
+          <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" Width="200"/>
+        </StackPanel>
+      </TabItem>
+
+      <TabItem Header="Kafka">
+        <ScrollViewer>
+            <StackPanel Spacing="10" Margin="10">
+              <TextBlock Text="Timeouts (ms)" FontWeight="Bold"/>
+
+              <TextBlock Text="Query Watermark Timeout"/>
+              <TextBox Text="{Binding KafkaConfig.QueryWatermarkTimeoutMs}"/>
+
+              <TextBlock Text="Query Topics Timeout"/>
+              <TextBox Text="{Binding KafkaConfig.QueryTopicsTimeoutMs}"/>
+
+              <TextBlock Text="Consume Timeout"/>
+              <TextBox Text="{Binding KafkaConfig.ConsumeTimeoutMs}"/>
+
+              <TextBlock Text="Admin Metadata Timeout"/>
+              <TextBox Text="{Binding KafkaConfig.AdminMetadataTimeoutMs}"/>
+
+              <TextBlock Text="Limits" FontWeight="Bold" Margin="0,10,0,0"/>
+
+              <TextBlock Text="Fetch Max Bytes"/>
+              <TextBox Text="{Binding KafkaConfig.FetchMaxBytes}"/>
+
+              <TextBlock Text="Statistics Interval (ms)"/>
+              <TextBox Text="{Binding KafkaConfig.StatisticsIntervalMs}"/>
+
+              <TextBlock Text="Consumer Config" FontWeight="Bold" Margin="0,10,0,0"/>
+              <TextBlock Text="Group ID"/>
+              <TextBox Text="{Binding KafkaConfig.GroupId}"/>
+
+              <CheckBox IsChecked="{Binding KafkaConfig.EnableAutoOffsetStore}" Content="Enable Auto Offset Store"/>
+              <CheckBox IsChecked="{Binding KafkaConfig.EnableAutoCommit}" Content="Enable Auto Commit"/>
+            </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Browser">
+        <StackPanel Spacing="10" Margin="10">
+          <TextBlock Text="Display" FontWeight="Bold"/>
+
+          <TextBlock Text="Font Size"/>
+          <TextBox Text="{Binding BrowserConfig.FontSize}"/>
+
+          <TextBlock Text="Default Fetch Count"/>
+          <TextBox Text="{Binding BrowserConfig.DefaultFetchCount}"/>
+
+          <TextBlock Text="Available Fetch Counts (comma separated)"/>
+          <TextBox Text="{Binding FetchCountsString}"/>
+
+          <TextBlock Text="Behavior" FontWeight="Bold" Margin="0,10,0,0"/>
+          <CheckBox IsChecked="{Binding BrowserConfig.RestoreTabsOnStartup}" Content="Restore open tabs on startup"/>
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

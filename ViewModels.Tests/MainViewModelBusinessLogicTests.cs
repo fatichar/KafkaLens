@@ -19,11 +19,18 @@ public class MainViewModelBusinessLogicTests
     private readonly IKafkaLensClient mockClient = Substitute.For<IKafkaLensClient>();
     private readonly AppConfig appConfig = new() { Title = "Test", ClusterRefreshIntervalSeconds = 100 };
 
+    public MainViewModelBusinessLogicTests()
+    {
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        clusterFactory.LoadClustersAsync().Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
+    }
+
     private MainViewModel CreateViewModel(ObservableCollection<ClusterViewModel>? clusters = null)
     {
-        clusters ??= new ObservableCollection<ClusterViewModel>();
-        clusterFactory.GetAllClusters().Returns(clusters);
-        clusterFactory.LoadClustersAsync().Returns(Task.FromResult(clusters));
+        if (clusters != null)
+        {
+            clusterFactory.LoadClustersAsync().Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(clusters));
+        }
 
         return new MainViewModel(
             appConfig,
@@ -81,7 +88,6 @@ public class MainViewModelBusinessLogicTests
         await vm.LoadClusters();
 
         // Assert — GetAllClusters called once (first call only), LoadClustersAsync called multiple times
-        clusterFactory.Received(1).GetAllClusters();
         // OnActivated() in constructor also calls LoadClusters, so total is 3+
         await clusterFactory.Received().LoadClustersAsync();
     }
@@ -205,16 +211,18 @@ public class MainViewModelBusinessLogicTests
     public async Task OnClustersChanged_AddingCluster_ShouldUpdateMenuItems()
     {
         // Arrange
-        var clusters = new ObservableCollection<ClusterViewModel>();
-        var vm = CreateViewModel(clusters);
+        var newCluster = CreateClusterVm("c2", "NewCluster");
+        clusterFactory.LoadClustersAsync().Returns(
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()),
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel> { newCluster }));
+        var vm = CreateViewModel();
+
+        // Act - first load gets empty snapshot
         await vm.LoadClusters();
         Assert.NotNull(vm.MenuItems);
+        await vm.LoadClusters();
 
-        // Act — add a cluster to the collection (triggers OnClustersChanged)
-        var newCluster = CreateClusterVm("c2", "NewCluster");
-        clusters.Add(newCluster);
-
-        // Assert — no exception thrown, menu items updated
+        // Assert - menu items updated after second snapshot
         Assert.Single(vm.Clusters);
     }
 
@@ -223,12 +231,14 @@ public class MainViewModelBusinessLogicTests
     {
         // Arrange
         var cluster = CreateClusterVm("c1", "Cluster1");
-        var clusters = new ObservableCollection<ClusterViewModel> { cluster };
-        var vm = CreateViewModel(clusters);
-        await vm.LoadClusters();
+        clusterFactory.LoadClustersAsync().Returns(
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel> { cluster }),
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
+        var vm = CreateViewModel();
 
-        // Act — remove the cluster (triggers OnClustersChanged)
-        clusters.Remove(cluster);
+        // Act - first load gets one cluster
+        await vm.LoadClusters();
+        await vm.LoadClusters();
 
         // Assert
         Assert.Empty(vm.Clusters);
@@ -305,4 +315,30 @@ public class MainViewModelBusinessLogicTests
         // Assert
         settingsService.Received(1).SetValue("Theme", "Dark");
     }
+
+    [AvaloniaFact]
+    public async Task LoadClusters_WhenInitialResultIsEmpty_ShouldRestoreTabsWhenClusterAppearsLater()
+    {
+        // Arrange
+        var targetCluster = CreateClusterVm("c1", "Cluster1");
+        clusterFactory.LoadClustersAsync().Returns(
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()),
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel> { targetCluster }));
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig
+        {
+            RestoreTabsOnStartup = true,
+            OpenedClusterIds = new List<string> { "c1" }
+        });
+
+        var vm = CreateViewModel();
+
+        // Act
+        await vm.LoadClusters();
+        await vm.LoadClusters();
+
+        // Assert
+        Assert.Single(vm.OpenedClusters);
+        Assert.Equal("c1", vm.OpenedClusters[0].ClusterId);
+    }
 }
+

@@ -25,7 +25,7 @@ public class ConfluentConsumerTests
             _ => Task.FromResult(new ListOffsetsResult { ResultInfos = new() });
 
         private TestConfluentConsumer(string url)
-            : base(url)
+            : base(url, new KafkaConfig())
         {
         }
 

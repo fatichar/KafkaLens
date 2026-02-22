@@ -1,7 +1,11 @@
 using System.Text;
 using System.Threading;
 using Avalonia.Headless.XUnit;
+using CommunityToolkit.Mvvm.Messaging;
+using KafkaLens.Formatting;
 using KafkaLens.Shared;
+using KafkaLens.Shared.Models;
+using KafkaLens.ViewModels.Messages;
 
 namespace KafkaLens.ViewModels.Tests;
 
@@ -23,6 +27,7 @@ public class OpenedClusterViewModelBusinessLogicTests
 
     private OpenedClusterViewModel CreateViewModel(string clusterId = "c1", string clusterName = "TestCluster")
     {
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var cluster = new KafkaCluster(clusterId, clusterName, "localhost:9092");
         var clusterVm = new ClusterViewModel(cluster, mockClient);
         return new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, clusterName);
@@ -626,12 +631,58 @@ public class OpenedClusterViewModelBusinessLogicTests
 
     #endregion
 
+    #region ConfigurationChangedMessage
+
+    [Fact]
+    public void ConfigurationChangedMessage_ShouldRefreshFetchCountsWithoutChangingSelectedFetchCount()
+    {
+        // Arrange
+        var initialConfig = new BrowserConfig
+        {
+            DefaultFetchCount = 10,
+            FetchCounts = new SortedSet<int> { 10, 25, 50 }
+        };
+
+        var updatedConfig = new BrowserConfig
+        {
+            DefaultFetchCount = 100,
+            FetchCounts = new SortedSet<int> { 100, 200, 500 }
+        };
+
+        var currentConfig = initialConfig;
+        settingsService.GetBrowserConfig().Returns(_ => currentConfig);
+
+        var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092");
+        var clusterVm = new ClusterViewModel(cluster, mockClient);
+        var vm = new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, "TestCluster");
+        var changedProperties = new List<string>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (!string.IsNullOrWhiteSpace(e.PropertyName))
+            {
+                changedProperties.Add(e.PropertyName!);
+            }
+        };
+
+        // Act
+        currentConfig = updatedConfig;
+        WeakReferenceMessenger.Default.Send(new ConfigurationChangedMessage());
+
+        // Assert
+        Assert.Contains(nameof(OpenedClusterViewModel.FetchCounts), changedProperties);
+        Assert.Equal(10, vm.FetchCount);
+        Assert.Equal(new[] { 100, 200, 500 }, vm.FetchCounts);
+    }
+
+    #endregion
+
     #region OnClusterPropertyChanged
 
     [AvaloniaFact]
     public async Task OnClusterPropertyChanged_WhenConnectedAndNoTopics_ShouldLoadTopics()
     {
         // Arrange
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092");
         var clusterVm = new ClusterViewModel(cluster, mockClient);
         var vm = new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, "TestCluster");

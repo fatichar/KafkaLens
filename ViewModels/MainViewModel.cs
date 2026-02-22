@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -29,7 +30,7 @@ public partial class MainViewModel : ViewModelBase
     // data
     public string? Title { get; private set; }
 
-    public ObservableCollection<ClusterViewModel> Clusters { get; set; } = null!;
+    public ObservableCollection<ClusterViewModel> Clusters { get; } = new();
 
     public ObservableCollection<OpenedClusterViewModel> OpenedClusters { get; } = new();
 
@@ -42,6 +43,12 @@ public partial class MainViewModel : ViewModelBase
     private readonly ITopicSettingsService topicSettingsService;
     private readonly ISavedMessagesClient savedMessagesClient;
     private DispatcherTimer timer;
+    private bool isInitialized;
+    private HashSet<string> pendingRestoreClusterIds = new(StringComparer.Ordinal);
+    private bool isRestoreStateInitialized;
+    private bool isOpenedClustersSubscriptionInitialized;
+    private bool isStartupLoadCompleted;
+    private readonly SemaphoreSlim clusterRefreshLock = new(1, 1);
 
     // commands
     public IRelayCommand EditClustersCommand { get; }
@@ -52,11 +59,13 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand<string> SelectTabCommand { get; }
     public IRelayCommand CloseCurrentTabCommand { get; }
     public IAsyncRelayCommand CheckForUpdatesCommand { get; }
+    public IRelayCommand ShowPreferencesCommand { get; }
 
     public static Action ShowAboutDialog { get; set; } = () => { };
     public static Action ShowFolderOpenDialog { get; set; } = () => { };
     public static Action ShowEditClustersDialog { get; set; } = () => { };
     public static Action<UpdateViewModel> ShowUpdateDialog { get; set; } = (vm) => { };
+    public static Action<PreferencesViewModel> ShowPreferencesDialog { get; set; } = (vm) => { };
     public static Action<string, string> ShowMessage { get; set; } = (title, message) => { };
 
     [ObservableProperty] private ObservableCollection<MenuItemViewModel>? menuItems;
@@ -133,6 +142,7 @@ public partial class MainViewModel : ViewModelBase
         SelectTabCommand = new RelayCommand<string>(s => SelectTab(int.Parse(s ?? "1")));
         CloseCurrentTabCommand = new RelayCommand(CloseCurrentTab);
         CheckForUpdatesCommand = new AsyncRelayCommand(() => CheckForUpdatesAsync(false));
+        ShowPreferencesCommand = new RelayCommand(ShowPreferences);
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
 
@@ -144,57 +154,285 @@ public partial class MainViewModel : ViewModelBase
 
         IsActive = true;
 
+        SetupPeriodicRefresh(appConfig);
+    }
+
+    private void SetupPeriodicRefresh(AppConfig appConfig)
+    {
         timer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(appConfig.ClusterRefreshIntervalSeconds > 0
                 ? appConfig.ClusterRefreshIntervalSeconds
                 : 60)
         };
-        timer.Tick += (s, e) => _ = LoadClusters();
+        timer.Tick += (s, e) => _ = RefreshClustersForHealthCheckAsync();
         timer.Start();
     }
 
     protected override async void OnActivated()
     {
-        await LoadClusters();
-        if (AutoCheckForUpdates)
+        try
         {
-            _ = CheckForUpdatesAsync(true);
+            await LoadClustersOnStartupAsync();
+            if (AutoCheckForUpdates)
+            {
+                _ = CheckForUpdatesAsync(true);
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Failed to initialize clusters on activation");
         }
     }
 
-    public async Task LoadClusters()
+    // Compatibility wrapper used by tests and existing call sites.
+    public Task LoadClusters()
     {
-        if (Clusters == null)
+        return LoadClustersOnStartupAsync();
+    }
+
+    private async Task LoadClustersOnStartupAsync()
+    {
+        await RunSerializedClusterFlowAsync(async () =>
         {
-            Clusters = clusterFactory.GetAllClusters();
+            await LoadAndApplyClustersAsync();
+            TryRestoreTabs();
+            EnsureOpenedClustersSubscriptionInitialized();
+            UpdateOpenedClusters();
+            isStartupLoadCompleted = true;
+        });
+    }
+
+    private async Task RefreshClustersForHealthCheckAsync()
+    {
+        if (!isStartupLoadCompleted)
+        {
+            return;
+        }
+
+        await RunSerializedClusterFlowAsync(async () =>
+        {
+            await RefreshDisconnectedClustersAsync();
+            await DiscoverClientsNeedingRefreshAsync();
+            EnsureOpenedClustersSubscriptionInitialized();
+            UpdateOpenedClusters();
+        });
+    }
+
+    private async Task LoadAndApplyClustersAsync()
+    {
+        var loadedClusters = await clusterFactory.LoadClustersAsync();
+
+        if (!isInitialized)
+        {
             Clusters.CollectionChanged += OnClustersChanged;
-
             openClusterMenuItems.Clear();
-            foreach (var cluster in Clusters)
-            {
-                AddClusterToMenu(cluster);
-            }
-
             CreateMenuItems();
-
-            await clusterFactory.LoadClustersAsync();
-
-#if DEBUG
-            if (Clusters is { Count: > 0 })
-            {
-                var connected = Clusters.FirstOrDefault(c => c.IsConnected ?? false);
-                if (connected != null)
-                    OpenCluster(connected.Id);
-            }
-#endif
+            isInitialized = true;
         }
-        else
+
+        ApplyClusterSnapshot(loadedClusters);
+    }
+
+    private void EnsureOpenedClustersSubscriptionInitialized()
+    {
+        if (isOpenedClustersSubscriptionInitialized)
         {
-            await clusterFactory.LoadClustersAsync();
+            return;
         }
 
-        UpdateOpenedClusters();
+        OpenedClusters.CollectionChanged += OnOpenedClustersChanged;
+        isOpenedClustersSubscriptionInitialized = true;
+    }
+
+    private async Task RunSerializedClusterFlowAsync(Func<Task> action)
+    {
+        await clusterRefreshLock.WaitAsync();
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            clusterRefreshLock.Release();
+        }
+    }
+
+    private void TryRestoreTabs()
+    {
+        if (!isRestoreStateInitialized)
+        {
+            var config = settingsService.GetBrowserConfig();
+            if (config.RestoreTabsOnStartup && config.OpenedClusterIds != null)
+            {
+                pendingRestoreClusterIds = config.OpenedClusterIds
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .ToHashSet(StringComparer.Ordinal);
+            }
+
+            isRestoreStateInitialized = true;
+        }
+
+        if (pendingRestoreClusterIds.Count == 0)
+        {
+            return;
+        }
+
+        var restoredNow = new List<string>();
+        foreach (var clusterId in pendingRestoreClusterIds)
+        {
+            var cluster = Clusters.FirstOrDefault(c => c.Id == clusterId);
+            if (cluster != null)
+            {
+                OpenCluster(cluster);
+                restoredNow.Add(clusterId);
+            }
+        }
+
+        foreach (var restoredId in restoredNow)
+        {
+            pendingRestoreClusterIds.Remove(restoredId);
+        }
+    }
+
+    private void ApplyClusterSnapshot(IReadOnlyList<ClusterViewModel> loadedClusters)
+    {
+        var existingByKey = Clusters.ToDictionary(GetClusterKey);
+        var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
+
+        foreach (var loaded in loadedClusters)
+        {
+            var key = GetClusterKey(loaded);
+            if (existingByKey.TryGetValue(key, out var existing))
+            {
+                existing.Name = loaded.Name;
+                existing.Address = loaded.Address;
+                existing.IsConnected = loaded.IsConnected;
+            }
+            else
+            {
+                Clusters.Add(loaded);
+                _ = loaded.CheckConnectionAsync();
+            }
+        }
+
+        var removed = Clusters.Where(existing => !loadedByKey.ContainsKey(GetClusterKey(existing))).ToList();
+        foreach (var item in removed)
+        {
+            Clusters.Remove(item);
+        }
+    }
+
+    private void ApplyClusterSnapshotForClients(IReadOnlyList<ClusterViewModel> loadedClusters, ISet<string> clientNames)
+    {
+        var existingForClients = Clusters
+            .Where(c => clientNames.Contains(c.Client.Name))
+            .ToList();
+
+        var existingByKey = existingForClients.ToDictionary(GetClusterKey);
+        var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
+
+        foreach (var loaded in loadedClusters)
+        {
+            var key = GetClusterKey(loaded);
+            if (existingByKey.TryGetValue(key, out var existing))
+            {
+                existing.Name = loaded.Name;
+                existing.Address = loaded.Address;
+                existing.IsConnected = loaded.IsConnected;
+            }
+            else
+            {
+                Clusters.Add(loaded);
+                _ = loaded.CheckConnectionAsync();
+            }
+        }
+
+        var toRemove = existingForClients
+            .Where(existing => !loadedByKey.ContainsKey(GetClusterKey(existing)))
+            .ToList();
+        foreach (var item in toRemove)
+        {
+            Clusters.Remove(item);
+        }
+    }
+
+    private async Task RefreshDisconnectedClustersAsync()
+    {
+        var disconnectedClusters = Clusters.Where(c => c.IsConnected != true).ToList();
+        var checks = disconnectedClusters.Select(CheckConnectionSafeAsync);
+        await Task.WhenAll(checks);
+    }
+
+    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster)
+    {
+        try
+        {
+            await cluster.CheckConnectionAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed connection check for cluster {ClusterName}", cluster.Name);
+            cluster.IsConnected = false;
+        }
+    }
+
+    private async Task DiscoverClientsNeedingRefreshAsync()
+    {
+        await ClientFactory.LoadClientsAsync();
+        var clients = ClientFactory.GetAllClients();
+        if (clients.Count == 0)
+        {
+            return;
+        }
+
+        var clientNamesNeedingRefresh = GetClientsNeedingDiscovery(clients);
+        if (clientNamesNeedingRefresh.Count == 0)
+        {
+            return;
+        }
+
+        var discovered = await clusterFactory.LoadClustersForClientsAsync(clientNamesNeedingRefresh);
+        ApplyClusterSnapshotForClients(discovered, clientNamesNeedingRefresh);
+    }
+
+    private HashSet<string> GetClientsNeedingDiscovery(IReadOnlyList<IKafkaLensClient> clients)
+    {
+        var byClient = Clusters
+            .GroupBy(cluster => cluster.Client.Name)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+
+        var result = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var client in clients)
+        {
+            if (!byClient.TryGetValue(client.Name, out var clientClusters) || clientClusters.Count == 0)
+            {
+                result.Add(client.Name);
+                continue;
+            }
+
+            if (clientClusters.Any(cluster => cluster.IsConnected != true))
+            {
+                result.Add(client.Name);
+            }
+        }
+
+        return result;
+    }
+
+    private static string GetClusterKey(ClusterViewModel cluster)
+    {
+        return $"{cluster.Client.Name}:{cluster.Id}";
+    }
+
+    private void OnOpenedClustersChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        var config = settingsService.GetBrowserConfig();
+        if (config.RestoreTabsOnStartup)
+        {
+            config.OpenedClusterIds = OpenedClusters.Select(c => c.ClusterId).ToList();
+            settingsService.SaveBrowserConfig(config);
+        }
     }
 
     private void UpdateOpenedClusters()
@@ -237,12 +475,29 @@ public partial class MainViewModel : ViewModelBase
         MenuItems = new ObservableCollection<MenuItemViewModel>
         {
             CreateClusterMenu(),
+            CreateEditMenu(),
             CreateViewMenu(),
             CreateHelpMenu()
         };
 
         // Ensure the initial theme state is reflected in the menu
         UpdateThemeMenuCheckedState();
+    }
+
+    private MenuItemViewModel CreateEditMenu()
+    {
+        return new MenuItemViewModel
+        {
+            Header = "_Edit",
+            Items = new()
+            {
+                new MenuItemViewModel
+                {
+                    Header = "_Preferences",
+                    Command = ShowPreferencesCommand
+                }
+            }
+        };
     }
 
     private MenuItemViewModel CreateViewMenu()
@@ -458,6 +713,12 @@ public partial class MainViewModel : ViewModelBase
         var clusterViewModel = new ClusterViewModel(cluster, savedMessagesClient);
         Clusters.Add(clusterViewModel);
         return clusterViewModel;
+    }
+
+    private void ShowPreferences()
+    {
+        var vm = new PreferencesViewModel(settingsService);
+        ShowPreferencesDialog(vm);
     }
 
     private void EditClustersAsync()

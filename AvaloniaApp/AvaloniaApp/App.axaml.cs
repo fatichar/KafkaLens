@@ -18,6 +18,7 @@ using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Messages;
 using KafkaLens.ViewModels.Services;
 using Serilog;
+using KafkaLens.Shared.Models;
 
 namespace AvaloniaApp;
 
@@ -51,14 +52,21 @@ public partial class App : Application
         services.AddSingleton<IClientInfoRepository>(clientRepo);
 
         var settingsFilePath = Path.Combine(kafkaLensDataPath, "settings.json");
-        services.AddSingleton<ISettingsService>(new SettingsService(settingsFilePath));
+        var settingsService = new SettingsService(settingsFilePath);
+        services.AddSingleton<ISettingsService>(settingsService);
+
+        var kafkaConfig = settingsService.GetKafkaConfig();
+        services.AddSingleton(kafkaConfig);
+
+        var browserConfig = settingsService.GetBrowserConfig();
+        services.AddSingleton(browserConfig);
 
         var topicSettingsFilePath = Path.Combine(kafkaLensDataPath, "topic_settings.json");
         services.AddSingleton<ITopicSettingsService>(new TopicSettingsService(topicSettingsFilePath));
 
         var pluginsPath = Path.Combine(kafkaLensDataPath, "Plugins");
         var pluginsDir = Directory.CreateDirectory(pluginsPath);
-        AddLocalDependencies(services, clusterRepo, pluginsDir);
+        AddLocalDependencies(services, clusterRepo, pluginsDir, kafkaConfig);
 
         FormatterFactory.AddFromPath(pluginsPath);
         services.AddSingleton(FormatterFactory.Instance);
@@ -84,7 +92,8 @@ public partial class App : Application
     private static void AddLocalDependencies(
         IServiceCollection services,
         IClusterInfoRepository clusterRepo,
-        DirectoryInfo pluginsDir)
+        DirectoryInfo pluginsDir,
+        KafkaConfig kafkaConfig)
     {
         AddPlugins(services, pluginsDir);
         var localClientsAssembly = LoadLocalClientsAssembly();
@@ -94,7 +103,7 @@ public partial class App : Application
             return;
         }
 
-        IKafkaLensClient? localClient = CreateLocalClient(localClientsAssembly, clusterRepo);
+        IKafkaLensClient? localClient = CreateLocalClient(localClientsAssembly, clusterRepo, kafkaConfig);
         if (localClient != null)
         {
             services.AddSingleton(localClient);
@@ -120,7 +129,7 @@ public partial class App : Application
     }
 
 
-    private static IKafkaLensClient? CreateLocalClient(Assembly assembly, IClusterInfoRepository clusterRepo)
+    private static IKafkaLensClient? CreateLocalClient(Assembly assembly, IClusterInfoRepository clusterRepo, KafkaConfig kafkaConfig)
     {
         var type = assembly.GetType("KafkaLens.Clients.LocalClient");
         if (type == null)
@@ -129,7 +138,7 @@ public partial class App : Application
             return null;
         }
 
-        var localClient = Activator.CreateInstance(type, clusterRepo);
+        var localClient = Activator.CreateInstance(type, clusterRepo, kafkaConfig);
         if (localClient == null)
         {
             Log.Error("Could not create instance of KafkaLens.Clients.LocalClient");
@@ -288,6 +297,20 @@ public partial class App : Application
         });
 
         var viewModel = Services.GetRequiredService<MainViewModel>();
+
+        MainViewModel.ShowPreferencesDialog = (vm) =>
+        {
+            var window = new PreferencesWindow
+            {
+                DataContext = vm
+            };
+            vm.CloseAction = window.Close;
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                window.ShowDialog(desktop.MainWindow);
+            }
+        };
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow

@@ -6,9 +6,11 @@ using System.Threading;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared;
 using KafkaLens.Formatting;
+using KafkaLens.ViewModels.Messages;
 using Newtonsoft.Json;
 using Serilog;
 using Xunit;
@@ -22,6 +24,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     internal const string KEY_FORMATTER_NAMES_SETTINGS_KEY = "KeyFormatterNames";
     internal const string VALUE_FORMATTER_NAMES_SETTINGS_KEY = "ValueFormatterNames";
 
+    private readonly ISettingsService settingsService;
     private readonly ITopicSettingsService topicSettingsService;
     private readonly ClusterViewModel cluster;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
@@ -83,8 +86,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public bool IsFetchOptionsEnabled => SelectedNodeType == ITreeNode.NodeType.Topic ||
                                          SelectedNodeType == ITreeNode.NodeType.Partition;
 
-    public int[] FetchCounts => new int[] { 10, 25, 50, 100, 250, 500, 1000, 5000, 10000, 25000 };
-    public int FetchCount { get; set; } = 10;
+    public int[] FetchCounts => settingsService.GetBrowserConfig().FetchCounts.ToArray();
+    [ObservableProperty] private int fetchCount;
     [ObservableProperty] private string? startOffset;
 
     private TimeOnly startTime;
@@ -139,10 +142,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         ClusterViewModel cluster,
         string name)
     {
+        this.settingsService = settingsService;
         this.topicSettingsService = topicSettingsService;
         this.cluster = cluster;
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
+
+        var browserConfig = settingsService.GetBrowserConfig();
+        FetchCount = browserConfig.DefaultFetchCount;
+        FontSize = browserConfig.FontSize;
 
         ToggleFetchCommand = new RelayCommand(() =>
         {
@@ -184,6 +192,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         KeyFormatterNames = BuildKeyFormatterNames(settingsService);
 
         IsActive = true;
+        WeakReferenceMessenger.Default.Register<ConfigurationChangedMessage>(this, (r, m) =>
+        {
+            var config = settingsService.GetBrowserConfig();
+            FontSize = config.FontSize;
+            OnPropertyChanged(nameof(FetchCounts));
+        });
     }
 
     private void UpdateStartTimeText()
