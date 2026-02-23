@@ -213,7 +213,12 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     var limit = remaining / (tps.Count - i);
                     remaining -= limit;
                     var tpo = tpos[i];
-                    partitionOptions.Add(new(new FetchPosition(PositionType.OFFSET, tpo.Offset.Value), limit));
+                    var offset = tpo.Offset.Value;
+                    if (options.Direction == FetchDirection.Backward)
+                    {
+                        offset = offset - limit + 1;
+                    }
+                    partitionOptions.Add(new(new FetchPosition(PositionType.OFFSET, offset), limit));
                 }
 
                 break;
@@ -226,6 +231,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     if (offset < 0)
                     {
                         offset = -1 - limit;
+                    }
+                    else if (options.Direction == FetchDirection.Backward)
+                    {
+                        offset = offset - limit + 1;
                     }
 
                     partitionOptions.Add(new(new(PositionType.OFFSET, offset), limit));

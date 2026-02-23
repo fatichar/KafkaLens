@@ -122,6 +122,26 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     [ObservableProperty] private string? fetchPosition;
 
+    [ObservableProperty] private bool fetchBackward;
+    public bool IsFetchBackwardEnabled => FetchPosition != "Start" && FetchPosition != "End";
+
+    partial void OnFetchPositionChanged(string? value)
+    {
+        OnPropertyChanged(nameof(IsFetchBackwardEnabled));
+        if (value == "End")
+        {
+            FetchBackward = true;
+        }
+        else if (value == "Start")
+        {
+            FetchBackward = false;
+        }
+        else
+        {
+            FetchBackward = false;
+        }
+    }
+
     static OpenedClusterViewModel()
     {
         FetchPositionsForTopic.Add("End");
@@ -896,6 +916,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
         var fetchOptions = new FetchOptions(start, end);
         fetchOptions.Limit = FetchCount;
+        fetchOptions.Direction = FetchBackward ? FetchDirection.Backward : FetchDirection.Forward;
         return fetchOptions;
     }
 }
