@@ -14,16 +14,6 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
         return Directory.Exists(clusterDir);
     }
 
-    public override List<Topic> GetTopics()
-    {
-        if (Topics.Count > 0)
-        {
-            Topics.Clear();
-        }
-
-        return base.GetTopics();
-    }
-
     protected override List<Topic> FetchTopics()
     {
         var topicDirs = Directory.GetDirectories(clusterDir);
@@ -226,21 +216,98 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
         if (options.Start.Type == PositionType.Timestamp)
         {
             var messages = new List<(string file, long offset)>();
-            foreach (var fileOffset in fileOffsets)
+            if (options.Direction == FetchDirection.Backward)
             {
-                if (cancellationToken.IsCancellationRequested) return;
-
-                var message = await CreateMessageAsync(fileOffset.file);
-                if (message.EpochMillis >= options.Start.Timestamp)
+                // Backward from Timestamp
+                for (int i = fileOffsets.Count - 1; i >= 0; i--)
                 {
-                    messages.Add(fileOffset);
-                    if (messages.Count >= options.Limit)
+                    if (cancellationToken.IsCancellationRequested) return;
+                    var fileOffset = fileOffsets[i];
+                    var message = await CreateMessageAsync(fileOffset.file);
+
+                    // We want messages BEFORE or AT the timestamp (depending on semantics)
+                    // Usually "Backward from T" means find first message >= T, then go back?
+                    // Or find messages <= T?
+                    // ConfluentConsumer implementation: Resolve T -> Offset O. Then O - Limit + 1.
+                    // So we find the first message with Timestamp >= T. Let's call it Anchor.
+                    // Then we take Anchor and (Limit-1) messages before it.
+
+                    // Actually, let's stick to ConfluentConsumer logic:
+                    // 1. Find the offset corresponding to Timestamp.
+                    // 2. Adjust offset backward.
+                    // 3. Fetch forward.
+
+                    // But here we are iterating.
+                    // Let's find the Anchor index first.
+                }
+
+                // Optimized approach:
+                // Find index of first message >= Timestamp.
+                int anchorIndex = -1;
+                for (int i = 0; i < fileOffsets.Count; i++)
+                {
+                    if (cancellationToken.IsCancellationRequested) return;
+                    var msg = await CreateMessageAsync(fileOffsets[i].file);
+                    if (msg.EpochMillis >= options.Start.Timestamp)
                     {
+                        anchorIndex = i;
                         break;
                     }
                 }
+
+                if (anchorIndex == -1)
+                {
+                    // All messages are older than timestamp? Or none exist?
+                    // If all older, anchor is effectively "End".
+                    // But if we want >= Timestamp, and none exist, then offset is HighWatermark.
+                    // If we go backward from HighWatermark, we get the last messages.
+                    anchorIndex = fileOffsets.Count;
+                }
+
+                int startIndex = Math.Max(0, anchorIndex - options.Limit + 1);
+                // We want to fetch UP TO anchorIndex (inclusive)
+                // If anchorIndex is count (non-existent), we fetch up to end?
+                // If anchorIndex is 5. We want [?, 5]. Limit 3. -> [3, 4, 5].
+                // Start index = 5 - 3 + 1 = 3.
+                // Count = 3.
+
+                // If anchorIndex is fileOffsets.Count (none found >= T).
+                // ConfluentConsumer behavior: T -> Offset. If T > all, Offset = HighWatermark.
+                // Backward from HighWatermark: [High-Limit+1, High].
+                // So [Count-Limit+1, Count].
+
+                startIndex = Math.Max(0, anchorIndex - options.Limit + 1);
+                int count = Math.Min(options.Limit, anchorIndex - startIndex + 1);
+                filesToProcess = fileOffsets.Skip(startIndex).Take(count);
             }
-            filesToProcess = messages;
+            else
+            {
+                // Forward (Existing Logic but simpler)
+                // Find first message >= Timestamp
+                // Take Limit.
+
+                // This linear scan is slow but consistent with existing code structure
+                // Optimization: Binary search if timestamps are monotonic?
+                // Saved messages are sorted by offset (filename). Timestamps usually correlate but not guaranteed.
+                // We'll stick to linear scan as existing code did.
+
+                // Actually existing code scanned and added to list.
+                foreach (var fileOffset in fileOffsets)
+                {
+                    if (cancellationToken.IsCancellationRequested) return;
+
+                    var message = await CreateMessageAsync(fileOffset.file);
+                    if (message.EpochMillis >= options.Start.Timestamp)
+                    {
+                        messages.Add(fileOffset);
+                        if (messages.Count >= options.Limit)
+                        {
+                            break;
+                        }
+                    }
+                }
+                filesToProcess = messages;
+            }
         }
         else // OFFSET
         {
@@ -255,7 +322,18 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
                 startIndex = Math.Max(0, totalCount + (int)options.Start.Offset);
             }
 
+            if (options.Direction == FetchDirection.Backward && options.Start.Offset >= 0)
+            {
+                // Adjust start index for backward fetch
+                // Target is startIndex.
+                // NewStart = startIndex - Limit + 1.
+                startIndex = Math.Max(0, startIndex - options.Limit + 1);
+            }
+
             int endIndex = totalCount;
+            // Existing logic for "End" (FetchPosition.End) is not affected by Direction flag
+            // because "End" logic is handled by "else // from end" block above or implicit limit.
+            // But we have explicit End property in Options.
             if (options.End != null)
             {
                 if (options.End.Offset >= 0)

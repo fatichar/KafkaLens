@@ -73,6 +73,66 @@ public class ConfluentConsumerTests
     }
 
     [Fact]
+    public async Task FetchMessages_WhenFirstPollTimesOut_RetriesAndStillFetches()
+    {
+        // Arrange
+        var mockAdminClient = Substitute.For<IAdminClient>();
+        var pollCount = 0;
+
+        Func<IConsumer<byte[], byte[]>> consumerFactory = () =>
+        {
+            var mockConsumer = Substitute.For<IConsumer<byte[], byte[]>>();
+            mockConsumer.Consume(Arg.Any<TimeSpan>()).Returns(_ =>
+            {
+                var current = Interlocked.Increment(ref pollCount);
+                if (current == 1)
+                {
+                    return null;
+                }
+
+                return new ConsumeResult<byte[], byte[]>
+                {
+                    Message = new Message<byte[], byte[]>
+                    {
+                        Key = Array.Empty<byte>(),
+                        Value = Array.Empty<byte>(),
+                        Timestamp = new Timestamp(DateTime.Now),
+                        Headers = new Headers()
+                    },
+                    Partition = 0,
+                    Offset = 0
+                };
+            });
+            return mockConsumer;
+        };
+
+        var consumer = TestConfluentConsumer.Create("localhost:9092", consumerFactory, mockAdminClient);
+        consumer.ListOffsetsHandler = specs =>
+        {
+            var isEarliest = specs.First().OffsetSpec.GetType().Name.Contains("Earliest");
+            long offset = isEarliest ? 0 : 100;
+            return Task.FromResult(new ListOffsetsResult
+            {
+                ResultInfos = specs.Select(s => new ListOffsetsResultInfo
+                {
+                    TopicPartitionOffsetError = new TopicPartitionOffsetError(s.TopicPartition, new Offset(offset), new Error(ErrorCode.NoError), 0)
+                }).ToList()
+            });
+        };
+
+        var tps = new List<TopicPartition> { new("test-topic", 0) };
+        var options = new FetchOptions(FetchPosition.Start, 1);
+        var messages = new MessageStream();
+
+        // Act
+        await consumer.PublicGetMessages(tps, options, messages, CancellationToken.None);
+
+        // Assert
+        Assert.Single(messages.Messages);
+        Assert.Equal(2, pollCount);
+    }
+
+    [Fact]
     public async Task FetchMessages_FromMultiplePartitions_IsNowParallel()
     {
         // Arrange

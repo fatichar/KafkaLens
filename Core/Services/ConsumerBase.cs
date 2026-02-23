@@ -21,19 +21,17 @@ public abstract class ConsumerBase : IKafkaConsumer
             Topics.Clear();
         }
 
-        if (Topics.Count != 0)
+        if (Topics.Count == 0)
         {
-            return Topics.Values.ToList();
-        }
-
-        try
-        {
-            LoadTopics();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw new Exception("Failed to load topics", e);
+            try
+            {
+                LoadTopics();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw new Exception("Failed to load topics", e);
+            }
         }
 
         return Topics.Values.ToList();

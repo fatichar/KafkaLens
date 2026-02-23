@@ -1,4 +1,10 @@
-﻿namespace KafkaLens.Shared.Models;
+namespace KafkaLens.Shared.Models;
+
+public enum FetchDirection
+{
+    Forward,
+    Backward
+}
 
 public class FetchOptions
 {
@@ -17,6 +23,7 @@ public class FetchOptions
     public FetchPosition Start { get; }
     public FetchPosition? End { get; }
     public int Limit { get; set; } = 10;
+    public FetchDirection Direction { get; set; } = FetchDirection.Forward;
 
-    public override string ToString() => $"Start = {Start}, End = {End}, Limit = {Limit}";
+    public override string ToString() => $"Start = {Start}, End = {End}, Limit = {Limit}, Direction = {Direction}";
 }

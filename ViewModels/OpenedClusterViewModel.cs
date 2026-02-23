@@ -124,6 +124,26 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     [ObservableProperty] private string? fetchPosition;
 
+    [ObservableProperty] private bool fetchBackward;
+    public bool IsFetchBackwardEnabled => FetchPosition != "Start" && FetchPosition != "End";
+
+    partial void OnFetchPositionChanged(string? value)
+    {
+        OnPropertyChanged(nameof(IsFetchBackwardEnabled));
+        if (value == "End")
+        {
+            FetchBackward = true;
+        }
+        else if (value == "Start")
+        {
+            FetchBackward = false;
+        }
+        else
+        {
+            FetchBackward = false;
+        }
+    }
+
     static OpenedClusterViewModel()
     {
         FetchPositionsForTopic.Add("End");
@@ -427,6 +447,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         get => field ?? selectedNode;
         set
         {
+            var previousNode = selectedNode;
             if (value == null && selectedNode != null)
             {
                 field = selectedNode;
@@ -441,21 +462,52 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             if (SetProperty(ref selectedNode, value))
             {
                 SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.None;
+                var logicalNodeChanged = !AreSameLogicalNode(previousNode, selectedNode);
 
-                FetchPositions = SelectedNodeType == ITreeNode.NodeType.Partition
-                    ? FetchPositionsForPartition
-                    : FetchPositionsForTopic;
-                FetchPosition = null;
-                FetchPosition = FetchPositions[0];
+                if (logicalNodeChanged)
+                {
+                    var newFetchPositions = SelectedNodeType == ITreeNode.NodeType.Partition
+                        ? FetchPositionsForPartition
+                        : FetchPositionsForTopic;
+                    var previousFetchPosition = FetchPosition;
+
+                    FetchPositions = newFetchPositions;
+                    FetchPosition = previousFetchPosition != null && newFetchPositions.Contains(previousFetchPosition)
+                        ? previousFetchPosition
+                        : newFetchPositions[0];
+                }
                 if (selectedNode is { Type: ITreeNode.NodeType.Partition } or { Type: ITreeNode.NodeType.Topic })
                 {
-                    if (IsCurrent)
+                    if (IsCurrent && logicalNodeChanged)
                     {
                         FetchMessages();
                     }
                 }
             }
         }
+    }
+
+    private static bool AreSameLogicalNode(ITreeNode? first, ITreeNode? second)
+    {
+        if (ReferenceEquals(first, second))
+        {
+            return true;
+        }
+
+        if (first is null || second is null)
+        {
+            return false;
+        }
+
+        return (first, second) switch
+        {
+            (TopicViewModel firstTopic, TopicViewModel secondTopic) =>
+                string.Equals(firstTopic.Name, secondTopic.Name, StringComparison.Ordinal),
+            (PartitionViewModel firstPartition, PartitionViewModel secondPartition) =>
+                firstPartition.Id == secondPartition.Id &&
+                string.Equals(firstPartition.TopicName, secondPartition.TopicName, StringComparison.Ordinal),
+            _ => first.Type == second.Type && string.Equals(first.Name, second.Name, StringComparison.Ordinal)
+        };
     }
 
     public string ClusterId => cluster.Id;
@@ -902,6 +954,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
         var fetchOptions = new FetchOptions(start, end);
         fetchOptions.Limit = FetchCount;
+        fetchOptions.Direction = FetchBackward ? FetchDirection.Backward : FetchDirection.Forward;
         return fetchOptions;
     }
 }

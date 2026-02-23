@@ -88,6 +88,7 @@ message FetchOptions {
   uint32 max_count = 1;
   FetchPosition start = 2;
   FetchPosition end = 3;
+  bool backward = 4;
 }
 
 message FetchPosition {

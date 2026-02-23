@@ -12,6 +12,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     private readonly TimeSpan queryWatermarkTimeout;
     private readonly TimeSpan queryTopicsTimeout;
     private readonly TimeSpan consumeTimeout;
+    private const int MaxConsecutiveEmptyPolls = 3;
     private readonly KafkaConfig kafkaConfig;
 
     protected IConsumer<byte[], byte[]> Consumer { get; }
@@ -219,7 +220,12 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     var limit = remaining / (tps.Count - i);
                     remaining -= limit;
                     var tpo = tpos[i];
-                    partitionOptions.Add(new(new FetchPosition(PositionType.Offset, tpo.Offset.Value), limit));
+                    var offset = tpo.Offset.Value;
+                    if (options.Direction == FetchDirection.Backward)
+                    {
+                        offset = offset - limit + 1;
+                    }
+                    partitionOptions.Add(new(new FetchPosition(PositionType.Offset, offset), limit));
                 }
 
                 break;
@@ -232,6 +238,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     if (offset < 0)
                     {
                         offset = -1 - limit;
+                    }
+                    else if (options.Direction == FetchDirection.Backward)
+                    {
+                        offset = offset - limit + 1;
                     }
 
                     partitionOptions.Add(new(new(PositionType.Offset, offset), limit));
@@ -256,6 +266,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         var batch = new List<Message>(100);
         var lastFlushTime = DateTime.Now;
         var batchInterval = TimeSpan.FromMilliseconds(100);
+        var consecutiveEmptyPolls = 0;
 
         lock (consumer)
         {
@@ -266,9 +277,17 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     var result = consumer.Consume(consumeTimeout);
                     if (result == null)
                     {
-                        Log.Information("Got null message. Must be timed out");
-                        break;
+                        consecutiveEmptyPolls++;
+                        Log.Information("Got null message (poll timeout) {Current}/{Max}", consecutiveEmptyPolls, MaxConsecutiveEmptyPolls);
+                        if (consecutiveEmptyPolls >= MaxConsecutiveEmptyPolls)
+                        {
+                            Log.Information("Stopping fetch after {Count} consecutive poll timeouts", consecutiveEmptyPolls);
+                            break;
+                        }
+                        continue;
                     }
+
+                    consecutiveEmptyPolls = 0;
 
                     if (result.IsPartitionEOF)
                     {

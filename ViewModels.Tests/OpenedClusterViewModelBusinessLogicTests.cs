@@ -352,6 +352,88 @@ public class OpenedClusterViewModelBusinessLogicTests
     }
 
     [AvaloniaFact]
+    public async Task SelectedNode_WhenSwitchedToEquivalentNode_ShouldKeepFetchOptions()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+        mockClient.GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new MessageStream());
+
+        vm.SelectedNode = vm.Topics[0];
+        vm.FetchPosition = "Timestamp";
+        vm.FetchBackward = true;
+        vm.FetchCount = 500;
+
+        // Simulate tab content rebind to a new instance of the same logical node.
+        var equivalentNode = new TopicViewModel(new Topic("test-topic", new List<Partition> { new(0) }), "Unknown", "Unknown");
+
+        // Act
+        vm.SelectedNode = equivalentNode;
+
+        // Assert
+        Assert.Equal("Timestamp", vm.FetchPosition);
+        Assert.True(vm.FetchBackward);
+        Assert.Equal(500, vm.FetchCount);
+        mockClient.Received(1).GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaFact]
+    public async Task SelectedNode_WhenSwitchingTopics_ShouldKeepFetchPositionIfSupported()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var topics = new List<Topic>
+        {
+            new("topic-1", new List<Partition> { new(0) }),
+            new("topic-2", new List<Partition> { new(0) })
+        };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+        mockClient.GetMessageStream("c1", "topic-1", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new MessageStream());
+        mockClient.GetMessageStream("c1", "topic-2", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new MessageStream());
+
+        vm.SelectedNode = vm.Topics[0];
+        vm.FetchPosition = "Timestamp";
+
+        // Act
+        vm.SelectedNode = vm.Topics[1];
+
+        // Assert
+        Assert.Equal("Timestamp", vm.FetchPosition);
+    }
+
+    [AvaloniaFact]
+    public async Task SelectedNode_WhenSwitchingFromPartitionWithOffsetToTopic_ShouldFallbackToEnd()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+        mockClient.GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new MessageStream());
+        mockClient.GetMessageStream("c1", "test-topic", 0, Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new MessageStream());
+
+        vm.SelectedNode = vm.Topics[0].Partitions[0];
+        vm.FetchPosition = "Offset";
+
+        // Act
+        vm.SelectedNode = vm.Topics[0];
+
+        // Assert
+        Assert.Equal("End", vm.FetchPosition);
+    }
+
+    [AvaloniaFact]
     public async Task FetchMessages_ShouldClearCurrentMessages()
     {
         // Arrange
