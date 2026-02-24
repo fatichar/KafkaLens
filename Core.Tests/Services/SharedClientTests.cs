@@ -14,15 +14,15 @@ namespace KafkaLens.Core.Tests.Services;
 
 public class SharedClientTests
 {
-    private readonly IClusterInfoRepository _infoRepository;
-    private readonly ConsumerFactory _consumerFactory;
-    private readonly SharedClient _sut;
+    private readonly IClusterInfoRepository infoRepository;
+    private readonly ConsumerFactory consumerFactory;
+    private readonly SharedClient sut;
 
     public SharedClientTests()
     {
-        _infoRepository = Substitute.For<IClusterInfoRepository>();
-        _consumerFactory = Substitute.For<ConsumerFactory>();
-        _sut = new SharedClient(_infoRepository, _consumerFactory);
+        infoRepository = Substitute.For<IClusterInfoRepository>();
+        consumerFactory = Substitute.For<ConsumerFactory>();
+        sut = new SharedClient(infoRepository, consumerFactory);
     }
 
     #region Properties
@@ -30,19 +30,19 @@ public class SharedClientTests
     [Fact]
     public void Name_ReturnsShared()
     {
-        Assert.Equal("Shared", _sut.Name);
+        Assert.Equal("Shared", sut.Name);
     }
 
     [Fact]
     public void CanEditClusters_ReturnsFalse()
     {
-        Assert.False(_sut.CanEditClusters);
+        Assert.False(sut.CanEditClusters);
     }
 
     [Fact]
     public void CanSaveMessages_ReturnsTrue()
     {
-        Assert.True(_sut.CanSaveMessages);
+        Assert.True(sut.CanSaveMessages);
     }
 
     #endregion Properties
@@ -53,11 +53,11 @@ public class SharedClientTests
     public async Task GetAllClustersAsync_NoClusters_ReturnsEmpty()
     {
         // Arrange
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
             new Dictionary<string, Shared.Entities.ClusterInfo>()));
 
         // Act
-        var result = await _sut.GetAllClustersAsync();
+        var result = await sut.GetAllClustersAsync();
 
         // Assert
         Assert.Empty(result);
@@ -74,10 +74,10 @@ public class SharedClientTests
             { "id1", cluster1 },
             { "id2", cluster2 }
         };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         // Act
-        var result = (await _sut.GetAllClustersAsync()).ToList();
+        var result = (await sut.GetAllClustersAsync()).ToList();
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -95,10 +95,10 @@ public class SharedClientTests
         // Arrange
         var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         // Act
-        var result = await _sut.GetClusterByIdAsync("id1");
+        var result = await sut.GetClusterByIdAsync("id1");
 
         // Assert
         Assert.Equal("id1", result.Id);
@@ -110,11 +110,11 @@ public class SharedClientTests
     public async Task GetClusterByIdAsync_InvalidId_ThrowsArgumentException()
     {
         // Arrange
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
             new Dictionary<string, Shared.Entities.ClusterInfo>()));
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _sut.GetClusterByIdAsync("nonexistent"));
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.GetClusterByIdAsync("nonexistent"));
     }
 
     #endregion GetClusterByIdAsync
@@ -126,17 +126,17 @@ public class SharedClientTests
     {
         // Arrange
         var newCluster = new NewKafkaCluster("test-cluster", "localhost:9092");
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
             new Dictionary<string, Shared.Entities.ClusterInfo>()));
 
         // Act
-        var result = await _sut.AddAsync(newCluster);
+        var result = await sut.AddAsync(newCluster);
 
         // Assert
         Assert.Equal("test-cluster", result.Name);
         Assert.Equal("localhost:9092", result.Address);
         Assert.NotNull(result.Id);
-        _infoRepository.Received(1).Add(Arg.Is<Shared.Entities.ClusterInfo>(c =>
+        infoRepository.Received(1).Add(Arg.Is<Shared.Entities.ClusterInfo>(c =>
             c.Name == "test-cluster" && c.Address == "localhost:9092"));
     }
 
@@ -146,12 +146,12 @@ public class SharedClientTests
         // Arrange
         var existing = new Shared.Entities.ClusterInfo("id1", "test-cluster", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", existing } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var newCluster = new NewKafkaCluster("test-cluster", "localhost:9093");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _sut.AddAsync(newCluster));
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.AddAsync(newCluster));
     }
 
     [Fact]
@@ -160,12 +160,12 @@ public class SharedClientTests
         // Arrange
         var existing = new Shared.Entities.ClusterInfo("id1", "Test-Cluster", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", existing } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var newCluster = new NewKafkaCluster("test-cluster", "localhost:9093");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _sut.AddAsync(newCluster));
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.AddAsync(newCluster));
     }
 
     #endregion AddAsync
@@ -178,17 +178,17 @@ public class SharedClientTests
         // Arrange
         var cluster = new Shared.Entities.ClusterInfo("id1", "old-name", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var update = new KafkaClusterUpdate("new-name", "localhost:9093");
 
         // Act
-        var result = await _sut.UpdateClusterAsync("id1", update);
+        var result = await sut.UpdateClusterAsync("id1", update);
 
         // Assert
         Assert.Equal("new-name", result.Name);
         Assert.Equal("localhost:9093", result.Address);
-        _infoRepository.Received(1).Update(Arg.Is<Shared.Entities.ClusterInfo>(c =>
+        infoRepository.Received(1).Update(Arg.Is<Shared.Entities.ClusterInfo>(c =>
             c.Name == "new-name" && c.Address == "localhost:9093"));
     }
 
@@ -196,13 +196,13 @@ public class SharedClientTests
     public async Task UpdateClusterAsync_InvalidId_ThrowsArgumentException()
     {
         // Arrange
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
             new Dictionary<string, Shared.Entities.ClusterInfo>()));
 
         var update = new KafkaClusterUpdate("name", "localhost:9092");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _sut.UpdateClusterAsync("nonexistent", update));
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.UpdateClusterAsync("nonexistent", update));
     }
 
     #endregion UpdateClusterAsync
@@ -216,10 +216,10 @@ public class SharedClientTests
         var clusterId = "id1";
 
         // Act
-        await _sut.RemoveClusterByIdAsync(clusterId);
+        await sut.RemoveClusterByIdAsync(clusterId);
 
         // Assert
-        _infoRepository.Received(1).Delete(clusterId);
+        infoRepository.Received(1).Delete(clusterId);
     }
 
     #endregion RemoveClusterByIdAsync
@@ -230,7 +230,7 @@ public class SharedClientTests
     public async Task ValidateConnectionAsync_ReturnsFalse()
     {
         // Act
-        var result = await _sut.ValidateConnectionAsync("localhost:9092");
+        var result = await sut.ValidateConnectionAsync("localhost:9092");
 
         // Assert
         Assert.False(result);
@@ -246,10 +246,10 @@ public class SharedClientTests
         // Arrange
         var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var mockConsumer = Substitute.For<IKafkaConsumer>();
-        _consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
+        consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
 
         var topics = new List<Topic>
         {
@@ -260,7 +260,7 @@ public class SharedClientTests
         mockConsumer.GetTopics().Returns(topics);
 
         // Act
-        var result = await _sut.GetTopicsAsync("id1");
+        var result = await sut.GetTopicsAsync("id1");
 
         // Assert
         Assert.Equal(3, result.Count);
@@ -273,11 +273,11 @@ public class SharedClientTests
     public async Task GetTopicsAsync_InvalidCluster_ThrowsArgumentException()
     {
         // Arrange
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
             new Dictionary<string, Shared.Entities.ClusterInfo>()));
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _sut.GetTopicsAsync("nonexistent"));
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.GetTopicsAsync("nonexistent"));
     }
 
     #endregion GetTopicsAsync
@@ -290,19 +290,19 @@ public class SharedClientTests
         // Arrange
         var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var mockConsumer = Substitute.For<IKafkaConsumer>();
-        _consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
+        consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
 
         var expectedMessages = new List<Message>();
         mockConsumer.GetMessagesAsync("test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
             .Returns(expectedMessages);
 
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
-        var result = await _sut.GetMessagesAsync("id1", "test-topic", options);
+        var result = await sut.GetMessagesAsync("id1", "test-topic", options);
 
         // Assert
         Assert.Same(expectedMessages, result);
@@ -314,19 +314,19 @@ public class SharedClientTests
         // Arrange
         var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var mockConsumer = Substitute.For<IKafkaConsumer>();
-        _consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
+        consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
 
         var expectedMessages = new List<Message>();
         mockConsumer.GetMessagesAsync("test-topic", 0, Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
             .Returns(expectedMessages);
 
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
-        var result = await _sut.GetMessagesAsync("id1", "test-topic", 0, options);
+        var result = await sut.GetMessagesAsync("id1", "test-topic", 0, options);
 
         // Assert
         Assert.Same(expectedMessages, result);
@@ -342,19 +342,19 @@ public class SharedClientTests
         // Arrange
         var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var mockConsumer = Substitute.For<IKafkaConsumer>();
-        _consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
+        consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
 
         var expectedStream = new MessageStream();
         mockConsumer.GetMessageStream("test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
             .Returns(expectedStream);
 
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
-        var result = _sut.GetMessageStream("id1", "test-topic", options);
+        var result = sut.GetMessageStream("id1", "test-topic", options);
 
         // Assert
         Assert.Same(expectedStream, result);
@@ -366,19 +366,19 @@ public class SharedClientTests
         // Arrange
         var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var mockConsumer = Substitute.For<IKafkaConsumer>();
-        _consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
+        consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
 
         var expectedStream = new MessageStream();
         mockConsumer.GetMessageStream("test-topic", 0, Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
             .Returns(expectedStream);
 
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
-        var result = _sut.GetMessageStream("id1", "test-topic", 0, options);
+        var result = sut.GetMessageStream("id1", "test-topic", 0, options);
 
         // Assert
         Assert.Same(expectedStream, result);
@@ -394,18 +394,18 @@ public class SharedClientTests
         // Arrange
         var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
         var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
-        _infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
 
         var mockConsumer = Substitute.For<IKafkaConsumer>();
-        _consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
+        consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
         mockConsumer.GetTopics().Returns(new List<Topic>());
 
         // Act
-        await _sut.GetTopicsAsync("id1");
-        await _sut.GetTopicsAsync("id1");
+        await sut.GetTopicsAsync("id1");
+        await sut.GetTopicsAsync("id1");
 
         // Assert
-        _consumerFactory.Received(1).CreateNew("localhost:9092");
+        consumerFactory.Received(1).CreateNew("localhost:9092");
     }
 
     #endregion Consumer Caching

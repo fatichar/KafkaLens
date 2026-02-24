@@ -9,7 +9,6 @@ using KafkaLens.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Avalonia.Styling;

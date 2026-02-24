@@ -246,7 +246,7 @@ public class GrpcClient : IKafkaLensClient
 
     private static FetchPosition ToGrpcFetchPosition(Shared.Models.FetchPosition position)
     {
-        if (position.Type == PositionType.OFFSET)
+        if (position.Type == PositionType.Offset)
         {
             return new FetchPosition()
             {

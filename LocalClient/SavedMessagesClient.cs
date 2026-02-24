@@ -22,7 +22,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     public bool CanEditClusters => false;
     public bool CanSaveMessages => false;
 
-    public Task<bool> ValidateConnectionAsync(string BootstrapServers)
+    public Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {
         return Task.FromResult(false);
     }

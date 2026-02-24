@@ -1,5 +1,4 @@
 using KafkaLens.Shared.Utils;
-using System.Collections.ObjectModel;
 
 namespace KafkaLens.Shared.Models;
 

@@ -1,5 +1,4 @@
-using System.Collections.ObjectModel;
-using KafkaLens.ViewModels.Search;
+﻿using KafkaLens.ViewModels.Search;
 using KafkaLens.Shared.Utils;
 
 namespace KafkaLens.ViewModels;

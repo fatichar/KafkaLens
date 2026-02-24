@@ -1,14 +1,10 @@
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Threading;
-using System.Linq;
-using System.Threading.Tasks;
-using Serilog;
 using KafkaLens.Core.Services;
 using KafkaLens.Shared.Models;
-using KafkaLens.Shared.Utils;
+using Serilog;
 
-namespace KafkaLens;
+namespace KafkaLens.Clients;
 
 public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
 {
@@ -123,7 +119,7 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
 
         IOrderedEnumerable<(string file, int partition, long timestamp)> sortedFiles;
 
-        bool fromEnd = options.Start.Type == PositionType.OFFSET && options.Start.Offset < 0;
+        bool fromEnd = options.Start.Type == PositionType.Offset && options.Start.Offset < 0;
 
         if (fromEnd)
         {
@@ -136,7 +132,7 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
 
         IEnumerable<(string file, int partition, long timestamp)> filesToProcess = sortedFiles;
 
-        if (options.Start.Type == PositionType.TIMESTAMP)
+        if (options.Start.Type == PositionType.Timestamp)
         {
             filesToProcess = filesToProcess.Where(f => f.timestamp >= options.Start.Timestamp);
         }
@@ -227,7 +223,7 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
         var totalCount = fileOffsets.Count;
         IEnumerable<(string file, long offset)> filesToProcess;
 
-        if (options.Start.Type == PositionType.TIMESTAMP)
+        if (options.Start.Type == PositionType.Timestamp)
         {
             var messages = new List<(string file, long offset)>();
             foreach (var fileOffset in fileOffsets)

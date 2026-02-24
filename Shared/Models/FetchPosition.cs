@@ -2,13 +2,13 @@
 
 public enum PositionType
 {
-    TIMESTAMP,
-    OFFSET
+    Timestamp,
+    Offset
 }
 public class FetchPosition
 {
-    public static FetchPosition START => new(PositionType.OFFSET, 0);
-    public static FetchPosition END => new(PositionType.OFFSET, -1);
+    public static FetchPosition Start => new(PositionType.Offset, 0);
+    public static FetchPosition End => new(PositionType.Offset, -1);
     public PositionType Type { get; private set; }
     public long Offset { get; private set; }
     public long Timestamp { get; private set; }
@@ -17,10 +17,10 @@ public class FetchPosition
         Type = type;
         switch (type)
         {
-            case PositionType.OFFSET:
+            case PositionType.Offset:
                 Offset = value;
                 break;
-            case PositionType.TIMESTAMP:
+            case PositionType.Timestamp:
                 Timestamp = value;
                 break;
         }
@@ -28,7 +28,7 @@ public class FetchPosition
 
     public void SetOffset(long offset)
     {
-        Type = PositionType.OFFSET;
+        Type = PositionType.Offset;
         Offset = offset;
     }
 }

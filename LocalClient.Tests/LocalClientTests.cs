@@ -9,7 +9,7 @@ using KafkaLens.Shared.Models;
 using NSubstitute;
 using Xunit;
 
-namespace KafkaLens.Clients;
+namespace KafkaLens.Clients.Tests;
 
 public class LocalClientTests
 {

@@ -4,26 +4,26 @@ using System.Globalization;
 
 public class FetchPositionConverterTests
 {
-    private readonly FetchPositionConverter _converter = new();
+    private readonly FetchPositionConverter converter = new();
 
     [Fact]
     public void Convert_PositionNull_ReturnsFalse()
     {
-        var result = _converter.Convert(null, typeof(bool), null, CultureInfo.InvariantCulture);
+        var result = converter.Convert(null, typeof(bool), null, CultureInfo.InvariantCulture);
         result.Should().Be(false);
     }
 
     [Fact]
     public void Convert_PositionTimestamp_ParameterNull_ReturnsTrue()
     {
-        var result = _converter.Convert("Timestamp", typeof(bool), null, CultureInfo.InvariantCulture);
+        var result = converter.Convert("Timestamp", typeof(bool), null, CultureInfo.InvariantCulture);
         result.Should().Be(true);
     }
 
     [Fact]
     public void Convert_PositionOffset_ParameterNull_ReturnsFalse()
     {
-        var result = _converter.Convert("Offset", typeof(bool), null, CultureInfo.InvariantCulture);
+        var result = converter.Convert("Offset", typeof(bool), null, CultureInfo.InvariantCulture);
         result.Should().Be(false);
     }
 
@@ -35,7 +35,7 @@ public class FetchPositionConverterTests
     [InlineData("Timestamp", "Offset", false)]
     public void Convert_WithParameter_ReturnsExpected(string position, string parameter, bool expected)
     {
-        var result = _converter.Convert(position, typeof(bool), parameter, CultureInfo.InvariantCulture);
+        var result = converter.Convert(position, typeof(bool), parameter, CultureInfo.InvariantCulture);
         result.Should().Be(expected);
     }
 
@@ -47,14 +47,14 @@ public class FetchPositionConverterTests
     [Fact]
     public void Convert_ToStringThrows_ReturnsFalse()
     {
-        var result = _converter.Convert(new ThrowingObject(), typeof(bool), null, CultureInfo.InvariantCulture);
+        var result = converter.Convert(new ThrowingObject(), typeof(bool), null, CultureInfo.InvariantCulture);
         result.Should().Be(false);
     }
 
     [Fact]
     public void ConvertBack_ThrowsNotImplementedException()
     {
-        Action act = () => _converter.ConvertBack(true, typeof(string), null, CultureInfo.InvariantCulture);
+        Action act = () => converter.ConvertBack(true, typeof(string), null, CultureInfo.InvariantCulture);
         act.Should().Throw<NotImplementedException>();
     }
 }

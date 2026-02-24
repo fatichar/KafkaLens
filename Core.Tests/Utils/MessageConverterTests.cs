@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using Confluent.Kafka;
 using KafkaLens.Core.Utils;
@@ -95,6 +96,47 @@ public class MessageConverterTests
     {
         // Arrange
         var result = CreateConsumeResult(key: null, value: null, headers: new Headers());
+
+        // Act
+        var message = MessageConverter.CreateMessage(result);
+
+        // Assert
+        Assert.Empty(message.Headers);
+    }
+
+    [Fact]
+    public void CreateMessage_NullResult_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => MessageConverter.CreateMessage(null!));
+    }
+
+    [Fact]
+    public void CreateMessage_NullMessage_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var result = new ConsumeResult<byte[], byte[]>
+        {
+            TopicPartitionOffset = new TopicPartitionOffset("test-topic", 0, 0)
+        };
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => MessageConverter.CreateMessage(result));
+    }
+
+    [Fact]
+    public void CreateMessage_NullHeaders_ReturnsEmptyDictionary()
+    {
+        // Arrange
+        var result = new ConsumeResult<byte[], byte[]>
+        {
+            TopicPartitionOffset = new TopicPartitionOffset("test-topic", 0, 0),
+            Message = new Message<byte[], byte[]>
+            {
+                Timestamp = new Timestamp(0, TimestampType.CreateTime),
+                Headers = null!
+            }
+        };
 
         // Act
         var message = MessageConverter.CreateMessage(result);

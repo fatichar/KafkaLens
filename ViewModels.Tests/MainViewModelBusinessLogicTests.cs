@@ -1,9 +1,7 @@
 using System.Collections.ObjectModel;
 using Avalonia.Headless.XUnit;
-using KafkaLens.Formatting;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
-using KafkaLens.Shared.Models;
 using KafkaLens.ViewModels.Config;
 
 namespace KafkaLens.ViewModels.Tests;

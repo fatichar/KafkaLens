@@ -1,6 +1,4 @@
-using FluentAssertions;
 using KafkaLens.ViewModels.Search;
-using Xunit;
 
 namespace KafkaLens.ViewModels.Tests;
 

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using KafkaLens.Shared.Models;
 using Xunit;
 
-namespace KafkaLens.Clients;
+namespace KafkaLens.Clients.Tests;
 
 public class SavedMessagesClientTests
 {

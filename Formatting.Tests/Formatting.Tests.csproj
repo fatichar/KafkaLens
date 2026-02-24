@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <AssemblyName>KafkaLens.Formatting.Tests</AssemblyName>
-    <RootNamespace>KafkaLens.Formatting</RootNamespace>
+    <RootNamespace>KafkaLens.Formatting.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

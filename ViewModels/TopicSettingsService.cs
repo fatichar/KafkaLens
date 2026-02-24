@@ -142,7 +142,7 @@ public class TopicSettingsService : ITopicSettingsService
     {
         if (string.IsNullOrWhiteSpace(formatterName) ||
             formatterName == "Auto" ||
-            formatterName == OpenedClusterViewModel.UnknownFormatterName)
+            formatterName == OpenedClusterViewModel.UNKNOWN_FORMATTER_NAME)
         {
             return null;
         }

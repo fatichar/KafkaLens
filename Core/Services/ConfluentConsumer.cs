@@ -202,7 +202,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         var remaining = options.Limit;
         switch (options.Start.Type)
         {
-            case PositionType.TIMESTAMP:
+            case PositionType.Timestamp:
                 tps.ForEach(tp =>
                     tptList.Add(new(tp, new Timestamp(options.Start.Timestamp, TimestampType.CreateTime))));
 
@@ -213,11 +213,11 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     var limit = remaining / (tps.Count - i);
                     remaining -= limit;
                     var tpo = tpos[i];
-                    partitionOptions.Add(new(new FetchPosition(PositionType.OFFSET, tpo.Offset.Value), limit));
+                    partitionOptions.Add(new(new FetchPosition(PositionType.Offset, tpo.Offset.Value), limit));
                 }
 
                 break;
-            case PositionType.OFFSET:
+            case PositionType.Offset:
                 for (var i = 0; i < tps.Count; i++)
                 {
                     var limit = remaining / (tps.Count - i);
@@ -228,7 +228,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                         offset = -1 - limit;
                     }
 
-                    partitionOptions.Add(new(new(PositionType.OFFSET, offset), limit));
+                    partitionOptions.Add(new(new(PositionType.Offset, offset), limit));
                 }
 
                 break;

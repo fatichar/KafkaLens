@@ -126,7 +126,7 @@ public class ConfluentConsumerTests
             new TopicPartition(topic, 1)
         };
 
-        var options = new FetchOptions(FetchPosition.START, 2); // 1 message per partition (2 partitions)
+        var options = new FetchOptions(FetchPosition.Start, 2); // 1 message per partition (2 partitions)
         var messages = new MessageStream();
 
         // Act

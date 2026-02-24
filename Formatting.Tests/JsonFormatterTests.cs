@@ -1,7 +1,7 @@
 using System.Text;
 using Xunit;
 
-namespace KafkaLens.Formatting;
+namespace KafkaLens.Formatting.Tests;
 
 public class JsonFormatterTests
 {

@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <AssemblyName>KafkaLens.GrpcClient.Tests</AssemblyName>
-    <RootNamespace>KafkaLens.Clients</RootNamespace>
+    <RootNamespace>KafkaLens.Clients.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

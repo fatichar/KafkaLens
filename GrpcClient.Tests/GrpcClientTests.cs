@@ -10,7 +10,7 @@ using GrpcMessage = KafkaLens.Grpc.Message;
 using GrpcTopic = KafkaLens.Grpc.Topic;
 using GrpcCluster = KafkaLens.Grpc.Cluster;
 
-namespace KafkaLens.Clients;
+namespace KafkaLens.Clients.Tests;
 
 public class GrpcClientTests
 {
@@ -170,7 +170,7 @@ public class GrpcClientTests
     [Fact]
     public void ToGrpcFetchOptions_MapsStartAndLimit()
     {
-        var options = new FetchOptions(FetchPosition.START, 50);
+        var options = new FetchOptions(FetchPosition.Start, 50);
 
         var result = InvokeStatic<GrpcFetchOptions>("ToGrpcFetchOptions", options);
 
@@ -180,7 +180,7 @@ public class GrpcClientTests
     [Fact]
     public void ToGrpcFetchOptions_OffsetPosition_SetsOffset()
     {
-        var position = new FetchPosition(PositionType.OFFSET, 100);
+        var position = new FetchPosition(PositionType.Offset, 100);
         var options = new FetchOptions(position, 10);
 
         var result = InvokeStatic<GrpcFetchOptions>("ToGrpcFetchOptions", options);
@@ -191,7 +191,7 @@ public class GrpcClientTests
     [Fact]
     public void ToGrpcFetchOptions_TimestampPosition_SetsTimestamp()
     {
-        var position = new FetchPosition(PositionType.TIMESTAMP, 1704067200000);
+        var position = new FetchPosition(PositionType.Timestamp, 1704067200000);
         var options = new FetchOptions(position, 10);
 
         var result = InvokeStatic<GrpcFetchOptions>("ToGrpcFetchOptions", options);
@@ -260,7 +260,7 @@ public class GrpcClientTests
     [Fact]
     public async Task GetMessagesAsync_Topic_ThrowsNotImplementedException()
     {
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         await Assert.ThrowsAsync<NotImplementedException>(() =>
             client.GetMessagesAsync("cluster", "topic", options));
@@ -269,7 +269,7 @@ public class GrpcClientTests
     [Fact]
     public async Task GetMessagesAsync_Partition_ThrowsNotImplementedException()
     {
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         await Assert.ThrowsAsync<NotImplementedException>(() =>
             client.GetMessagesAsync("cluster", "topic", 0, options));

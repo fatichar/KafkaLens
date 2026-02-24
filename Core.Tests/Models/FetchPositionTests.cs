@@ -9,7 +9,7 @@ public class FetchPositionTests
     public void Constructor_WithOffset_SetsPropertiesCorrectly()
     {
         // Arrange
-        var type = PositionType.OFFSET;
+        var type = PositionType.Offset;
         long value = 12345;
 
         // Act
@@ -25,7 +25,7 @@ public class FetchPositionTests
     public void Constructor_WithTimestamp_SetsPropertiesCorrectly()
     {
         // Arrange
-        var type = PositionType.TIMESTAMP;
+        var type = PositionType.Timestamp;
         long value = 1625097600000;
 
         // Act
@@ -41,10 +41,10 @@ public class FetchPositionTests
     public void Start_IsOffsetZero()
     {
         // Act
-        var fetchPosition = FetchPosition.START;
+        var fetchPosition = FetchPosition.Start;
 
         // Assert
-        Assert.Equal(PositionType.OFFSET, fetchPosition.Type);
+        Assert.Equal(PositionType.Offset, fetchPosition.Type);
         Assert.Equal(0, fetchPosition.Offset);
     }
 
@@ -52,10 +52,10 @@ public class FetchPositionTests
     public void End_IsOffsetMinusOne()
     {
         // Act
-        var fetchPosition = FetchPosition.END;
+        var fetchPosition = FetchPosition.End;
 
         // Assert
-        Assert.Equal(PositionType.OFFSET, fetchPosition.Type);
+        Assert.Equal(PositionType.Offset, fetchPosition.Type);
         Assert.Equal(-1, fetchPosition.Offset);
     }
 
@@ -63,13 +63,13 @@ public class FetchPositionTests
     public void SetOffset_UpdatesProperties()
     {
         // Arrange
-        var fetchPosition = new FetchPosition(PositionType.TIMESTAMP, 12345);
+        var fetchPosition = new FetchPosition(PositionType.Timestamp, 12345);
 
         // Act
         fetchPosition.SetOffset(67890);
 
         // Assert
-        Assert.Equal(PositionType.OFFSET, fetchPosition.Type);
+        Assert.Equal(PositionType.Offset, fetchPosition.Type);
         Assert.Equal(67890, fetchPosition.Offset);
     }
 }

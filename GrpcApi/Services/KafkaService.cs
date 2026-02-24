@@ -14,7 +14,7 @@ public class KafkaService(ILogger<KafkaService> logger, IKafkaLensClient kafkaLe
 {
     #region fields
 
-    private readonly ILogger<KafkaService> _logger = logger;
+    private readonly ILogger<KafkaService> logger = logger;
 
     #endregion
 
@@ -190,9 +190,9 @@ public class KafkaService(ILogger<KafkaService> logger, IKafkaLensClient kafkaLe
     {
         if (request.PositionCase == FetchPosition.PositionOneofCase.Offset)
         {
-            return new Models.FetchPosition(Models.PositionType.OFFSET, (long)request.Offset);
+            return new Models.FetchPosition(Models.PositionType.Offset, (long)request.Offset);
         }
-        return new Models.FetchPosition(Models.PositionType.TIMESTAMP, request.Timestamp.ToDateTimeOffset().ToUnixTimeMilliseconds());
+        return new Models.FetchPosition(Models.PositionType.Timestamp, request.Timestamp.ToDateTimeOffset().ToUnixTimeMilliseconds());
     }
 
     #endregion Convertors

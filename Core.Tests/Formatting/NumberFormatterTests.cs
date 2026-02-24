@@ -1,7 +1,7 @@
 using KafkaLens.Formatting;
 using Xunit;
 
-namespace Core.Tests.Formatting;
+namespace KafkaLens.Core.Tests.Formatting;
 
 public class NumericFormatterTests
 {

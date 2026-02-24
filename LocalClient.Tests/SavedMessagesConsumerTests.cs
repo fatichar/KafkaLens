@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using KafkaLens.Shared.Models;
 using Xunit;
 
-namespace KafkaLens.Clients;
+namespace KafkaLens.Clients.Tests;
 
 public class SavedMessagesConsumerTests : IDisposable
 {
@@ -153,7 +153,7 @@ public class SavedMessagesConsumerTests : IDisposable
         var consumer = new SavedMessagesConsumer(testDir);
         consumer.GetTopics();
 
-        var options = new FetchOptions(FetchPosition.START, 100);
+        var options = new FetchOptions(FetchPosition.Start, 100);
         var stream = consumer.GetMessageStream("my-topic", 0, options);
 
         // Wait briefly for stream to populate
@@ -176,7 +176,7 @@ public class SavedMessagesConsumerTests : IDisposable
         var consumer = new SavedMessagesConsumer(testDir);
         consumer.GetTopics();
 
-        var options = new FetchOptions(FetchPosition.START, 100);
+        var options = new FetchOptions(FetchPosition.Start, 100);
         var stream = consumer.GetMessageStream("my-topic", 0, options);
 
         await Task.Delay(500);
@@ -209,7 +209,7 @@ public class SavedMessagesConsumerTests : IDisposable
         var consumer = new SavedMessagesConsumer(testDir);
         consumer.GetTopics();
 
-        var options = new FetchOptions(FetchPosition.START, 100);
+        var options = new FetchOptions(FetchPosition.Start, 100);
         var stream = consumer.GetMessageStream("my-topic", 0, options);
 
         await Task.Delay(500);
@@ -235,7 +235,7 @@ public class SavedMessagesConsumerTests : IDisposable
         var consumer = new SavedMessagesConsumer(testDir);
         consumer.GetTopics();
 
-        var options = new FetchOptions(FetchPosition.START, 100);
+        var options = new FetchOptions(FetchPosition.Start, 100);
         var stream = consumer.GetMessageStream("my-topic", options);
 
         await Task.Delay(500);
@@ -256,7 +256,7 @@ public class SavedMessagesConsumerTests : IDisposable
             CreateTextMessage("my-topic", 0, i, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), $"k{i}", $"v{i}");
         }
         var consumer = new SavedMessagesConsumer(testDir);
-        var options = new FetchOptions(FetchPosition.START, 5);
+        var options = new FetchOptions(FetchPosition.Start, 5);
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", 0, options);
@@ -275,7 +275,7 @@ public class SavedMessagesConsumerTests : IDisposable
             CreateTextMessage("my-topic", 0, i, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), $"k{i}", $"v{i}");
         }
         var consumer = new SavedMessagesConsumer(testDir);
-        var options = new FetchOptions(new(PositionType.OFFSET, 5), 10);
+        var options = new FetchOptions(new(PositionType.Offset, 5), 10);
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", 0, options);
@@ -295,7 +295,7 @@ public class SavedMessagesConsumerTests : IDisposable
             CreateBinaryMessage("my-topic", 0, i, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), $"k{i}", $"v{i}");
         }
         var consumer = new SavedMessagesConsumer(testDir);
-        var options = new FetchOptions(start: FetchPosition.START, end: new(PositionType.OFFSET, 5));
+        var options = new FetchOptions(start: FetchPosition.Start, end: new(PositionType.Offset, 5));
         options.Limit = 10;
 
         // Act
@@ -320,7 +320,7 @@ public class SavedMessagesConsumerTests : IDisposable
         }
         var consumer = new SavedMessagesConsumer(testDir);
         var startTs = now.AddSeconds(5).ToUnixTimeMilliseconds();
-        var options = new FetchOptions(new(PositionType.TIMESTAMP, startTs), 10);
+        var options = new FetchOptions(new(PositionType.Timestamp, startTs), 10);
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", 0, options);
@@ -342,7 +342,7 @@ public class SavedMessagesConsumerTests : IDisposable
             CreateTextMessage("my-topic", 1, i, DateTimeOffset.UtcNow.AddSeconds(i*2+1).ToUnixTimeMilliseconds(), $"k{i+10}", $"v{i+10}");
         }
         var consumer = new SavedMessagesConsumer(testDir);
-        var options = new FetchOptions(FetchPosition.START, 5);
+        var options = new FetchOptions(FetchPosition.Start, 5);
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", options);
@@ -363,7 +363,7 @@ public class SavedMessagesConsumerTests : IDisposable
         CreateTextMessage("my-topic", 1, 1, now.AddSeconds(3).ToUnixTimeMilliseconds(), "k3", "v3");
         
         var consumer = new SavedMessagesConsumer(testDir);
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
         var stream = consumer.GetMessageStream("my-topic", options);
@@ -388,7 +388,7 @@ public class SavedMessagesConsumerTests : IDisposable
         }
         
         var consumer = new SavedMessagesConsumer(testDir);
-        var options = new FetchOptions(start: new FetchPosition(PositionType.OFFSET, -1 - 3), end: new FetchPosition(PositionType.OFFSET, -1))
+        var options = new FetchOptions(start: new FetchPosition(PositionType.Offset, -1 - 3), end: new FetchPosition(PositionType.Offset, -1))
         {
             Limit = 3
         };

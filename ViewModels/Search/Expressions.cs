@@ -1,5 +1,3 @@
-using System;
-
 namespace KafkaLens.ViewModels.Search;
 
 public class TermExpression(string term) : IFilterExpression

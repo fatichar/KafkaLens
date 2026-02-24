@@ -18,9 +18,9 @@ namespace KafkaLens.ViewModels;
 public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 {
     const int SELECTED_ITEM_DELAY_MS = 3;
-    internal const string UnknownFormatterName = "Unknown";
-    internal const string KeyFormatterNamesSettingsKey = "KeyFormatterNames";
-    internal const string ValueFormatterNamesSettingsKey = "ValueFormatterNames";
+    internal const string UNKNOWN_FORMATTER_NAME = "Unknown";
+    internal const string KEY_FORMATTER_NAMES_SETTINGS_KEY = "KeyFormatterNames";
+    internal const string VALUE_FORMATTER_NAMES_SETTINGS_KEY = "ValueFormatterNames";
 
     private readonly ITopicSettingsService topicSettingsService;
     private readonly ClusterViewModel cluster;
@@ -586,7 +586,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     {
         IMessageFormatter? best = null;
         int maxLength = 0;
-        var allowedValueFormatterNames = ValueFormatterNames.Where(n => n != UnknownFormatterName).ToHashSet(StringComparer.Ordinal);
+        var allowedValueFormatterNames = ValueFormatterNames.Where(n => n != UNKNOWN_FORMATTER_NAME).ToHashSet(StringComparer.Ordinal);
 
         // Disable console output, as some formatters may write to it.
         var originalOut = Console.Out;
@@ -628,7 +628,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     private IMessageFormatter? GuessKeyFormatter(Message message)
     {
         var configuredNames = KeyFormatterNames
-            .Where(n => n != UnknownFormatterName)
+            .Where(n => n != UNKNOWN_FORMATTER_NAME)
             .ToList();
 
         var prioritized = configuredNames
@@ -651,21 +651,21 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     {
         if (string.IsNullOrWhiteSpace(formatterName) ||
             formatterName == "Auto" ||
-            formatterName == UnknownFormatterName)
+            formatterName == UNKNOWN_FORMATTER_NAME)
         {
-            return UnknownFormatterName;
+            return UNKNOWN_FORMATTER_NAME;
         }
 
         return allowedNames.Contains(formatterName)
             ? formatterName
-            : UnknownFormatterName;
+            : UNKNOWN_FORMATTER_NAME;
     }
 
     internal static bool CanApplyFormatterToLoadedMessages(string? formatterName, IList<string> allowedNames)
     {
         return !string.IsNullOrWhiteSpace(formatterName) &&
                formatterName != "Auto" &&
-               formatterName != UnknownFormatterName &&
+               formatterName != UNKNOWN_FORMATTER_NAME &&
                allowedNames.Contains(formatterName);
     }
 
@@ -767,7 +767,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     {
         return string.IsNullOrWhiteSpace(formatterName) ||
                formatterName == "Auto" ||
-               formatterName == UnknownFormatterName;
+               formatterName == UNKNOWN_FORMATTER_NAME;
     }
 
     private static string? ToKnownFormatterOrNull(string? formatterName)
@@ -778,9 +778,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     private IList<string> BuildKeyFormatterNames(ISettingsService settingsService)
     {
         var allowed = FormatterFactory.Instance.GetBuiltInKeyFormatterNames();
-        var configured = ParseConfiguredFormatterNames(settingsService.GetValue(KeyFormatterNamesSettingsKey), allowed);
+        var configured = ParseConfiguredFormatterNames(settingsService.GetValue(KEY_FORMATTER_NAMES_SETTINGS_KEY), allowed);
         var names = configured.Count > 0 ? configured : allowed;
-        var result = new List<string>(names.Count + 1) { UnknownFormatterName };
+        var result = new List<string>(names.Count + 1) { UNKNOWN_FORMATTER_NAME };
         result.AddRange(names);
         return result;
     }
@@ -788,9 +788,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     private IList<string> BuildValueFormatterNames(ISettingsService settingsService)
     {
         var allowed = FormatterNames;
-        var configured = ParseConfiguredFormatterNames(settingsService.GetValue(ValueFormatterNamesSettingsKey), allowed);
+        var configured = ParseConfiguredFormatterNames(settingsService.GetValue(VALUE_FORMATTER_NAMES_SETTINGS_KEY), allowed);
         var names = configured.Count > 0 ? configured : allowed;
-        var result = new List<string>(names.Count + 1) { UnknownFormatterName };
+        var result = new List<string>(names.Count + 1) { UNKNOWN_FORMATTER_NAME };
         result.AddRange(names);
         return result;
     }
@@ -869,18 +869,18 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         switch (FetchPosition)
         {
             case "End":
-                end = Shared.Models.FetchPosition.END;
-                start = new(PositionType.OFFSET, Shared.Models.FetchPosition.END.Offset - FetchCount);
+                end = Shared.Models.FetchPosition.End;
+                start = new(PositionType.Offset, Shared.Models.FetchPosition.End.Offset - FetchCount);
                 break;
             case "Start":
-                start = Shared.Models.FetchPosition.START;
+                start = Shared.Models.FetchPosition.Start;
                 break;
             case "Timestamp":
                 var epochMs = (long)(StartDateTime.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
-                start = new(PositionType.TIMESTAMP, epochMs);
+                start = new(PositionType.Timestamp, epochMs);
                 break;
             case "Offset":
-                start = new(PositionType.OFFSET, long.TryParse(StartOffset, out var offset) ? offset : -1);
+                start = new(PositionType.Offset, long.TryParse(StartOffset, out var offset) ? offset : -1);
                 break;
             default:
                 throw new Exception("Invalid fetch position " + FetchPosition);

@@ -138,7 +138,7 @@ public class ConsumerBaseTests
         var consumer = new TestConsumer(topics, messages: messages);
         consumer.GetTopics(); // pre-load topics
 
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
         var stream = consumer.GetMessageStream("topic1", options);
@@ -155,7 +155,7 @@ public class ConsumerBaseTests
         var consumer = new TestConsumer(topics);
         consumer.GetTopics();
 
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
         var stream = consumer.GetMessageStream("topic1", 0, options);
@@ -177,7 +177,7 @@ public class ConsumerBaseTests
         var consumer = new TestConsumer(topics, messages: messages);
         consumer.GetTopics();
 
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
         var result = await consumer.GetMessagesAsync("topic1", options);
@@ -198,7 +198,7 @@ public class ConsumerBaseTests
         var consumer = new TestConsumer(topics, messages: messages);
         consumer.GetTopics();
 
-        var options = new FetchOptions(FetchPosition.START, 10);
+        var options = new FetchOptions(FetchPosition.Start, 10);
 
         // Act
         var result = await consumer.GetMessagesAsync("topic1", 0, options);

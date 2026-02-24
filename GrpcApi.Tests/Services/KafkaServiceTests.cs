@@ -14,28 +14,27 @@ namespace KafkaLens.GrpcApi.Tests.Services;
 
 public class KafkaServiceTests
 {
-    private readonly IFixture _fixture;
-    private readonly IKafkaLensClient _kafkaLensClient;
-    private readonly ILogger<KafkaService> _logger;
-    private readonly KafkaService _sut;
+    private readonly IFixture fixture;
+    private readonly IKafkaLensClient kafkaLensClient;
+    private readonly KafkaService sut;
 
     public KafkaServiceTests()
     {
-        _fixture = new Fixture().Customize(new AutoNSubstituteCustomization());
-        _kafkaLensClient = _fixture.Freeze<IKafkaLensClient>();
-        _logger = _fixture.Freeze<ILogger<KafkaService>>();
-        _sut = new KafkaService(_logger, _kafkaLensClient);
+        fixture = new Fixture().Customize(new AutoNSubstituteCustomization());
+        kafkaLensClient = fixture.Freeze<IKafkaLensClient>();
+        var logger = fixture.Freeze<ILogger<KafkaService>>();
+        sut = new KafkaService(logger, kafkaLensClient);
     }
 
     [Fact]
     public async Task GetAllClusters_ShouldReturnClusters()
     {
         // Arrange
-        var clusters = _fixture.CreateMany<Models.KafkaCluster>(3).ToList();
-        _kafkaLensClient.GetAllClustersAsync().Returns(clusters);
+        var clusters = fixture.CreateMany<Models.KafkaCluster>(3).ToList();
+        kafkaLensClient.GetAllClustersAsync().Returns(clusters);
 
         // Act
-        var response = await _sut.GetAllClusters(new Empty(), null!);
+        var response = await sut.GetAllClusters(new Empty(), null!);
 
         // Assert
         response.Clusters.Should().HaveCount(clusters.Count);
@@ -51,18 +50,18 @@ public class KafkaServiceTests
     public async Task AddCluster_ShouldAddAndReturnCluster()
     {
         // Arrange
-        var request = _fixture.Create<AddClusterRequest>();
-        var cluster = _fixture.Create<Models.KafkaCluster>();
-        _kafkaLensClient.AddAsync(Arg.Any<Models.NewKafkaCluster>()).Returns(cluster);
+        var request = fixture.Create<AddClusterRequest>();
+        var cluster = fixture.Create<Models.KafkaCluster>();
+        kafkaLensClient.AddAsync(Arg.Any<Models.NewKafkaCluster>()).Returns(cluster);
 
         // Act
-        var response = await _sut.AddCluster(request, null!);
+        var response = await sut.AddCluster(request, null!);
 
         // Assert
         response.Id.Should().Be(cluster.Id);
         response.Name.Should().Be(cluster.Name);
         response.BootstrapServers.Should().Be(cluster.Address);
-        await _kafkaLensClient.Received(1).AddAsync(Arg.Is<Models.NewKafkaCluster>(c =>
+        await kafkaLensClient.Received(1).AddAsync(Arg.Is<Models.NewKafkaCluster>(c =>
             c.Name == request.Name && c.Address == request.BootstrapServers));
     }
 
@@ -70,12 +69,12 @@ public class KafkaServiceTests
     public async Task GetTopics_ShouldReturnTopics()
     {
         // Arrange
-        var request = _fixture.Create<GetTopicsRequest>();
-        var topics = _fixture.CreateMany<Models.Topic>(3).ToList();
-        _kafkaLensClient.GetTopicsAsync(request.ClusterId).Returns(topics);
+        var request = fixture.Create<GetTopicsRequest>();
+        var topics = fixture.CreateMany<Models.Topic>(3).ToList();
+        kafkaLensClient.GetTopicsAsync(request.ClusterId).Returns(topics);
 
         // Act
-        var response = await _sut.GetTopics(request, null!);
+        var response = await sut.GetTopics(request, null!);
 
         // Assert
         response.Topics.Should().HaveCount(topics.Count);
@@ -90,12 +89,12 @@ public class KafkaServiceTests
     public async Task RemoveCluster_ShouldCallRemove()
     {
         // Arrange
-        var request = _fixture.Create<RemoveClusterRequest>();
+        var request = fixture.Create<RemoveClusterRequest>();
 
         // Act
-        await _sut.RemoveCluster(request, null!);
+        await sut.RemoveCluster(request, null!);
 
         // Assert
-        await _kafkaLensClient.Received(1).RemoveClusterByIdAsync(request.ClusterId);
+        await kafkaLensClient.Received(1).RemoveClusterByIdAsync(request.ClusterId);
     }
 }

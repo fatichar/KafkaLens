@@ -1,10 +1,7 @@
-using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading;
 using Avalonia.Headless.XUnit;
-using KafkaLens.Formatting;
 using KafkaLens.Shared;
-using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels.Tests;
 
@@ -407,7 +404,7 @@ public class OpenedClusterViewModelBusinessLogicTests
 
         // Assert
         Assert.Equal(25, options.Limit);
-        Assert.Equal(PositionType.OFFSET, options.Start.Type);
+        Assert.Equal(PositionType.Offset, options.Start.Type);
         Assert.Equal(0, options.Start.Offset);
     }
 
@@ -424,7 +421,7 @@ public class OpenedClusterViewModelBusinessLogicTests
 
         // Assert
         Assert.Equal(10, options.Limit);
-        Assert.Equal(PositionType.TIMESTAMP, options.Start.Type);
+        Assert.Equal(PositionType.Timestamp, options.Start.Type);
     }
 
     [AvaloniaFact]
@@ -441,7 +438,7 @@ public class OpenedClusterViewModelBusinessLogicTests
 
         // Assert
         Assert.Equal(10, options.Limit);
-        Assert.Equal(PositionType.OFFSET, options.Start.Type);
+        Assert.Equal(PositionType.Offset, options.Start.Type);
         Assert.Equal(42, options.Start.Offset);
     }
 
