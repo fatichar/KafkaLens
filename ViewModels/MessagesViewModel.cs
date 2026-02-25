@@ -88,7 +88,11 @@ public sealed class MessagesViewModel: ViewModelBase
         get => lineFilter;
         set
         {
-            lineFilter = value;
+            if (!SetProperty(ref lineFilter, value))
+            {
+                return;
+            }
+
             if (currentMessage != null)
             {
                 currentMessage.LineFilter = lineFilter;

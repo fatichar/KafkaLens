@@ -327,7 +327,10 @@ public class MainViewModelBusinessLogicTests
         settingsService.GetBrowserConfig().Returns(new BrowserConfig
         {
             RestoreTabsOnStartup = true,
-            OpenedClusterIds = new List<string> { "c1" }
+            OpenedTabs = new List<OpenedTabState>
+            {
+                new() { ClusterId = "c1" }
+            }
         });
 
         var vm = CreateViewModel();
@@ -339,6 +342,47 @@ public class MainViewModelBusinessLogicTests
         // Assert
         Assert.Single(vm.OpenedClusters);
         Assert.Equal("c1", vm.OpenedClusters[0].ClusterId);
+    }
+
+    [AvaloniaFact]
+    public async Task LoadClusters_ShouldRestoreOpenedTabUiState()
+    {
+        // Arrange
+        var targetCluster = CreateClusterVm("c1", "Cluster1");
+        clusterFactory.LoadClustersAsync().Returns(
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel> { targetCluster }));
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig
+        {
+            RestoreTabsOnStartup = true,
+            OpenedTabs = new List<OpenedTabState>
+            {
+                new()
+                {
+                    ClusterId = "c1",
+                    MessagesSortColumn = "Offset",
+                    MessagesSortAscending = false,
+                    PositiveFilter = "error",
+                    NegativeFilter = "debug",
+                    LineFilter = "tenantId",
+                    UseObjectFilter = false
+                }
+            }
+        });
+
+        var vm = CreateViewModel();
+
+        // Act
+        await vm.LoadClusters();
+
+        // Assert
+        Assert.Single(vm.OpenedClusters);
+        var opened = vm.OpenedClusters[0];
+        Assert.Equal("Offset", opened.MessagesSortColumn);
+        Assert.False(opened.MessagesSortAscending);
+        Assert.Equal("error", opened.CurrentMessages.PositiveFilter);
+        Assert.Equal("debug", opened.CurrentMessages.NegativeFilter);
+        Assert.Equal("tenantId", opened.CurrentMessages.LineFilter);
+        Assert.False(opened.CurrentMessages.UseObjectFilter);
     }
 }
 

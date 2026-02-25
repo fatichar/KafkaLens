@@ -86,7 +86,7 @@ public partial class PreferencesViewModel : ViewModelBase
 
         // Keep the latest runtime tab state instead of overwriting with a potentially stale dialog snapshot.
         var latestBrowserConfig = settingsService.GetBrowserConfig();
-        BrowserConfig.OpenedClusterIds = latestBrowserConfig.OpenedClusterIds?.ToList() ?? new List<string>();
+        BrowserConfig.OpenedTabs = latestBrowserConfig.OpenedTabs?.ToList() ?? new List<OpenedTabState>();
 
         settingsService.SaveKafkaConfig(KafkaConfig);
         settingsService.SaveBrowserConfig(BrowserConfig);

@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -44,11 +45,12 @@ public partial class MainViewModel : ViewModelBase
     private readonly ISavedMessagesClient savedMessagesClient;
     private DispatcherTimer timer;
     private bool isInitialized;
-    private HashSet<string> pendingRestoreClusterIds = new(StringComparer.Ordinal);
+    private readonly List<OpenedTabState> pendingRestoreTabs = new();
     private bool isRestoreStateInitialized;
     private bool isOpenedClustersSubscriptionInitialized;
     private bool isStartupLoadCompleted;
     private readonly SemaphoreSlim clusterRefreshLock = new(1, 1);
+    private readonly Dictionary<OpenedClusterViewModel, (PropertyChangedEventHandler TabHandler, PropertyChangedEventHandler MessagesHandler)> openedClusterStateHandlers = new();
 
     // commands
     public IRelayCommand EditClustersCommand { get; }
@@ -263,36 +265,35 @@ public partial class MainViewModel : ViewModelBase
         if (!isRestoreStateInitialized)
         {
             var config = settingsService.GetBrowserConfig();
-            if (config.RestoreTabsOnStartup && config.OpenedClusterIds != null)
+            if (config.RestoreTabsOnStartup)
             {
-                pendingRestoreClusterIds = config.OpenedClusterIds
-                    .Where(id => !string.IsNullOrWhiteSpace(id))
-                    .ToHashSet(StringComparer.Ordinal);
+                pendingRestoreTabs.AddRange(config.OpenedTabs.Where(t => !string.IsNullOrWhiteSpace(t.ClusterId)));
             }
 
             isRestoreStateInitialized = true;
         }
 
-        if (pendingRestoreClusterIds.Count == 0)
+        if (pendingRestoreTabs.Count == 0)
         {
             return;
         }
 
-        var restoredNow = new List<string>();
-        foreach (var clusterId in pendingRestoreClusterIds)
+        var remaining = new List<OpenedTabState>();
+        foreach (var tab in pendingRestoreTabs)
         {
-            var cluster = Clusters.FirstOrDefault(c => c.Id == clusterId);
+            var cluster = Clusters.FirstOrDefault(c => c.Id == tab.ClusterId);
             if (cluster != null)
             {
-                OpenCluster(cluster);
-                restoredNow.Add(clusterId);
+                OpenCluster(cluster, tab);
+            }
+            else
+            {
+                remaining.Add(tab);
             }
         }
 
-        foreach (var restoredId in restoredNow)
-        {
-            pendingRestoreClusterIds.Remove(restoredId);
-        }
+        pendingRestoreTabs.Clear();
+        pendingRestoreTabs.AddRange(remaining);
     }
 
     private void ApplyClusterSnapshot(IReadOnlyList<ClusterViewModel> loadedClusters)
@@ -427,12 +428,23 @@ public partial class MainViewModel : ViewModelBase
 
     private void OnOpenedClustersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        var config = settingsService.GetBrowserConfig();
-        if (config.RestoreTabsOnStartup)
+        if (e?.OldItems != null)
         {
-            config.OpenedClusterIds = OpenedClusters.Select(c => c.ClusterId).ToList();
-            settingsService.SaveBrowserConfig(config);
+            foreach (OpenedClusterViewModel opened in e.OldItems)
+            {
+                UnsubscribeFromOpenedClusterState(opened);
+            }
         }
+
+        if (e?.NewItems != null)
+        {
+            foreach (OpenedClusterViewModel opened in e.NewItems)
+            {
+                SubscribeToOpenedClusterState(opened);
+            }
+        }
+
+        PersistOpenedTabsState();
     }
 
     private void UpdateOpenedClusters()
@@ -920,6 +932,11 @@ public partial class MainViewModel : ViewModelBase
 
     internal void OpenCluster(ClusterViewModel clusterViewModel)
     {
+        OpenCluster(clusterViewModel, null);
+    }
+
+    private void OpenCluster(ClusterViewModel clusterViewModel, OpenedTabState? tabState)
+    {
         Log.Information("Opening cluster: {ClusterName}", clusterViewModel.Name);
         var newName = clusterViewModel.Name;
         openedClustersMap.TryGetValue(clusterViewModel.Id, out var alreadyOpened);
@@ -936,10 +953,74 @@ public partial class MainViewModel : ViewModelBase
 
         var openedCluster =
             new OpenedClusterViewModel(settingsService, topicSettingsService, clusterViewModel, newName);
+        openedCluster.ApplyOpenedTabState(tabState);
         alreadyOpened.Add(openedCluster);
         OpenedClusters.Add(openedCluster);
         _ = openedCluster.LoadTopicsAsync();
         SelectedIndex = OpenedClusters.Count - 1;
+    }
+
+    private void PersistOpenedTabsState()
+    {
+        var config = settingsService.GetBrowserConfig();
+        if (!config.RestoreTabsOnStartup)
+        {
+            return;
+        }
+
+        config.OpenedTabs = OpenedClusters.Select(c => c.CaptureOpenedTabState()).ToList();
+        settingsService.SaveBrowserConfig(config);
+    }
+
+    private void SubscribeToOpenedClusterState(OpenedClusterViewModel opened)
+    {
+        if (openedClusterStateHandlers.ContainsKey(opened))
+        {
+            return;
+        }
+
+        PropertyChangedEventHandler tabHandler = (_, args) =>
+        {
+            if (args.PropertyName == nameof(OpenedClusterViewModel.MessagesSortColumn) ||
+                args.PropertyName == nameof(OpenedClusterViewModel.MessagesSortAscending) ||
+                args.PropertyName == nameof(OpenedClusterViewModel.SelectedNode) ||
+                args.PropertyName == nameof(OpenedClusterViewModel.FetchPosition) ||
+                args.PropertyName == nameof(OpenedClusterViewModel.FetchCount) ||
+                args.PropertyName == nameof(OpenedClusterViewModel.FetchBackward) ||
+                args.PropertyName == nameof(OpenedClusterViewModel.StartOffset) ||
+                args.PropertyName == nameof(OpenedClusterViewModel.StartDate) ||
+                args.PropertyName == nameof(OpenedClusterViewModel.StartTimeText))
+            {
+                PersistOpenedTabsState();
+            }
+        };
+
+        PropertyChangedEventHandler messagesHandler = (_, args) =>
+        {
+            if (args.PropertyName == nameof(MessagesViewModel.PositiveFilter) ||
+                args.PropertyName == nameof(MessagesViewModel.NegativeFilter) ||
+                args.PropertyName == nameof(MessagesViewModel.LineFilter) ||
+                args.PropertyName == nameof(MessagesViewModel.UseObjectFilter))
+            {
+                PersistOpenedTabsState();
+            }
+        };
+
+        opened.PropertyChanged += tabHandler;
+        opened.CurrentMessages.PropertyChanged += messagesHandler;
+        openedClusterStateHandlers[opened] = (tabHandler, messagesHandler);
+    }
+
+    private void UnsubscribeFromOpenedClusterState(OpenedClusterViewModel opened)
+    {
+        if (!openedClusterStateHandlers.TryGetValue(opened, out var handlers))
+        {
+            return;
+        }
+
+        opened.PropertyChanged -= handlers.TabHandler;
+        opened.CurrentMessages.PropertyChanged -= handlers.MessagesHandler;
+        openedClusterStateHandlers.Remove(opened);
     }
 
     internal static string GenerateNewName(string clusterName, List<OpenedClusterViewModel> alreadyOpened)

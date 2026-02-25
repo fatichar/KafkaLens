@@ -758,6 +758,85 @@ public class OpenedClusterViewModelBusinessLogicTests
 
     #endregion
 
+    #region Session State
+
+    [AvaloniaFact]
+    public async Task ApplyOpenedTabState_ShouldRestoreSelectedNodeAndFetchOptionsAfterTopicsLoad()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0), new(1) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        vm.IsCurrent = true;
+        mockClient.GetMessageStream("c1", "test-topic", 1, Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new MessageStream());
+
+        var state = new OpenedTabState
+        {
+            ClusterId = "c1",
+            SelectedNodeType = nameof(ITreeNode.NodeType.Partition),
+            SelectedTopicName = "test-topic",
+            SelectedPartitionId = 1,
+            FetchPosition = "Offset",
+            FetchCount = 25,
+            FetchBackward = true,
+            StartOffset = "123",
+            StartDate = new DateTime(2026, 1, 15),
+            StartTimeText = "11:22:33"
+        };
+        vm.ApplyOpenedTabState(state);
+
+        // Act
+        await vm.LoadTopicsAsync();
+
+        // Assert
+        Assert.IsType<PartitionViewModel>(vm.SelectedNode);
+        var partition = (PartitionViewModel)vm.SelectedNode!;
+        Assert.Equal("test-topic", partition.TopicName);
+        Assert.Equal(1, partition.Id);
+        Assert.Equal("Offset", vm.FetchPosition);
+        Assert.Equal(25, vm.FetchCount);
+        Assert.True(vm.FetchBackward);
+        Assert.Equal("123", vm.StartOffset);
+        Assert.Equal(new DateTime(2026, 1, 15), vm.StartDate.Date);
+        Assert.Equal("11:22:33", vm.StartTimeText);
+        mockClient.Received(1).GetMessageStream("c1", "test-topic", 1, Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaFact]
+    public async Task CaptureOpenedTabState_ShouldIncludeSelectedNodeAndFetchPanelValues()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0), new(1) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = false;
+        vm.SelectedNode = vm.Topics[0].Partitions[1];
+        vm.FetchPosition = "Offset";
+        vm.FetchCount = 50;
+        vm.FetchBackward = true;
+        vm.StartOffset = "99";
+        vm.StartDate = new DateTime(2026, 2, 10);
+        vm.StartTimeText = "08:09:10";
+
+        // Act
+        var state = vm.CaptureOpenedTabState();
+
+        // Assert
+        Assert.Equal(nameof(ITreeNode.NodeType.Partition), state.SelectedNodeType);
+        Assert.Equal("test-topic", state.SelectedTopicName);
+        Assert.Equal(1, state.SelectedPartitionId);
+        Assert.Equal("Offset", state.FetchPosition);
+        Assert.Equal(50, state.FetchCount);
+        Assert.True(state.FetchBackward);
+        Assert.Equal("99", state.StartOffset);
+        Assert.Equal(new DateTime(2026, 2, 10), state.StartDate?.Date);
+        Assert.Equal("08:09:10", state.StartTimeText);
+    }
+
+    #endregion
+
     #region OnClusterPropertyChanged
 
     [AvaloniaFact]

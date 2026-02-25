@@ -11,8 +11,7 @@ public class PreferencesViewModelTests
         settingsService.GetBrowserConfig().Returns(new BrowserConfig
         {
             DefaultFetchCount = 10,
-            FetchCounts = new SortedSet<int> { 10, 25, 50 },
-            OpenedClusterIds = new List<string> { "c1" }
+            FetchCounts = new SortedSet<int> { 10, 25, 50 }
         });
 
         var vm = new PreferencesViewModel(settingsService)
@@ -48,7 +47,7 @@ public class PreferencesViewModelTests
     }
 
     [Fact]
-    public void Save_ShouldPreserveLatestOpenedClusterIds()
+    public void Save_ShouldPreserveLatestOpenedTabs()
     {
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
@@ -58,14 +57,21 @@ public class PreferencesViewModelTests
         {
             DefaultFetchCount = 10,
             FetchCounts = new SortedSet<int> { 10, 25, 50 },
-            OpenedClusterIds = new List<string> { "stale-cluster-id" }
+            OpenedTabs = new List<OpenedTabState>
+            {
+                new() { ClusterId = "stale-cluster-id", PositiveFilter = "stale" }
+            }
         };
 
         var latestConfigAtSaveTime = new BrowserConfig
         {
             DefaultFetchCount = 10,
             FetchCounts = new SortedSet<int> { 10, 25, 50 },
-            OpenedClusterIds = new List<string> { "c1", "c2" }
+            OpenedTabs = new List<OpenedTabState>
+            {
+                new() { ClusterId = "c1", PositiveFilter = "err" },
+                new() { ClusterId = "c2", PositiveFilter = "warn" }
+            }
         };
 
         settingsService.GetBrowserConfig().Returns(configFromDialogOpen, latestConfigAtSaveTime);
@@ -81,6 +87,10 @@ public class PreferencesViewModelTests
         // Assert
         settingsService.Received(1).SaveBrowserConfig(
             Arg.Is<BrowserConfig>(config =>
-                config.OpenedClusterIds.SequenceEqual(new[] { "c1", "c2" })));
+                config.OpenedTabs.Count == 2 &&
+                config.OpenedTabs[0].ClusterId == "c1" &&
+                config.OpenedTabs[0].PositiveFilter == "err" &&
+                config.OpenedTabs[1].ClusterId == "c2" &&
+                config.OpenedTabs[1].PositiveFilter == "warn"));
     }
 }
