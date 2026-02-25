@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Linq;
+using System;
 using Avalonia.Input;
 using Avalonia.Controls;
 using Avalonia.Styling;
@@ -62,6 +63,7 @@ public partial class Browser : UserControl
         if (Context != null)
         {
             Context.CurrentMessages.PropertyChanged += OnCurrentMessagesChanged;
+            ApplySavedSort(Context);
 
             // Restore display if there's already a selected message
             var message = Context.CurrentMessages.CurrentMessage;
@@ -124,6 +126,41 @@ public partial class Browser : UserControl
 
         var grid = (DataGrid)sender;
         Context.SelectedMessages = grid.SelectedItems.Cast<MessageViewModel>().ToList();
+    }
+
+    private void MessagesGrid_OnSorting(object? sender, DataGridColumnEventArgs e)
+    {
+        if (Context == null || e.Column == null)
+        {
+            return;
+        }
+
+        var clickedColumn = e.Column.Header?.ToString();
+        var sameColumn = string.Equals(Context.MessagesSortColumn, clickedColumn, StringComparison.Ordinal);
+        var nextAscending = !(sameColumn && Context.MessagesSortAscending == true);
+
+        Context.MessagesSortColumn = clickedColumn;
+        Context.MessagesSortAscending = nextAscending;
+    }
+
+    private void ApplySavedSort(OpenedClusterViewModel context)
+    {
+        if (string.IsNullOrWhiteSpace(context.MessagesSortColumn) || context.MessagesSortAscending == null)
+        {
+            return;
+        }
+
+        var column = MessagesGrid.Columns.FirstOrDefault(c =>
+            string.Equals(c.Header?.ToString(), context.MessagesSortColumn, StringComparison.Ordinal));
+
+        if (column == null)
+        {
+            return;
+        }
+
+        column.Sort(context.MessagesSortAscending.Value
+            ? ListSortDirection.Ascending
+            : ListSortDirection.Descending);
     }
 
     private void SetText(string message)

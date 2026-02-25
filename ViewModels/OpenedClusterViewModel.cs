@@ -514,6 +514,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public static FormatterFactory FormatterFactory { get; set; } = null!;
     public IList<MessageViewModel> SelectedMessages { get; set; } = new List<MessageViewModel>();
     public bool IsCurrent { get; set; }
+    public string? MessagesSortColumn { get; set; }
+    public bool? MessagesSortAscending { get; set; }
 
     MessageStream? messages = null;
     private readonly List<IMessageLoadListener> messageLoadListeners = new();

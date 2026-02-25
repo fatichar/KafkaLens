@@ -37,6 +37,7 @@
                               CanUserReorderColumns="True"
                               CanUserResizeColumns="True"
                               LoadingRow="messagesGrid_LoadingRow"
+                              Sorting="MessagesGrid_OnSorting"
                               CanUserSortColumns="True"
                               RowHeaderWidth="50"
                               IsReadOnly="True"
