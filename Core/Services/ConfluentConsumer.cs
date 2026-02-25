@@ -127,8 +127,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     protected override async Task GetMessagesAsync(string topicName, FetchOptions options, MessageStream messages,
         CancellationToken cancellationToken)
     {
-        ValidateTopic(topicName);
-        var topic = Topics[topicName];
+        var topic = ValidateTopic(topicName);
         var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id))
             .ToList();
 

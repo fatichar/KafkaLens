@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using KafkaLens.Core.Services;
@@ -122,6 +123,41 @@ public class ConsumerBaseTests
         Assert.NotNull(ex.InnerException);
     }
 
+    [Fact]
+    public void GetTopics_WhenFetchReturnsDuplicateTopicNames_FiltersDuplicates()
+    {
+        // Arrange
+        var topics = new List<Topic>
+        {
+            new Topic("topic1", 1),
+            new Topic("topic1", 2),
+            new Topic("topic2", 1)
+        };
+        var consumer = new TestConsumer(topics);
+
+        // Act
+        var result = consumer.GetTopics();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Equal(1, result.Count(t => t.Name == "topic1"));
+        Assert.Equal(1, result.Count(t => t.Name == "topic2"));
+    }
+
+    [Fact]
+    public async Task GetTopics_CalledConcurrently_LoadsOnlyOnce()
+    {
+        // Arrange
+        var consumer = new ConcurrentLoadConsumer(new List<Topic> { new Topic("topic1", 1) });
+
+        // Act
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() => consumer.GetTopics())));
+
+        // Assert
+        Assert.All(results, topics => Assert.Single(topics));
+        Assert.Equal(1, consumer.FetchCount);
+    }
+
     #endregion GetTopics
 
     #region ValidateTopic
@@ -239,6 +275,33 @@ public class ConsumerBaseTests
         }
 
         protected override Task GetMessagesAsync(string topicName, int partition, FetchOptions options, MessageStream messages, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private class ConcurrentLoadConsumer(List<Topic> topics) : ConsumerBase
+    {
+        private int fetchCount;
+        public int FetchCount => fetchCount;
+
+        public override bool ValidateConnection() => true;
+
+        protected override List<Topic> FetchTopics()
+        {
+            Interlocked.Increment(ref fetchCount);
+            Thread.Sleep(50);
+            return topics;
+        }
+
+        protected override Task GetMessagesAsync(string topicName, FetchOptions options, MessageStream messages,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected override Task GetMessagesAsync(string topicName, int partition, FetchOptions options,
+            MessageStream messages, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
