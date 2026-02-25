@@ -49,7 +49,7 @@ public class ConsumerBaseTests
             LastRefreshTime = time;
         }
 
-        public Dictionary<string, Topic> GetTopicsDict() => Topics;
+        public IDictionary<string, Topic> GetTopicsDict() => Topics;
     }
 
     #region GetTopics

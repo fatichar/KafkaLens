@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using KafkaLens.Shared.Models;
 using Serilog;
 
@@ -6,7 +7,7 @@ namespace KafkaLens.Core.Services;
 public abstract class ConsumerBase : IKafkaConsumer
 {
     protected readonly TimeSpan MaxRefreshInterval = TimeSpan.FromMinutes(60);
-    protected Dictionary<string, Topic> Topics { get; set; } = new();
+    protected ConcurrentDictionary<string, Topic> Topics { get; set; } = new();
     private readonly object topicsLock = new();
 
     protected DateTime LastRefreshTime { get; set; } = DateTime.Now;
@@ -15,31 +16,29 @@ public abstract class ConsumerBase : IKafkaConsumer
 
     public virtual List<Topic> GetTopics()
     {
-        lock (topicsLock)
+        // if topics were loaded in the last 60 minutes, return them
+        // otherwise, refresh the topics
+        if (!RecentlyRefreshed() || Topics.IsEmpty)
         {
-            // if topics were loaded in the last 5 minutes, return them
-            // otherwise, refresh the topics
-            if (!RecentlyRefreshed())
+            lock (topicsLock)
             {
-                Topics.Clear();
-            }
-
-            if (Topics.Count == 0)
-            {
-                try
+                if (!RecentlyRefreshed() || Topics.IsEmpty)
                 {
-                    LoadTopics();
-                    LastRefreshTime = DateTime.Now;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw new Exception("Failed to load topics", e);
+                    try
+                    {
+                        LoadTopics();
+                        LastRefreshTime = DateTime.Now;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw new Exception("Failed to load topics", e);
+                    }
                 }
             }
-
-            return Topics.Values.ToList();
         }
+
+        return Topics.Values.ToList();
     }
 
     private bool RecentlyRefreshed()
@@ -52,14 +51,18 @@ public abstract class ConsumerBase : IKafkaConsumer
         Log.Information("Loading topics...");
         var topics = FetchTopics();
         var duplicatesCount = 0;
+
+        var newTopics = new ConcurrentDictionary<string, Topic>();
         foreach (var topic in topics)
         {
-            if (!Topics.TryAdd(topic.Name, topic))
+            if (!newTopics.TryAdd(topic.Name, topic))
             {
                 duplicatesCount++;
                 Log.Warning("Duplicate topic name encountered while loading topics: {TopicName}", topic.Name);
             }
         }
+
+        Topics = newTopics;
 
         if (duplicatesCount > 0)
         {
@@ -144,18 +147,21 @@ public abstract class ConsumerBase : IKafkaConsumer
 
     protected Topic ValidateTopic(string topicName)
     {
-        lock (topicsLock)
+        if (Topics.IsEmpty || !Topics.ContainsKey(topicName))
         {
-            if (Topics.Count == 0)
+            lock (topicsLock)
             {
-                LoadTopics();
-                LastRefreshTime = DateTime.Now;
+                if (Topics.IsEmpty || !Topics.ContainsKey(topicName))
+                {
+                    LoadTopics();
+                    LastRefreshTime = DateTime.Now;
+                }
             }
+        }
 
-            if (Topics.TryGetValue(topicName, out var topic))
-            {
-                return topic;
-            }
+        if (Topics.TryGetValue(topicName, out var topic))
+        {
+            return topic;
         }
 
         throw new Exception($"Topic {topicName} does not exist.");

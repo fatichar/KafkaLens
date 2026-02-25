@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using KafkaLens.Core.Services;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
@@ -14,7 +15,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     private readonly Dictionary<string, ClusterInfo> clusters = new();
 
     // key = clusterInfo id, value = kafka consumer
-    private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
+    private readonly ConcurrentDictionary<string, IKafkaConsumer> consumers = new();
 
     #region Create
 
@@ -41,9 +42,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     {
         try
         {
-            var consumer = CreateConsumer(clusterInfo.Address);
-            consumers.Add(clusterInfo.Id, consumer);
-            return consumer;
+            return consumers.GetOrAdd(clusterInfo.Id, _ => CreateConsumer(clusterInfo.Address));
         }
         catch (Exception e)
         {
@@ -185,13 +184,9 @@ public class SavedMessagesClient : ISavedMessagesClient
     [return: NotNull]
     private IKafkaConsumer GetConsumer(string clusterId)
     {
-        if (consumers.TryGetValue(clusterId, out var consumer))
-        {
-            return consumer;
-        }
         if (clusters.TryGetValue(clusterId, out var cluster))
         {
-            return Connect(cluster);
+            return consumers.GetOrAdd(clusterId, _ => Connect(cluster));
         }
         throw new ArgumentException("Unknown clusterInfo", nameof(clusterId));
     }

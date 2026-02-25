@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
@@ -21,7 +22,7 @@ public class SharedClient(
     private ReadOnlyDictionary<string, Shared.Entities.ClusterInfo> Clusters => infoRepository.GetAll();
 
     // key = clusterInfo id, value = kafka consumer
-    private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
+    private readonly ConcurrentDictionary<string, IKafkaConsumer> consumers = new();
 
     #region Create
     public Task<bool> ValidateConnectionAsync(string address)
@@ -45,11 +46,7 @@ public class SharedClient(
         var cluster = Clusters.Values.FirstOrDefault(c => c.Address == address);
         if (cluster != null)
         {
-            if (consumers.TryGetValue(cluster.Id, out var consumer))
-            {
-                return consumer;
-            }
-            return Connect(cluster);
+            return consumers.GetOrAdd(cluster.Id, _ => CreateConsumer(cluster.Address));
         }
         // Address not associated with any known cluster, create a temporary consumer
         return consumerFactory.CreateNew(address);
@@ -77,9 +74,7 @@ public class SharedClient(
     {
         try
         {
-            var consumer = CreateConsumer(clusterInfo.Address);
-            consumers.Add(clusterInfo.Id, consumer);
-            return consumer;
+            return consumers.GetOrAdd(clusterInfo.Id, _ => CreateConsumer(clusterInfo.Address));
         }
         catch (Exception e)
         {
@@ -236,13 +231,9 @@ public class SharedClient(
 
     private IKafkaConsumer GetConsumer(string clusterId)
     {
-        if (consumers.TryGetValue(clusterId, out var consumer))
-        {
-            return consumer;
-        }
         if (Clusters.TryGetValue(clusterId, out var cluster))
         {
-            return Connect(cluster);
+            return consumers.GetOrAdd(clusterId, _ => Connect(cluster));
         }
         throw new ArgumentException("Unknown clusterInfo", nameof(clusterId));
     }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using KafkaLens.Core.Utils;
@@ -15,11 +16,87 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     private const int MaxConsecutiveEmptyPolls = 3;
     private readonly KafkaConfig kafkaConfig;
 
-    protected IConsumer<byte[], byte[]> Consumer { get; }
-
+    private readonly ConsumerPool consumerPool;
     protected ConsumerConfig Config { get; set; }
 
     protected IAdminClient AdminClient { get; }
+
+    private class ConsumerPool : IDisposable
+    {
+        private readonly Func<IConsumer<byte[], byte[]>> factory;
+        private readonly ConcurrentBag<IConsumer<byte[], byte[]>> pool = new();
+        private readonly SemaphoreSlim semaphore;
+
+        public ConsumerPool(int maxLimit, Func<IConsumer<byte[], byte[]>> factory)
+        {
+            this.factory = factory;
+            semaphore = new SemaphoreSlim(maxLimit, maxLimit);
+
+            // Warm-up: Pre-create one consumer so the very first fetch doesn't pay the initialization penalty.
+            // This happens in the background.
+            Task.Run(() =>
+            {
+                try
+                {
+                    var consumer = factory();
+                    pool.Add(consumer);
+                }
+                catch (Exception e)
+                {
+                    Log.Error(e, "Failed to warm up consumer pool");
+                }
+            });
+        }
+
+        public async Task<ConsumerLease> LeaseAsync(CancellationToken ct)
+        {
+            await semaphore.WaitAsync(ct);
+            if (!pool.TryTake(out var consumer))
+            {
+                consumer = factory();
+            }
+            return new ConsumerLease(consumer, this);
+        }
+
+        public void Return(IConsumer<byte[], byte[]> consumer)
+        {
+            pool.Add(consumer);
+            semaphore.Release();
+        }
+
+        public void Dispose()
+        {
+            foreach (var c in pool)
+            {
+                c.Dispose();
+            }
+            pool.Clear();
+            semaphore.Dispose();
+        }
+    }
+
+    private class ConsumerLease : IAsyncDisposable, IDisposable
+    {
+        public IConsumer<byte[], byte[]> Consumer { get; }
+        private readonly ConsumerPool pool;
+
+        public ConsumerLease(IConsumer<byte[], byte[]> consumer, ConsumerPool pool)
+        {
+            Consumer = consumer;
+            this.pool = pool;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            pool.Return(Consumer);
+            return ValueTask.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            pool.Return(Consumer);
+        }
+    }
 
     #region Create
 
@@ -33,7 +110,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         Config = CreateConsumerConfig(url);
         Config.Set("log_level", "0");
         AdminClient = CreateAdminClient(Config.BootstrapServers);
-        Consumer = CreateConsumer();
+        consumerPool = new ConsumerPool(10, CreateConsumer); // Max limit of 10 concurrent consumers
     }
 
     protected virtual IConsumer<byte[], byte[]> CreateConsumer()
@@ -55,7 +132,8 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             EnableAutoCommit = kafkaConfig.EnableAutoCommit,
             FetchMaxBytes = kafkaConfig.FetchMaxBytes,
             StatisticsIntervalMs = kafkaConfig.StatisticsIntervalMs,
-            LogQueue = true
+            LogQueue = true,
+            EnablePartitionEof = true
         };
     }
 
@@ -138,7 +216,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         MessageStream messages, CancellationToken cancellationToken)
     {
         var watermarks = await QueryWatermarkOffsetsAsync(tps, cancellationToken);
-        var partitionOptions = CreateOptionsForPartition(tps, options);
+        var partitionOptions = await CreateOptionsForPartitionAsync(tps, options, cancellationToken);
         var tpos = CreateTopicPartitionOffsets(tps, watermarks, partitionOptions);
 
         var tpoLimits = new List<(TopicPartitionOffset Tpo, int Limit)>();
@@ -154,35 +232,26 @@ class ConfluentConsumer : ConsumerBase, IDisposable
     private async Task FetchMessagesAsync(IReadOnlyList<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
         MessageStream messages, CancellationToken cancellationToken)
     {
-        if (tpoLimits.Count == 1)
+        // Limit concurrency to avoid resource exhaustion
+        var parallelOptions = new ParallelOptions
         {
-            lock (Consumer)
-            {
-                Consumer.Assign(tpoLimits[0].Tpo);
-                FetchMessages(Consumer, messages, tpoLimits[0].Limit, cancellationToken);
-                Consumer.Unassign();
-            }
-        }
-        else
-        {
-            // Limit concurrency to avoid resource exhaustion (e.g., too many open connections/files)
-            var parallelOptions = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 20,
-                CancellationToken = cancellationToken
-            };
+            MaxDegreeOfParallelism = 20,
+            CancellationToken = cancellationToken
+        };
 
-            await Parallel.ForEachAsync(tpoLimits, parallelOptions, async (tpoLimit, ct) =>
+        await Parallel.ForEachAsync(tpoLimits, parallelOptions, async (tpoLimit, ct) =>
+        {
+            await using var lease = await consumerPool.LeaseAsync(ct);
+            var consumer = lease.Consumer;
+
+            // We wrap blocking Consume calls in Task.Run to ensure we don't block the Parallel.ForEachAsync scheduler
+            await Task.Run(() =>
             {
-                // We wrap blocking Consume calls in Task.Run to ensure we don't block the Parallel.ForEachAsync scheduler
-                await Task.Run(() =>
-                {
-                    using var consumer = CreateConsumer();
-                    consumer.Assign(tpoLimit.Tpo);
-                    FetchMessages(consumer, messages, tpoLimit.Limit, ct);
-                }, ct);
-            });
-        }
+                consumer.Assign(tpoLimit.Tpo);
+                FetchMessages(consumer, messages, tpoLimit.Limit, ct);
+                consumer.Unassign();
+            }, ct);
+        });
     }
 
     private List<Confluent.Kafka.TopicPartitionOffset> CreateTopicPartitionOffsets(
@@ -201,7 +270,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return tpos;
     }
 
-    private List<FetchOptions> CreateOptionsForPartition(List<Confluent.Kafka.TopicPartition> tps, FetchOptions options)
+    private async Task<List<FetchOptions>> CreateOptionsForPartitionAsync(List<Confluent.Kafka.TopicPartition> tps, FetchOptions options, CancellationToken cancellationToken)
     {
         var partitionOptions = new List<FetchOptions>();
         var tptList = new List<TopicPartitionTimestamp>();
@@ -212,7 +281,11 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                 tps.ForEach(tp =>
                     tptList.Add(new(tp, new Timestamp(options.Start.Timestamp, TimestampType.CreateTime))));
 
-                var tpos = Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout);
+                List<TopicPartitionOffset> tpos;
+                await using (var lease = await consumerPool.LeaseAsync(cancellationToken))
+                {
+                    tpos = lease.Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout);
+                }
 
                 for (var i = 0; i < tpos.Count; i++)
                 {
@@ -254,73 +327,76 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return partitionOptions;
     }
 
-    private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount,
-        CancellationToken cancellationToken)
-    {
-        if (requiredCount <= 0)
+        private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount,
+            CancellationToken cancellationToken)
         {
-            return 0;
-        }
-
-        var batch = new List<Message>(100);
-        var lastFlushTime = DateTime.Now;
-        var batchInterval = TimeSpan.FromMilliseconds(100);
-        var consecutiveEmptyPolls = 0;
-
-        lock (consumer)
-        {
-            while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
+            if (requiredCount <= 0)
             {
-                try
+                return 0;
+            }
+
+            var batch = new List<Message>(100);
+            var lastFlushTime = DateTime.Now;
+            var batchInterval = TimeSpan.FromMilliseconds(100);
+            var consecutiveEmptyPolls = 0;
+            // Increase max consecutive empty polls because EnablePartitionEof is true.
+            // It will receive an EOF immediately if there are no messages.
+            // Null returns mean the consumer is still connecting or waiting for metadata.
+            var maxEmptyPolls = 10;
+
+            lock (consumer)
+            {
+                while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
                 {
-                    var result = consumer.Consume(consumeTimeout);
-                    if (result == null)
+                    try
                     {
-                        consecutiveEmptyPolls++;
-                        Log.Information("Got null message (poll timeout) {Current}/{Max}", consecutiveEmptyPolls, MaxConsecutiveEmptyPolls);
-                        if (consecutiveEmptyPolls >= MaxConsecutiveEmptyPolls)
+                        var result = consumer.Consume(consumeTimeout);
+                        if (result == null)
                         {
-                            Log.Information("Stopping fetch after {Count} consecutive poll timeouts", consecutiveEmptyPolls);
+                            consecutiveEmptyPolls++;
+                            Log.Debug("Waiting for consumer connection/metadata (poll timeout {Current}/{Max})", consecutiveEmptyPolls, maxEmptyPolls);
+                            if (consecutiveEmptyPolls >= maxEmptyPolls)
+                            {
+                                Log.Information("Stopping fetch after {Count} consecutive empty polls (connection timeout)", consecutiveEmptyPolls);
+                                break;
+                            }
+                            continue;
+                        }
+
+                        consecutiveEmptyPolls = 0;
+
+                        if (result.IsPartitionEOF)
+                        {
+                            Log.Information("End of partition reached");
                             break;
                         }
-                        continue;
+
+                        var message = MessageConverter.CreateMessage(result);
+                        batch.Add(message);
+                        --requiredCount;
+
+                        if (batch.Count >= 100 || DateTime.Now - lastFlushTime >= batchInterval)
+                        {
+                            FlushBatch(messages, batch);
+                            lastFlushTime = DateTime.Now;
+                        }
                     }
-
-                    consecutiveEmptyPolls = 0;
-
-                    if (result.IsPartitionEOF)
+                    catch (ConsumeException e)
                     {
-                        Log.Information("End of partition reached");
+                        Log.Error(e, "Error while consuming message");
                         break;
                     }
-
-                    var message = MessageConverter.CreateMessage(result);
-                    batch.Add(message);
-                    --requiredCount;
-
-                    if (batch.Count >= 100 || DateTime.Now - lastFlushTime >= batchInterval)
+                    catch (Exception e)
                     {
-                        FlushBatch(messages, batch);
-                        lastFlushTime = DateTime.Now;
+                        Log.Error(e, "Error while consuming message");
+                        break;
                     }
                 }
-                catch (ConsumeException e)
-                {
-                    Log.Error(e, "Error while consuming message");
-                    break;
-                }
-                catch (Exception e)
-                {
-                    Log.Error(e, "Error while consuming message");
-                    break;
-                }
             }
+
+            FlushBatch(messages, batch);
+            return requiredCount;
         }
-
-        FlushBatch(messages, batch);
-        return requiredCount;
-    }
-
     private void FlushBatch(MessageStream messages, List<Message> batch)
     {
         if (batch.Count > 0)
@@ -401,10 +477,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
 
     public override void Dispose()
     {
-        lock (Consumer)
-        {
-            Consumer.Dispose();
-        }
+        consumerPool.Dispose();
         AdminClient.Dispose();
         base.Dispose();
     }

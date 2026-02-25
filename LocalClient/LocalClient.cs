@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using KafkaLens.Core.Services;
 using KafkaLens.Core.Utils;
@@ -21,7 +22,7 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     private ReadOnlyDictionary<string, ClusterInfo> Clusters => infoRepository.GetAll();
 
     // key = clusterInfo id, value = kafka consumer
-    private readonly IDictionary<string, IKafkaConsumer> consumers = new Dictionary<string, IKafkaConsumer>();
+    private readonly ConcurrentDictionary<string, IKafkaConsumer> consumers = new();
 
     #region Create
     public Task<bool> ValidateConnectionAsync(string address)
@@ -42,17 +43,10 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
 
     private IKafkaConsumer GetOrCreateConsumerByAddress(string address)
     {
-        lock (consumers)
+        var cluster = Clusters.Values.FirstOrDefault(c => c.Address == address);
+        if (cluster != null)
         {
-            var cluster = Clusters.Values.FirstOrDefault(c => c.Address == address);
-            if (cluster != null)
-            {
-                if (consumers.TryGetValue(cluster.Id, out var consumer))
-                {
-                    return consumer;
-                }
-                return Connect(cluster);
-            }
+            return consumers.GetOrAdd(cluster.Id, _ => Connect(cluster));
         }
         // Address not associated with any known cluster, create a temporary consumer
         return consumerFactory.CreateNew(address);
@@ -80,9 +74,7 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     {
         try
         {
-            var consumer = CreateConsumer(clusterInfo.Address);
-            consumers.Add(clusterInfo.Id, consumer);
-            return consumer;
+            return consumers.GetOrAdd(clusterInfo.Id, _ => CreateConsumer(clusterInfo.Address));
         }
         catch (Exception e)
         {
@@ -112,19 +104,16 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
         return Task.Run(() => Clusters.Values.Select(c =>
         {
             var model = ToModel(c);
-            lock (consumers)
+            if (consumers.TryGetValue(c.Id, out var consumer))
             {
-                if (consumers.TryGetValue(c.Id, out var consumer))
+                try
                 {
-                    try
-                    {
-                        model.IsConnected = consumer.ValidateConnection();
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Debug("ValidateConnection failed for cluster {ClusterName}: {Message}", c.Name, e.Message);
-                        model.IsConnected = false;
-                    }
+                    model.IsConnected = consumer.ValidateConnection();
+                }
+                catch (Exception e)
+                {
+                    Log.Debug("ValidateConnection failed for cluster {ClusterName}: {Message}", c.Name, e.Message);
+                    model.IsConnected = false;
                 }
             }
             return model;
@@ -245,16 +234,9 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
 
     private IKafkaConsumer GetConsumer(string clusterId)
     {
-        lock (consumers)
+        if (Clusters.TryGetValue(clusterId, out var cluster))
         {
-            if (consumers.TryGetValue(clusterId, out var consumer))
-            {
-                return consumer;
-            }
-            if (Clusters.TryGetValue(clusterId, out var cluster))
-            {
-                return Connect(cluster);
-            }
+            return consumers.GetOrAdd(clusterId, _ => Connect(cluster));
         }
         throw new ArgumentException("Unknown clusterInfo", nameof(clusterId));
     }

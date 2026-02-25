@@ -24,13 +24,19 @@ Users can open the same cluster in multiple tabs and trigger fetches concurrentl
 - Replace `Dictionary<string, IKafkaConsumer>` with `ConcurrentDictionary<string, IKafkaConsumer>`.
 - Use `GetOrAdd` for creation paths.
 
-2. Serialize shared-consumer operations
-- Add a per-`ConfluentConsumer` lock or `SemaphoreSlim`.
-- Protect all operations touching the shared `Consumer` instance (assign/consume/unassign, offsets-for-times, dispose path).
+2. Implement a Dynamic Consumer Pool with a Maximum Limit (instead of serializing a shared consumer)
+- **The Issue:** Serializing all operations on a single shared `Consumer` instance per cluster prevents true parallel fetching (Tab B blocks while Tab A fetches).
+- **Alternative:** Implement a dynamic pool of consumers (e.g., `ConcurrentBag<IConsumer>`) with a maximum limit. 
+    - The pool starts empty. When a tab requests a consumer, provide one if available.
+    - If the pool is empty and the number of created consumers is below the maximum limit, instantiate a new consumer.
+    - If the maximum limit is reached, the request waits asynchronously (`SemaphoreSlim.WaitAsync()`) until a consumer is returned.
+    - This allows true concurrent fetching against the same cluster without thread-safety issues, while protecting against resource exhaustion.
+- **Locking:** Where synchronization is still necessary (e.g., managing the pool itself or specific shared resources), explicitly favor `SemaphoreSlim.WaitAsync()` over the `lock` keyword to avoid thread-pool starvation or UI freezing during async network I/O.
+- **Cancellation:** Ensure all concurrent operations accept a `CancellationToken` so that if a user closes a tab, the `SemaphoreSlim` or pooled consumer is released immediately.
 
 3. Protect topic cache
-- Guard topic refresh/load and `Topics` mutations with a lock.
-- Ensure `ValidateTopic` and refresh cannot interleave unsafely.
+- Replace `Dictionary` for topic metadata with `ConcurrentDictionary` to allow concurrent reads while safely handling updates.
+- Ensure `ValidateTopic` and refresh paths use thread-safe update methods (like `AddOrUpdate` or `GetOrAdd`) to prevent unsafe interleaving.
 
 4. Keep null-poll retry behavior
 - Retain retry-on-timeout logic added in fetch loop to avoid false empty results from transient empty polls.
@@ -39,3 +45,4 @@ Users can open the same cluster in multiple tabs and trigger fetches concurrentl
 - Concurrent topic fetches on same cluster should not throw or deadlock.
 - Concurrent topic + partition fetches should return stable results.
 - No regression for single-tab latency and correctness.
+- Fast cancellation: Closing a tab during a fetch should immediately release resources for other tabs without leaving orphaned locks.
