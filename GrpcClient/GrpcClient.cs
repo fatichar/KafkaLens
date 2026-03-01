@@ -81,14 +81,16 @@ public class GrpcClient : IKafkaLensClient
                 DateTime.UtcNow.AddSeconds(5));
             var clusters = response.Clusters.Select(ToClusterModel).ToList();
 
-            // For clusters where the server didn't provide IsConnected,
-            // try ValidateConnectionAsync as a fallback
-            var needsCheck = clusters.Where(c => !response.Clusters
-                .First(rc => rc.Id == c.Id).HasIsConnected).ToList();
-            await Task.WhenAll(needsCheck.Select(async c =>
+            // Set initial connection state to false for clusters missing it.
+            // MainViewModel will handle the background connectivity check.
+            foreach (var cluster in clusters)
             {
-                c.IsConnected = await ValidateConnectionAsync(c.Address);
-            }));
+                var grpcCluster = response.Clusters.First(rc => rc.Id == cluster.Id);
+                if (!grpcCluster.HasIsConnected)
+                {
+                    cluster.IsConnected = false;
+                }
+            }
 
             return clusters;
         }

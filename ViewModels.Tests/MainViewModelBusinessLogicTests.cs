@@ -23,6 +23,7 @@ public class MainViewModelBusinessLogicTests
     {
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         clusterFactory.LoadClustersAsync().Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
+        MainViewModel.ConfirmRestoreTabs = (count) => Task.FromResult(true);
     }
 
     private MainViewModel CreateViewModel(ObservableCollection<ClusterViewModel>? clusters = null)
@@ -385,4 +386,3 @@ public class MainViewModelBusinessLogicTests
         Assert.False(opened.CurrentMessages.UseObjectFilter);
     }
 }
-

@@ -44,6 +44,11 @@ developer productivity.
 -   Other platforms: zip distribution.
 -   Icons and assets must be embedded properly.
 
+## Communication & General Rules
+
+-   **Discuss Before Doing:** Do not jump to implementation when the user asks a question or proposes an idea. Always answer questions and discuss the approach first.
+-   **Execution:** Do not ask the user to run the application. The user will run the application themselves.
+
 ## Change Approval Policy (Mandatory)
 
 Agents MUST obtain explicit approval before implementing any non-trivial

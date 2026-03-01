@@ -42,6 +42,17 @@ public partial class MainView : UserControl
             var box = MessageBoxManager.GetMessageBoxStandard(title, message, ButtonEnum.Ok);
             box.ShowAsync();
         };
+
+        MainViewModel.ConfirmRestoreTabs = async (count) =>
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "Restore Tabs",
+                $"You had {count} tabs open in the previous session, restore them?",
+                ButtonEnum.YesNo);
+
+            var result = await box.ShowAsync();
+            return result == ButtonResult.Yes;
+        };
     }
 
     private void OnShowEditClustersDialog()

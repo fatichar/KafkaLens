@@ -78,6 +78,16 @@
 
           <TextBlock Text="Behavior" FontWeight="Bold" Margin="0,10,0,0"/>
           <CheckBox IsChecked="{Binding BrowserConfig.RestoreTabsOnStartup}" Content="Restore open tabs on startup"/>
+
+          <TextBlock Text="Background Connection Check" FontWeight="Bold" Margin="0,10,0,0"/>
+          <StackPanel Margin="10,5,0,0" Spacing="5">
+              <RadioButton GroupName="ConnectionCheck"
+                           IsChecked="{Binding FastConnectionCheck}"
+                           Content="Fast (Ping only) - Uses minimal memory, but might falsely show clusters as offline." />
+              <RadioButton GroupName="ConnectionCheck"
+                           IsChecked="{Binding DeepConnectionCheck}"
+                           Content="Deep (Load Topics) - Takes longer and uses more memory, ensures accurate status, opens clusters instantly." />
+          </StackPanel>
         </StackPanel>
       </TabItem>
     </TabControl>

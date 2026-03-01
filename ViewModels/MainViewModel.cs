@@ -69,6 +69,7 @@ public partial class MainViewModel : ViewModelBase
     public static Action<UpdateViewModel> ShowUpdateDialog { get; set; } = (vm) => { };
     public static Action<PreferencesViewModel> ShowPreferencesDialog { get; set; } = (vm) => { };
     public static Action<string, string> ShowMessage { get; set; } = (title, message) => { };
+    public static Func<int, Task<bool>> ConfirmRestoreTabs { get; set; } = (count) => Task.FromResult(false);
 
     [ObservableProperty] private ObservableCollection<MenuItemViewModel>? menuItems;
 
@@ -77,6 +78,8 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string currentTheme;
 
     [ObservableProperty] private bool autoCheckForUpdates;
+
+    [ObservableProperty] private bool isLoadingClusters;
 
     partial void OnAutoCheckForUpdatesChanged(bool value)
     {
@@ -148,6 +151,9 @@ public partial class MainViewModel : ViewModelBase
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
 
+        Clusters.CollectionChanged += OnClustersChanged;
+        CreateMenuItems();
+
         Title = appConfig.Title;
 
         currentTheme = settingsService.GetValue("Theme") ?? "System";
@@ -197,12 +203,21 @@ public partial class MainViewModel : ViewModelBase
     {
         await RunSerializedClusterFlowAsync(async () =>
         {
-            await LoadAndApplyClustersAsync();
-            TryRestoreTabs();
-            EnsureOpenedClustersSubscriptionInitialized();
-            UpdateOpenedClusters();
-            isStartupLoadCompleted = true;
+            IsLoadingClusters = true;
+            try
+            {
+                await LoadAndApplyClustersAsync();
+                EnsureOpenedClustersSubscriptionInitialized();
+                UpdateOpenedClusters();
+                isStartupLoadCompleted = true;
+            }
+            finally
+            {
+                IsLoadingClusters = false;
+            }
         });
+
+        await TryRestoreTabsAsync();
     }
 
     private async Task RefreshClustersForHealthCheckAsync()
@@ -227,9 +242,6 @@ public partial class MainViewModel : ViewModelBase
 
         if (!isInitialized)
         {
-            Clusters.CollectionChanged += OnClustersChanged;
-            openClusterMenuItems.Clear();
-            CreateMenuItems();
             isInitialized = true;
         }
 
@@ -260,14 +272,22 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private void TryRestoreTabs()
+    private async Task TryRestoreTabsAsync()
     {
         if (!isRestoreStateInitialized)
         {
             var config = settingsService.GetBrowserConfig();
             if (config.RestoreTabsOnStartup)
             {
-                pendingRestoreTabs.AddRange(config.OpenedTabs.Where(t => !string.IsNullOrWhiteSpace(t.ClusterId)));
+                var tabsToRestore = config.OpenedTabs.Where(t => !string.IsNullOrWhiteSpace(t.ClusterId)).ToList();
+                if (tabsToRestore.Count > 0)
+                {
+                    bool shouldRestore = await ConfirmRestoreTabs(tabsToRestore.Count);
+                    if (shouldRestore)
+                    {
+                        pendingRestoreTabs.AddRange(tabsToRestore);
+                    }
+                }
             }
 
             isRestoreStateInitialized = true;
@@ -301,6 +321,8 @@ public partial class MainViewModel : ViewModelBase
         var existingByKey = Clusters.ToDictionary(GetClusterKey);
         var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
 
+        var config = settingsService.GetBrowserConfig();
+
         foreach (var loaded in loadedClusters)
         {
             var key = GetClusterKey(loaded);
@@ -313,7 +335,7 @@ public partial class MainViewModel : ViewModelBase
             else
             {
                 Clusters.Add(loaded);
-                _ = loaded.CheckConnectionAsync();
+                _ = loaded.CheckConnectionAsync(config.EagerLoadTopicsOnStartup);
             }
         }
 
@@ -332,6 +354,8 @@ public partial class MainViewModel : ViewModelBase
 
         var existingByKey = existingForClients.ToDictionary(GetClusterKey);
         var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
+        
+        var config = settingsService.GetBrowserConfig();
 
         foreach (var loaded in loadedClusters)
         {
@@ -345,7 +369,7 @@ public partial class MainViewModel : ViewModelBase
             else
             {
                 Clusters.Add(loaded);
-                _ = loaded.CheckConnectionAsync();
+                _ = loaded.CheckConnectionAsync(config.EagerLoadTopicsOnStartup);
             }
         }
 
@@ -360,16 +384,17 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task RefreshDisconnectedClustersAsync()
     {
+        var config = settingsService.GetBrowserConfig();
         var disconnectedClusters = Clusters.Where(c => c.IsConnected != true).ToList();
-        var checks = disconnectedClusters.Select(CheckConnectionSafeAsync);
+        var checks = disconnectedClusters.Select(c => CheckConnectionSafeAsync(c, config.EagerLoadTopicsOnStartup));
         await Task.WhenAll(checks);
     }
 
-    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster)
+    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster, bool eagerLoadTopics)
     {
         try
         {
-            await cluster.CheckConnectionAsync();
+            await cluster.CheckConnectionAsync(eagerLoadTopics);
         }
         catch (Exception ex)
         {
@@ -644,11 +669,41 @@ public partial class MainViewModel : ViewModelBase
 
     private MenuItemViewModel CreateOpenMenu()
     {
-        return new MenuItemViewModel
+        var openMenu = new MenuItemViewModel
         {
             Header = "_Open Cluster",
             Items = openClusterMenuItems
         };
+
+        UpdateOpenMenuItems();
+        PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(IsLoadingClusters))
+            {
+                UpdateOpenMenuItems();
+            }
+        };
+
+        return openMenu;
+    }
+
+    private void UpdateOpenMenuItems()
+    {
+        if (IsLoadingClusters && openClusterMenuItems.Count == 0)
+        {
+            if (!openClusterMenuItems.Any(m => m.Header == "Loading..."))
+            {
+                openClusterMenuItems.Add(new MenuItemViewModel { Header = "Loading...", IsEnabled = false });
+            }
+        }
+        else
+        {
+            var loadingItem = openClusterMenuItems.FirstOrDefault(m => m.Header == "Loading...");
+            if (loadingItem != null)
+            {
+                openClusterMenuItems.Remove(loadingItem);
+            }
+        }
     }
 
     private MenuItemViewModel CreateHelpMenu()

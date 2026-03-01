@@ -28,6 +28,12 @@ public partial class PreferencesViewModel : ViewModelBase
     [ObservableProperty]
     private string fetchCountsString;
 
+    [ObservableProperty]
+    private bool fastConnectionCheck;
+
+    [ObservableProperty]
+    private bool deepConnectionCheck;
+
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand CancelCommand { get; }
 
@@ -41,6 +47,9 @@ public partial class PreferencesViewModel : ViewModelBase
         browserConfig = settingsService.GetBrowserConfig();
         selectedTheme = settingsService.GetValue("Theme") ?? "System";
         fetchCountsString = string.Join(", ", browserConfig.FetchCounts);
+
+        FastConnectionCheck = !browserConfig.EagerLoadTopicsOnStartup;
+        DeepConnectionCheck = browserConfig.EagerLoadTopicsOnStartup;
 
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
@@ -87,6 +96,8 @@ public partial class PreferencesViewModel : ViewModelBase
         // Keep the latest runtime tab state instead of overwriting with a potentially stale dialog snapshot.
         var latestBrowserConfig = settingsService.GetBrowserConfig();
         BrowserConfig.OpenedTabs = latestBrowserConfig.OpenedTabs?.ToList() ?? new List<OpenedTabState>();
+
+        BrowserConfig.EagerLoadTopicsOnStartup = DeepConnectionCheck;
 
         settingsService.SaveKafkaConfig(KafkaConfig);
         settingsService.SaveBrowserConfig(BrowserConfig);

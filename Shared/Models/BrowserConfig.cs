@@ -9,6 +9,7 @@ public class BrowserConfig
     public int DefaultFetchCount { get; set; } = 10;
     public ISet<int> FetchCounts { get; set; } = new SortedSet<int>();
     public bool RestoreTabsOnStartup { get; set; } = true;
+    public bool EagerLoadTopicsOnStartup { get; set; } = false;
     public List<OpenedTabState> OpenedTabs { get; set; } = new List<OpenedTabState>();
 }
 

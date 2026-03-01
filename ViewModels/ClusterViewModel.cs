@@ -32,9 +32,18 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         LoadTopicsCommand = new AsyncRelayCommand(LoadTopicsAsync);
     }
 
-    public async Task CheckConnectionAsync()
+    public async Task CheckConnectionAsync(bool eagerLoadTopics = false)
     {
-        IsConnected = await Client.ValidateConnectionAsync(Address);
+        if (eagerLoadTopics)
+        {
+            // By loading topics, we implicitly validate the connection
+            // AND cache the topics for instantaneous UI loading.
+            await LoadTopicsAsync();
+        }
+        else
+        {
+            IsConnected = await Client.ValidateConnectionAsync(Address);
+        }
     }
 
     private async Task LoadTopicsAsync()

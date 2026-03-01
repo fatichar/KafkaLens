@@ -104,18 +104,7 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
         return Task.Run(() => Clusters.Values.Select(c =>
         {
             var model = ToModel(c);
-            if (consumers.TryGetValue(c.Id, out var consumer))
-            {
-                try
-                {
-                    model.IsConnected = consumer.ValidateConnection();
-                }
-                catch (Exception e)
-                {
-                    Log.Debug("ValidateConnection failed for cluster {ClusterName}: {Message}", c.Name, e.Message);
-                    model.IsConnected = false;
-                }
-            }
+            model.IsConnected = false; // Initial state, will be updated by background check
             return model;
         }).AsEnumerable());
     }
