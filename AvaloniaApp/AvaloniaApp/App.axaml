@@ -35,6 +35,47 @@
             <Setter Property="Fill" Value="{DynamicResource StatusUnknownBrush}"/>
         </Style>
 
+        <Style Selector="ProgressBar.circular">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel>
+                        <Arc Stroke="{TemplateBinding Background}"
+                             StrokeThickness="2"
+                             StartAngle="0" SweepAngle="360" />
+
+                        <Arc Name="PART_IndeterminateIndicator"
+                             Stroke="{TemplateBinding Foreground}"
+                             StrokeThickness="2"
+                             StrokeJoin="Round"
+                             StrokeLineCap="Round"
+                             StartAngle="0"
+                             SweepAngle="90"
+                             IsVisible="{TemplateBinding IsIndeterminate}">
+                            <Arc.RenderTransform>
+                                <RotateTransform />
+                            </Arc.RenderTransform>
+                        </Arc>
+                        <Border Name="PART_Indicator" IsVisible="False" />
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="ProgressBar.circular:indeterminate /template/ Arc#PART_IndeterminateIndicator">
+            <Style.Animations>
+                <Animation Duration="0:0:1" IterationCount="Infinite">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="RotateTransform.Angle" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="RotateTransform.Angle" Value="360"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
         <!-- Theme-aware DataGrid selection -->
         <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
             <Setter Property="Fill" Value="{DynamicResource ThemeSelectionBrush}" />

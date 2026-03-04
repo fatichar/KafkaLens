@@ -108,12 +108,12 @@ public class SharedClient(
             {
                 try
                 {
-                    model.IsConnected = consumer.ValidateConnection();
+                    model.Status = consumer.ValidateConnection() ? ConnectionState.Connected : ConnectionState.Failed;
                 }
                 catch (Exception e)
                 {
                     Log.Debug("ValidateConnection failed for cluster {ClusterName}: {Message}", c.Name, e.Message);
-                    model.IsConnected = false;
+                    model.Status = ConnectionState.Failed;
                 }
             }
             return model;

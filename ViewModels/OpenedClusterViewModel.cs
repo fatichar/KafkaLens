@@ -65,11 +65,14 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public string StatusColor => cluster.StatusColor;
 
+    public bool IsChecking => cluster.IsChecking;
+
     public ObservableCollection<ITreeNode> Nodes { get; } = new();
     public ObservableCollection<TopicViewModel> Topics { get; } = new();
 
     public MessagesViewModel CurrentMessages { get; } = new();
     private readonly List<MessageViewModel> pendingMessages = new();
+    private bool isSyncingTopics;
 
     public ITreeNode.NodeType SelectedNodeType
     {
@@ -235,11 +238,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         {
             OnPropertyChanged(nameof(StatusColor));
         }
-        else if (e.PropertyName == nameof(ClusterViewModel.IsConnected))
+        else if (e.PropertyName == nameof(ClusterViewModel.Status))
         {
-            if (cluster.IsConnected == true && Topics.Count == 0)
+            OnPropertyChanged(nameof(IsChecking));
+            if (cluster.Status == ConnectionState.Connected && Topics.Count == 0 && !isSyncingTopics)
             {
-                _ = LoadTopicsAsync();
+                Dispatcher.UIThread.Post(() => _ = LoadTopicsAsync());
             }
         }
         else if (e.PropertyName == nameof(ClusterViewModel.Name))
@@ -397,6 +401,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     internal async Task LoadTopicsAsync()
     {
+        if (isSyncingTopics) return;
+        isSyncingTopics = true;
         try
         {
             await cluster.LoadTopicsCommand.ExecuteAsync(null);
@@ -416,6 +422,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         catch (Exception e)
         {
             Serilog.Log.Error(e, "Failed to load topics for opened cluster {ClusterName}", Name);
+        }
+        finally
+        {
+            isSyncingTopics = false;
         }
     }
 

@@ -33,7 +33,10 @@
                             <DataGridTemplateColumn Header="Status" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="vm:ClusterViewModel">
-                                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" ToolTip.Tip="{Binding ConnectionStatus}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" ToolTip.Tip="{Binding ConnectionStatus}" IsVisible="{Binding !IsChecking}"/>
+                                            <ProgressBar Classes="circular" MinWidth="0" Width="12" Height="12" IsIndeterminate="True" IsVisible="{Binding IsChecking}"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -66,7 +69,10 @@
                             <DataGridTemplateColumn Header="Status" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="vm:ClientInfoViewModel">
-                                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" ToolTip.Tip="{Binding ConnectionStatus}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" ToolTip.Tip="{Binding ConnectionStatus}" IsVisible="{Binding !IsChecking}"/>
+                                            <ProgressBar Classes="circular" MinWidth="0" Width="12" Height="12" IsIndeterminate="True" IsVisible="{Binding IsChecking}"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

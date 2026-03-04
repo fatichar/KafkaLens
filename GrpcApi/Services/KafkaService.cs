@@ -130,7 +130,7 @@ public class KafkaService(ILogger<KafkaService> logger, IKafkaLensClient kafkaLe
             Id = cluster.Id,
             Name = cluster.Name,
             BootstrapServers = cluster.Address,
-            IsConnected = cluster.IsConnected
+            IsConnected = cluster.Status == Models.ConnectionState.Connected
         };
     }
 

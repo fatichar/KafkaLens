@@ -1,12 +1,14 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Entities;
+using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels;
 
-public class EditClustersViewModel
+public class EditClustersViewModel : IDisposable
 {
     private IClusterInfoRepository ClusterRepository { get; }
     private IClientInfoRepository ClientRepository { get; }
@@ -37,9 +39,37 @@ public class EditClustersViewModel
         ClientRepository = clientInfoRepository;
         ClientFactory = clientFactory;
 
+        AllClusters.CollectionChanged += AllClusters_CollectionChanged;
+
         Clients = new ObservableCollection<ClientInfoViewModel>(ClientRepository.GetAll().Values.Select(c => new ClientInfoViewModel(c)));
 
         CheckClientConnectionsAsync();
+    }
+
+    private void AllClusters_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null)
+        {
+            foreach (ClusterViewModel item in e.NewItems)
+            {
+                if (item.Client.CanEditClusters && !Clusters.Contains(item))
+                {
+                    Clusters.Add(item);
+                }
+            }
+        }
+        if (e.OldItems != null)
+        {
+            foreach (ClusterViewModel item in e.OldItems)
+            {
+                Clusters.Remove(item);
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        AllClusters.CollectionChanged -= AllClusters_CollectionChanged;
     }
 
     private async void CheckClientConnectionsAsync()
@@ -54,21 +84,23 @@ public class EditClustersViewModel
     {
         try
         {
+            client.Status = ConnectionState.Checking;
             var kafkaClient = ClientFactory.GetClient(client.Name);
             var clusters = (await kafkaClient.GetAllClustersAsync()).ToList();
             // If GrpcClient fails to connect, it returns a single cluster with IsConnected=false
-            if (clusters.Count() == 1 && !clusters.First().IsConnected)
+            if (clusters.Count == 1 && clusters.First().Status == ConnectionState.Failed)
             {
-                 client.IsConnected = false;
+                 client.Status = ConnectionState.Failed;
             }
             else
             {
-                client.IsConnected = true;
+                client.Status = ConnectionState.Connected;
             }
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            client.IsConnected = false;
+            client.LastError = e.Message;
+            client.Status = ConnectionState.Failed;
         }
     }
 
@@ -114,7 +146,7 @@ public class EditClustersViewModel
         var vm = new ClientInfoViewModel(clientInfo);
         Clients.Add(vm);
         _ = CheckClientConnectionAsync(vm);
-        
+
         // Load clusters from the newly added client
         await LoadClustersForClientAsync(name);
     }
@@ -126,22 +158,22 @@ public class EditClustersViewModel
         if (existing != null)
         {
             // Check if anything actually changed that would require cluster reload
-            var hasChanges = existing.Info.Name != updated.Name || 
-                           existing.Info.Address != updated.Address || 
+            var hasChanges = existing.Info.Name != updated.Name ||
+                           existing.Info.Address != updated.Address ||
                            existing.Info.Protocol != updated.Protocol;
-            
+
             var oldName = existing.Name;
-            
+
             // Update the existing ViewModel instead of replacing it
             existing.UpdateInfo(updated);
             _ = CheckClientConnectionAsync(existing);
-            
+
             // Only reload clusters if there are actual changes
             if (hasChanges)
             {
                 // Reload the ClientFactory to pick up the new client configuration
                 await ClientFactory.LoadClientsAsync();
-                
+
                 // Remove old clusters and reload from updated client
                 var oldClusters = AllClusters.Where(c => c.Client.Name == oldName).ToList();
                 foreach (var cluster in oldClusters)
@@ -149,7 +181,7 @@ public class EditClustersViewModel
                     AllClusters.Remove(cluster);
                     Clusters.Remove(cluster);
                 }
-                
+
                 await LoadClustersForClientAsync(updated.Name);
             }
         }
@@ -161,7 +193,7 @@ public class EditClustersViewModel
         {
             var client = ClientFactory.GetClient(clientName);
             var clusters = (await client.GetAllClustersAsync()).ToList();
-            
+
             foreach (var cluster in clusters)
             {
                 var existing = AllClusters.FirstOrDefault(c => c.Id == cluster.Id && c.Client.Name == client.Name);
@@ -186,7 +218,7 @@ public class EditClustersViewModel
     public void RemoveClient(ClientInfoViewModel? clientInfo)
     {
         if (clientInfo == null) return;
-        
+
         // Remove all clusters belonging to this client
         var clustersToRemove = AllClusters.Where(c => c.Client.Name == clientInfo.Name).ToList();
         foreach (var cluster in clustersToRemove)
@@ -194,7 +226,7 @@ public class EditClustersViewModel
             AllClusters.Remove(cluster);
             Clusters.Remove(cluster);
         }
-        
+
         ClientRepository.Delete(clientInfo.Id);
         Clients.Remove(clientInfo);
     }

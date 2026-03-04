@@ -104,7 +104,7 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
         return Task.Run(() => Clusters.Values.Select(c =>
         {
             var model = ToModel(c);
-            model.IsConnected = false; // Initial state, will be updated by background check
+            model.Status = ConnectionState.Unknown; // Initial state, will be updated by background check
             return model;
         }).AsEnumerable());
     }

@@ -31,7 +31,10 @@
             </Menu.Styles>
             <Menu.DataTemplates>
                 <DataTemplate DataType="{x:Type vm:StatusIconViewModel}">
-                    <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding Color}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding Color}" VerticalAlignment="Center" IsVisible="{Binding !IsLoading}"/>
+                        <ProgressBar Classes="circular" MinWidth="0" Width="12" Height="12" IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </DataTemplate>
             </Menu.DataTemplates>
         </Menu>
@@ -43,7 +46,8 @@
             <TabControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:OpenedClusterViewModel">
                     <StackPanel Orientation="Horizontal" Spacing="5">
-                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" VerticalAlignment="Center"/>
+                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" VerticalAlignment="Center" IsVisible="{Binding !IsChecking}"/>
+                        <ProgressBar Classes="circular" MinWidth="0" Width="12" Height="12" IsIndeterminate="True" IsVisible="{Binding IsChecking}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </DataTemplate>

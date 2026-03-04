@@ -1,11 +1,15 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels;
 
 public partial class ConnectionViewModelBase : ViewModelBase
 {
     [ObservableProperty]
-    private bool? isConnected;
+    private ConnectionState status = ConnectionState.Unknown;
+
+    [ObservableProperty]
+    private string? lastError;
 
     [ObservableProperty]
     private string connectionStatus = "Unknown";
@@ -13,22 +17,55 @@ public partial class ConnectionViewModelBase : ViewModelBase
     [ObservableProperty]
     private string statusColor = "Gray";
 
-    partial void OnIsConnectedChanged(bool? value)
+    [ObservableProperty]
+    private bool isChecking;
+
+    partial void OnStatusChanged(ConnectionState value)
     {
-        if (value == true)
+        IsChecking = value == ConnectionState.Checking;
+        switch (value)
         {
-            ConnectionStatus = "Connected";
-            StatusColor = "Green";
+            case ConnectionState.Connected:
+                ConnectionStatus = "Connected";
+                StatusColor = "Green";
+                break;
+            case ConnectionState.Failed:
+                ConnectionStatus = "Disconnected";
+                StatusColor = "Red";
+                break;
+            case ConnectionState.Checking:
+                ConnectionStatus = "Checking...";
+                // Keep the color of the last state if it's not Unknown
+                if (StatusColor == "Gray")
+                {
+                    StatusColor = "Gray";
+                }
+                break;
+            case ConnectionState.Unknown:
+            default:
+                ConnectionStatus = "Unknown";
+                StatusColor = "Gray";
+                break;
         }
-        else if (value == false)
+    }
+
+    [System.Obsolete("Use Status instead")]
+    public bool? IsConnected
+    {
+        get => Status switch
         {
-            ConnectionStatus = "Disconnected";
-            StatusColor = "Red";
-        }
-        else
+            ConnectionState.Connected => true,
+            ConnectionState.Failed => false,
+            _ => null
+        };
+        set
         {
-            ConnectionStatus = "Unknown";
-            StatusColor = "Gray";
+            Status = value switch
+            {
+                true => ConnectionState.Connected,
+                false => ConnectionState.Failed,
+                _ => ConnectionState.Unknown
+            };
         }
     }
 }

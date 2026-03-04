@@ -156,4 +156,10 @@ public partial class EditClustersDialog : Window
     {
         OsUtils.OpenExternal(AppDataPath);
     }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        Context?.Dispose();
+    }
 }

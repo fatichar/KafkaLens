@@ -21,7 +21,8 @@ public class SharedClientTests
     public SharedClientTests()
     {
         infoRepository = Substitute.For<IClusterInfoRepository>();
-        consumerFactory = Substitute.For<ConsumerFactory>();
+        var kafkaConfig = new KafkaConfig();
+        consumerFactory = Substitute.For<ConsumerFactory>(kafkaConfig);
         sut = new SharedClient(infoRepository, consumerFactory);
     }
 

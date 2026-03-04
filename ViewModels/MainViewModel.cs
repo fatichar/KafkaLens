@@ -330,7 +330,7 @@ public partial class MainViewModel : ViewModelBase
             {
                 existing.Name = loaded.Name;
                 existing.Address = loaded.Address;
-                existing.IsConnected = loaded.IsConnected;
+                existing.Status = loaded.Status;
             }
             else
             {
@@ -354,7 +354,7 @@ public partial class MainViewModel : ViewModelBase
 
         var existingByKey = existingForClients.ToDictionary(GetClusterKey);
         var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
-        
+
         var config = settingsService.GetBrowserConfig();
 
         foreach (var loaded in loadedClusters)
@@ -364,7 +364,7 @@ public partial class MainViewModel : ViewModelBase
             {
                 existing.Name = loaded.Name;
                 existing.Address = loaded.Address;
-                existing.IsConnected = loaded.IsConnected;
+                existing.Status = loaded.Status;
             }
             else
             {
@@ -385,7 +385,7 @@ public partial class MainViewModel : ViewModelBase
     private async Task RefreshDisconnectedClustersAsync()
     {
         var config = settingsService.GetBrowserConfig();
-        var disconnectedClusters = Clusters.Where(c => c.IsConnected != true).ToList();
+        var disconnectedClusters = Clusters.Where(c => c.Status != ConnectionState.Connected).ToList();
         var checks = disconnectedClusters.Select(c => CheckConnectionSafeAsync(c, config.EagerLoadTopicsOnStartup));
         await Task.WhenAll(checks);
     }
@@ -399,7 +399,7 @@ public partial class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed connection check for cluster {ClusterName}", cluster.Name);
-            cluster.IsConnected = false;
+            cluster.Status = ConnectionState.Failed;
         }
     }
 
@@ -437,7 +437,7 @@ public partial class MainViewModel : ViewModelBase
                 continue;
             }
 
-            if (clientClusters.Any(cluster => cluster.IsConnected != true))
+            if (clientClusters.Any(cluster => cluster.Status != ConnectionState.Connected))
             {
                 result.Add(client.Name);
             }
@@ -642,7 +642,7 @@ public partial class MainViewModel : ViewModelBase
 
     private MenuItemViewModel CreateOpenMenuItem(ClusterViewModel c)
     {
-        var statusIcon = new StatusIconViewModel { Color = c.StatusColor };
+        var statusIcon = new StatusIconViewModel { Status = c.Status };
         var menuItem = new MenuItemViewModel
         {
             Header = c.Name,
@@ -654,9 +654,9 @@ public partial class MainViewModel : ViewModelBase
 
         c.PropertyChanged += (s, e) =>
         {
-            if (e.PropertyName == nameof(ClusterViewModel.StatusColor))
+            if (e.PropertyName == nameof(ClusterViewModel.Status))
             {
-                statusIcon.Color = c.StatusColor;
+                statusIcon.Status = c.Status;
             }
             else if (e.PropertyName == nameof(ClusterViewModel.Name))
             {

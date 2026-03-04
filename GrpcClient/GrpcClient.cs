@@ -81,14 +81,14 @@ public class GrpcClient : IKafkaLensClient
                 DateTime.UtcNow.AddSeconds(5));
             var clusters = response.Clusters.Select(ToClusterModel).ToList();
 
-            // Set initial connection state to false for clusters missing it.
+            // Set initial connection state to unknown for clusters missing it.
             // MainViewModel will handle the background connectivity check.
             foreach (var cluster in clusters)
             {
                 var grpcCluster = response.Clusters.First(rc => rc.Id == cluster.Id);
                 if (!grpcCluster.HasIsConnected)
                 {
-                    cluster.IsConnected = false;
+                    cluster.Status = ConnectionState.Unknown;
                 }
             }
 
@@ -101,7 +101,7 @@ public class GrpcClient : IKafkaLensClient
             {
                 new KafkaCluster(Guid.NewGuid().ToString(), Name, url)
                 {
-                    IsConnected = false
+                    Status = ConnectionState.Failed
                 }
             };
         }
@@ -215,7 +215,7 @@ public class GrpcClient : IKafkaLensClient
         var model = new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
         if (cluster.HasIsConnected)
         {
-            model.IsConnected = cluster.IsConnected;
+            model.Status = cluster.IsConnected ? ConnectionState.Connected : ConnectionState.Failed;
         }
         return model;
     }

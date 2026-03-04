@@ -1,50 +1,54 @@
+using KafkaLens.Shared.Models;
+
 namespace KafkaLens.ViewModels.Tests;
 
 public class ConnectionViewModelBaseTests
 {
     [Fact]
-    public void OnIsConnectedChanged_WhenTrue_SetsConnectedStatus()
+    public void StatusChanged_WhenConnected_SetsConnectedStatus()
     {
         // Arrange
         var viewModel = new TestConnectionViewModelBase();
         
         // Act
-        viewModel.SetIsConnected(true);
+        viewModel.Status = ConnectionState.Connected;
         
         // Assert
-        Assert.True(viewModel.IsConnected);
+        Assert.Equal(ConnectionState.Connected, viewModel.Status);
         Assert.Equal("Connected", viewModel.ConnectionStatus);
         Assert.Equal("Green", viewModel.StatusColor);
+        Assert.False(viewModel.IsChecking);
     }
 
     [Fact]
-    public void OnIsConnectedChanged_WhenFalse_SetsDisconnectedStatus()
+    public void StatusChanged_WhenFailed_SetsDisconnectedStatus()
     {
         // Arrange
         var viewModel = new TestConnectionViewModelBase();
         
         // Act
-        viewModel.SetIsConnected(false);
+        viewModel.Status = ConnectionState.Failed;
         
         // Assert
-        Assert.False(viewModel.IsConnected);
+        Assert.Equal(ConnectionState.Failed, viewModel.Status);
         Assert.Equal("Disconnected", viewModel.ConnectionStatus);
         Assert.Equal("Red", viewModel.StatusColor);
+        Assert.False(viewModel.IsChecking);
     }
 
     [Fact]
-    public void OnIsConnectedChanged_WhenNull_SetsUnknownStatus()
+    public void StatusChanged_WhenChecking_SetsCheckingStatus()
     {
         // Arrange
         var viewModel = new TestConnectionViewModelBase();
         
         // Act
-        viewModel.SetIsConnected(null);
+        viewModel.Status = ConnectionState.Checking;
         
         // Assert
-        Assert.Null(viewModel.IsConnected);
-        Assert.Equal("Unknown", viewModel.ConnectionStatus);
-        Assert.Equal("Gray", viewModel.StatusColor);
+        Assert.Equal(ConnectionState.Checking, viewModel.Status);
+        Assert.Equal("Checking...", viewModel.ConnectionStatus);
+        Assert.True(viewModel.IsChecking);
     }
 
     [Fact]
@@ -54,13 +58,14 @@ public class ConnectionViewModelBaseTests
         var viewModel = new TestConnectionViewModelBase();
         
         // Assert
-        Assert.Null(viewModel.IsConnected);
+        Assert.Equal(ConnectionState.Unknown, viewModel.Status);
         Assert.Equal("Unknown", viewModel.ConnectionStatus);
         Assert.Equal("Gray", viewModel.StatusColor);
+        Assert.False(viewModel.IsChecking);
     }
 
     [Fact]
-    public void OnIsConnectedChanged_ShouldRaisePropertyChangedForAllProperties()
+    public void StatusChanged_ShouldRaisePropertyChangedForAllProperties()
     {
         // Arrange
         var viewModel = new TestConnectionViewModelBase();
@@ -68,19 +73,17 @@ public class ConnectionViewModelBaseTests
         viewModel.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName!);
         
         // Act
-        viewModel.SetIsConnected(true);
+        viewModel.Status = ConnectionState.Checking;
+        viewModel.Status = ConnectionState.Connected;
         
         // Assert
-        Assert.Contains(nameof(ConnectionViewModelBase.IsConnected), changedProperties);
+        Assert.Contains(nameof(ConnectionViewModelBase.Status), changedProperties);
         Assert.Contains(nameof(ConnectionViewModelBase.ConnectionStatus), changedProperties);
         Assert.Contains(nameof(ConnectionViewModelBase.StatusColor), changedProperties);
+        Assert.Contains(nameof(ConnectionViewModelBase.IsChecking), changedProperties);
     }
 }
 
 public class TestConnectionViewModelBase : ConnectionViewModelBase
 {
-    public void SetIsConnected(bool? value)
-    {
-        IsConnected = value;
-    }
 }
