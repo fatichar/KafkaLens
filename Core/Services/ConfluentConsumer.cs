@@ -278,8 +278,15 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         switch (options.Start.Type)
         {
             case PositionType.Timestamp:
+                var queryTimestamp = options.Start.Timestamp;
+                if (options.Direction == FetchDirection.Backward)
+                {
+                    // Query for T + 1 to find the first message > T.
+                    // This allows us to fetch messages <= T by ending just before it.
+                    queryTimestamp++;
+                }
                 tps.ForEach(tp =>
-                    tptList.Add(new(tp, new Timestamp(options.Start.Timestamp, TimestampType.CreateTime))));
+                    tptList.Add(new(tp, new Timestamp(queryTimestamp, TimestampType.CreateTime))));
 
                 List<TopicPartitionOffset> tpos;
                 await using (var lease = await consumerPool.LeaseAsync(cancellationToken))
@@ -293,9 +300,26 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     remaining -= limit;
                     var tpo = tpos[i];
                     var offset = tpo.Offset.Value;
-                    if (options.Direction == FetchDirection.Backward)
+                    if (offset < 0)
                     {
-                        offset = offset - limit + 1;
+                        if (options.Direction == FetchDirection.Backward)
+                        {
+                            offset = -1; // -1 means end of partition
+                            offset = offset - limit + 1;
+                        }
+                    }
+                    else if (options.Direction == FetchDirection.Backward)
+                    {
+                        var desiredStart = offset - limit;
+                        if (desiredStart < 0)
+                        {
+                            limit += (int)desiredStart;
+                            offset = 0;
+                        }
+                        else
+                        {
+                            offset = desiredStart;
+                        }
                     }
                     partitionOptions.Add(new(new FetchPosition(PositionType.Offset, offset), limit));
                 }
@@ -313,7 +337,16 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     }
                     else if (options.Direction == FetchDirection.Backward)
                     {
-                        offset = offset - limit + 1;
+                        var desiredStart = offset - limit + 1;
+                        if (desiredStart < 0)
+                        {
+                            limit += (int)desiredStart;
+                            offset = 0;
+                        }
+                        else
+                        {
+                            offset = desiredStart;
+                        }
                     }
 
                     partitionOptions.Add(new(new(PositionType.Offset, offset), limit));

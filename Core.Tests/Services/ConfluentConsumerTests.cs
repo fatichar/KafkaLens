@@ -253,4 +253,118 @@ public class ConfluentConsumerTests
         // Parallel batching should be much faster than sequential individual queries (which took ~1000ms)
         Assert.True(sw.ElapsedMilliseconds < partitionCount * queryDelayMs / 2, $"Expected parallel execution taking ~{queryDelayMs}ms, but took {sw.ElapsedMilliseconds}ms");
     }
+
+    [Fact]
+    public async Task GetMessagesAsync_BackwardFetch_ByOffset_StartsFromCorrectOffset()
+    {
+        // Arrange
+        var mockAdminClient = Substitute.For<IAdminClient>();
+        var assignedOffset = -1L;
+        var limit = 5;
+        
+        Func<IConsumer<byte[], byte[]>> consumerFactory = () =>
+        {
+            var mockConsumer = Substitute.For<IConsumer<byte[], byte[]>>();
+            mockConsumer.QueryWatermarkOffsets(Arg.Any<TopicPartition>(), Arg.Any<TimeSpan>())
+                .Returns(new WatermarkOffsets(0, 100)); // Log size is 100
+                
+            mockConsumer.When(x => x.Assign(Arg.Any<TopicPartitionOffset>()))
+                .Do(x => assignedOffset = x.Arg<TopicPartitionOffset>().Offset.Value);
+
+            mockConsumer.Consume(Arg.Any<TimeSpan>()).Returns((ConsumeResult<byte[], byte[]>?)null); // Just timeout immediately
+            return mockConsumer;
+        };
+
+        var consumer = TestConfluentConsumer.Create("localhost:9092", consumerFactory, mockAdminClient);
+        consumer.ListOffsetsHandler = specs =>
+        {
+            var isEarliest = specs.First().OffsetSpec.GetType().Name.Contains("Earliest");
+            long offset = isEarliest ? 0 : 100;
+            return Task.FromResult(new ListOffsetsResult
+            {
+                ResultInfos = specs.Select(s => new ListOffsetsResultInfo
+                {
+                    TopicPartitionOffsetError = new TopicPartitionOffsetError(s.TopicPartition, new Offset(offset), new Error(ErrorCode.NoError), 0)
+                }).ToList()
+            });
+        };
+
+        var tps = new List<TopicPartition> { new TopicPartition("test-topic", 0) };
+        var options = new FetchOptions(new FetchPosition(PositionType.Offset, 50), limit)
+        {
+            Direction = FetchDirection.Backward
+        };
+        var messages = new MessageStream();
+
+        // Act
+        await consumer.PublicGetMessages(tps, options, messages, CancellationToken.None);
+
+        // Assert
+        // Starting at 50, backwards for 5 items, means we want offsets 46, 47, 48, 49, 50.
+        // So the assigned offset should be 46.
+        Assert.Equal(46, assignedOffset);
+    }
+
+    [Fact]
+    public async Task GetMessagesAsync_BackwardFetch_ByTimestamp_UsesOffsetPlusOneForTimesAndCalculatesCorrectly()
+    {
+        // Arrange
+        var mockAdminClient = Substitute.For<IAdminClient>();
+        var assignedOffset = -1L;
+        var limit = 5;
+        var queriedTimestamp = -1L;
+        
+        Func<IConsumer<byte[], byte[]>> consumerFactory = () =>
+        {
+            var mockConsumer = Substitute.For<IConsumer<byte[], byte[]>>();
+            mockConsumer.QueryWatermarkOffsets(Arg.Any<TopicPartition>(), Arg.Any<TimeSpan>())
+                .Returns(new WatermarkOffsets(0, 100)); // Log size is 100
+                
+            mockConsumer.OffsetsForTimes(Arg.Any<IEnumerable<TopicPartitionTimestamp>>(), Arg.Any<TimeSpan>())
+                .Returns(args =>
+                {
+                    var query = args.Arg<IEnumerable<TopicPartitionTimestamp>>().First();
+                    queriedTimestamp = query.Timestamp.UnixTimestampMs;
+                    // Simulate that timestamp (query.Timestamp) corresponds to offset 50
+                    return new List<TopicPartitionOffset> { new TopicPartitionOffset(query.TopicPartition, new Offset(50)) };
+                });
+
+            mockConsumer.When(x => x.Assign(Arg.Any<TopicPartitionOffset>()))
+                .Do(x => assignedOffset = x.Arg<TopicPartitionOffset>().Offset.Value);
+
+            mockConsumer.Consume(Arg.Any<TimeSpan>()).Returns((ConsumeResult<byte[], byte[]>?)null); // Return nothing
+            return mockConsumer;
+        };
+
+        var consumer = TestConfluentConsumer.Create("localhost:9092", consumerFactory, mockAdminClient);
+        consumer.ListOffsetsHandler = specs =>
+        {
+            var isEarliest = specs.First().OffsetSpec.GetType().Name.Contains("Earliest");
+            long offset = isEarliest ? 0 : 100;
+            return Task.FromResult(new ListOffsetsResult
+            {
+                ResultInfos = specs.Select(s => new ListOffsetsResultInfo
+                {
+                    TopicPartitionOffsetError = new TopicPartitionOffsetError(s.TopicPartition, new Offset(offset), new Error(ErrorCode.NoError), 0)
+                }).ToList()
+            });
+        };
+
+        var tps = new List<TopicPartition> { new TopicPartition("test-topic", 0) };
+        var targetTimestamp = 1600000000L;
+        var options = new FetchOptions(new FetchPosition(PositionType.Timestamp, targetTimestamp), limit)
+        {
+            Direction = FetchDirection.Backward
+        };
+        var messages = new MessageStream();
+
+        // Act
+        await consumer.PublicGetMessages(tps, options, messages, CancellationToken.None);
+
+        // Assert
+        // We requested T, backwards. Code should query OffsetsForTimes for T+1.
+        Assert.Equal(targetTimestamp + 1, queriedTimestamp);
+        // OffsetsForTimes returned offset 50. Limit is 5. Backward fetch should start at 50 - 5 = 45.
+        Assert.Equal(45, assignedOffset);
+    }
 }

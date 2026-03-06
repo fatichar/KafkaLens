@@ -133,6 +133,15 @@ public class SavedMessagesConsumerTests : IDisposable
 
         Directory.CreateDirectory(Path.Combine(testDir, "topic-b", "0"));
 
+        // Since LastRefreshTime is an auto-property, we need to modify its backing field
+        var cacheTimeField = typeof(KafkaLens.Core.Services.ConsumerBase).GetField("<LastRefreshTime>k__BackingField", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+        if (cacheTimeField != null)
+        {
+            cacheTimeField.SetValue(consumer, DateTime.Now.AddHours(-2));
+        }
+
         var topics2 = consumer.GetTopics();
         Assert.Equal(2, topics2.Count);
     }
@@ -403,6 +412,66 @@ public class SavedMessagesConsumerTests : IDisposable
         Assert.Equal("k7", stream.Messages[0].KeyText);
         Assert.Equal("k8", stream.Messages[1].KeyText);
         Assert.Equal("k9", stream.Messages[2].KeyText); // Latest message
+    }
+
+    [Fact]
+    public async Task GetMessageStream_Partition_BackwardFetch_ByOffset_ReturnsCorrectMessages()
+    {
+        // Arrange
+        for (int i = 0; i < 10; i++) // Offsets 0 to 9
+        {
+            CreateTextMessage("my-topic", 0, i, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), $"k{i}", $"v{i}");
+        }
+        var consumer = new SavedMessagesConsumer(testDir);
+        
+        // Fetch 3 messages backwards from offset 7 (should return offsets 5, 6, 7)
+        var options = new FetchOptions(new FetchPosition(PositionType.Offset, 7), 3)
+        {
+            Direction = FetchDirection.Backward
+        };
+
+        // Act
+        var stream = consumer.GetMessageStream("my-topic", 0, options);
+        await Task.Delay(500);
+
+        // Assert
+        Assert.Equal(3, stream.Messages.Count);
+        var sorted = stream.Messages.OrderBy(m => m.Offset).ToList();
+        Assert.Equal(5, sorted[0].Offset);
+        Assert.Equal(6, sorted[1].Offset);
+        Assert.Equal(7, sorted[2].Offset);
+    }
+
+    [Fact]
+    public async Task GetMessageStream_Partition_BackwardFetch_ByTimestamp_ReturnsCorrectMessages()
+    {
+        // Arrange
+        var now = DateTimeOffset.UtcNow;
+        for (int i = 0; i < 10; i++) // Offsets 0 to 9, increasing timestamps
+        {
+            CreateTextMessage("my-topic", 0, i, now.AddSeconds(i).ToUnixTimeMilliseconds(), $"k{i}", $"v{i}");
+        }
+        var consumer = new SavedMessagesConsumer(testDir);
+        
+        // Let's target the timestamp of message 7.
+        // It should find message 7 as the anchor, and return limit (3) messages ending at that anchor.
+        var targetTs = now.AddSeconds(7).ToUnixTimeMilliseconds();
+        var options = new FetchOptions(new FetchPosition(PositionType.Timestamp, targetTs), 3)
+        {
+            Direction = FetchDirection.Backward
+        };
+
+        // Act
+        var stream = consumer.GetMessageStream("my-topic", 0, options);
+        await Task.Delay(500);
+
+        // Assert
+        Assert.Equal(3, stream.Messages.Count);
+        var sorted = stream.Messages.OrderBy(m => m.Offset).ToList();
+        // Should return messages 5, 6, 7
+        Assert.Equal(5, sorted[0].Offset);
+        Assert.Equal(6, sorted[1].Offset);
+        Assert.Equal(7, sorted[2].Offset);
     }
 
     #endregion
