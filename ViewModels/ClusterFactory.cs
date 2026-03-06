@@ -29,6 +29,11 @@ public class ClusterFactory(IClientFactory clientFactory) : IClusterFactory
         return await LoadForClientsAsync(clients);
     }
 
+    public async Task<IReadOnlyList<ClusterViewModel>> LoadClustersForClientAsync(IKafkaLensClient client)
+    {
+        return await LoadForClientAsync(client);
+    }
+
     private static IReadOnlyList<ClusterViewModel> SortClusters(IReadOnlyCollection<ClusterViewModel> clusters)
     {
         return clusters

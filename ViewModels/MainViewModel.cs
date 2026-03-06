@@ -201,23 +201,33 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task LoadClustersOnStartupAsync()
     {
-        await RunSerializedClusterFlowAsync(async () =>
+        IsLoadingClusters = true;
+        try
         {
-            IsLoadingClusters = true;
-            try
-            {
-                await LoadAndApplyClustersAsync();
-                EnsureOpenedClustersSubscriptionInitialized();
-                UpdateOpenedClusters();
-                isStartupLoadCompleted = true;
-            }
-            finally
-            {
-                IsLoadingClusters = false;
-            }
-        });
+            await ClientFactory.LoadClientsAsync();
+            var clients = ClientFactory.GetAllClients();
 
-        await TryRestoreTabsAsync();
+            var loadTasks = clients.Select(async client =>
+            {
+                var loadedClusters = await clusterFactory.LoadClustersForClientAsync(client);
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    ApplyClusterSnapshotForClients(loadedClusters, new HashSet<string> { client.Name });
+                    EnsureOpenedClustersSubscriptionInitialized();
+                    UpdateOpenedClusters();
+                    _ = TryRestoreTabsAsync();
+                });
+            }).ToList();
+
+            isInitialized = true;
+            isStartupLoadCompleted = true;
+
+            await Task.WhenAll(loadTasks);
+        }
+        finally
+        {
+            IsLoadingClusters = false;
+        }
     }
 
     private async Task RefreshClustersForHealthCheckAsync()

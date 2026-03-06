@@ -23,6 +23,8 @@ public class MainViewModelBusinessLogicTests
     {
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         clusterFactory.LoadClustersAsync().Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
+        clusterFactory.LoadClustersForClientAsync(Arg.Any<IKafkaLensClient>()).Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
+        clientFactory.GetAllClients().Returns(new List<IKafkaLensClient>());
         MainViewModel.ConfirmRestoreTabs = (count) => Task.FromResult(true);
     }
 
@@ -31,6 +33,17 @@ public class MainViewModelBusinessLogicTests
         if (clusters != null)
         {
             clusterFactory.LoadClustersAsync().Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(clusters));
+            // For per-client loading, we need to mock the clients and the per-client load
+            var clients = clusters.Select(c => c.Client).Distinct().ToList();
+            if (clients.Count > 0)
+            {
+                clientFactory.GetAllClients().Returns(clients);
+                foreach (var client in clients)
+                {
+                    var clientClusters = clusters.Where(c => c.Client == client).ToList();
+                    clusterFactory.LoadClustersForClientAsync(client).Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(clientClusters));
+                }
+            }
         }
 
         return new MainViewModel(
@@ -74,7 +87,7 @@ public class MainViewModelBusinessLogicTests
         Assert.Equal(2, vm.Clusters.Count);
         Assert.NotNull(vm.MenuItems);
         // OnActivated() in constructor also calls LoadClusters, so at least 1 call expected
-        await clusterFactory.Received().LoadClustersAsync();
+        await clusterFactory.Received().LoadClustersForClientAsync(Arg.Any<IKafkaLensClient>());
     }
 
     [AvaloniaFact]
@@ -90,7 +103,7 @@ public class MainViewModelBusinessLogicTests
 
         // Assert — GetAllClusters called once (first call only), LoadClustersAsync called multiple times
         // OnActivated() in constructor also calls LoadClusters, so total is 3+
-        await clusterFactory.Received().LoadClustersAsync();
+        await clusterFactory.Received().LoadClustersForClientAsync(Arg.Any<IKafkaLensClient>());
     }
 
     [AvaloniaFact]

@@ -445,8 +445,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         Children.Clear();
         foreach (var topic in Topics)
         {
-            if (string.IsNullOrWhiteSpace(FilterText) ||
-                topic.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase))
+            var noFilter = string.IsNullOrWhiteSpace(FilterText);
+            if (noFilter || topic.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase))
             {
                 Children.Add(topic);
             }
