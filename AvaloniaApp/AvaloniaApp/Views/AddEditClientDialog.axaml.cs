@@ -30,6 +30,7 @@ public partial class AddEditClientDialog : Window
         _originalId = existing.Id;
         NameBox.Text = existing.Name;
         AddressBox.Text = existing.Address;
+        ApiKeyBox.Text = existing.ApiKey;
         Title = "Edit Client";
 
         // Pre-select protocol
@@ -63,7 +64,7 @@ public partial class AddEditClientDialog : Window
         var protocolItem = ProtocolBox.SelectedItem as ComboBoxItem;
         var protocol = protocolItem?.Content?.ToString() ?? "grpc";
 
-        Result = new ClientInfo(_originalId ?? Guid.NewGuid().ToString(), newName, AddressBox.Text.Trim(), protocol);
+        Result = new ClientInfo(_originalId ?? Guid.NewGuid().ToString(), newName, AddressBox.Text.Trim(), protocol, ApiKeyBox.Text?.Trim() ?? "");
         Close(Result);
     }
 

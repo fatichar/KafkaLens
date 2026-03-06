@@ -5,12 +5,13 @@ namespace KafkaLens.Clients.Entities;
 
 public class ClientInfo
 {
-    public ClientInfo(string id, string name, string address, string protocol)
+    public ClientInfo(string id, string name, string address, string protocol, string apiKey = "")
     {
         Id = id;
         Name = name;
         Address = address;
         Protocol = protocol;
+        ApiKey = apiKey;
     }
 
     [Required]
@@ -28,4 +29,7 @@ public class ClientInfo
     [Required]
     [JsonPropertyName("address")]
     public string Address { get; set; }
+
+    [JsonPropertyName("apiKey")]
+    public string ApiKey { get; set; } = "";
 }

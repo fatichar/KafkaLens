@@ -18,6 +18,9 @@
                 <ComboBoxItem Content="grpc"/>
             </ComboBox>
 
+            <Label Content="API Key (Optional)"/>
+            <TextBox Name="ApiKeyBox" Watermark="e.g. MySecretKey" PasswordChar="*"/>
+
             <TextBlock Name="ErrorTextBlock" Foreground="{DynamicResource ThemeErrorBrush}" TextWrapping="Wrap" Margin="0,10,0,0"/>
         </StackPanel>
 

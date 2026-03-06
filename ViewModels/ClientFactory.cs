@@ -81,7 +81,7 @@ public class ClientFactory : IClientFactory
             case "grpc":
             {
                 var address = SanitizeAddress(clusterInfo.Address);
-                return new GrpcClient(clusterInfo.Name, address);
+                return new GrpcClient(clusterInfo.Name, address, clusterInfo.ApiKey);
             }
             default:
                 throw new ArgumentException($"Protocol {clusterInfo.Protocol} is not supported");

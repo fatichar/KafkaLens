@@ -13,6 +13,7 @@ public partial class ClientInfoViewModel : ConnectionViewModelBase
         name = info.Name;
         address = info.Address;
         protocol = info.Protocol;
+        apiKey = info.ApiKey;
     }
 
     [ObservableProperty]
@@ -20,6 +21,9 @@ public partial class ClientInfoViewModel : ConnectionViewModelBase
     
     [ObservableProperty]
     private string address;
+
+    [ObservableProperty]
+    private string apiKey;
     
     public string Id => Info.Id;
     
@@ -32,5 +36,6 @@ public partial class ClientInfoViewModel : ConnectionViewModelBase
         Name = info.Name;
         Address = info.Address;
         Protocol = info.Protocol;
+        ApiKey = info.ApiKey;
     }
 }

@@ -18,16 +18,18 @@ public class GrpcClient : IKafkaLensClient
 
     private readonly KafkaApi.KafkaApiClient client;
     private readonly string url;
+    private readonly string apiKey;
     public bool CanEditClusters => false;
 
     #endregion
 
     #region Constructor
-    public GrpcClient(string name, string url)
+    public GrpcClient(string name, string url, string apiKey = "")
     {
         Name = name;
         CanSaveMessages = true;
         this.url = url;
+        this.apiKey = apiKey;
         var channel = GrpcChannel.ForAddress(url);
         client = new KafkaApi.KafkaApiClient(channel);
     }
@@ -42,7 +44,7 @@ public class GrpcClient : IKafkaLensClient
             var response = await client.ValidateConnectionAsync(new ValidateConnectionRequest
             {
                 BootstrapServers = bootstrapServers
-            });
+            }, GetMetadata());
             return response.IsConnected;
         }
         catch (RpcException e)
@@ -64,7 +66,7 @@ public class GrpcClient : IKafkaLensClient
         {
             Name = newCluster.Name,
             BootstrapServers = newCluster.Address
-        });
+        }, GetMetadata());
 
         return ToClusterModel(response);
     }
@@ -77,7 +79,7 @@ public class GrpcClient : IKafkaLensClient
         {
             var response = await client.GetAllClustersAsync(
                 new Empty(),
-                null,
+                GetMetadata(),
                 DateTime.UtcNow.AddSeconds(5));
             var clusters = response.Clusters.Select(ToClusterModel).ToList();
 
@@ -117,7 +119,7 @@ public class GrpcClient : IKafkaLensClient
 
     public async Task<IList<Topic>> GetTopicsAsync(string clusterId)
     {
-        var response = await client.GetTopicsAsync(new GetTopicsRequest { ClusterId = clusterId }).ResponseAsync;
+        var response = await client.GetTopicsAsync(new GetTopicsRequest { ClusterId = clusterId }, GetMetadata()).ResponseAsync;
         return response.Topics.Select(ToTopicModel).ToList();
     }
 
@@ -129,7 +131,7 @@ public class GrpcClient : IKafkaLensClient
             TopicName = topic,
             FetchOptions = ToGrpcFetchOptions(options)
         };
-        var response = client.GetTopicMessages(request, cancellationToken: cancellationToken);
+        var response = client.GetTopicMessages(request, GetMetadata(), cancellationToken: cancellationToken);
 
         return ToStream(response, cancellationToken);
     }
@@ -148,7 +150,7 @@ public class GrpcClient : IKafkaLensClient
             Partition = (uint)partition,
             FetchOptions = ToGrpcFetchOptions(options)
         };
-        var response = client.GetPartitionMessages(request, cancellationToken: cancellationToken);
+        var response = client.GetPartitionMessages(request, GetMetadata(), cancellationToken: cancellationToken);
         return ToStream(response, cancellationToken);
     }
 
@@ -191,9 +193,21 @@ public class GrpcClient : IKafkaLensClient
     #region Delete
     public async Task RemoveClusterByIdAsync(string clusterId)
     {
-        var response = await client.RemoveClusterAsync(new RemoveClusterRequest { ClusterId = clusterId }).ResponseAsync;
+        var response = await client.RemoveClusterAsync(new RemoveClusterRequest { ClusterId = clusterId }, GetMetadata()).ResponseAsync;
     }
     #endregion Delete
+
+    #region Helpers
+    private Metadata GetMetadata()
+    {
+        var metadata = new Metadata();
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            metadata.Add("x-api-key", apiKey);
+        }
+        return metadata;
+    }
+    #endregion Helpers
 
     #region Convertors
     private static KafkaCluster ToClusterModel(Cluster cluster)

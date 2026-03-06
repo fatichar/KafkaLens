@@ -1,4 +1,5 @@
 using GrpcApi.Config;
+using GrpcApi.Interceptors;
 using GrpcApi.Services;
 using KafkaLens.Shared;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -29,7 +30,11 @@ builder.WebHost.ConfigureKestrel(options =>
 
 // Add services to the container.
 var services = builder.Services;
-services.AddGrpc();
+services.AddGrpc(options =>
+{
+    options.Interceptors.Add<ApiKeyInterceptor>();
+});
+services.AddSingleton<ApiKeyInterceptor>();
 services.AddSingleton(config);
 var clusterRepo = new ClusterInfoRepository(config.DatabasePath);
 services.AddSingleton<IClusterInfoRepository>(clusterRepo);
