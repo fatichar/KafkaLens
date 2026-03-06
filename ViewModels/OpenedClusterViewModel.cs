@@ -296,21 +296,25 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     {
         Log.Information($"Saving {messages.Count} messages");
 
-        // Pre-create partition directories
         var baseDir = Path.Join(SaveMessagesDir, Name);
+        var dirCache = new Dictionary<(string Topic, int Partition), string>();
 
-        var partitionDirs = messages
-            .Select(m => Path.Join(baseDir, m.Topic, m.Partition.ToString()))
-            .Distinct();
-
-        foreach (var dir in partitionDirs)
-            Directory.CreateDirectory(dir);
+        foreach (var m in messages)
+        {
+            var key = (m.Topic, m.Partition);
+            if (!dirCache.TryGetValue(key, out var dir))
+            {
+                dir = Path.Join(baseDir, m.Topic, m.Partition.ToString());
+                Directory.CreateDirectory(dir);
+                dirCache[key] = dir;
+            }
+        }
 
         var throttler = new SemaphoreSlim(8); // tune 4–12
 
         var tasks = messages.Select(async msg =>
         {
-            var dir = Path.Join(baseDir, msg.Topic, msg.Partition.ToString());
+            var dir = dirCache[(msg.Topic, msg.Partition)];
 
             await throttler.WaitAsync().ConfigureAwait(false);
             try
