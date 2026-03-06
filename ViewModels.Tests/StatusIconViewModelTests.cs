@@ -1,5 +1,3 @@
-using KafkaLens.Shared.Models;
-
 namespace KafkaLens.ViewModels.Tests;
 
 public class StatusIconViewModelTests

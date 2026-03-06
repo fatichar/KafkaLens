@@ -6,6 +6,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace KafkaLens.ViewModels;
 
+public enum MenuItemToggleType { None, CheckBox, Radio }
+
 public partial class MenuItemViewModel : ViewModelBase
 {
     [ObservableProperty]

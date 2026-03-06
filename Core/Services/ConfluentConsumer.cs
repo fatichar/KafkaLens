@@ -8,7 +8,7 @@ using TopicPartition = Confluent.Kafka.TopicPartition;
 
 namespace KafkaLens.Core.Services;
 
-class ConfluentConsumer : ConsumerBase, IDisposable
+internal class ConfluentConsumer : ConsumerBase, IDisposable
 {
     private readonly TimeSpan queryWatermarkTimeout;
     private readonly TimeSpan queryTopicsTimeout;
@@ -55,6 +55,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             {
                 consumer = factory();
             }
+
             return new ConsumerLease(consumer, this);
         }
 
@@ -70,6 +71,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             {
                 c.Dispose();
             }
+
             pool.Clear();
             semaphore.Dispose();
         }
@@ -150,7 +152,8 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             .Build();
     }
 
-    protected virtual Task<ListOffsetsResult> ListOffsetsAsync(IEnumerable<TopicPartitionOffsetSpec> topicPartitionOffsets, ListOffsetsOptions options)
+    protected virtual Task<ListOffsetsResult> ListOffsetsAsync(
+        IEnumerable<TopicPartitionOffsetSpec> topicPartitionOffsets, ListOffsetsOptions options)
     {
         return AdminClient.ListOffsetsAsync(topicPartitionOffsets, options);
     }
@@ -270,7 +273,8 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return tpos;
     }
 
-    private async Task<List<FetchOptions>> CreateOptionsForPartitionAsync(List<Confluent.Kafka.TopicPartition> tps, FetchOptions options, CancellationToken cancellationToken)
+    private async Task<List<FetchOptions>> CreateOptionsForPartitionAsync(List<Confluent.Kafka.TopicPartition> tps,
+        FetchOptions options, CancellationToken cancellationToken)
     {
         var partitionOptions = new List<FetchOptions>();
         var tptList = new List<TopicPartitionTimestamp>();
@@ -285,6 +289,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                     // This allows us to fetch messages <= T by ending just before it.
                     queryTimestamp++;
                 }
+
                 tps.ForEach(tp =>
                     tptList.Add(new(tp, new Timestamp(queryTimestamp, TimestampType.CreateTime))));
 
@@ -321,6 +326,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                             offset = desiredStart;
                         }
                     }
+
                     partitionOptions.Add(new(new FetchPosition(PositionType.Offset, offset), limit));
                 }
 
@@ -360,76 +366,80 @@ class ConfluentConsumer : ConsumerBase, IDisposable
         return partitionOptions;
     }
 
-        private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount,
-            CancellationToken cancellationToken)
+    private int FetchMessages(IConsumer<byte[], byte[]> consumer, MessageStream messages, int requiredCount,
+        CancellationToken cancellationToken)
+    {
+        if (requiredCount <= 0)
         {
-            if (requiredCount <= 0)
-            {
-                return 0;
-            }
+            return 0;
+        }
 
-            var batch = new List<Message>(100);
-            var lastFlushTime = DateTime.Now;
-            var batchInterval = TimeSpan.FromMilliseconds(100);
-            var consecutiveEmptyPolls = 0;
-            // Increase max consecutive empty polls because EnablePartitionEof is true.
-            // It will receive an EOF immediately if there are no messages.
-            // Null returns mean the consumer is still connecting or waiting for metadata.
-            var maxEmptyPolls = 10;
+        var batch = new List<Message>(100);
+        var lastFlushTime = DateTime.Now;
+        var batchInterval = TimeSpan.FromMilliseconds(100);
+        var consecutiveEmptyPolls = 0;
+        // Increase max consecutive empty polls because EnablePartitionEof is true.
+        // It will receive an EOF immediately if there are no messages.
+        // Null returns mean the consumer is still connecting or waiting for metadata.
+        var maxEmptyPolls = 10;
 
-            lock (consumer)
+        lock (consumer)
+        {
+            while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
             {
-                while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
+                try
                 {
-                    try
+                    var result = consumer.Consume(consumeTimeout);
+                    if (result == null)
                     {
-                        var result = consumer.Consume(consumeTimeout);
-                        if (result == null)
+                        consecutiveEmptyPolls++;
+                        Log.Debug("Waiting for consumer connection/metadata (poll timeout {Current}/{Max})",
+                            consecutiveEmptyPolls, maxEmptyPolls);
+                        if (consecutiveEmptyPolls >= maxEmptyPolls)
                         {
-                            consecutiveEmptyPolls++;
-                            Log.Debug("Waiting for consumer connection/metadata (poll timeout {Current}/{Max})", consecutiveEmptyPolls, maxEmptyPolls);
-                            if (consecutiveEmptyPolls >= maxEmptyPolls)
-                            {
-                                Log.Information("Stopping fetch after {Count} consecutive empty polls (connection timeout)", consecutiveEmptyPolls);
-                                break;
-                            }
-                            continue;
-                        }
-
-                        consecutiveEmptyPolls = 0;
-
-                        if (result.IsPartitionEOF)
-                        {
-                            Log.Information("End of partition reached");
+                            Log.Information("Stopping fetch after {Count} consecutive empty polls (connection timeout)",
+                                consecutiveEmptyPolls);
                             break;
                         }
 
-                        var message = MessageConverter.CreateMessage(result);
-                        batch.Add(message);
-                        --requiredCount;
+                        continue;
+                    }
 
-                        if (batch.Count >= 100 || DateTime.Now - lastFlushTime >= batchInterval)
-                        {
-                            FlushBatch(messages, batch);
-                            lastFlushTime = DateTime.Now;
-                        }
-                    }
-                    catch (ConsumeException e)
+                    consecutiveEmptyPolls = 0;
+
+                    if (result.IsPartitionEOF)
                     {
-                        Log.Error(e, "Error while consuming message");
+                        Log.Information("End of partition reached");
                         break;
                     }
-                    catch (Exception e)
+
+                    var message = MessageConverter.CreateMessage(result);
+                    batch.Add(message);
+                    --requiredCount;
+
+                    if (batch.Count >= 100 || DateTime.Now - lastFlushTime >= batchInterval)
                     {
-                        Log.Error(e, "Error while consuming message");
-                        break;
+                        FlushBatch(messages, batch);
+                        lastFlushTime = DateTime.Now;
                     }
                 }
+                catch (ConsumeException e)
+                {
+                    Log.Error(e, "Error while consuming message");
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Log.Error(e, "Error while consuming message");
+                    break;
+                }
             }
-
-            FlushBatch(messages, batch);
-            return requiredCount;
         }
+
+        FlushBatch(messages, batch);
+        return requiredCount;
+    }
+
     private void FlushBatch(MessageStream messages, List<Message> batch)
     {
         if (batch.Count > 0)
@@ -438,11 +448,13 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             {
                 messages.Messages.AddRange(batch);
             }
+
             batch.Clear();
         }
     }
 
-    private async Task<List<WatermarkOffsets>> QueryWatermarkOffsetsAsync(List<Confluent.Kafka.TopicPartition> tps, CancellationToken cancellationToken)
+    private async Task<List<WatermarkOffsets>> QueryWatermarkOffsetsAsync(List<Confluent.Kafka.TopicPartition> tps,
+        CancellationToken cancellationToken)
     {
         Log.Debug("Querying watermark offsets for {TopicPartitions}", tps);
         if (tps.Count == 0)
@@ -450,8 +462,10 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             return new List<WatermarkOffsets>();
         }
 
-        var earliestSpecs = tps.Select(tp => new TopicPartitionOffsetSpec { TopicPartition = tp, OffsetSpec = OffsetSpec.Earliest() }).ToList();
-        var latestSpecs = tps.Select(tp => new TopicPartitionOffsetSpec { TopicPartition = tp, OffsetSpec = OffsetSpec.Latest() }).ToList();
+        var earliestSpecs = tps.Select(tp => new TopicPartitionOffsetSpec
+            { TopicPartition = tp, OffsetSpec = OffsetSpec.Earliest() }).ToList();
+        var latestSpecs = tps.Select(tp => new TopicPartitionOffsetSpec
+            { TopicPartition = tp, OffsetSpec = OffsetSpec.Latest() }).ToList();
 
         try
         {
@@ -472,6 +486,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                 {
                     throw new KafkaException(tpoe.Error);
                 }
+
                 resultsMap[tpoe.TopicPartition] = (tpoe.Offset.Value, -1);
             }
 
@@ -482,6 +497,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                 {
                     throw new KafkaException(tpoe.Error);
                 }
+
                 if (resultsMap.TryGetValue(tpoe.TopicPartition, out var val))
                 {
                     resultsMap[tpoe.TopicPartition] = (val.Low, tpoe.Offset.Value);
@@ -494,6 +510,7 @@ class ConfluentConsumer : ConsumerBase, IDisposable
                 {
                     return new WatermarkOffsets(new Offset(val.Low), new Offset(val.High));
                 }
+
                 throw new Exception($"Failed to get watermark offsets for {tp}");
             });
         }

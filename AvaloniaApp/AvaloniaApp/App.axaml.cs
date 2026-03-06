@@ -69,7 +69,6 @@ public partial class App : Application
         AddLocalDependencies(services, clusterRepo, pluginsDir, kafkaConfig);
 
         FormatterFactory.AddFromPath(pluginsPath);
-        services.AddSingleton(FormatterFactory.Instance);
 
         services.AddSingleton(new MessageViewOptions
             {
@@ -80,6 +79,8 @@ public partial class App : Application
         // services.AddSingleton<ConsumerFactory>();
         services.AddSingleton<IClusterFactory, ClusterFactory>();
         services.AddSingleton<IClientFactory, ClientFactory>();
+        services.AddSingleton<IMessageSaver, MessageSaver>();
+        services.AddSingleton<IFormatterService, FormatterService>();
         services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<MainViewModel>();
 

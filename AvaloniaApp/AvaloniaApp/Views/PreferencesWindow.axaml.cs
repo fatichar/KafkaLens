@@ -1,7 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using KafkaLens.ViewModels;
-using System;
 
 namespace AvaloniaApp.Views;
 

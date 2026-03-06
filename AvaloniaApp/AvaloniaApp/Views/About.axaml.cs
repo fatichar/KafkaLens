@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Reflection;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using AvaloniaApp.Utils;

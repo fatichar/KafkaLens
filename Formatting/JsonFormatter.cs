@@ -6,8 +6,8 @@ namespace KafkaLens.Formatting;
 
 public class JsonFormatter : IMessageFormatter
 {
-    const char INDENT_CHAR = ' ';
-    const int INDENT_SIZE = 4;
+    private const char INDENT_CHAR = ' ';
+    private const int INDENT_SIZE = 4;
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     public string? Format(byte[] data, string searchText, bool useObjectFilter = true)

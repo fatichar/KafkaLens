@@ -1,3 +1,4 @@
+using KafkaLens.ViewModels.Services;
 using Newtonsoft.Json;
 using System.IO;
 
@@ -142,7 +143,7 @@ public class TopicSettingsService : ITopicSettingsService
     {
         if (string.IsNullOrWhiteSpace(formatterName) ||
             formatterName == "Auto" ||
-            formatterName == OpenedClusterViewModel.UNKNOWN_FORMATTER_NAME)
+            formatterName == FormatterService.UnknownFormatterName)
         {
             return null;
         }

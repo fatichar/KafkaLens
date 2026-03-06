@@ -1,23 +1,21 @@
 using KafkaLens.Shared;
+using KafkaLens.ViewModels.Services;
 
 namespace KafkaLens.ViewModels.Tests;
 
 public class MainViewModelTests
 {
-    public MainViewModelTests()
-    {
-        OpenedClusterViewModel.FormatterFactory = FormatterFactory.Instance;
-    }
-
     private OpenedClusterViewModel CreateOpenedCluster(string name)
     {
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var topicSettingsService = Substitute.For<ITopicSettingsService>();
+        var messageSaver = Substitute.For<IMessageSaver>();
+        var formatterService = Substitute.For<IFormatterService>();
         var cluster = new KafkaCluster("1", "MyCluster", "localhost");
         var client = Substitute.For<IKafkaLensClient>();
         var clusterVm = new ClusterViewModel(cluster, client);
-        return new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, name);
+        return new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, name);
     }
 
     [Fact]

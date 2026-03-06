@@ -1,5 +1,4 @@
 using KafkaLens.Shared;
-using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels.Tests;
 

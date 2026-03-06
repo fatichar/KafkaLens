@@ -2,10 +2,9 @@ using System.Text;
 using System.Threading;
 using Avalonia.Headless.XUnit;
 using CommunityToolkit.Mvvm.Messaging;
-using KafkaLens.Formatting;
 using KafkaLens.Shared;
-using KafkaLens.Shared.Models;
 using KafkaLens.ViewModels.Messages;
+using KafkaLens.ViewModels.Services;
 
 namespace KafkaLens.ViewModels.Tests;
 
@@ -14,15 +13,18 @@ public class OpenedClusterViewModelBusinessLogicTests
     private readonly IKafkaLensClient mockClient;
     private readonly ISettingsService settingsService;
     private readonly ITopicSettingsService topicSettingsService;
+    private readonly IMessageSaver messageSaver;
+    private readonly IFormatterService formatterService;
 
     public OpenedClusterViewModelBusinessLogicTests()
     {
         mockClient = Substitute.For<IKafkaLensClient>();
         settingsService = Substitute.For<ISettingsService>();
         topicSettingsService = Substitute.For<ITopicSettingsService>();
+        messageSaver = Substitute.For<IMessageSaver>();
+        formatterService = new FormatterService();
         topicSettingsService.GetSettings(Arg.Any<string>(), Arg.Any<string>())
             .Returns(new TopicSettings());
-        OpenedClusterViewModel.FormatterFactory = FormatterFactory.Instance;
     }
 
     private OpenedClusterViewModel CreateViewModel(string clusterId = "c1", string clusterName = "TestCluster")
@@ -30,7 +32,7 @@ public class OpenedClusterViewModelBusinessLogicTests
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var cluster = new KafkaCluster(clusterId, clusterName, "localhost:9092");
         var clusterVm = new ClusterViewModel(cluster, mockClient);
-        return new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, clusterName);
+        return new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, clusterName);
     }
 
     [Fact]
@@ -736,7 +738,7 @@ public class OpenedClusterViewModelBusinessLogicTests
 
         var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092");
         var clusterVm = new ClusterViewModel(cluster, mockClient);
-        var vm = new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, "TestCluster");
+        var vm = new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, "TestCluster");
         var changedProperties = new List<string>();
         vm.PropertyChanged += (_, e) =>
         {
@@ -846,7 +848,7 @@ public class OpenedClusterViewModelBusinessLogicTests
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092");
         var clusterVm = new ClusterViewModel(cluster, mockClient);
-        var vm = new OpenedClusterViewModel(settingsService, topicSettingsService, clusterVm, "TestCluster");
+        var vm = new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, "TestCluster");
 
         var topics = new List<Topic> { new("auto-loaded-topic", new List<Partition>()) };
         mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));

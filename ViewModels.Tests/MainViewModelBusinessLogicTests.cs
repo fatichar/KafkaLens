@@ -3,6 +3,7 @@ using Avalonia.Headless.XUnit;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.ViewModels.Config;
+using KafkaLens.ViewModels.Services;
 
 namespace KafkaLens.ViewModels.Tests;
 
@@ -15,6 +16,8 @@ public class MainViewModelBusinessLogicTests
     private readonly IClusterInfoRepository clusterInfoRepository = Substitute.For<IClusterInfoRepository>();
     private readonly IClientInfoRepository clientInfoRepository = Substitute.For<IClientInfoRepository>();
     private readonly IClientFactory clientFactory = Substitute.For<IClientFactory>();
+    private readonly IMessageSaver messageSaver = Substitute.For<IMessageSaver>();
+    private readonly IFormatterService formatterService = Substitute.For<IFormatterService>();
     private readonly IUpdateService updateService = Substitute.For<IUpdateService>();
     private readonly IKafkaLensClient mockClient = Substitute.For<IKafkaLensClient>();
     private readonly AppConfig appConfig = new() { Title = "Test", ClusterRefreshIntervalSeconds = 100 };
@@ -55,8 +58,9 @@ public class MainViewModelBusinessLogicTests
             clusterInfoRepository,
             clientInfoRepository,
             clientFactory,
-            updateService,
-            FormatterFactory.Instance);
+            messageSaver,
+            formatterService,
+            updateService);
     }
 
     private (ClusterViewModel vm, KafkaCluster model) CreateClusterVmWithModel(string id = "c1", string name = "Cluster1", string address = "localhost:9092")

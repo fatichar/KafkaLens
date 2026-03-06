@@ -4,7 +4,7 @@ using Serilog;
 
 namespace KafkaLens.Updater;
 
-class Program
+internal class Program
 {
     [STAThread]
     public static void Main(string[] args)

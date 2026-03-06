@@ -1,7 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.IO;
-using System.Text;
 using System.Threading;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,92 +6,49 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared;
-using KafkaLens.Formatting;
 using KafkaLens.ViewModels.Messages;
-using Newtonsoft.Json;
-using Serilog;
-using Xunit;
+using KafkaLens.ViewModels.Services;
 
 namespace KafkaLens.ViewModels;
 
 public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 {
-    const int SELECTED_ITEM_DELAY_MS = 3;
-    internal const string UNKNOWN_FORMATTER_NAME = "Unknown";
-    internal const string KEY_FORMATTER_NAMES_SETTINGS_KEY = "KeyFormatterNames";
-    internal const string VALUE_FORMATTER_NAMES_SETTINGS_KEY = "ValueFormatterNames";
+    private const int SELECTED_ITEM_DELAY_MS = 3;
+    private const string KEY_FORMATTER_NAMES_SETTINGS_KEY = "KeyFormatterNames";
+    private const string VALUE_FORMATTER_NAMES_SETTINGS_KEY = "ValueFormatterNames";
 
     private readonly ISettingsService settingsService;
     private readonly ITopicSettingsService topicSettingsService;
+    private readonly IMessageSaver messageSaver;
+    private readonly IFormatterService formatterService;
     private readonly ClusterViewModel cluster;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
+
     private static IList<string> FetchPositionsForTopic { get; } = new List<string>();
     private static IList<string> FetchPositionsForPartition { get; } = new List<string>();
-
-    public IList<string> FetchPositions
-    {
-        get;
-        set => SetProperty(ref field, value);
-    }
 
     public ITreeNode.NodeType Type => ITreeNode.NodeType.Cluster;
 
     [ObservableProperty] private bool isSelected;
     [ObservableProperty] private bool isExpanded;
-    public ObservableCollection<ITreeNode> Children { get; } = new();
-
-    [ObservableProperty] private List<IMessageFormatter> formatters;
+    [ObservableProperty] private string name;
+    [ObservableProperty] private bool isLoading;
+    [ObservableProperty] private bool applyToAllClusters;
+    [ObservableProperty] private string? messagesSortColumn;
+    [ObservableProperty] private bool? messagesSortAscending;
 
     [ObservableProperty] private IList<string> formatterNames;
     [ObservableProperty] private IList<string> valueFormatterNames;
     [ObservableProperty] private IList<string> keyFormatterNames;
 
-    public RelayCommand ToggleFetchCommand { get; }
-    public RelayCommand RefreshCommand { get; }
-    public RelayCommand GuessValueFormatterCommand { get; }
-    public RelayCommand GuessKeyFormatterCommand { get; }
-    public IAsyncRelayCommand SaveTopicSettingsCommand { get; }
-    public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
-    public AsyncRelayCommand SaveSelectedAsFormattedCommand { get; set; }
-    public AsyncRelayCommand SaveAllAsRawCommand { get; set; }
-    public AsyncRelayCommand SaveAllAsFormattedCommand { get; set; }
-
-    [ObservableProperty] private string name;
-
-    public string Address => cluster.Address;
-
-    public string StatusColor => cluster.StatusColor;
-
-    public bool IsChecking => cluster.IsChecking;
-
-    public ObservableCollection<ITreeNode> Nodes { get; } = new();
-    public ObservableCollection<TopicViewModel> Topics { get; } = new();
-
-    public MessagesViewModel CurrentMessages { get; } = new();
-    private readonly List<MessageViewModel> pendingMessages = new();
-    private bool isSyncingTopics;
-
-    public ITreeNode.NodeType SelectedNodeType
-    {
-        get;
-        set
-        {
-            if (SetProperty(ref field, value))
-            {
-                OnPropertyChanged(nameof(IsFetchOptionsEnabled));
-            }
-        }
-    } = ITreeNode.NodeType.None;
-
-    public bool IsFetchOptionsEnabled => SelectedNodeType == ITreeNode.NodeType.Topic ||
-                                         SelectedNodeType == ITreeNode.NodeType.Partition;
-
-    public int[] FetchCounts => settingsService.GetBrowserConfig().FetchCounts.ToArray();
     [ObservableProperty] private int fetchCount;
     [ObservableProperty] private string? startOffset;
+    [ObservableProperty] private bool fetchBackward;
+    [ObservableProperty] private string? fetchPosition;
+    [ObservableProperty] private DateTime startDate;
+    [ObservableProperty] private bool isStartTimeValid = true;
 
     private TimeOnly startTime;
-    [ObservableProperty] private bool isStartTimeValid = true;
 
     public string StartTimeText
     {
@@ -113,39 +67,57 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         }
     }
 
-    [ObservableProperty] private DateTime startDate;
-
-    private DateTime StartDateTime => StartDate.Date + startTime.ToTimeSpan();
-
     public int FontSize
     {
         get;
         set => SetProperty(ref field, value, true);
     } = 14;
 
-    [ObservableProperty] private bool isLoading;
-
-    [ObservableProperty] private string? fetchPosition;
-
-    [ObservableProperty] private bool fetchBackward;
-    public bool IsFetchBackwardEnabled => FetchPosition != "Start" && FetchPosition != "End";
-
-    partial void OnFetchPositionChanged(string? value)
+    public IList<string> FetchPositions
     {
-        OnPropertyChanged(nameof(IsFetchBackwardEnabled));
-        if (value == "End")
-        {
-            FetchBackward = true;
-        }
-        else if (value == "Start")
-        {
-            FetchBackward = false;
-        }
-        else
-        {
-            FetchBackward = false;
-        }
+        get;
+        set => SetProperty(ref field, value);
     }
+
+    public ITreeNode.NodeType SelectedNodeType
+    {
+        get;
+        set
+        {
+            if (SetProperty(ref field, value))
+                OnPropertyChanged(nameof(IsFetchOptionsEnabled));
+        }
+    } = ITreeNode.NodeType.None;
+
+    public bool IsFetchOptionsEnabled => SelectedNodeType == ITreeNode.NodeType.Topic ||
+                                         SelectedNodeType == ITreeNode.NodeType.Partition;
+    public bool IsFetchBackwardEnabled => FetchPosition != "Start" && FetchPosition != "End";
+    public int[] FetchCounts => settingsService.GetBrowserConfig().FetchCounts.ToArray();
+
+    public ObservableCollection<ITreeNode> Children { get; } = new();
+    public ObservableCollection<ITreeNode> Nodes { get; } = new();
+    public ObservableCollection<TopicViewModel> Topics { get; } = new();
+    public MessagesViewModel CurrentMessages { get; } = new();
+
+    public string Address => cluster.Address;
+    public string StatusColor => cluster.StatusColor;
+    public bool IsChecking => cluster.IsChecking;
+    public string ClusterId => cluster.Id;
+
+    public IList<MessageViewModel> SelectedMessages { get; set; } = new List<MessageViewModel>();
+    public bool IsCurrent { get; set; }
+
+    public RelayCommand ToggleFetchCommand { get; }
+    public RelayCommand RefreshCommand { get; }
+    public RelayCommand GuessValueFormatterCommand { get; }
+    public RelayCommand GuessKeyFormatterCommand { get; }
+    public IAsyncRelayCommand SaveTopicSettingsCommand { get; }
+    public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
+    public AsyncRelayCommand SaveSelectedAsFormattedCommand { get; set; }
+    public AsyncRelayCommand SaveAllAsRawCommand { get; set; }
+    public AsyncRelayCommand SaveAllAsFormattedCommand { get; set; }
+
+    private DateTime StartDateTime => StartDate.Date + startTime.ToTimeSpan();
 
     static OpenedClusterViewModel()
     {
@@ -162,11 +134,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public OpenedClusterViewModel(
         ISettingsService settingsService,
         ITopicSettingsService topicSettingsService,
+        IMessageSaver messageSaver,
+        IFormatterService formatterService,
         ClusterViewModel cluster,
         string name)
     {
         this.settingsService = settingsService;
         this.topicSettingsService = topicSettingsService;
+        this.messageSaver = messageSaver;
+        this.formatterService = formatterService;
         this.cluster = cluster;
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
@@ -189,10 +165,18 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         GuessKeyFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: true));
         SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
 
-        SaveSelectedAsRawCommand = new AsyncRelayCommand(SaveSelectedMessagesAsRaw, CanSaveMessages);
-        SaveSelectedAsFormattedCommand = new AsyncRelayCommand(SaveSelectedMessagesAsFormatted, CanSaveMessages);
-        SaveAllAsRawCommand = new AsyncRelayCommand(SaveAllMessagesAsRaw, CanSaveMessages);
-        SaveAllAsFormattedCommand = new AsyncRelayCommand(SaveAllMessagesAsFormatted, CanSaveMessages);
+        SaveSelectedAsRawCommand = new AsyncRelayCommand(
+            () => messageSaver.SaveAsync(SelectedMessages, Name, false),
+            () => messageSaver.CanSaveMessages(cluster.Id));
+        SaveSelectedAsFormattedCommand = new AsyncRelayCommand(
+            () => messageSaver.SaveAsync(SelectedMessages, Name, true),
+            () => messageSaver.CanSaveMessages(cluster.Id));
+        SaveAllAsRawCommand = new AsyncRelayCommand(
+            () => messageSaver.SaveAsync(CurrentMessages.Messages, Name, false),
+            () => messageSaver.CanSaveMessages(cluster.Id));
+        SaveAllAsFormattedCommand = new AsyncRelayCommand(
+            () => messageSaver.SaveAsync(CurrentMessages.Messages, Name, true),
+            () => messageSaver.CanSaveMessages(cluster.Id));
 
         Nodes.Add(this);
         IsSelected = true;
@@ -205,14 +189,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         FetchPositions = FetchPositionsForTopic;
         FetchPosition = FetchPositions[0];
 
-        formatters = FormatterFactory.GetFormatters();
-        FormatterNames = formatters.ConvertAll(f => f.Name);
-
-        ValueFormatterNames = BuildValueFormatterNames(settingsService);
-
-        DefaultFormatter = Formatters.FirstOrDefault() ?? new TextFormatter();
-
-        KeyFormatterNames = BuildKeyFormatterNames(settingsService);
+        InitializeFormatters();
 
         IsActive = true;
         WeakReferenceMessenger.Default.Register<ConfigurationChangedMessage>(this, (r, m) =>
@@ -223,237 +200,58 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         });
     }
 
+    private void InitializeFormatters()
+    {
+        var allFormatterNames = formatterService.GetAllFormatterNames();
+        FormatterNames = allFormatterNames;
+        ValueFormatterNames = formatterService.BuildFormatterNames(
+            settingsService.GetValue(VALUE_FORMATTER_NAMES_SETTINGS_KEY), allFormatterNames);
+        KeyFormatterNames = formatterService.BuildFormatterNames(
+            settingsService.GetValue(KEY_FORMATTER_NAMES_SETTINGS_KEY),
+            formatterService.GetBuiltInKeyFormatterNames());
+    }
+
     private void UpdateStartTimeText()
     {
         var updated = startTime.ToString("HH:mm:ss");
         if (!updated.Equals(StartTimeText))
-        {
             StartTimeText = updated;
-        }
+    }
+
+    partial void OnFetchPositionChanged(string? value)
+    {
+        OnPropertyChanged(nameof(IsFetchBackwardEnabled));
+        FetchBackward = value == "End";
     }
 
     private void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ClusterViewModel.StatusColor))
-        {
             OnPropertyChanged(nameof(StatusColor));
-        }
         else if (e.PropertyName == nameof(ClusterViewModel.Status))
         {
             OnPropertyChanged(nameof(IsChecking));
             if (cluster.Status == ConnectionState.Connected && Topics.Count == 0 && !isSyncingTopics)
-            {
                 Dispatcher.UIThread.Post(() => _ = LoadTopicsAsync());
-            }
         }
         else if (e.PropertyName == nameof(ClusterViewModel.Name))
-        {
             Name = cluster.Name;
-        }
     }
 
-    #region SAVE MESSAGES
-
-    private static readonly string SaveMessagesDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "KafkaLens",
-        "SavedMessages");
-
-    private bool CanSaveMessages()
+    private static bool AreSameLogicalNode(ITreeNode? first, ITreeNode? second)
     {
-        return cluster.Client.CanSaveMessages;
-    }
+        if (ReferenceEquals(first, second)) return true;
+        if (first is null || second is null) return false;
 
-    private async Task SaveAllMessagesAsRaw()
-    {
-        await SaveAsync(CurrentMessages.Messages, false);
-    }
-
-    private async Task SaveAllMessagesAsFormatted()
-    {
-        await SaveAsync(CurrentMessages.Messages, true);
-    }
-
-    private async Task SaveSelectedMessagesAsRaw()
-    {
-        await SaveAsync(SelectedMessages, false);
-    }
-
-    private async Task SaveSelectedMessagesAsFormatted()
-    {
-        await SaveAsync(SelectedMessages, true);
-    }
-
-    private async Task SaveAsync(IList<MessageViewModel> messages, bool formatted)
-    {
-        if (messages.Count == 0)
-            return;
-
-        await Task.Run(() => SaveAllInternal(messages, formatted));
-    }
-
-    private void SaveAllInternal(IList<MessageViewModel> messages, bool formatted)
-    {
-        Log.Information($"Saving {messages.Count} messages");
-
-        var baseDir = Path.Join(SaveMessagesDir, Name);
-        var dirCache = new Dictionary<(string Topic, int Partition), string>();
-
-        foreach (var m in messages)
+        return (first, second) switch
         {
-            var key = (m.Topic, m.Partition);
-            if (!dirCache.TryGetValue(key, out var dir))
-            {
-                dir = Path.Join(baseDir, m.Topic, m.Partition.ToString());
-                Directory.CreateDirectory(dir);
-                dirCache[key] = dir;
-            }
-        }
-
-        var throttler = new SemaphoreSlim(8); // tune 4–12
-
-        var tasks = messages.Select(async msg =>
-        {
-            var dir = dirCache[(msg.Topic, msg.Partition)];
-
-            await throttler.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                await SaveSingleAsync(dir, msg, formatted)
-                    .ConfigureAwait(false);
-            }
-            finally
-            {
-                throttler.Release();
-            }
-        });
-
-        Task.WhenAll(tasks)
-            .ContinueWith(t => { Log.Information($"Saved {messages.Count} messages"); })
-            .ConfigureAwait(false);
+            (TopicViewModel a, TopicViewModel b) =>
+                string.Equals(a.Name, b.Name, StringComparison.Ordinal),
+            (PartitionViewModel a, PartitionViewModel b) =>
+                a.Id == b.Id && string.Equals(a.TopicName, b.TopicName, StringComparison.Ordinal),
+            _ => first.Type == second.Type && string.Equals(first.Name, second.Name, StringComparison.Ordinal)
+        };
     }
-
-
-    private async Task SaveSingleAsync(
-        string dir,
-        MessageViewModel msg,
-        bool formatted)
-    {
-        var filePath = Path.Join(dir, msg.Offset + GetExtension(formatted));
-
-        if (!formatted)
-        {
-            await SaveRaw(msg, filePath);
-        }
-        else
-        {
-            await SaveFormatted(msg, filePath);
-        }
-    }
-
-    private static async Task SaveFormatted(MessageViewModel msg, string filePath)
-    {
-        msg.PrettyFormat();
-
-        var sb = new StringBuilder(512);
-
-        sb.AppendLine($"Key: {msg.Key}");
-        sb.AppendLine($"Timestamp: {msg.Timestamp}");
-        sb.AppendLine($"Partition: {msg.Partition}");
-        sb.AppendLine($"Offset: {msg.Offset}");
-
-        if (msg.Message.Headers.Count > 0)
-        {
-            sb.AppendLine("Headers:");
-            foreach (var header in msg.Message.Headers)
-            {
-                sb.Append("  ")
-                    .Append(header.Key)
-                    .Append(": ")
-                    .AppendLine(Encoding.UTF8.GetString(header.Value));
-            }
-        }
-
-        sb.AppendLine();
-        sb.AppendLine(msg.DisplayText);
-
-        await File.WriteAllTextAsync(filePath, sb.ToString())
-            .ConfigureAwait(false);
-    }
-
-    private static async Task SaveRaw(MessageViewModel msg, string filePath)
-    {
-        await using var fileStream = new FileStream(
-            filePath,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            bufferSize: 81920,   // larger buffer for binary
-            useAsync: true);
-
-        msg.Message.Serialize(fileStream);
-        await fileStream.FlushAsync().ConfigureAwait(false);
-    }
-
-
-    private static string GetExtension(bool formatted)
-    {
-        return formatted ? ".txt" : ".klm";
-    }
-
-    #endregion
-
-    internal async Task LoadTopicsAsync()
-    {
-        if (isSyncingTopics) return;
-        isSyncingTopics = true;
-        try
-        {
-            await cluster.LoadTopicsCommand.ExecuteAsync(null);
-            Topics.Clear();
-            foreach (var topic in cluster.Topics)
-            {
-                var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
-                var valueFormatter = NormalizeFormatterName(settings.ValueFormatter, ValueFormatterNames);
-                var keyFormatter = NormalizeFormatterName(settings.KeyFormatter, KeyFormatterNames);
-                var viewModel = new TopicViewModel(topic, valueFormatter, keyFormatter);
-                Topics.Add(viewModel);
-            }
-
-            FilterTopics();
-            RestorePendingSessionState();
-        }
-        catch (Exception e)
-        {
-            Serilog.Log.Error(e, "Failed to load topics for opened cluster {ClusterName}", Name);
-        }
-        finally
-        {
-            isSyncingTopics = false;
-        }
-    }
-
-    [ObservableProperty] private string filterText = "";
-
-    partial void OnFilterTextChanged(string value)
-    {
-        FilterTopics();
-    }
-
-    internal void FilterTopics()
-    {
-        Children.Clear();
-        foreach (var topic in Topics)
-        {
-            var noFilter = string.IsNullOrWhiteSpace(FilterText);
-            if (noFilter || topic.Name.Contains(FilterText, StringComparison.OrdinalIgnoreCase))
-            {
-                Children.Add(topic);
-            }
-        }
-    }
-
-    private IMessageFormatter DefaultFormatter { get; set; }
 
     private ITreeNode? selectedNode;
 
@@ -491,620 +289,13 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                         ? previousFetchPosition
                         : newFetchPositions[0];
                 }
+
                 if (selectedNode is { Type: ITreeNode.NodeType.Partition } or { Type: ITreeNode.NodeType.Topic })
                 {
                     if (IsCurrent && logicalNodeChanged && !suppressFetchOnSelectionChange)
-                    {
                         FetchMessages();
-                    }
                 }
             }
-        }
-    }
-
-    private static bool AreSameLogicalNode(ITreeNode? first, ITreeNode? second)
-    {
-        if (ReferenceEquals(first, second))
-        {
-            return true;
-        }
-
-        if (first is null || second is null)
-        {
-            return false;
-        }
-
-        return (first, second) switch
-        {
-            (TopicViewModel firstTopic, TopicViewModel secondTopic) =>
-                string.Equals(firstTopic.Name, secondTopic.Name, StringComparison.Ordinal),
-            (PartitionViewModel firstPartition, PartitionViewModel secondPartition) =>
-                firstPartition.Id == secondPartition.Id &&
-                string.Equals(firstPartition.TopicName, secondPartition.TopicName, StringComparison.Ordinal),
-            _ => first.Type == second.Type && string.Equals(first.Name, second.Name, StringComparison.Ordinal)
-        };
-    }
-
-    public string ClusterId => cluster.Id;
-    public static FormatterFactory FormatterFactory { get; set; } = null!;
-    public IList<MessageViewModel> SelectedMessages { get; set; } = new List<MessageViewModel>();
-    public bool IsCurrent { get; set; }
-    [ObservableProperty] private string? messagesSortColumn;
-    [ObservableProperty] private bool? messagesSortAscending;
-
-    MessageStream? messages = null;
-    private readonly List<IMessageLoadListener> messageLoadListeners = new();
-    private CancellationTokenSource? fetchCts;
-    private OpenedTabState? pendingRestoreState;
-    private bool suppressFetchOnSelectionChange;
-
-    private void OnStreamFinished()
-    {
-        Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            IsLoading = false;
-            messageLoadListeners.ForEach(listener => listener.MessageLoadingFinished());
-        });
-    }
-
-    private void StopLoading()
-    {
-        fetchCts?.Cancel();
-        IsLoading = false;
-    }
-
-    internal void FetchMessages()
-    {
-        if (selectedNode == null)
-        {
-            return;
-        }
-
-        fetchCts?.Cancel();
-        fetchCts = new CancellationTokenSource();
-
-        if (messages != null)
-        {
-            messages.Messages.CollectionChanged -= OnMessagesChanged;
-            messages.Finished -= OnStreamFinished;
-        }
-
-        CurrentMessages.Clear();
-        IsLoading = true;
-
-        var fetchOptions = CreateFetchOptions();
-        messageLoadListeners.ForEach(listener => listener.MessageLoadingStarted());
-
-        messages = selectedNode switch
-        {
-            TopicViewModel topic => KafkaLensClient.GetMessageStream(cluster.Id, topic.Name,
-                fetchOptions, fetchCts.Token),
-
-            PartitionViewModel partition => KafkaLensClient.GetMessageStream(cluster.Id,
-                partition.TopicName, partition.Id, fetchOptions, fetchCts.Token),
-
-            _ => null
-        };
-
-        if (messages != null)
-        {
-            messages.Messages.CollectionChanged += OnMessagesChanged;
-            messages.Finished += OnStreamFinished;
-        }
-    }
-
-    private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        var node = (IMessageSource?)SelectedNode;
-        if (node == null)
-        {
-            return;
-        }
-
-        bool settingsChanged = false;
-        var topicName = GetCurrentTopicName();
-
-        if (IsUnknownFormatter(node.FormatterName))
-        {
-            Assert.True(e.NewItems?.Count > 0);
-            var message = (Message)e.NewItems![0]!;
-            var formatter = GuessValueFormatter(message);
-            node.FormatterName = formatter?.Name ?? DefaultFormatter.Name;
-            settingsChanged = true;
-            Log.Information("Guessed value formatter {Formatter} for topic {Topic}", node.FormatterName, topicName);
-        }
-
-        if (IsUnknownFormatter(node.KeyFormatterName))
-        {
-            Assert.True(e.NewItems?.Count > 0);
-            var message = (Message)e.NewItems![0]!;
-            var formatter = GuessKeyFormatter(message);
-            if (formatter != null)
-            {
-                node.KeyFormatterName = formatter.Name;
-                settingsChanged = true;
-                Log.Information("Guessed key formatter {Formatter} for topic {Topic}", node.KeyFormatterName, topicName);
-            }
-        }
-
-        if (settingsChanged)
-        {
-            topicSettingsService.SetSettings(cluster.Id, topicName, new TopicSettings
-            {
-                KeyFormatter = node.KeyFormatterName,
-                ValueFormatter = node.FormatterName
-            });
-        }
-
-        lock (pendingMessages)
-        {
-            Log.Debug("Pending messages = {Count}", pendingMessages.Count);
-            Log.Debug("Received {Count} messages", e.NewItems?.Count);
-            var valueFormatterName = NormalizeFormatterName(node.FormatterName, ValueFormatterNames);
-            var keyFormatterName = NormalizeFormatterName(node.KeyFormatterName, KeyFormatterNames);
-            foreach (var msg in e.NewItems ?? new List<Message>())
-            {
-                var viewModel = new MessageViewModel((Message)msg, valueFormatterName, keyFormatterName);
-                viewModel.Topic = topicName;
-                pendingMessages.Add(viewModel);
-            }
-
-            Dispatcher.UIThread.InvokeAsync(UpdateMessages);
-            Log.Debug("Pending messages = {Count}", pendingMessages.Count);
-        }
-    }
-
-    private string GetCurrentTopicName()
-    {
-        switch (selectedNode)
-        {
-            case TopicViewModel topic:
-                return topic.Name;
-            case PartitionViewModel partition:
-                return partition.TopicName;
-            default:
-                throw new InvalidOperationException();
-        }
-    }
-
-    private IMessageFormatter? GuessValueFormatter(Message message)
-    {
-        IMessageFormatter? best = null;
-        int maxLength = 0;
-        var allowedValueFormatterNames = ValueFormatterNames.Where(n => n != UNKNOWN_FORMATTER_NAME).ToHashSet(StringComparer.Ordinal);
-
-        // Disable console output, as some formatters may write to it.
-        var originalOut = Console.Out;
-        Console.SetOut(TextWriter.Null);
-        try
-        {
-            foreach (IMessageFormatter formatter in Formatters)
-            {
-                if (!allowedValueFormatterNames.Contains(formatter.Name))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    var text = formatter.Format(message.Value ?? Array.Empty<byte>(), true);
-                    if (text == null) continue;
-                    if (text.Length > maxLength)
-                    {
-                        maxLength = text.Length;
-                        best = formatter;
-                    }
-                }
-                catch
-                {
-                    // Formatter doesn't support this message type — skip silently
-                }
-            }
-        }
-        finally
-        {
-            // Restore console output.
-            Console.SetOut(originalOut);
-        }
-
-        return best;
-    }
-
-    private IMessageFormatter? GuessKeyFormatter(Message message)
-    {
-        var configuredNames = KeyFormatterNames
-            .Where(n => n != UNKNOWN_FORMATTER_NAME)
-            .ToList();
-
-        var prioritized = configuredNames
-            .Where(n => n != "Text")
-            .Concat(configuredNames.Where(n => n == "Text"));
-
-        foreach (var formatterName in prioritized)
-        {
-            var formatter = FormatterFactory.Instance.GetFormatter(formatterName);
-            if (formatter.Format(message.Key ?? Array.Empty<byte>(), false) != null)
-            {
-                return formatter;
-            }
-        }
-
-        return null;
-    }
-
-    internal static string NormalizeFormatterName(string? formatterName, IList<string> allowedNames)
-    {
-        if (string.IsNullOrWhiteSpace(formatterName) ||
-            formatterName == "Auto" ||
-            formatterName == UNKNOWN_FORMATTER_NAME)
-        {
-            return UNKNOWN_FORMATTER_NAME;
-        }
-
-        return allowedNames.Contains(formatterName)
-            ? formatterName
-            : UNKNOWN_FORMATTER_NAME;
-    }
-
-    internal static bool CanApplyFormatterToLoadedMessages(string? formatterName, IList<string> allowedNames)
-    {
-        return !string.IsNullOrWhiteSpace(formatterName) &&
-               formatterName != "Auto" &&
-               formatterName != UNKNOWN_FORMATTER_NAME &&
-               allowedNames.Contains(formatterName);
-    }
-
-    [ObservableProperty] private bool applyToAllClusters;
-
-    internal Task SaveTopicSettingsAsync()
-    {
-        if (SelectedNode is not IMessageSource node) return Task.CompletedTask;
-
-        TryGuessUnknownFormattersFromLoadedMessages(node);
-
-        var topicName = GetCurrentTopicName();
-        var settings = new TopicSettings
-        {
-            KeyFormatter = ToKnownFormatterOrNull(node.KeyFormatterName),
-            ValueFormatter = ToKnownFormatterOrNull(node.FormatterName)
-        };
-        topicSettingsService.SetSettings(cluster.Id, topicName, settings, ApplyToAllClusters);
-
-        // Re-format existing messages
-        foreach (var msg in CurrentMessages.Messages)
-        {
-            if (CanApplyFormatterToLoadedMessages(settings.ValueFormatter, ValueFormatterNames))
-            {
-                msg.FormatterName = settings.ValueFormatter!;
-            }
-
-            if (CanApplyFormatterToLoadedMessages(settings.KeyFormatter, KeyFormatterNames))
-            {
-                msg.KeyFormatterName = settings.KeyFormatter!;
-            }
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private void TryGuessUnknownFormattersFromLoadedMessages(IMessageSource node)
-    {
-        if (CurrentMessages.Messages.Count == 0)
-        {
-            return;
-        }
-
-        var firstMessage = CurrentMessages.Messages[0].Message;
-        var topicName = GetCurrentTopicName();
-
-        if (IsUnknownFormatter(node.FormatterName))
-        {
-            var formatter = GuessValueFormatter(firstMessage);
-            node.FormatterName = formatter?.Name ?? DefaultFormatter.Name;
-            Log.Information("Guessed value formatter {Formatter} for topic {Topic}", node.FormatterName, topicName);
-        }
-
-        if (IsUnknownFormatter(node.KeyFormatterName))
-        {
-            var formatter = GuessKeyFormatter(firstMessage);
-            if (formatter != null)
-            {
-                node.KeyFormatterName = formatter.Name;
-                Log.Information("Guessed key formatter {Formatter} for topic {Topic}", node.KeyFormatterName, topicName);
-            }
-        }
-    }
-
-    private void GuessFormatterForSelectedNode(bool isKeyFormatter)
-    {
-        if (SelectedNode is not IMessageSource node || CurrentMessages.Messages.Count == 0)
-        {
-            return;
-        }
-
-        var firstMessage = CurrentMessages.Messages[0].Message;
-        if (isKeyFormatter)
-        {
-            var keyFormatter = GuessKeyFormatter(firstMessage)?.Name;
-            if (string.IsNullOrWhiteSpace(keyFormatter))
-            {
-                return;
-            }
-
-            node.KeyFormatterName = keyFormatter;
-            foreach (var msg in CurrentMessages.Messages)
-            {
-                msg.KeyFormatterName = keyFormatter!;
-            }
-
-            return;
-        }
-
-        var valueFormatter = GuessValueFormatter(firstMessage)?.Name ?? DefaultFormatter.Name;
-        node.FormatterName = valueFormatter;
-        foreach (var msg in CurrentMessages.Messages)
-        {
-            msg.FormatterName = valueFormatter;
-        }
-    }
-
-    private static bool IsUnknownFormatter(string? formatterName)
-    {
-        return string.IsNullOrWhiteSpace(formatterName) ||
-               formatterName == "Auto" ||
-               formatterName == UNKNOWN_FORMATTER_NAME;
-    }
-
-    private static string? ToKnownFormatterOrNull(string? formatterName)
-    {
-        return IsUnknownFormatter(formatterName) ? null : formatterName;
-    }
-
-    private IList<string> BuildKeyFormatterNames(ISettingsService settingsService)
-    {
-        var allowed = FormatterFactory.Instance.GetBuiltInKeyFormatterNames();
-        var configured = ParseConfiguredFormatterNames(settingsService.GetValue(KEY_FORMATTER_NAMES_SETTINGS_KEY), allowed);
-        var names = configured.Count > 0 ? configured : allowed;
-        var result = new List<string>(names.Count + 1) { UNKNOWN_FORMATTER_NAME };
-        result.AddRange(names);
-        return result;
-    }
-
-    private IList<string> BuildValueFormatterNames(ISettingsService settingsService)
-    {
-        var allowed = FormatterNames;
-        var configured = ParseConfiguredFormatterNames(settingsService.GetValue(VALUE_FORMATTER_NAMES_SETTINGS_KEY), allowed);
-        var names = configured.Count > 0 ? configured : allowed;
-        var result = new List<string>(names.Count + 1) { UNKNOWN_FORMATTER_NAME };
-        result.AddRange(names);
-        return result;
-    }
-
-    private static IList<string> ParseConfiguredFormatterNames(string? configuredRaw, IList<string> allowed)
-    {
-        if (string.IsNullOrWhiteSpace(configuredRaw))
-        {
-            return new List<string>();
-        }
-
-        var configured = TryParseFormatterList(configuredRaw);
-        if (configured.Count == 0)
-        {
-            return new List<string>();
-        }
-
-        var allowedSet = new HashSet<string>(allowed, StringComparer.Ordinal);
-        var filtered = new List<string>();
-        foreach (var name in configured)
-        {
-            if (allowedSet.Contains(name) && !filtered.Contains(name))
-            {
-                filtered.Add(name);
-            }
-        }
-
-        return filtered;
-    }
-
-    private static IList<string> TryParseFormatterList(string configuredRaw)
-    {
-        try
-        {
-            var parsed = JsonConvert.DeserializeObject<List<string>>(configuredRaw);
-            if (parsed != null)
-            {
-                return parsed.Where(v => !string.IsNullOrWhiteSpace(v)).ToList();
-            }
-        }
-        catch
-        {
-            // Fall back to comma-separated list.
-        }
-
-        return configuredRaw
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(v => !string.IsNullOrWhiteSpace(v))
-            .ToList();
-    }
-
-    public void UpdateMessages()
-    {
-        lock (pendingMessages)
-        {
-            Log.Debug("UI: Pending messages = {Count}", pendingMessages.Count);
-            if (pendingMessages.Count > 0)
-            {
-                CurrentMessages.AddRange(pendingMessages);
-                Log.Debug("UI: Loaded {Count} messages", pendingMessages.Count);
-                pendingMessages.Clear();
-            }
-        }
-
-        if (!messages?.HasMore ?? false)
-        {
-            Log.Debug("UI: No more messages");
-            IsLoading = false;
-        }
-    }
-
-    internal FetchOptions CreateFetchOptions()
-    {
-        FetchPosition start;
-        FetchPosition? end = null;
-        switch (FetchPosition)
-        {
-            case "End":
-                end = Shared.Models.FetchPosition.End;
-                start = new(PositionType.Offset, Shared.Models.FetchPosition.End.Offset - FetchCount);
-                break;
-            case "Start":
-                start = Shared.Models.FetchPosition.Start;
-                break;
-            case "Timestamp":
-                var epochMs = (long)(StartDateTime.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalMilliseconds;
-                start = new(PositionType.Timestamp, epochMs);
-                break;
-            case "Offset":
-                start = new(PositionType.Offset, long.TryParse(StartOffset, out var offset) ? offset : -1);
-                break;
-            default:
-                throw new Exception("Invalid fetch position " + FetchPosition);
-        }
-
-        var fetchOptions = new FetchOptions(start, end);
-        fetchOptions.Limit = FetchCount;
-        fetchOptions.Direction = FetchBackward ? FetchDirection.Backward : FetchDirection.Forward;
-        return fetchOptions;
-    }
-
-    internal OpenedTabState CaptureOpenedTabState()
-    {
-        string? selectedNodeType = null;
-        string? selectedTopicName = null;
-        int? selectedPartitionId = null;
-
-        switch (selectedNode)
-        {
-            case TopicViewModel topic:
-                selectedNodeType = nameof(ITreeNode.NodeType.Topic);
-                selectedTopicName = topic.Name;
-                break;
-            case PartitionViewModel partition:
-                selectedNodeType = nameof(ITreeNode.NodeType.Partition);
-                selectedTopicName = partition.TopicName;
-                selectedPartitionId = partition.Id;
-                break;
-        }
-
-        return new OpenedTabState
-        {
-            ClusterId = ClusterId,
-            SelectedNodeType = selectedNodeType,
-            SelectedTopicName = selectedTopicName,
-            SelectedPartitionId = selectedPartitionId,
-            FetchPosition = FetchPosition,
-            FetchCount = FetchCount,
-            FetchBackward = FetchBackward,
-            StartOffset = StartOffset,
-            StartDate = StartDate,
-            StartTimeText = StartTimeText,
-            MessagesSortColumn = MessagesSortColumn,
-            MessagesSortAscending = MessagesSortAscending,
-            PositiveFilter = CurrentMessages.PositiveFilter,
-            NegativeFilter = CurrentMessages.NegativeFilter,
-            LineFilter = CurrentMessages.LineFilter,
-            UseObjectFilter = CurrentMessages.UseObjectFilter
-        };
-    }
-
-    internal void ApplyOpenedTabState(OpenedTabState? state)
-    {
-        if (state == null)
-        {
-            return;
-        }
-
-        MessagesSortColumn = state.MessagesSortColumn;
-        MessagesSortAscending = state.MessagesSortAscending;
-        CurrentMessages.PositiveFilter = state.PositiveFilter ?? "";
-        CurrentMessages.NegativeFilter = state.NegativeFilter ?? "";
-        CurrentMessages.LineFilter = state.LineFilter ?? "";
-        CurrentMessages.UseObjectFilter = state.UseObjectFilter;
-        pendingRestoreState = state;
-    }
-
-    private void RestorePendingSessionState()
-    {
-        var state = pendingRestoreState;
-        if (state == null)
-        {
-            return;
-        }
-
-        pendingRestoreState = null;
-
-        ITreeNode? targetNode = null;
-        if (!string.IsNullOrWhiteSpace(state.SelectedTopicName))
-        {
-            var topic = Topics.FirstOrDefault(t => string.Equals(t.Name, state.SelectedTopicName, StringComparison.Ordinal));
-            if (topic != null)
-            {
-                if (string.Equals(state.SelectedNodeType, nameof(ITreeNode.NodeType.Partition), StringComparison.Ordinal) &&
-                    state.SelectedPartitionId.HasValue)
-                {
-                    var partition = topic.Partitions.FirstOrDefault(p => p.Id == state.SelectedPartitionId.Value);
-                    targetNode = partition ?? (ITreeNode)topic;
-                    topic.IsExpanded = true;
-                }
-                else
-                {
-                    targetNode = topic;
-                }
-            }
-        }
-
-        if (targetNode != null)
-        {
-            suppressFetchOnSelectionChange = true;
-            try
-            {
-                SelectedNode = targetNode;
-                targetNode.IsSelected = true;
-            }
-            finally
-            {
-                suppressFetchOnSelectionChange = false;
-            }
-        }
-
-        if (state.FetchCount > 0)
-        {
-            FetchCount = state.FetchCount;
-        }
-
-        StartOffset = state.StartOffset;
-        if (state.StartDate.HasValue)
-        {
-            StartDate = state.StartDate.Value;
-        }
-        if (!string.IsNullOrWhiteSpace(state.StartTimeText))
-        {
-            StartTimeText = state.StartTimeText!;
-        }
-
-        if (!string.IsNullOrWhiteSpace(state.FetchPosition) && FetchPositions.Contains(state.FetchPosition))
-        {
-            FetchPosition = state.FetchPosition;
-        }
-
-        if (IsFetchBackwardEnabled)
-        {
-            FetchBackward = state.FetchBackward;
-        }
-
-        if (IsCurrent && targetNode is { Type: ITreeNode.NodeType.Topic or ITreeNode.NodeType.Partition })
-        {
-            FetchMessages();
         }
     }
 }
