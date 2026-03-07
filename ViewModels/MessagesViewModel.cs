@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 ﻿using KafkaLens.ViewModels.Search;
 using KafkaLens.Shared.Utils;
 
@@ -53,6 +58,8 @@ public sealed class MessagesViewModel: ViewModelBase
 
     private string positiveFilter = "";
     private IFilterExpression positiveExpression = new AllMatchExpression();
+    private CancellationTokenSource? filterCts;
+
     public string PositiveFilter
     {
         get => positiveFilter;
@@ -62,7 +69,7 @@ public sealed class MessagesViewModel: ViewModelBase
                 return;
             SetProperty(ref positiveFilter, value);
             positiveExpression = SearchParser.Parse(value);
-            ApplyFilter();
+            _ = ApplyFilterAsync();
         }
     }
 
@@ -77,7 +84,7 @@ public sealed class MessagesViewModel: ViewModelBase
                 return;
             SetProperty(ref negativeFilter, value);
             negativeExpression = SearchParser.Parse(value, false);
-            ApplyFilter();
+            _ = ApplyFilterAsync();
         }
     }
 
@@ -100,17 +107,50 @@ public sealed class MessagesViewModel: ViewModelBase
         }
     }
 
-    private void ApplyFilter()
+    private async Task ApplyFilterAsync()
     {
-        Filtered.Clear();
+        filterCts?.Cancel();
+        filterCts = new CancellationTokenSource();
+        var token = filterCts.Token;
 
-        foreach (var message in Messages)
+        var messagesCopy = Messages.ToList();
+
+        try
         {
-            if (FilterAccepts(message.DecodedMessage))
+            var filteredMessages = await Task.Run(() =>
             {
-                Filtered.Add(message);
+                var result = new List<MessageViewModel>();
+                foreach (var message in messagesCopy)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (FilterAccepts(message.DecodedMessage))
+                    {
+                        result.Add(message);
+                    }
+                }
+                return result;
+            }, token);
+
+            if (!token.IsCancellationRequested)
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    if (!token.IsCancellationRequested)
+                    {
+                        Filtered.ReplaceRange(filteredMessages);
+                    }
+                });
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        _ = ApplyFilterAsync();
     }
 
     private bool FilterAccepts(string message)
