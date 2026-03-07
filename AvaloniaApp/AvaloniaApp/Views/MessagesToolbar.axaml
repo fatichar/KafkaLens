@@ -3,16 +3,43 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
 	x:DataType="vm:OpenedClusterViewModel">
-	<Grid ColumnDefinitions="Auto, *, Auto, *" Margin="5">
-		<Label Grid.Column="0" VerticalAlignment="Center" Margin="0,0,5,0">Contains</Label>
-		<TextBox Grid.Column="1" x:Name="PositiveFilterBox"
+	<Grid ColumnDefinitions="*, Auto" Margin="5">
+		<TextBox Grid.Column="0" x:Name="FilterBox"
 		         VerticalContentAlignment="Center" VerticalAlignment="Center"
 		         Text="{Binding CurrentMessages.PositiveFilter}"
 		         Watermark="Filter (Ctrl+F)"/>
-		<Label Grid.Column="2" Content="But not" VerticalAlignment="Center" Margin="10,0,5,0"/>
-		<TextBox Grid.Column="3" x:Name="NegativeFilterBox"
-		         VerticalContentAlignment="Center" VerticalAlignment="Center"
-		         Text="{Binding Path=CurrentMessages.NegativeFilter}"
-		         Watermark="Exclude"/>
+		<Button Grid.Column="1" Content="?" VerticalAlignment="Center" Margin="5,0,0,0"
+		        ToolTip.Tip="Filter syntax help">
+			<Button.Flyout>
+				<Flyout>
+					<StackPanel Margin="10" MaxWidth="320">
+						<TextBlock FontWeight="Bold" Margin="0,0,0,8">Filter Syntax</TextBlock>
+						<TextBlock TextWrapping="Wrap" Margin="0,0,0,10">
+							Combine search terms using boolean operators. Multiple words without an operator are treated as OR.
+						</TextBlock>
+						<Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+							<TextBlock Grid.Row="0" Grid.Column="0" FontFamily="Courier New" FontWeight="Bold" Margin="0,0,12,4">&amp;&amp;</TextBlock>
+							<TextBlock Grid.Row="0" Grid.Column="1" Margin="0,0,0,4">AND — both terms must match</TextBlock>
+							<TextBlock Grid.Row="1" Grid.Column="0" FontFamily="Courier New" FontWeight="Bold" Margin="0,0,12,4">||</TextBlock>
+							<TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,4">OR — either term must match</TextBlock>
+							<TextBlock Grid.Row="2" Grid.Column="0" FontFamily="Courier New" FontWeight="Bold" Margin="0,0,12,4">!</TextBlock>
+							<TextBlock Grid.Row="2" Grid.Column="1" Margin="0,0,0,4">NOT — term must not match</TextBlock>
+							<TextBlock Grid.Row="3" Grid.Column="0" FontFamily="Courier New" FontWeight="Bold" Margin="0,0,12,4">( )</TextBlock>
+							<TextBlock Grid.Row="3" Grid.Column="1" Margin="0,0,0,4">Grouping</TextBlock>
+							<TextBlock Grid.Row="4" Grid.Column="0" FontFamily="Courier New" FontWeight="Bold" Margin="0,0,12,0">"..."</TextBlock>
+							<TextBlock Grid.Row="4" Grid.Column="1">Exact phrase match</TextBlock>
+						</Grid>
+						<TextBlock Margin="0,10,0,4" FontWeight="SemiBold">Examples:</TextBlock>
+						<TextBlock FontFamily="Courier New">error &amp;&amp; !debug</TextBlock>
+						<TextBlock FontFamily="Courier New">warning || error</TextBlock>
+						<TextBlock FontFamily="Courier New">user &amp;&amp; (login || logout)</TextBlock>
+						<TextBlock FontFamily="Courier New" Margin="0,4,0,0">word1 word2</TextBlock>
+						<TextBlock Margin="0,0,0,4" FontSize="11" Foreground="Gray">matches word1 OR word2</TextBlock>
+						<TextBlock FontFamily="Courier New">"word1 word2"</TextBlock>
+						<TextBlock FontSize="11" Foreground="Gray">matches the exact phrase</TextBlock>
+					</StackPanel>
+				</Flyout>
+			</Button.Flyout>
+		</Button>
 	</Grid>
 </UserControl>

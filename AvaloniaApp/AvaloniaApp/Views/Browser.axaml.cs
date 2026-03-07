@@ -246,8 +246,8 @@ public partial class Browser : UserControl
     {
         if (e is not { KeyModifiers: KeyModifiers.Control, Key: Key.F }) return;
 
-        var positiveFilterBox = MessagesToolbar.FindControl<TextBox>("PositiveFilterBox");
-        positiveFilterBox?.Focus();
+        var filterBox = MessagesToolbar.FindControl<TextBox>("FilterBox");
+        filterBox?.Focus();
         e.Handled = true;
     }
 }
