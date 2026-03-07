@@ -463,7 +463,68 @@ class ConfluentConsumer : ConsumerBase, IDisposable
             var earliestResults = await earliestTask;
             var latestResults = await latestTask;
 
-            var resultsMap = new Dictionary<Confluent.Kafka.TopicPartition, (long Low, long High)>();
+            // Fast path for single topic (common case)
+            string? singleTopic = tps.Count > 0 ? tps[0].Topic : null;
+            bool isSingleTopic = true;
+            int maxPartition = -1;
+
+            foreach (var tp in tps)
+            {
+                if (tp.Topic != singleTopic)
+                {
+                    isSingleTopic = false;
+                    break;
+                }
+                if (tp.Partition.Value > maxPartition)
+                {
+                    maxPartition = tp.Partition.Value;
+                }
+            }
+
+            if (isSingleTopic && maxPartition >= 0 && maxPartition < 100000)
+            {
+                var arr = new (long Low, long High)[maxPartition + 1];
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    arr[i] = (-1, -1);
+                }
+
+                foreach (var info in earliestResults.ResultInfos)
+                {
+                    var tpoe = info.TopicPartitionOffsetError;
+                    if (tpoe.Error.IsError) throw new KafkaException(tpoe.Error);
+                    var p = tpoe.TopicPartition.Partition.Value;
+                    if (p <= maxPartition) arr[p].Low = tpoe.Offset.Value;
+                }
+
+                foreach (var info in latestResults.ResultInfos)
+                {
+                    var tpoe = info.TopicPartitionOffsetError;
+                    if (tpoe.Error.IsError) throw new KafkaException(tpoe.Error);
+                    var p = tpoe.TopicPartition.Partition.Value;
+                    if (p <= maxPartition) arr[p].High = tpoe.Offset.Value;
+                }
+
+                var output = new List<WatermarkOffsets>(tps.Count);
+                foreach (var tp in tps)
+                {
+                    var p = tp.Partition.Value;
+                    var low = arr[p].Low;
+                    var high = arr[p].High;
+                    if (low != -1 && high != -1)
+                    {
+                        output.Add(new WatermarkOffsets(new Offset(low), new Offset(high)));
+                    }
+                    else
+                    {
+                        throw new Exception($"Failed to get watermark offsets for {tp}");
+                    }
+                }
+                return output;
+            }
+
+            // Fallback for multiple topics or extreme partition values
+            var resultsMap = new Dictionary<Confluent.Kafka.TopicPartition, (long Low, long High)>(tps.Count);
 
             foreach (var info in earliestResults.ResultInfos)
             {
