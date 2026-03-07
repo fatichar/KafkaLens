@@ -47,7 +47,7 @@ public partial class MainView : UserControl
         {
             var box = MessageBoxManager.GetMessageBoxStandard(
                 "Restore Tabs",
-                $"You had {count} tabs open in the previous session, restore them?",
+                $"You had {count} {(count > 1 ? "tabs" : "tab")} open in the previous session, restore now?",
                 ButtonEnum.YesNo);
 
             var result = await box.ShowAsync();

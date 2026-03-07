@@ -8,23 +8,14 @@ namespace KafkaLens.ViewModels;
 public partial class MainViewModel
 {
     private readonly List<OpenedTabState> pendingRestoreTabs = new();
-    private bool isRestoreStateInitialized;
+    private Task? restoreStateInitTask;
     private readonly Dictionary<OpenedClusterViewModel, (PropertyChangedEventHandler TabHandler, PropertyChangedEventHandler MessagesHandler)>
         openedClusterStateHandlers = new();
 
     private async Task TryRestoreTabsAsync()
     {
-        if (!isRestoreStateInitialized)
-        {
-            var config = settingsService.GetBrowserConfig();
-            if (config.RestoreTabsOnStartup)
-            {
-                var tabsToRestore = config.OpenedTabs.Where(t => !string.IsNullOrWhiteSpace(t.ClusterId)).ToList();
-                if (tabsToRestore.Count > 0 && await ConfirmRestoreTabs(tabsToRestore.Count))
-                    pendingRestoreTabs.AddRange(tabsToRestore);
-            }
-            isRestoreStateInitialized = true;
-        }
+        restoreStateInitTask ??= InitializeRestoreStateAsync();
+        await restoreStateInitTask;
 
         if (pendingRestoreTabs.Count == 0) return;
 
@@ -40,6 +31,17 @@ public partial class MainViewModel
 
         pendingRestoreTabs.Clear();
         pendingRestoreTabs.AddRange(remaining);
+    }
+
+    private async Task InitializeRestoreStateAsync()
+    {
+        var config = settingsService.GetBrowserConfig();
+        if (config.RestoreTabsOnStartup)
+        {
+            var tabsToRestore = config.OpenedTabs.Where(t => !string.IsNullOrWhiteSpace(t.ClusterId)).ToList();
+            if (tabsToRestore.Count > 0 && await ConfirmRestoreTabs(tabsToRestore.Count))
+                pendingRestoreTabs.AddRange(tabsToRestore);
+        }
     }
 
     private void PersistOpenedTabsState()
