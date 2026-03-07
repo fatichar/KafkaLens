@@ -8,8 +8,8 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{99DB910F-94D0-4923-8F30-759C962F5B48}
 AppName={#MyAppName}
-AppVersion=0.7
-;AppVerName=KafkaLens 0.7
+AppVersion=0.8
+;AppVerName=KafkaLens 0.8
 AppPublisher=Pravin Chaudhary
 AppPublisherURL=https://www.kafkalens.com/
 AppSupportURL=https://www.kafkalens.com/
