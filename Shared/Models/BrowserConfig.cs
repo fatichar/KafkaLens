@@ -16,6 +16,7 @@ public class BrowserConfig
 public class OpenedTabState
 {
     public string ClusterId { get; set; } = "";
+    public string? SavedMessagesPath { get; set; }
     public string? SelectedNodeType { get; set; }
     public string? SelectedTopicName { get; set; }
     public int? SelectedPartitionId { get; set; }

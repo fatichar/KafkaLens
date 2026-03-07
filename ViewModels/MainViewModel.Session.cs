@@ -25,6 +25,8 @@ public partial class MainViewModel
             var cluster = Clusters.FirstOrDefault(c => c.Id == tab.ClusterId);
             if (cluster != null)
                 OpenCluster(cluster, tab);
+            else if (!string.IsNullOrWhiteSpace(tab.SavedMessagesPath))
+                await OpenSavedMessagesAsync(tab.SavedMessagesPath, tab);
             else
                 remaining.Add(tab);
         }

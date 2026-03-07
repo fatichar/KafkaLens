@@ -47,14 +47,16 @@ public partial class MainViewModel
         SelectedIndex = OpenedClusters.Count - 1;
     }
 
-    public async void OpenSavedMessages(string path)
+    public async void OpenSavedMessages(string path) => await OpenSavedMessagesAsync(path, null);
+
+    private async Task OpenSavedMessagesAsync(string path, OpenedTabState? tabState)
     {
         if (path.EndsWith('\\') || path.EndsWith('/'))
             path = path.Remove(path.Length - 1, 1);
 
         var clusterName = Path.GetFileName(path) + "(saved)";
         var clusterViewModel = await AddOrGetCluster(clusterName, path);
-        OpenCluster(clusterViewModel);
+        OpenCluster(clusterViewModel, tabState);
     }
 
     private async Task<ClusterViewModel> AddOrGetCluster(string clusterName, string path)

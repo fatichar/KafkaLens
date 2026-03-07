@@ -1,3 +1,4 @@
+using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
 
 namespace KafkaLens.ViewModels;
@@ -29,6 +30,7 @@ public partial class OpenedClusterViewModel
         return new OpenedTabState
         {
             ClusterId = ClusterId,
+            SavedMessagesPath = cluster.Client is ISavedMessagesClient ? cluster.Address : null,
             SelectedNodeType = selectedNodeType,
             SelectedTopicName = selectedTopicName,
             SelectedPartitionId = selectedPartitionId,
