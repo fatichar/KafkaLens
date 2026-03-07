@@ -62,6 +62,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool isLoadingClusters;
 
     private DispatcherTimer? timer;
+    private Task? _startupTask;
 
     partial void OnAutoCheckForUpdatesChanged(bool value)
     {
@@ -150,7 +151,12 @@ public partial class MainViewModel : ViewModelBase
         timer.Start();
     }
 
-    protected override async void OnActivated()
+    protected override void OnActivated()
+    {
+        _startupTask = RunActivationAsync();
+    }
+
+    private async Task RunActivationAsync()
     {
         try
         {
@@ -164,8 +170,13 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    // Compatibility wrapper used by tests and existing call sites.
-    public Task LoadClusters() => LoadClustersOnStartupAsync();
+    // Returns the in-progress startup task if still running, otherwise starts a fresh load.
+    public Task LoadClusters()
+    {
+        if (_startupTask is { IsCompleted: false })
+            return _startupTask;
+        return _startupTask = LoadClustersOnStartupAsync();
+    }
 
     private void ShowPreferences() => ShowPreferencesDialog(new PreferencesViewModel(settingsService));
 
