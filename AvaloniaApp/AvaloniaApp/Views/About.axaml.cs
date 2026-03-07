@@ -44,27 +44,39 @@ public partial class About : Window
     private void OpenUrl(object urlObj)
     {
         var url = urlObj as string;
-        if (string.IsNullOrEmpty(url)) return;
+        if (string.IsNullOrEmpty(url) ||
+            (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+             !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             //https://stackoverflow.com/a/2796367/241446
-            using var proc = new Process();
-            proc.StartInfo.UseShellExecute = true;
-            proc.StartInfo.FileName = url;
-            proc.Start();
-
+            using var proc = Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
             return;
         }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            Process.Start("x-www-browser", url);
+            using var proc = Process.Start(new ProcessStartInfo("xdg-open")
+            {
+                ArgumentList = { url }
+            });
             return;
         }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            Process.Start("open", url);
+            using var proc = Process.Start(new ProcessStartInfo("open")
+            {
+                ArgumentList = { url }
+            });
             return;
         }
 

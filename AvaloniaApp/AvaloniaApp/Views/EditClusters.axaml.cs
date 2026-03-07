@@ -160,7 +160,10 @@ public partial class EditClustersDialog : Window
     {
         if (!string.IsNullOrEmpty(fileExplorerCommand))
         {
-            Process.Start(fileExplorerCommand, "\"" + AppDataPath + "\"");
+            using var proc = Process.Start(new ProcessStartInfo(fileExplorerCommand)
+            {
+                ArgumentList = { AppDataPath }
+            });
         }
     }
 
