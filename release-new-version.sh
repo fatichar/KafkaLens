@@ -52,7 +52,23 @@ if [ "$INSTALLER_VERSION" != "$VERSION" ]; then
 fi
 echo "INFO: Version consistency check passed."
 
-# 5. Check if tag already exists
+# 5. Verify download.html version matches
+DOWNLOAD_HTML="docs/download.html"
+echo "INFO: Reading version from $DOWNLOAD_HTML..."
+HTML_VERSION=$(sed -nE 's/.*Latest Stable Release \(v([^)]+)\).*/\1/p' "$DOWNLOAD_HTML" | head -1)
+if [ -z "$HTML_VERSION" ]; then
+  echo "ERROR: Could not find 'Latest Stable Release (vX.Y)' in $DOWNLOAD_HTML"
+  exit 1
+fi
+echo "INFO: Parsed download.html version: $HTML_VERSION"
+
+if [ "$HTML_VERSION" != "$VERSION" ]; then
+  echo "ERROR: Version mismatch: Directory.Build.props has $VERSION but $DOWNLOAD_HTML has $HTML_VERSION"
+  exit 1
+fi
+echo "INFO: download.html version check passed."
+
+# 6. Check if tag already exists
 echo "INFO: Checking whether tag $TAG already exists..."
 if git rev-parse "$TAG" >/dev/null 2>&1; then
   echo "ERROR: Tag $TAG already exists."
@@ -60,12 +76,12 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
 fi
 echo "INFO: Tag $TAG does not exist yet."
 
-# 6. Create annotated tag (opens editor for release notes)
+# 7. Create annotated tag (opens editor for release notes)
 echo "INFO: Creating annotated tag $TAG..."
 git tag -a "$TAG"
 echo "INFO: Tag $TAG created."
 
-# 7. Push tag
+# 8. Push tag
 echo "INFO: Pushing tag $TAG to origin..."
 git push
 git push origin "$TAG"
