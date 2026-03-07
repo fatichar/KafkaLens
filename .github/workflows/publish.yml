@@ -200,6 +200,11 @@ jobs:
         with:
           path: artifacts
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Extract tag message
         id: tag_message
         run: |
