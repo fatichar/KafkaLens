@@ -10,10 +10,10 @@ namespace KafkaLens.Core.Services;
 
 internal class ConfluentConsumer : ConsumerBase, IDisposable
 {
+    private const int MAX_PARTITION_COUNT = 100000;
     private readonly TimeSpan queryWatermarkTimeout;
     private readonly TimeSpan queryTopicsTimeout;
     private readonly TimeSpan consumeTimeout;
-    private const int MaxConsecutiveEmptyPolls = 3;
     private readonly KafkaConfig kafkaConfig;
 
     private readonly ConsumerPool consumerPool;
@@ -191,10 +191,10 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
         MessageStream messages, CancellationToken cancellationToken)
     {
         var tp = ValidateTopicPartition(topicName, partition);
-        await GetMessagesAsync(new List<Confluent.Kafka.TopicPartition>() { tp }, options, messages, cancellationToken);
+        await GetMessagesAsync(new List<TopicPartition>() { tp }, options, messages, cancellationToken);
     }
 
-    private Confluent.Kafka.TopicPartition ValidateTopicPartition(string topicName, int partition)
+    private TopicPartition ValidateTopicPartition(string topicName, int partition)
     {
         var topic = ValidateTopic(topicName);
         if (partition < 0 || partition >= topic.PartitionCount)
@@ -202,14 +202,14 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
             throw new ArgumentException($"Invalid partition {partition} for topic {topicName}");
         }
 
-        return new Confluent.Kafka.TopicPartition(topicName, partition);
+        return new TopicPartition(topicName, partition);
     }
 
     protected override async Task GetMessagesAsync(string topicName, FetchOptions options, MessageStream messages,
         CancellationToken cancellationToken)
     {
         var topic = ValidateTopic(topicName);
-        var tps = topic.Partitions.Select(partition => new Confluent.Kafka.TopicPartition(topicName, partition.Id))
+        var tps = topic.Partitions.Select(partition => new TopicPartition(topicName, partition.Id))
             .ToList();
 
         await GetMessagesAsync(tps, options, messages, cancellationToken);
@@ -257,11 +257,11 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
         });
     }
 
-    private List<Confluent.Kafka.TopicPartitionOffset> CreateTopicPartitionOffsets(
-        List<Confluent.Kafka.TopicPartition> tps, List<WatermarkOffsets> watermarks,
+    private List<TopicPartitionOffset> CreateTopicPartitionOffsets(
+        List<TopicPartition> tps, List<WatermarkOffsets> watermarks,
         List<FetchOptions> partitionOptions)
     {
-        var tpos = new List<Confluent.Kafka.TopicPartitionOffset>();
+        var tpos = new List<TopicPartitionOffset>();
 
         for (var i = 0; i < tps.Count; ++i)
         {
@@ -273,7 +273,7 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
         return tpos;
     }
 
-    private async Task<List<FetchOptions>> CreateOptionsForPartitionAsync(List<Confluent.Kafka.TopicPartition> tps,
+    private async Task<List<FetchOptions>> CreateOptionsForPartitionAsync(List<TopicPartition> tps,
         FetchOptions options, CancellationToken cancellationToken)
     {
         var partitionOptions = new List<FetchOptions>();
@@ -453,7 +453,7 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
         }
     }
 
-    private async Task<List<WatermarkOffsets>> QueryWatermarkOffsetsAsync(List<Confluent.Kafka.TopicPartition> tps,
+    private async Task<List<WatermarkOffsets>> QueryWatermarkOffsetsAsync(List<TopicPartition> tps,
         CancellationToken cancellationToken)
     {
         Log.Debug("Querying watermark offsets for {TopicPartitions}", tps);
@@ -477,48 +477,119 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
             var earliestResults = await earliestTask;
             var latestResults = await latestTask;
 
-            var resultsMap = new Dictionary<Confluent.Kafka.TopicPartition, (long Low, long High)>();
-
-            foreach (var info in earliestResults.ResultInfos)
-            {
-                var tpoe = info.TopicPartitionOffsetError;
-                if (tpoe.Error.IsError)
-                {
-                    throw new KafkaException(tpoe.Error);
-                }
-
-                resultsMap[tpoe.TopicPartition] = (tpoe.Offset.Value, -1);
-            }
-
-            foreach (var info in latestResults.ResultInfos)
-            {
-                var tpoe = info.TopicPartitionOffsetError;
-                if (tpoe.Error.IsError)
-                {
-                    throw new KafkaException(tpoe.Error);
-                }
-
-                if (resultsMap.TryGetValue(tpoe.TopicPartition, out var val))
-                {
-                    resultsMap[tpoe.TopicPartition] = (val.Low, tpoe.Offset.Value);
-                }
-            }
-
-            return tps.ConvertAll(tp =>
-            {
-                if (resultsMap.TryGetValue(tp, out var val))
-                {
-                    return new WatermarkOffsets(new Offset(val.Low), new Offset(val.High));
-                }
-
-                throw new Exception($"Failed to get watermark offsets for {tp}");
-            });
+            return BuildWatermarkOffsets(tps, earliestResults.ResultInfos, latestResults.ResultInfos);
         }
         catch (Exception e)
         {
             Log.Error(e, "Error querying watermark offsets");
             throw;
         }
+    }
+
+    private List<WatermarkOffsets> BuildWatermarkOffsets(List<TopicPartition> tps, IReadOnlyList<ListOffsetsResultInfo> earliestInfos, IReadOnlyList<ListOffsetsResultInfo> latestInfos)
+    {
+        string? singleTopic = tps.Count > 0 ? tps[0].Topic : null;
+        bool isSingleTopic = true;
+        int maxPartition = -1;
+
+        foreach (var tp in tps)
+        {
+            if (tp.Topic != singleTopic)
+            {
+                isSingleTopic = false;
+                break;
+            }
+            if (tp.Partition.Value > maxPartition)
+            {
+                maxPartition = tp.Partition.Value;
+            }
+        }
+
+        if (isSingleTopic && maxPartition is >= 0 and < MAX_PARTITION_COUNT)
+        {
+            return BuildWatermarkOffsetsSingleTopic(tps, earliestInfos, latestInfos, maxPartition);
+        }
+
+        return BuildWatermarkOffsetsMultiTopic(tps, earliestInfos, latestInfos);
+    }
+
+    private List<WatermarkOffsets> BuildWatermarkOffsetsSingleTopic(List<TopicPartition> tps, IReadOnlyList<ListOffsetsResultInfo> earliestInfos, IReadOnlyList<ListOffsetsResultInfo> latestInfos, int maxPartition)
+    {
+        var arr = new (long Low, long High)[maxPartition + 1];
+        for (int i = 0; i < arr.Length; i++)
+        {
+            arr[i] = (-1, -1);
+        }
+
+        foreach (var info in earliestInfos)
+        {
+            var tpoe = info.TopicPartitionOffsetError;
+            if (tpoe.Error.IsError) throw new KafkaException(tpoe.Error);
+            var p = tpoe.TopicPartition.Partition.Value;
+            if (p <= maxPartition) arr[p].Low = tpoe.Offset.Value;
+        }
+
+        foreach (var info in latestInfos)
+        {
+            var tpoe = info.TopicPartitionOffsetError;
+            if (tpoe.Error.IsError) throw new KafkaException(tpoe.Error);
+            var p = tpoe.TopicPartition.Partition.Value;
+            if (p <= maxPartition) arr[p].High = tpoe.Offset.Value;
+        }
+
+        var output = new List<WatermarkOffsets>(tps.Count);
+        foreach (var tp in tps)
+        {
+            var p = tp.Partition.Value;
+            var low = arr[p].Low;
+            var high = arr[p].High;
+            if (low != -1 && high != -1)
+            {
+                output.Add(new WatermarkOffsets(new Offset(low), new Offset(high)));
+            }
+            else
+            {
+                throw new Exception($"Failed to get watermark offsets for {tp}");
+            }
+        }
+        return output;
+    }
+
+    private List<WatermarkOffsets> BuildWatermarkOffsetsMultiTopic(List<TopicPartition> tps, IReadOnlyList<ListOffsetsResultInfo> earliestInfos, IReadOnlyList<ListOffsetsResultInfo> latestInfos)
+    {
+        var resultsMap = new Dictionary<TopicPartition, (long Low, long High)>(tps.Count);
+
+        foreach (var info in earliestInfos)
+        {
+            var tpoe = info.TopicPartitionOffsetError;
+            if (tpoe.Error.IsError)
+            {
+                throw new KafkaException(tpoe.Error);
+            }
+            resultsMap[tpoe.TopicPartition] = (tpoe.Offset.Value, -1);
+        }
+
+        foreach (var info in latestInfos)
+        {
+            var tpoe = info.TopicPartitionOffsetError;
+            if (tpoe.Error.IsError)
+            {
+                throw new KafkaException(tpoe.Error);
+            }
+            if (resultsMap.TryGetValue(tpoe.TopicPartition, out var val))
+            {
+                resultsMap[tpoe.TopicPartition] = (val.Low, tpoe.Offset.Value);
+            }
+        }
+
+        return tps.ConvertAll(tp =>
+        {
+            if (resultsMap.TryGetValue(tp, out var val))
+            {
+                return new WatermarkOffsets(new Offset(val.Low), new Offset(val.High));
+            }
+            throw new Exception($"Failed to get watermark offsets for {tp}");
+        });
     }
 
     #endregion Read
