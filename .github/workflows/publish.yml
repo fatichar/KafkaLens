@@ -206,17 +206,13 @@ jobs:
           path: artifacts
 
       - name: Extract tag message
-        id: tag_message
         run: |
-          TAG_MESSAGE=$(git tag -l --format='%(contents)' ${{ github.ref_name }})
-          echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$TAG_MESSAGE" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          git tag -l --format='%(contents)' ${{ github.ref_name }} > tag_message.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          body: ${{ steps.tag_message.outputs.message }}
+          body_path: tag_message.txt
           files: |
             artifacts/kafkalens-windows-${{ needs.extract-version.outputs.version }}/*.exe
             artifacts/kafkalens-linux-${{ needs.extract-version.outputs.version }}/*.zip
