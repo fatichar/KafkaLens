@@ -20,9 +20,6 @@ public partial class About : Window
         AppVersion = version != null ? $"Version: {version.ToString(2)}" : "Version: unknown";
         DataContext = this;
         InitializeComponent();
-#if DEBUG
-        this.AttachDevTools();
-#endif
     }
 
     private void CheckForUpdates_OnClick(object? sender, RoutedEventArgs e)

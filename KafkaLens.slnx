@@ -31,6 +31,7 @@
   <Project Path="Core.Tests/Core.Tests.csproj" />
   <Project Path="Formatting.Tests/Formatting.Tests.csproj" />
   <Project Path="GrpcClient.Tests/GrpcClient.Tests.csproj" />
+  <Project Path="IntegrationTests/IntegrationTests.csproj" />
   <Project Path="LocalClient.Tests/LocalClient.Tests.csproj" />
   <Project Path="GrpcApi.Tests/GrpcApi.Tests.csproj" />
   <Project Path="ViewModels.Tests/ViewModels.Tests.csproj" />
