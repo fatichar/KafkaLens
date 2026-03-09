@@ -24,10 +24,25 @@ namespace AvaloniaApp;
 
 public partial class App : Application
 {
-    public IServiceProvider Services { get; } = ConfigureServices();
+    public IServiceProvider Services { get; protected set; }
     public new static App Current => (App)Application.Current!;
 
-    private static IServiceProvider ConfigureServices()
+    public App()
+    {
+        // Don't call ConfigureServices here to allow derived TestApp classes
+        // to completely bypass logic before initialization if needed.
+        // It's assigned later in actual startup if not already.
+    }
+
+    public override void Initialize()
+    {
+        if (Services == null)
+            Services = ConfigureServices();
+
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    protected virtual IServiceProvider ConfigureServices()
     {
         var configuration = new ConfigurationBuilder()
             .AddEnvironmentVariables()
@@ -225,11 +240,6 @@ public partial class App : Application
         // In Debug, use local logs directory
         return "logs/log.txt";
 #endif
-    }
-
-    public override void Initialize()
-    {
-        AvaloniaXamlLoader.Load(this);
     }
 
     private ResourceDictionary? currentThemeResources;
