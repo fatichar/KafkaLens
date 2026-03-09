@@ -128,12 +128,12 @@ public partial class MainViewModel : ViewModelBase
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
         Clusters.CollectionChanged += OnClustersChanged;
 
-        CreateMenuItems();
-
         Title = appConfig.Title;
         currentTheme = settingsService.GetValue("Theme") ?? "System";
         autoCheckForUpdates =
             bool.TryParse(settingsService.GetValue("AutoCheckForUpdates") ?? "true", out var autoCheck) && autoCheck;
+
+        CreateMenuItems();
 
         IsActive = true;
         SetupPeriodicRefresh(appConfig);
@@ -178,7 +178,7 @@ public partial class MainViewModel : ViewModelBase
         return _startupTask = LoadClustersOnStartupAsync();
     }
 
-    private void ShowPreferences() => ShowPreferencesDialog(new PreferencesViewModel(settingsService));
+    private void ShowPreferences() => ShowPreferencesDialog(new PreferencesViewModel(settingsService, theme => CurrentTheme = theme));
 
     private void EditClustersAsync() => ShowEditClustersDialog();
 }

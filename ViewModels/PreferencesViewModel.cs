@@ -25,6 +25,8 @@ public partial class PreferencesViewModel : ViewModelBase
     [ObservableProperty]
     private string selectedTheme;
 
+    partial void OnSelectedThemeChanged(string value) => applyTheme?.Invoke(value);
+
     [ObservableProperty]
     private string fetchCountsString;
 
@@ -39,13 +41,17 @@ public partial class PreferencesViewModel : ViewModelBase
 
     public Action CloseAction { get; set; } = () => { };
 
-    public PreferencesViewModel(ISettingsService settingsService)
+    private readonly Action<string>? applyTheme;
+    private readonly string originalTheme;
+
+    public PreferencesViewModel(ISettingsService settingsService, Action<string>? applyTheme = null)
     {
         this.settingsService = settingsService;
+        this.applyTheme = applyTheme;
 
         kafkaConfig = settingsService.GetKafkaConfig();
         browserConfig = settingsService.GetBrowserConfig();
-        selectedTheme = settingsService.GetValue("Theme") ?? "System";
+        selectedTheme = originalTheme = settingsService.GetValue("Theme") ?? "System";
         fetchCountsString = string.Join(", ", browserConfig.FetchCounts);
 
         FastConnectionCheck = !browserConfig.EagerLoadTopicsOnStartup;
@@ -101,9 +107,7 @@ public partial class PreferencesViewModel : ViewModelBase
 
         settingsService.SaveKafkaConfig(KafkaConfig);
         settingsService.SaveBrowserConfig(BrowserConfig);
-        settingsService.SetValue("Theme", SelectedTheme);
 
-        WeakReferenceMessenger.Default.Send(new ThemeChangedMessage(SelectedTheme));
         WeakReferenceMessenger.Default.Send(new ConfigurationChangedMessage());
 
         CloseAction();
@@ -111,6 +115,7 @@ public partial class PreferencesViewModel : ViewModelBase
 
     private void Cancel()
     {
+        applyTheme?.Invoke(originalTheme);
         CloseAction();
     }
 }

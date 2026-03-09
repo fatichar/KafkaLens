@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Controls;
 using Avalonia.Input;
 using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Shared;
