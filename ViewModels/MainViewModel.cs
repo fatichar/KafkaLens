@@ -1080,13 +1080,31 @@ public partial class MainViewModel : ViewModelBase
 
     internal static string GenerateNewName(string clusterName, List<OpenedClusterViewModel> alreadyOpened)
     {
-        var existingNames = alreadyOpened.ConvertAll(c => c.Name);
-        var suffixes = existingNames.ConvertAll(n =>
-            n.Length > clusterName.Length + 1 ? n.Substring(clusterName.Length + 1) : "");
-        suffixes.Remove("");
-        var numbersStrings = suffixes.ConvertAll(s => s.Length > 1 ? s.Substring(1, s.Length - 2) : "");
-        var numbers = numbersStrings.ConvertAll(ns => int.TryParse(ns, out var number) ? number : 0);
+        var numbers = new List<int>();
+        int clusterNameLength = clusterName.Length;
+        int expectedPrefixLength = clusterNameLength + 2; // "ClusterName ("
+
+        foreach (var cluster in alreadyOpened)
+        {
+            var name = cluster.Name;
+
+            // Expected format: "ClusterName (N)" or just "ClusterName"
+            if (name.Length > expectedPrefixLength &&
+                name.StartsWith(clusterName, StringComparison.Ordinal) &&
+                name[clusterNameLength] == ' ' &&
+                name[clusterNameLength + 1] == '(' &&
+                name[name.Length - 1] == ')')
+            {
+                var numSpan = name.AsSpan(clusterNameLength + 2, name.Length - expectedPrefixLength - 1);
+                if (int.TryParse(numSpan, out int number))
+                {
+                    numbers.Add(number);
+                }
+            }
+        }
+
         numbers.Sort();
+
         var smallestAvailable = numbers.Count + 1;
         for (var i = 0; i < numbers.Count; i++)
         {
