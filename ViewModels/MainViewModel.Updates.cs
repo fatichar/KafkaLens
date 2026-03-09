@@ -14,15 +14,6 @@ public partial class MainViewModel
         var result = await UpdateService.CheckForUpdateAsync();
         if (result.UpdateAvailable)
         {
-            if (!UpdateService.IsInstallDirectoryWritable())
-            {
-                if (!silent)
-                    ShowMessage("Update Available",
-                        "A new update is available, but KafkaLens does not have permission to update itself in the " +
-                        "current installation directory. Please move the application to a user-writable folder " +
-                        "to enable auto-updates.");
-                return;
-            }
 
             Log.Information("Update available: {Version}", result.LatestVersion);
             var updateVm = new UpdateViewModel(result);
@@ -40,12 +31,6 @@ public partial class MainViewModel
     private void PerformUpdate(UpdateCheckResult result)
     {
         if (!ValidateResult(result)) return;
-
-        if (!UpdateService.IsInstallDirectoryWritable())
-        {
-            Log.Warning("Install directory is not writable. Cannot perform auto-update.");
-            return;
-        }
 
         var appDir = AppContext.BaseDirectory;
         var updaterPath = Path.Combine(appDir, "KafkaLens.Updater");
@@ -70,24 +55,29 @@ public partial class MainViewModel
         }
 
         var executablePath = Process.GetCurrentProcess().MainModule?.FileName!;
-        var processStartInfo = new ProcessStartInfo { FileName = updaterPath, UseShellExecute = false };
+        var processStartInfo = new ProcessStartInfo
+        {
+            FileName = updaterPath,
+            UseShellExecute = false
+        };
+        
         processStartInfo.ArgumentList.Add("--pid");
         processStartInfo.ArgumentList.Add(Environment.ProcessId.ToString());
         processStartInfo.ArgumentList.Add("--url");
-        processStartInfo.ArgumentList.Add(result.DownloadUrl!);
+        processStartInfo.ArgumentList.Add(result.DownloadUrl);
         if (result.ChecksumUrl != null)
         {
             processStartInfo.ArgumentList.Add("--checksum-url");
             processStartInfo.ArgumentList.Add(result.ChecksumUrl);
         }
         processStartInfo.ArgumentList.Add("--asset-name");
-        processStartInfo.ArgumentList.Add(result.AssetName!);
+        processStartInfo.ArgumentList.Add(result.AssetName);
         processStartInfo.ArgumentList.Add("--dest");
         processStartInfo.ArgumentList.Add(appDir);
         processStartInfo.ArgumentList.Add("--executable");
         processStartInfo.ArgumentList.Add(executablePath);
 
-        Log.Information("Starting updater: {UpdaterPath} {Args}", updaterPath, string.Join(" ", processStartInfo.ArgumentList));
+        Log.Information("Starting updater: {UpdaterPath} with {ArgCount} arguments", updaterPath, processStartInfo.ArgumentList.Count);
 
         try
         {

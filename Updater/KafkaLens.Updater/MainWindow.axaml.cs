@@ -29,13 +29,33 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
-        Log.Information("Started KafkaLens Updater");
-        InitializeComponent();
+        try
+        {
+            Log.Information("Started KafkaLens Updater - Initializing UI");
+            Log.Information("Current working directory: {CurrentDir}", Directory.GetCurrentDirectory());
+            
+            InitializeComponent();
+            Log.Information("UI components initialized");
+            
+            var args = Environment.GetCommandLineArgs();
+            Log.Information("Retrieved command line arguments: {ArgCount} args", args.Length);
+            
+            ParseArgs(args);
+            Log.Information("Arguments parsed successfully");
 
-        var args = Environment.GetCommandLineArgs();
-        ParseArgs(args);
-
-        Opened += async (s, e) => await StartUpdate();
+            Opened += async (s, e) => 
+            {
+                Log.Information("Window opened, starting update process");
+                await StartUpdate();
+            };
+            
+            Log.Information("MainWindow constructor completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to initialize MainWindow");
+            throw;
+        }
     }
 
     #region Argument Parsing
@@ -136,20 +156,40 @@ public partial class MainWindow : Window
         Log.Information("Running installer {InstallerPath}", archivePath);
         await Dispatcher.UIThread.InvokeAsync(async () =>
         {
-            await UpdateStatus("Running installer...", "Please follow the installer instructions.");
+            await UpdateStatus("Running installer...", "The installer will now launch to complete the update.");
             await UpdateProgress(90);
         });
 
-        var installProcess = Process.Start(new ProcessStartInfo
+        try
         {
-            FileName = archivePath,
-            UseShellExecute = true,
-        });
+            // Launch the installer and don't wait for it to complete
+            var installProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = archivePath,
+                UseShellExecute = true,
+            });
 
-        Log.Information("Installer started. Waiting for it to complete.");
-        await UpdateStatus("Installer is running.", "Please complete the installation.");
-
-        await installProcess?.WaitForExitAsync()!;
+            if (installProcess != null)
+            {
+                Log.Information("Installer launched successfully with PID {Pid}", installProcess.Id);
+                await UpdateStatus("Installer launched", "Please follow the installer instructions to complete the update.");
+                
+                // Give user time to see the message
+                await Task.Delay(3000);
+                
+                Log.Information("Updater exiting - installer will handle the rest");
+                Environment.Exit(0);
+            }
+            else
+            {
+                throw new Exception("Failed to launch installer process");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to launch installer");
+            await HandleError($"Failed to launch installer: {ex.Message}");
+        }
     }
 
     private async Task PerformArchiveUpdate(string archivePath, string sessionTempDir)

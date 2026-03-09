@@ -71,10 +71,33 @@ echo "INFO: download.html version check passed."
 # 6. Check if tag already exists
 echo "INFO: Checking whether tag $TAG already exists..."
 if git rev-parse "$TAG" >/dev/null 2>&1; then
-  echo "ERROR: Tag $TAG already exists."
-  exit 1
+  echo "WARNING: Tag $TAG already exists."
+  echo "Choose an option:"
+  echo "1) Delete the existing tag (local and remote) and continue"
+  echo "2) Cancel the release operation"
+  read -p "Enter your choice (1 or 2): " CHOICE
+  
+  case $CHOICE in
+    1)
+      echo "INFO: Deleting existing tag $TAG..."
+      # Delete local tag
+      git tag -d "$TAG" 2>/dev/null || true
+      # Delete remote tag
+      git push origin --delete "$TAG" 2>/dev/null || true
+      echo "INFO: Tag $TAG deleted successfully."
+      ;;
+    2)
+      echo "INFO: Release operation cancelled by user."
+      exit 0
+      ;;
+    *)
+      echo "ERROR: Invalid choice. Release operation cancelled."
+      exit 1
+      ;;
+  esac
+else
+  echo "INFO: Tag $TAG does not exist yet."
 fi
-echo "INFO: Tag $TAG does not exist yet."
 
 # 7. Create annotated tag (opens editor for release notes)
 echo "INFO: Creating annotated tag $TAG..."

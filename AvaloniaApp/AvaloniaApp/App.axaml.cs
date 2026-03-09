@@ -187,16 +187,44 @@ public partial class App : Application
 
     private static void ConfigureLogging()
     {
+        var logPath = GetLogPath();
+        var logDirectory = Path.GetDirectoryName(logPath);
+        
+        if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
+        {
+            try
+            {
+                Directory.CreateDirectory(logDirectory);
+            }
+            catch
+            {
+                // Fallback to local logs if AppData creation fails
+                logPath = "logs/log.txt";
+            }
+        }
+
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console(
                 outputTemplate:
                 "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u4}] {Message:lj}{NewLine}{Exception}")
-            .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day)
+            .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
             .CreateLogger();
 
-        Log.Information("The global logger has been configured");
+        Log.Information("The global logger has been configured with log path: {LogPath}", logPath);
         System.Diagnostics.Debug.WriteLine("Log to console");
+    }
+
+    private static string GetLogPath()
+    {
+#if RELEASE
+        // In Release, use AppData\Local\KafkaLens
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(appDataPath, "KafkaLens", "logs", "log.txt");
+#else
+        // In Debug, use local logs directory
+        return "logs/log.txt";
+#endif
     }
 
     public override void Initialize()

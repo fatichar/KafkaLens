@@ -54,4 +54,30 @@
         </Content>
     </ItemGroup>
 
+    <!-- Build and copy updater to publish directory -->
+    <Target Name="BuildAndCopyUpdaterForPublish" AfterTargets="Publish">
+        <PropertyGroup>
+            <UpdaterProject>$(MSBuildThisFileDirectory)..\..\Updater\KafkaLens.Updater\KafkaLens.Updater.csproj</UpdaterProject>
+            <UpdaterOutputDir>$(MSBuildThisFileDirectory)..\..\Updater\KafkaLens.Updater\bin\$(Configuration)\net10.0</UpdaterOutputDir>
+            <UpdaterDestDir>$(PublishDir)</UpdaterDestDir>
+        </PropertyGroup>
+
+        <!-- Build and publish updater project -->
+        <MSBuild Projects="$(UpdaterProject)" 
+                 Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)" 
+                 Targets="Publish"
+                 Condition="Exists('$(UpdaterProject)')" />
+
+        <!-- Copy updater publish files to main publish directory -->
+        <ItemGroup>
+            <UpdaterPublishFiles Include="$(UpdaterOutputDir)\$(RuntimeIdentifier)\publish\**\*.*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(UpdaterPublishFiles)" 
+              DestinationFolder="$(UpdaterDestDir)%(RecursiveDir)" 
+              SkipUnchangedFiles="true"
+              Condition="Exists('$(UpdaterOutputDir)\$(RuntimeIdentifier)\publish')" />
+
+        <Message Text="Copied updater from publish to $(UpdaterDestDir)" Importance="high" Condition="Exists('$(UpdaterOutputDir)\$(RuntimeIdentifier)\publish')" />
+    </Target>
+
 </Project>
