@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 ﻿using KafkaLens.ViewModels.Search;
 using KafkaLens.Shared.Utils;
 
@@ -58,7 +54,6 @@ public sealed class MessagesViewModel: ViewModelBase
 
     private string positiveFilter = "";
     private IFilterExpression positiveExpression = new AllMatchExpression();
-    private CancellationTokenSource? filterCts;
 
     public string PositiveFilter
     {
@@ -69,7 +64,7 @@ public sealed class MessagesViewModel: ViewModelBase
                 return;
             SetProperty(ref positiveFilter, value);
             positiveExpression = SearchParser.Parse(value);
-            _ = ApplyFilterAsync();
+            ApplyFilter();
         }
     }
 
@@ -84,7 +79,7 @@ public sealed class MessagesViewModel: ViewModelBase
                 return;
             SetProperty(ref negativeFilter, value);
             negativeExpression = SearchParser.Parse(value, false);
-            _ = ApplyFilterAsync();
+            ApplyFilter();
         }
     }
 
@@ -107,50 +102,10 @@ public sealed class MessagesViewModel: ViewModelBase
         }
     }
 
-    private async Task ApplyFilterAsync()
-    {
-        filterCts?.Cancel();
-        filterCts = new CancellationTokenSource();
-        var token = filterCts.Token;
-
-        var messagesCopy = Messages.ToList();
-
-        try
-        {
-            var filteredMessages = await Task.Run(() =>
-            {
-                var result = new List<MessageViewModel>();
-                foreach (var message in messagesCopy)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (FilterAccepts(message.DecodedMessage))
-                    {
-                        result.Add(message);
-                    }
-                }
-                return result;
-            }, token);
-
-            if (!token.IsCancellationRequested)
-            {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                {
-                    if (!token.IsCancellationRequested)
-                    {
-                        Filtered.ReplaceRange(filteredMessages);
-                    }
-                });
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore cancellation
-        }
-    }
-
     private void ApplyFilter()
     {
-        _ = ApplyFilterAsync();
+        var filtered = Messages.Where(m => FilterAccepts(m.DecodedMessage)).ToList();
+        Filtered.ReplaceRange(filtered);
     }
 
     private bool FilterAccepts(string message)
