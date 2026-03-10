@@ -102,4 +102,22 @@ public class SettingsService : ISettingsService
         settings[nameof(BrowserConfig)] = JObject.FromObject(config);
         Save();
     }
+
+    private static readonly JsonSerializer ReplaceSerializer = new()
+    {
+        ObjectCreationHandling = ObjectCreationHandling.Replace
+    };
+
+    public PluginSettings GetPluginSettings()
+    {
+        if (settings.TryGetValue(nameof(PluginSettings), out var token) && token is JObject obj)
+            return obj.ToObject<PluginSettings>(ReplaceSerializer) ?? new PluginSettings();
+        return new PluginSettings();
+    }
+
+    public void SavePluginSettings(PluginSettings ps)
+    {
+        settings[nameof(PluginSettings)] = JObject.FromObject(ps);
+        Save();
+    }
 }

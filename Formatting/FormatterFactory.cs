@@ -53,7 +53,7 @@ public class FormatterFactory
         return formatters[name];
     }
 
-    private void AddFormatter(IMessageFormatter formatter)
+    public void AddFormatter(IMessageFormatter formatter)
     {
         formatters.Add(formatter.Name, formatter);
     }

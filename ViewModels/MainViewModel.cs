@@ -10,6 +10,7 @@ using KafkaLens.Shared.Models;
 using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Messages;
 using KafkaLens.ViewModels.Services;
+using KafkaLens.Shared.Services;
 using Serilog;
 
 namespace KafkaLens.ViewModels;
@@ -29,6 +30,11 @@ public partial class MainViewModel : ViewModelBase
     internal readonly ISettingsService settingsService;
     internal readonly ITopicSettingsService topicSettingsService;
     internal readonly ISavedMessagesClient savedMessagesClient;
+    private readonly PluginRegistry _pluginRegistry;
+    private readonly PluginRepositoryClient _repoClient;
+    private readonly PluginInstaller _pluginInstaller;
+    private readonly RepositoryManager _repoManager;
+    private readonly IThemeService _themeService;
 
     // Data
     public string? Title { get; private set; }
@@ -45,6 +51,7 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand CloseCurrentTabCommand { get; }
     public IAsyncRelayCommand CheckForUpdatesCommand { get; }
     public IRelayCommand ShowPreferencesCommand { get; }
+    public IRelayCommand ShowPluginManagerCommand { get; }
 
     // UI callbacks (set by the view layer)
     public static Action ShowAboutDialog { get; set; } = () => { };
@@ -52,6 +59,7 @@ public partial class MainViewModel : ViewModelBase
     public static Action ShowEditClustersDialog { get; set; } = () => { };
     public static Action<UpdateViewModel> ShowUpdateDialog { get; set; } = _ => { };
     public static Action<PreferencesViewModel> ShowPreferencesDialog { get; set; } = _ => { };
+    public static Action<PluginManagerViewModel> ShowPluginManagerDialog { get; set; } = _ => { };
     public static Action<string, string> ShowMessage { get; set; } = (_, _) => { };
     public static Func<int, Task<bool>> ConfirmRestoreTabs { get; set; } = _ => Task.FromResult(false);
 
@@ -100,7 +108,12 @@ public partial class MainViewModel : ViewModelBase
         IClientFactory clientFactory,
         IMessageSaver messageSaver,
         IFormatterService formatterService,
-        IUpdateService updateService)
+        IUpdateService updateService,
+        PluginRegistry pluginRegistry,
+        PluginRepositoryClient repoClient,
+        PluginInstaller pluginInstaller,
+        RepositoryManager repoManager,
+        IThemeService themeService)
     {
         this.messageSaver = messageSaver;
         this.formatterService = formatterService;
@@ -112,6 +125,11 @@ public partial class MainViewModel : ViewModelBase
         ClientInfoRepository = clientInfoRepository;
         ClientFactory = clientFactory;
         UpdateService = updateService;
+        _pluginRegistry  = pluginRegistry;
+        _repoClient      = repoClient;
+        _pluginInstaller = pluginInstaller;
+        _repoManager     = repoManager;
+        _themeService    = themeService;
 
         Log.Information("Creating MainViewModel");
 
@@ -124,12 +142,17 @@ public partial class MainViewModel : ViewModelBase
         CloseCurrentTabCommand = new RelayCommand(CloseCurrentTab);
         CheckForUpdatesCommand = new AsyncRelayCommand(() => CheckForUpdatesAsync(false));
         ShowPreferencesCommand = new RelayCommand(ShowPreferences);
+        ShowPluginManagerCommand = new RelayCommand(OpenPluginManager);
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
         Clusters.CollectionChanged += OnClustersChanged;
 
         Title = appConfig.Title;
-        currentTheme = settingsService.GetValue("Theme") ?? "System";
+        
+        // Validate and set current theme
+        var savedTheme = settingsService.GetValue("Theme") ?? "System";
+        currentTheme = ValidateTheme(savedTheme);
+        
         autoCheckForUpdates =
             bool.TryParse(settingsService.GetValue("AutoCheckForUpdates") ?? "true", out var autoCheck) && autoCheck;
 
@@ -178,7 +201,49 @@ public partial class MainViewModel : ViewModelBase
         return _startupTask = LoadClustersOnStartupAsync();
     }
 
-    private void ShowPreferences() => ShowPreferencesDialog(new PreferencesViewModel(settingsService, theme => CurrentTheme = theme));
+    private void ShowPreferences() => ShowPreferencesDialog(new PreferencesViewModel(settingsService, _themeService, theme => CurrentTheme = theme));
+
+    private string ValidateTheme(string themeName)
+    {
+        if (_themeService != null)
+        {
+            var availableThemes = _themeService.GetAvailableThemes();
+            // Try exact match first, then case-insensitive
+            var theme = availableThemes.FirstOrDefault(t => t.Id == themeName) ??
+                       availableThemes.FirstOrDefault(t => string.Equals(t.Id, themeName, StringComparison.OrdinalIgnoreCase));
+            
+            if (theme != null)
+            {
+                return theme.Id; // Return the actual theme ID (case-corrected)
+            }
+        }
+        
+        // If theme not found or ThemeService unavailable, fall back to System
+        if (themeName != "System")
+        {
+            Log.Warning("Theme {ThemeName} not found, falling back to System theme", themeName);
+            // Save the corrected theme to settings
+            settingsService.SetValue("Theme", "System");
+            return "System";
+        }
+        
+        return "System";
+    }
 
     private void EditClustersAsync() => ShowEditClustersDialog();
+
+    private void OpenPluginManager()
+    {
+        Log.Information("OpenPluginManager called - creating PluginManagerViewModel");
+        try
+        {
+            var viewModel = new PluginManagerViewModel(_pluginRegistry, _repoClient, _pluginInstaller, _repoManager);
+            Log.Information("PluginManagerViewModel created successfully, calling ShowPluginManagerDialog");
+            ShowPluginManagerDialog(viewModel);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to create or show PluginManagerViewModel");
+        }
+    }
 }

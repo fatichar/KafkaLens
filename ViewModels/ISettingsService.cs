@@ -25,4 +25,6 @@ public interface ISettingsService
     void SaveKafkaConfig(KafkaConfig config);
     BrowserConfig GetBrowserConfig();
     void SaveBrowserConfig(BrowserConfig config);
+    PluginSettings GetPluginSettings();
+    void SavePluginSettings(PluginSettings settings);
 }

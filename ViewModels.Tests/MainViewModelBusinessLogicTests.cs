@@ -1,9 +1,13 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using Avalonia.Headless.XUnit;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
+using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Services;
 using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Services;
+using AvaloniaApp.Services;
 
 namespace KafkaLens.ViewModels.Tests;
 
@@ -21,14 +25,26 @@ public class MainViewModelBusinessLogicTests
     private readonly IUpdateService updateService = Substitute.For<IUpdateService>();
     private readonly IKafkaLensClient mockClient = Substitute.For<IKafkaLensClient>();
     private readonly AppConfig appConfig = new() { Title = "Test", ClusterRefreshIntervalSeconds = 100 };
+    private readonly PluginRegistry pluginRegistry;
+    private readonly PluginRepositoryClient repoClient = new();
+    private readonly PluginInstaller pluginInstaller;
+    private readonly RepositoryManager repoManager;
+    private readonly ExtensionRegistry extensionRegistry = new();
+    private readonly IThemeService themeService;
 
     public MainViewModelBusinessLogicTests()
     {
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        settingsService.GetPluginSettings().Returns(new PluginSettings());
         clusterFactory.LoadClustersAsync().Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
         clusterFactory.LoadClustersForClientAsync(Arg.Any<IKafkaLensClient>()).Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
         clientFactory.GetAllClients().Returns(new List<IKafkaLensClient>());
         MainViewModel.ConfirmRestoreTabs = (count) => Task.FromResult(true);
+
+        pluginRegistry  = new PluginRegistry(Path.GetTempPath(), settingsService, extensionRegistry);
+        pluginInstaller = new PluginInstaller(Path.GetTempPath(), settingsService);
+        repoManager     = new RepositoryManager(settingsService);
+        themeService    = new ThemeService(extensionRegistry);
     }
 
     private MainViewModel CreateViewModel(ObservableCollection<ClusterViewModel>? clusters = null)
@@ -60,7 +76,12 @@ public class MainViewModelBusinessLogicTests
             clientFactory,
             messageSaver,
             formatterService,
-            updateService);
+            updateService,
+            pluginRegistry,
+            repoClient,
+            pluginInstaller,
+            repoManager,
+            themeService);
     }
 
     private (ClusterViewModel vm, KafkaCluster model) CreateClusterVmWithModel(string id = "c1", string name = "Cluster1", string address = "localhost:9092")

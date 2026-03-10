@@ -4,6 +4,7 @@ using AvaloniaApp;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Services;
 using KafkaLens.ViewModels;
 using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Services;
@@ -72,6 +73,17 @@ public class TestApp : App
 
         var updateService = Substitute.For<IUpdateService>();
         services.AddSingleton(updateService);
+
+        var pluginsDir = Path.Combine(Path.GetTempPath(), "kafkalens-test-plugins");
+        Directory.CreateDirectory(pluginsDir);
+        settingsService.GetPluginSettings().Returns(new KafkaLens.Shared.Models.PluginSettings());
+        var extensionRegistry = new ExtensionRegistry();
+        services.AddSingleton(extensionRegistry);
+        services.AddSingleton(new PluginRegistry(pluginsDir, settingsService, extensionRegistry));
+        services.AddSingleton(new PluginRepositoryClient());
+        services.AddSingleton(new PluginInstaller(pluginsDir));
+        services.AddSingleton(new RepositoryManager(settingsService));
+
         services.AddSingleton<MainViewModel>();
 
         services.AddLogging();

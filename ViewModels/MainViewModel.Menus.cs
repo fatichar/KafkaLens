@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Shared;
+using Serilog;
 
 namespace KafkaLens.ViewModels;
 
@@ -118,7 +120,11 @@ public partial class MainViewModel
     private MenuItemViewModel CreateEditMenu() => new()
     {
         Header = "_Edit",
-        Items = new() { new MenuItemViewModel { Header = "_Preferences", Command = ShowPreferencesCommand } }
+        Items = new()
+        {
+            new MenuItemViewModel { Header = "_Preferences", Command = ShowPreferencesCommand },
+            new MenuItemViewModel { Header = "Plugin _Manager\u2026", Command = ShowPluginManagerCommand }
+        }
     };
 
     private MenuItemViewModel CreateViewMenu() => new()
@@ -129,18 +135,43 @@ public partial class MainViewModel
 
     private ObservableCollection<MenuItemViewModel> CreateThemeMenuItems()
     {
-        var themes = new[] { "Light", "Bright", "Ocean", "Forest", "Purple", "Dark", "Gray", "System" };
         var items = new ObservableCollection<MenuItemViewModel>();
-        foreach (var theme in themes)
+        
+        // Get all available themes from ThemeService (built-in + plugin themes)
+        if (_themeService != null)
         {
-            items.Add(new MenuItemViewModel
+            var availableThemes = _themeService.GetAvailableThemes();
+            
+            foreach (var theme in availableThemes)
             {
-                Header = theme,
-                Command = new RelayCommand(() => CurrentTheme = theme),
-                ToggleType = MenuItemToggleType.Radio,
-                IsChecked = theme == CurrentTheme
-            });
+                items.Add(new MenuItemViewModel
+                {
+                    Header = theme.DisplayName,
+                    CommandParameter = theme.Id, // Store the theme ID for later comparison
+                    Command = new RelayCommand(() => CurrentTheme = theme.Id),
+                    ToggleType = MenuItemToggleType.Radio,
+                    IsChecked = theme.Id == CurrentTheme
+                });
+            }
         }
+        else
+        {
+            // Fallback if ThemeService is not available yet
+            Log.Warning("ThemeService is null, using fallback themes");
+            var fallbackThemes = new[] { "Light", "Dark", "System" };
+            foreach (var theme in fallbackThemes)
+            {
+                items.Add(new MenuItemViewModel
+                {
+                    Header = theme,
+                    CommandParameter = theme, // Store the theme ID for later comparison
+                    Command = new RelayCommand(() => CurrentTheme = theme),
+                    ToggleType = MenuItemToggleType.Radio,
+                    IsChecked = theme == CurrentTheme
+                });
+            }
+        }
+        
         return items;
     }
 
@@ -166,8 +197,14 @@ public partial class MainViewModel
         var themeMenu = MenuItems?.FirstOrDefault(m => m.Header == "_View")
             ?.Items?.FirstOrDefault(m => m.Header == "Theme");
         if (themeMenu?.Items != null)
+        {
             foreach (var item in themeMenu.Items)
-                item.IsChecked = item.Header == CurrentTheme;
+            {
+                // Compare using the stored theme ID in CommandParameter property
+                var themeId = item.CommandParameter as string;
+                item.IsChecked = string.Equals(themeId, CurrentTheme, StringComparison.OrdinalIgnoreCase);
+            }
+        }
     }
 
     private void UpdateAutoCheckMenuCheckedState()

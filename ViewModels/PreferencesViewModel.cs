@@ -2,7 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Services;
 using KafkaLens.ViewModels.Messages;
+using Serilog;
 using System.Collections.ObjectModel;
 
 namespace KafkaLens.ViewModels;
@@ -10,6 +12,7 @@ namespace KafkaLens.ViewModels;
 public partial class PreferencesViewModel : ViewModelBase
 {
     private readonly ISettingsService settingsService;
+    private readonly IThemeService? themeService;
 
     [ObservableProperty]
     private KafkaConfig kafkaConfig;
@@ -17,15 +20,12 @@ public partial class PreferencesViewModel : ViewModelBase
     [ObservableProperty]
     private BrowserConfig browserConfig;
 
-    public ObservableCollection<string> Themes { get; } = new()
-    {
-        "Light", "Bright", "Ocean", "Forest", "Purple", "Dark", "System"
-    };
+    public ObservableCollection<string> Themes { get; } = new();
 
     [ObservableProperty]
     private string selectedTheme;
 
-    partial void OnSelectedThemeChanged(string value) => applyTheme?.Invoke(value);
+    partial void OnSelectedThemeChanged(string value) => applyTheme?.Invoke(GetThemeIdFromDisplayName(value));
 
     [ObservableProperty]
     private string fetchCountsString;
@@ -44,14 +44,25 @@ public partial class PreferencesViewModel : ViewModelBase
     private readonly Action<string>? applyTheme;
     private readonly string originalTheme;
 
-    public PreferencesViewModel(ISettingsService settingsService, Action<string>? applyTheme = null)
+    public PreferencesViewModel(ISettingsService settingsService, IThemeService? themeService = null, Action<string>? applyTheme = null)
     {
         this.settingsService = settingsService;
+        this.themeService = themeService;
         this.applyTheme = applyTheme;
 
         kafkaConfig = settingsService.GetKafkaConfig();
         browserConfig = settingsService.GetBrowserConfig();
-        selectedTheme = originalTheme = settingsService.GetValue("Theme") ?? "System";
+        
+        // Load themes first to validate the current theme
+        LoadThemes(themeService);
+        
+        // Get current theme from settings, but validate it exists
+        var currentTheme = settingsService.GetValue("Theme") ?? "System";
+        var validatedThemeId = ValidateTheme(currentTheme, themeService);
+        
+        // Convert theme ID to DisplayName for selection in the dialog
+        selectedTheme = originalTheme = GetThemeDisplayName(validatedThemeId, themeService);
+        
         fetchCountsString = string.Join(", ", browserConfig.FetchCounts);
 
         FastConnectionCheck = !browserConfig.EagerLoadTopicsOnStartup;
@@ -59,6 +70,84 @@ public partial class PreferencesViewModel : ViewModelBase
 
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
+    }
+
+    private string ValidateTheme(string themeName, IThemeService? themeService)
+    {
+        if (themeService != null)
+        {
+            var availableThemes = themeService.GetAvailableThemes();
+            // Try exact match first, then case-insensitive
+            var theme = availableThemes.FirstOrDefault(t => t.Id == themeName) ??
+                       availableThemes.FirstOrDefault(t => string.Equals(t.Id, themeName, StringComparison.OrdinalIgnoreCase));
+            
+            if (theme != null)
+            {
+                return theme.Id; // Return the actual theme ID (case-corrected)
+            }
+        }
+        
+        // If theme not found or ThemeService unavailable, fall back to System
+        if (themeName != "System")
+        {
+            Log.Warning("Theme {ThemeName} not found, falling back to System theme", themeName);
+            return "System";
+        }
+        
+        return "System";
+    }
+
+    private void LoadThemes(IThemeService? themeService)
+    {
+        Themes.Clear();
+        
+        if (themeService != null)
+        {
+            var availableThemes = themeService.GetAvailableThemes();
+            foreach (var theme in availableThemes.OrderBy(t => t.DisplayName))
+            {
+                Themes.Add(theme.DisplayName);
+            }
+        }
+        else
+        {
+            // Fallback to basic themes if ThemeService is not available
+            Themes.Add("Light");
+            Themes.Add("Dark");
+            Themes.Add("System");
+        }
+    }
+
+    private string GetThemeDisplayName(string themeId, IThemeService? themeService)
+    {
+        if (themeService != null)
+        {
+            var availableThemes = themeService.GetAvailableThemes();
+            var theme = availableThemes.FirstOrDefault(t => string.Equals(t.Id, themeId, StringComparison.OrdinalIgnoreCase));
+            if (theme != null)
+            {
+                return theme.DisplayName;
+            }
+        }
+        
+        // Fallback for basic themes or if ThemeService unavailable
+        return themeId;
+    }
+
+    private string GetThemeIdFromDisplayName(string displayName)
+    {
+        if (themeService != null)
+        {
+            var availableThemes = themeService.GetAvailableThemes();
+            var theme = availableThemes.FirstOrDefault(t => string.Equals(t.DisplayName, displayName, StringComparison.OrdinalIgnoreCase));
+            if (theme != null)
+            {
+                return theme.Id;
+            }
+        }
+        
+        // Fallback for basic themes or if ThemeService unavailable
+        return displayName;
     }
 
     private void Save()

@@ -17,6 +17,8 @@ using KafkaLens.Shared.DataAccess;
 using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Messages;
 using KafkaLens.ViewModels.Services;
+using KafkaLens.Shared.Services;
+using AvaloniaApp.Services;
 using Serilog;
 using KafkaLens.Shared.Models;
 
@@ -26,6 +28,7 @@ public partial class App : Application
 {
     public IServiceProvider Services { get; protected set; }
     public new static App Current => (App)Application.Current!;
+    private IThemeService? _themeService;
 
     public App()
     {
@@ -79,17 +82,37 @@ public partial class App : Application
         var topicSettingsFilePath = Path.Combine(kafkaLensDataPath, "topic_settings.json");
         services.AddSingleton<ITopicSettingsService>(new TopicSettingsService(topicSettingsFilePath));
 
-        var pluginsPath = Path.Combine(kafkaLensDataPath, "Plugins");
-        var pluginsDir = Directory.CreateDirectory(pluginsPath);
-        AddLocalDependencies(services, clusterRepo, pluginsDir, kafkaConfig);
+        AddLocalDependencies(services, clusterRepo, kafkaConfig);
 
-        FormatterFactory.AddFromPath(pluginsPath);
+        var pluginManagerDir = Path.Combine(kafkaLensDataPath, "plugins");
+        Directory.CreateDirectory(pluginManagerDir);
+        var extensionRegistry = new ExtensionRegistry();
+        var pluginRegistry    = new PluginRegistry(pluginManagerDir, settingsService, extensionRegistry);
+
+        // Load enabled plugins so their extensions are registered
+        pluginRegistry.GetInstalledPlugins();
+
+        // Bridge plugin-provided formatters into FormatterFactory
+        foreach (var formatter in extensionRegistry.GetExtensions<IMessageFormatter>())
+            FormatterFactory.Instance.AddFormatter(formatter);
+
+        // Initialize ThemeService after plugins are loaded
+        _themeService = new ThemeService(extensionRegistry);
+        services.AddSingleton<IThemeService>(_themeService);
 
         services.AddSingleton(new MessageViewOptions
             {
                 FormatterName = FormatterFactory.Instance.DefaultFormatter.Name
             }
         );
+        var repoClient        = new PluginRepositoryClient();
+        var pluginInstaller   = new PluginInstaller(pluginManagerDir, settingsService);
+        var repoManager       = new RepositoryManager(settingsService);
+        services.AddSingleton(extensionRegistry);
+        services.AddSingleton(pluginRegistry);
+        services.AddSingleton(repoClient);
+        services.AddSingleton(pluginInstaller);
+        services.AddSingleton(repoManager);
 
         // services.AddSingleton<ConsumerFactory>();
         services.AddSingleton<IClusterFactory, ClusterFactory>();
@@ -108,10 +131,8 @@ public partial class App : Application
     private static void AddLocalDependencies(
         IServiceCollection services,
         IClusterInfoRepository clusterRepo,
-        DirectoryInfo pluginsDir,
         KafkaConfig kafkaConfig)
     {
-        AddPlugins(services, pluginsDir);
         var localClientsAssembly = LoadLocalClientsAssembly();
         if (localClientsAssembly == null)
         {
@@ -130,20 +151,6 @@ public partial class App : Application
             services.AddSingleton<ISavedMessagesClient>(savedMessagesClient);
         }
     }
-
-    private static void AddPlugins(IServiceCollection services, DirectoryInfo pluginsDir)
-    {
-        // var pluginLoader = new PluginLoader(pluginsDir);
-        // var plugins = pluginLoader.LoadPlugins();
-        // foreach (var plugin in plugins)
-        // {
-        //     services.AddSingleton(plugin);
-        // }
-
-        var formattersPath = Path.Combine(pluginsDir.FullName, "Formatters");
-        var formattersDir = Directory.CreateDirectory(formattersPath);
-    }
-
 
     private static IKafkaLensClient? CreateLocalClient(Assembly assembly, IClusterInfoRepository clusterRepo, KafkaConfig kafkaConfig)
     {
@@ -204,7 +211,7 @@ public partial class App : Application
     {
         var logPath = GetLogPath();
         var logDirectory = Path.GetDirectoryName(logPath);
-        
+
         if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
         {
             try
@@ -295,32 +302,71 @@ public partial class App : Application
             currentThemeResources = null;
         }
 
-        // Determine which theme file to load and which base variant to use
-        string themeFileToLoad;
-        if (themeName == "System")
-        {
-            RequestedThemeVariant = ThemeVariant.Default;
-            var isDark = ActualThemeVariant == ThemeVariant.Dark;
-            themeFileToLoad = isDark ? "Dark" : "Light";
-            Log.Information("System theme detected as: {Variant}", themeFileToLoad);
-        }
-        else
-        {
-            RequestedThemeVariant = themeName is "Dark" or "Gray" ? ThemeVariant.Dark : ThemeVariant.Light;
-            themeFileToLoad = themeName;
-        }
-
-        // Load and apply theme resource dictionary
-        var themeDict = LoadThemeFromFile(themeFileToLoad);
+        // Try to load theme using ThemeService (supports both built-in and plugin themes)
+        var themeDict = _themeService?.LoadThemeResources(themeName);
+        
         if (themeDict != null)
         {
-            Resources.MergedDictionaries.Add(themeDict);
-            currentThemeResources = themeDict;
-            Log.Information("Theme {ThemeName} applied. MergedDictionaries count: {Count}", themeName, Resources.MergedDictionaries.Count);
+            // Check if this theme dictionary is already added to prevent duplicates
+            var resourceDict = themeDict as ResourceDictionary;
+            if (resourceDict != null && !Resources.MergedDictionaries.Contains(resourceDict))
+            {
+                // Set base theme variant based on theme info
+                var themeInfo = _themeService?.GetTheme(themeName);
+                if (themeInfo != null)
+                {
+                    if (themeName == "System")
+                    {
+                        RequestedThemeVariant = ThemeVariant.Default;
+                    }
+                    else
+                    {
+                        RequestedThemeVariant = (ThemeVariant?)themeInfo.BaseVariant ?? ThemeVariant.Default;
+                    }
+                }
+
+                Resources.MergedDictionaries.Add(resourceDict);
+                currentThemeResources = resourceDict;
+                Log.Information("Theme {ThemeName} applied successfully", themeName);
+            }
+            else
+            {
+                Log.Warning("Theme {ThemeName} dictionary already exists or is null", themeName);
+            }
         }
         else
         {
-            Log.Error("Theme {ThemeName} could not be applied - dictionary was null", themeName);
+            // Fallback to built-in theme loading if ThemeService fails
+            Log.Warning("ThemeService failed to load {ThemeName}, falling back to built-in loading", themeName);
+            themeDict = LoadThemeFromFile(themeName);
+            
+            if (themeDict != null)
+            {
+                // Set base variant for built-in themes
+                if (themeName == "System")
+                {
+                    RequestedThemeVariant = ThemeVariant.Default;
+                }
+                else
+                {
+                    RequestedThemeVariant = themeName is "Dark" or "Gray" ? ThemeVariant.Dark : ThemeVariant.Light;
+                }
+
+                Resources.MergedDictionaries.Add(themeDict as ResourceDictionary);
+                currentThemeResources = themeDict as ResourceDictionary;
+                Log.Information("Theme {ThemeName} applied via fallback built-in loading", themeName);
+            }
+            else
+            {
+                Log.Error("Theme {ThemeName} could not be applied from any source", themeName);
+                
+                // Ultimate fallback to Light theme
+                if (themeName != "Light")
+                {
+                    Log.Information("Falling back to Light theme");
+                    ApplyTheme("Light");
+                }
+            }
         }
     }
 
@@ -348,6 +394,14 @@ public partial class App : Application
             {
                 window.ShowDialog(desktop.MainWindow);
             }
+        };
+
+        MainViewModel.ShowPluginManagerDialog = (vm) =>
+        {
+            Log.Information("ShowPluginManagerDialog called with PluginManagerViewModel");
+            var window = new PluginManagerWindow { DataContext = vm };
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                window.ShowDialog(desktop.MainWindow);
         };
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
