@@ -16,12 +16,12 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
 
     protected override List<Topic> FetchTopics()
     {
-        var topicDirs = Directory.GetDirectories(clusterDir);
-        var topics = Array.ConvertAll(topicDirs, topicDir =>
+        var topicDirs = Directory.EnumerateDirectories(clusterDir);
+        var topics = topicDirs.Select(topicDir =>
         {
             var topicName = Path.GetFileName(topicDir);
-            var partitionDirs = Directory.GetDirectories(topicDir);
-            var partitions = Array.ConvertAll(partitionDirs, partitionDir =>
+            var partitionDirs = Directory.EnumerateDirectories(topicDir);
+            var partitions = partitionDirs.Select(partitionDir =>
             {
                 var partition = int.Parse(Path.GetFileName(partitionDir));
                 return new Partition(partition);
@@ -80,7 +80,7 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
         {
             return;
         }
-        var partitionDirs = Directory.GetDirectories(topicDir);
+        var partitionDirs = Directory.EnumerateDirectories(topicDir);
 
         var allFilesWithTimestamp = new ConcurrentBag<(string file, int partition, long timestamp)>();
 
@@ -94,9 +94,9 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
         await Parallel.ForEachAsync(partitionDirs, parallelOptions, async (partitionDir, ct) =>
         {
             var partition = int.Parse(Path.GetFileName(partitionDir));
-            var messageFiles = Directory.GetFiles(partitionDir, "*.klm");
-            var textFiles = Directory.GetFiles(partitionDir, "*.txt");
-            var allFiles = messageFiles.Concat(textFiles).ToList();
+            var messageFiles = Directory.EnumerateFiles(partitionDir, "*.klm");
+            var textFiles = Directory.EnumerateFiles(partitionDir, "*.txt");
+            var allFiles = messageFiles.Concat(textFiles);
 
             await Parallel.ForEachAsync(allFiles, parallelOptions, async (file, innerCt) =>
             {
@@ -197,8 +197,8 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
         {
             return;
         }
-        var messageFiles = Directory.GetFiles(partitionDir, "*.klm");
-        var textFiles = Directory.GetFiles(partitionDir, "*.txt");
+        var messageFiles = Directory.EnumerateFiles(partitionDir, "*.klm");
+        var textFiles = Directory.EnumerateFiles(partitionDir, "*.txt");
         var allFiles = messageFiles.Concat(textFiles);
 
         var fileOffsets = allFiles.Select(file =>
