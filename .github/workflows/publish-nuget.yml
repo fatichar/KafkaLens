@@ -46,8 +46,17 @@ jobs:
     - name: Build
       run: dotnet build -c Release -p:Version=${{ steps.version.outputs.version }}
     
+    - name: Pack Shared
+      run: dotnet pack Shared/Shared.csproj -c Release -p:Version=${{ steps.version.outputs.version }} --no-build
+    
     - name: Pack Formatting
       run: dotnet pack Formatting/Formatting.csproj -c Release -p:Version=${{ steps.version.outputs.version }} --no-build
+    
+    - name: Upload Shared Package
+      run: dotnet nuget push Shared/bin/Release/KafkaLens.Shared.${{ steps.version.outputs.version }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s ${{ env.NUGET_SOURCE }} --skip-duplicate
+    
+    - name: Upload Shared Symbols
+      run: dotnet nuget push Shared/bin/Release/KafkaLens.Shared.${{ steps.version.outputs.version }}.snupkg -k ${{ secrets.NUGET_API_KEY }} -s ${{ env.NUGET_SOURCE }} --skip-duplicate
     
     - name: Upload Formatting Package
       run: dotnet nuget push Formatting/bin/Release/KafkaLens.Formatting.${{ steps.version.outputs.version }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s ${{ env.NUGET_SOURCE }} --skip-duplicate
