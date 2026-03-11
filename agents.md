@@ -115,6 +115,10 @@ Before implementation, provide a concise proposal:
 
 Do not proceed until clear approval is granted.
 
+## Git
+- Never push code automatically. Always ask for permission before pushing.
+- Commit messages should be brief.
+
 ## Known Design Notes & Tech Debt
 
 - **Concurrent fetch plan:** `docs/concurrent-fetch-plan.md` — consumer pool refactor for
