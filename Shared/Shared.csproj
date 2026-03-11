@@ -6,12 +6,32 @@
     <RootNamespace>KafkaLens.Shared</RootNamespace>
     <LangVersion>latestmajor</LangVersion>
     <Nullable>enable</Nullable>
+    
+    <!-- NuGet Package Metadata -->
+    <PackageId>KafkaLens.Shared</PackageId>
+    <PackageDescription>Shared interfaces and models for KafkaLens plugin development</PackageDescription>
+    <PackageTags>kafka;plugin;shared;interfaces</PackageTags>
+    <PackageProjectUrl>https://github.com/fatichar/KafkaLens</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/fatichar/KafkaLens</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition=" '$(CI)' == 'true' ">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
   </ItemGroup>
+  
+  <!-- Source Link for debugging -->
+  <ItemGroup Condition=" '$(CI)' == 'true' ">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
+  </ItemGroup>
+  
   <ItemGroup Label="Logging">
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />

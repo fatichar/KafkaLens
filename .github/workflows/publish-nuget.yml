@@ -1,0 +1,71 @@
+name: Publish NuGet Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 0.8.1)'
+        required: true
+        type: string
+
+env:
+  NUGET_SOURCE: https://api.nuget.org/v3/index.json
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+    
+    - name: Determine Version
+      id: version
+      run: |
+        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          VERSION="${{ github.event.inputs.version }}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Publishing version: $VERSION"
+    
+    - name: Restore Dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build -c Release -p:Version=${{ steps.version.outputs.version }}
+    
+    - name: Test
+      run: dotnet test -c Release --no-build
+    
+    - name: Pack Shared
+      run: dotnet pack Shared/Shared.csproj -c Release -p:Version=${{ steps.version.outputs.version }} --no-build
+    
+    - name: Pack Formatting
+      run: dotnet pack Formatting/Formatting.csproj -c Release -p:Version=${{ steps.version.outputs.version }} --no-build
+    
+    - name: Upload Shared Package
+      run: dotnet nuget push Shared/bin/Release/KafkaLens.Shared.${{ steps.version.outputs.version }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s ${{ env.NUGET_SOURCE }} --skip-duplicate
+    
+    - name: Upload Formatting Package
+      run: dotnet nuget push Formatting/bin/Release/KafkaLens.Formatting.${{ steps.version.outputs.version }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s ${{ env.NUGET_SOURCE }} --skip-duplicate
+    
+    - name: Upload Shared Symbols
+      run: dotnet nuget push Shared/bin/Release/KafkaLens.Shared.${{ steps.version.outputs.version }}.snupkg -k ${{ secrets.NUGET_API_KEY }} -s ${{ env.NUGET_SOURCE }} --skip-duplicate
+    
+    - name: Upload Formatting Symbols
+      run: dotnet nuget push Formatting/bin/Release/KafkaLens.Formatting.${{ steps.version.outputs.version }}.snupkg -k ${{ secrets.NUGET_API_KEY }} -s ${{ env.NUGET_SOURCE }} --skip-duplicate

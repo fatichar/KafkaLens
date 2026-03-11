@@ -5,15 +5,33 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <AssemblyName>KafkaLens.Formatting</AssemblyName>
-        <RootNamespace>Kafka\Lens.Formatting</RootNamespace>
+        <RootNamespace>KafkaLens.Formatting</RootNamespace>
         <LangVersion>default</LangVersion>
         <AssemblyVersion>2.0.0.0</AssemblyVersion>
         <FileVersion>$(AssemblyVersion)</FileVersion>
+        
+        <!-- NuGet Package Metadata -->
+        <PackageId>KafkaLens.Formatting</PackageId>
+        <PackageDescription>Message formatters and formatting interfaces for KafkaLens plugins</PackageDescription>
+        <PackageTags>kafka;formatter;plugin;message;parsing</PackageTags>
+        <PackageProjectUrl>https://github.com/fatichar/KafkaLens</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/fatichar/KafkaLens</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <ContinuousIntegrationBuild Condition=" '$(CI)' == 'true' ">true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    </ItemGroup>
+    <!-- Source Link for debugging -->
+    <ItemGroup Condition=" '$(CI)' == 'true' ">
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
     </ItemGroup>
     <ItemGroup Label="Logging">
         <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
