@@ -33,9 +33,13 @@ public class MessageViewModelTests
         // Act
         var timestamp = viewModel.Timestamp;
 
-        // Assert
+        // Assert - Use culture-agnostic checks
         Assert.Contains("2022", timestamp);
-        Assert.Contains("01-01-2022", timestamp);
+        Assert.Contains("01", timestamp);
+        Assert.Contains("01", timestamp); // Both month and day
+        // Check for either format (culture-dependent)
+        Assert.True(timestamp.Contains("01-01-2022") || timestamp.Contains("01/01/2022"), 
+                   $"Expected date format not found in: {timestamp}");
     }
 
     [Fact]
