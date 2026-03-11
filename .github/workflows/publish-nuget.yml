@@ -1,9 +1,6 @@
 name: Publish NuGet Packages
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       version:
