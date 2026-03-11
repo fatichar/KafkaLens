@@ -3,7 +3,6 @@ using System.Threading;
 using Avalonia.Threading;
 using KafkaLens.Shared.Models;
 using Serilog;
-using Xunit;
 
 namespace KafkaLens.ViewModels;
 
@@ -74,24 +73,28 @@ public partial class OpenedClusterViewModel
 
         if (formatterService.IsUnknownFormatter(node.FormatterName))
         {
-            Assert.True(e.NewItems?.Count > 0);
-            var message = (Message)e.NewItems![0]!;
-            var formatter = formatterService.GuessValueFormatter(message, ValueFormatterNames);
-            node.FormatterName = formatter?.Name ?? formatterService.GetDefaultFormatterName();
+            if (e.NewItems?.Count > 0)
+            {
+                var message = (Message)e.NewItems![0]!;
+                var formatter = formatterService.GuessValueFormatter(message, ValueFormatterNames);
+                node.FormatterName = formatter?.Name ?? formatterService.GetDefaultFormatterName();
+            }
             settingsChanged = true;
             Log.Information("Guessed value formatter {Formatter} for topic {Topic}", node.FormatterName, topicName);
         }
 
         if (formatterService.IsUnknownFormatter(node.KeyFormatterName))
         {
-            Assert.True(e.NewItems?.Count > 0);
-            var message = (Message)e.NewItems![0]!;
-            var formatter = formatterService.GuessKeyFormatter(message, KeyFormatterNames);
-            if (formatter != null)
+            if (e.NewItems?.Count > 0)
             {
-                node.KeyFormatterName = formatter.Name;
-                settingsChanged = true;
-                Log.Information("Guessed key formatter {Formatter} for topic {Topic}", node.KeyFormatterName, topicName);
+                var message = (Message)e.NewItems![0]!;
+                var formatter = formatterService.GuessKeyFormatter(message, KeyFormatterNames);
+                if (formatter != null)
+                {
+                    node.KeyFormatterName = formatter.Name;
+                    settingsChanged = true;
+                    Log.Information("Guessed key formatter {Formatter} for topic {Topic}", node.KeyFormatterName, topicName);
+                }
             }
         }
 
