@@ -47,7 +47,7 @@ public class PluginRegistry : IDisposable
     /// and records any <see cref="IKafkaLensPlugin"/> implementations for later
     /// initialisation via <see cref="InitializeAll"/>.
     /// </summary>
-    public IReadOnlyList<PluginInfo> GetInstalledPlugins()
+    public IReadOnlyList<PluginInfo> LoadPlugins()
     {
         if (!Directory.Exists(_pluginsDir))
             return [];
@@ -116,7 +116,7 @@ public class PluginRegistry : IDisposable
 
     /// <summary>
     /// Calls <see cref="IKafkaLensPlugin.Initialize"/> on every plugin instance collected
-    /// during <see cref="GetInstalledPlugins"/>.  Call this once after the application DI
+    /// during <see cref="LoadPlugins"/>.  Call this once after the application DI
     /// container has been built so that plugins receive a fully-populated
     /// <see cref="IServiceProvider"/>.
     /// </summary>
@@ -127,7 +127,7 @@ public class PluginRegistry : IDisposable
             try
             {
                 plugin.Initialize(services);
-                Log.Information("Initialized IKafkaLensPlugin: {Type}", plugin.GetType().FullName);
+                Log.Information("Initialized Plugin: {Type}", plugin.GetType().FullName);
             }
             catch (Exception ex)
             {
@@ -229,33 +229,44 @@ public class PluginRegistry : IDisposable
     {
         foreach (var type in assembly.GetExportedTypes())
         {
-            // Only register types explicitly annotated with [KafkaLensExtension].
-            // This applies uniformly to ALL extension point types, including
-            // IMessageFormatter — there is no special-case implicit registration.
-            // Plugin authors must decorate their formatter class with
-            // [KafkaLensExtension(typeof(IMessageFormatter))].
+            if (type.IsAbstract || type.IsInterface) continue;
+
+            // Explicit registration via [KafkaLensExtension] attribute.
             var extensionAttrs = type.GetCustomAttributes<KafkaLensExtensionAttribute>();
             foreach (var extAttr in extensionAttrs)
             {
-                try
-                {
-                    var instance = Activator.CreateInstance(type);
-                    if (instance == null) continue;
-
-                    // Register via the interface type declared on the attribute
-                    var registerMethod = typeof(ExtensionRegistry)
-                        .GetMethod(nameof(ExtensionRegistry.Register))!
-                        .MakeGenericMethod(extAttr.ExtensionType);
-
-                    registerMethod.Invoke(_extensionRegistry, [instance]);
-                    Log.Information("Registered extension {Type} for {Interface}",
-                        type.FullName, extAttr.ExtensionType.Name);
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning(ex, "Failed to register extension {Type}", type.FullName);
-                }
+                TryRegister(type, extAttr.ExtensionType);
             }
+
+            // Implicit fallback for IMessageFormatter so that formatter plugins written
+            // before [KafkaLensExtension] was introduced continue to work without changes.
+            if (typeof(IMessageFormatter).IsAssignableFrom(type)
+                && !type.GetCustomAttributes<KafkaLensExtensionAttribute>()
+                        .Any(a => a.ExtensionType == typeof(IMessageFormatter)))
+            {
+                TryRegister(type, typeof(IMessageFormatter));
+            }
+        }
+    }
+
+    private void TryRegister(Type type, Type extensionType)
+    {
+        try
+        {
+            var instance = Activator.CreateInstance(type);
+            if (instance == null) return;
+
+            var registerMethod = typeof(ExtensionRegistry)
+                .GetMethod(nameof(ExtensionRegistry.Register))!
+                .MakeGenericMethod(extensionType);
+
+            registerMethod.Invoke(_extensionRegistry, [instance]);
+            Log.Information("Registered extension {Type} for {Interface}",
+                type.FullName, extensionType.Name);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to register extension {Type}", type.FullName);
         }
     }
 

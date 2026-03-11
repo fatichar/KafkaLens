@@ -90,11 +90,7 @@ public partial class App : Application
         var pluginRegistry    = new PluginRegistry(pluginManagerDir, settingsService, extensionRegistry);
 
         // Load enabled plugins so their extensions are registered
-        pluginRegistry.GetInstalledPlugins();
-
-        // Bridge plugin-provided formatters into FormatterFactory
-        foreach (var formatter in extensionRegistry.GetExtensions<IMessageFormatter>())
-            FormatterFactory.Instance.AddFormatter(formatter);
+        _ = pluginRegistry.LoadPlugins();
 
         // Initialize ThemeService after plugins are loaded, passing the resolved plugins directory
         // so it can locate plugin XAML resources without hard-coding the path.
@@ -130,6 +126,12 @@ public partial class App : Application
 
         // Now that the DI container is fully built, give plugins access to it.
         pluginRegistry.InitializeAll(provider);
+
+        // Bridge plugin-provided formatters into FormatterFactory.
+        // Must run after InitializeAll so plugins have had a chance to register
+        // extensions inside their Initialize(IServiceProvider) method.
+        foreach (var formatter in extensionRegistry.GetExtensions<IMessageFormatter>())
+            FormatterFactory.Instance.AddFormatter(formatter);
 
         return provider;
     }
@@ -310,7 +312,7 @@ public partial class App : Application
 
         // Try to load theme using ThemeService (supports both built-in and plugin themes)
         var themeDict = _themeService?.LoadThemeResources(themeName);
-        
+
         if (themeDict != null)
         {
             // Check if this theme dictionary is already added to prevent duplicates
@@ -336,7 +338,7 @@ public partial class App : Application
             // Fallback to built-in theme loading if ThemeService fails
             Log.Warning("ThemeService failed to load {ThemeName}, falling back to built-in loading", themeName);
             themeDict = LoadThemeFromFile(themeName);
-            
+
             if (themeDict != null)
             {
                 // Set base variant for built-in themes
@@ -356,7 +358,7 @@ public partial class App : Application
             else
             {
                 Log.Error("Theme {ThemeName} could not be applied from any source", themeName);
-                
+
                 // Ultimate fallback to Light theme
                 if (themeName != "Light")
                 {

@@ -206,7 +206,7 @@ public partial class PluginManagerViewModel : ViewModelBase
 
     private void LoadInstalledPlugins()
     {
-        var plugins = _registry.GetInstalledPlugins()
+        var plugins = _registry.LoadPlugins()
             .Select(p => new InstalledPluginViewModel(
                 p, _registry, _installer,
                 onUninstall:       RemoveInstalled,

@@ -16,31 +16,42 @@
     <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
 
       <!-- Repo selector row -->
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock Text="Repository:" VerticalAlignment="Center"/>
-        <ComboBox ItemsSource="{Binding Repositories}"
+      <Grid HorizontalAlignment="Center">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*" MinWidth="300" MaxWidth="600"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Repository:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+        <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Repositories}"
                   SelectedItem="{Binding SelectedRepository}"
-                  Width="360"
                   VerticalAlignment="Center"/>
-        <Button Content="＋" ToolTip.Tip="Add repository"
+        <Button Grid.Row="0" Grid.Column="2" Content="＋" ToolTip.Tip="Add repository"
                 Command="{Binding ToggleAddRepoCommand}"
-                VerticalAlignment="Center"/>
-        <Button Content="－" ToolTip.Tip="Remove selected repository"
+                VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <Button Grid.Row="0" Grid.Column="3" Content="－" ToolTip.Tip="Remove selected repository"
                 Command="{Binding RemoveRepositoryCommand}"
                 CommandParameter="{Binding SelectedRepository}"
-                VerticalAlignment="Center"/>
-        <Button Content="Refresh" Command="{Binding RefreshCommand}"
-                VerticalAlignment="Center"/>
-        <ProgressBar IsIndeterminate="True" Width="80" Height="6"
+                VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <Button Grid.Row="0" Grid.Column="4" Content="Refresh" Command="{Binding RefreshCommand}"
+                VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <ProgressBar Grid.Row="0" Grid.Column="5" IsIndeterminate="True" Width="80" Height="6"
                      IsVisible="{Binding IsLoading}"
-                     VerticalAlignment="Center"/>
-        <TextBlock Text="{Binding ErrorMessage}"
+                     VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="6" Text="{Binding ErrorMessage}"
                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                    Foreground="Red"
                    VerticalAlignment="Center"
                    TextWrapping="Wrap"
-                   MaxWidth="260"/>
-      </StackPanel>
+                   MaxWidth="600" Margin="0,6,0,0"/>
+      </Grid>
 
       <!-- Add-repo input row (toggled) -->
       <StackPanel Orientation="Horizontal" Spacing="6"
