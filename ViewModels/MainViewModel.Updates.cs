@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using KafkaLens.Shared;
 using Serilog;
 
@@ -34,7 +33,7 @@ public partial class MainViewModel
 
         var appDir = AppContext.BaseDirectory;
         var updaterPath = Path.Combine(appDir, "KafkaLens.Updater");
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) updaterPath += ".exe";
+        if (OperatingSystem.IsWindows()) updaterPath += ".exe";
 
         Log.Information("Looking for updater at: {UpdaterPath}", updaterPath);
 
@@ -42,7 +41,7 @@ public partial class MainViewModel
         {
             Log.Error("Updater not found at {UpdaterPath}", updaterPath);
             var currentDirUpdater = Path.Combine(Directory.GetCurrentDirectory(), "KafkaLens.Updater.exe");
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && File.Exists(currentDirUpdater))
+            if (OperatingSystem.IsWindows() && File.Exists(currentDirUpdater))
             {
                 Log.Information("Found updater in current directory: {CurrentDirUpdater}", currentDirUpdater);
                 updaterPath = currentDirUpdater;

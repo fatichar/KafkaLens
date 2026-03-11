@@ -82,17 +82,17 @@ public class UpdateService : IUpdateService
 
     private bool IsForThisPlatform(string name)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (OperatingSystem.IsWindows())
         {
             return name.Contains("win-x64", StringComparison.CurrentCultureIgnoreCase);
         }
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        if (OperatingSystem.IsMacOS())
         {
             return RuntimeInformation.ProcessArchitecture == Architecture.Arm64
                 ? name.Contains("macos-arm64", StringComparison.CurrentCultureIgnoreCase)
                 : name.Contains("macos-x64", StringComparison.CurrentCultureIgnoreCase);
         }
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (OperatingSystem.IsLinux())
         {
             return name.Contains("linux-x64", StringComparison.CurrentCultureIgnoreCase);
         }

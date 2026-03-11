@@ -7,7 +7,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -127,7 +126,7 @@ public partial class MainWindow : Window
 
             Dispatcher.UIThread.Post(() => CancelButton.IsVisible = false);
 
-            var isInstaller = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+            var isInstaller = OperatingSystem.IsWindows() &&
                               assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
 
             if (isInstaller)
@@ -371,7 +370,7 @@ public partial class MainWindow : Window
 
     private async Task ExtractTarGz(string archivePath, string destination)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (OperatingSystem.IsWindows())
         {
             throw new NotSupportedException("tar.gz extraction is not supported on Windows.");
         }
