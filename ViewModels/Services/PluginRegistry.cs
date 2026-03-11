@@ -12,12 +12,18 @@ using Serilog;
 
 namespace KafkaLens.ViewModels.Services;
 
-public class PluginRegistry
+public class PluginRegistry : IDisposable
 {
     private readonly string _pluginsDir;
     private readonly ISettingsService _settings;
     private readonly ExtensionRegistry _extensionRegistry;
     private readonly HashSet<string> _registeredIds = [];
+
+    /// <summary>
+    /// Holds all instantiated <see cref="IKafkaLensPlugin"/> implementations so that
+    /// <see cref="InitializeAll"/> and <see cref="Dispose"/> can invoke them in order.
+    /// </summary>
+    private readonly List<IKafkaLensPlugin> _pluginInstances = [];
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -27,8 +33,8 @@ public class PluginRegistry
     public PluginRegistry(string pluginsDir, ISettingsService settings,
         ExtensionRegistry? extensionRegistry = null)
     {
-        _pluginsDir = pluginsDir;
-        _settings = settings;
+        _pluginsDir        = pluginsDir;
+        _settings          = settings;
         _extensionRegistry = extensionRegistry ?? new ExtensionRegistry();
     }
 
@@ -38,7 +44,8 @@ public class PluginRegistry
     /// 2. Flat DLLs (backward compat): <c>plugins/{id}.dll</c>
     /// For each DLL: reads <see cref="KafkaLensPluginAttribute"/>, loads optional
     /// <c>plugin.json</c>, registers <see cref="KafkaLensExtensionAttribute"/> extensions,
-    /// and calls <see cref="IKafkaLensPlugin.Initialize"/> if implemented.
+    /// and records any <see cref="IKafkaLensPlugin"/> implementations for later
+    /// initialisation via <see cref="InitializeAll"/>.
     /// </summary>
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
     {
@@ -52,7 +59,7 @@ public class PluginRegistry
         foreach (var subDir in Directory.EnumerateDirectories(_pluginsDir))
         {
             var folderId = Path.GetFileName(subDir);
-            
+
             // Check for declarative theme package first (themes.json)
             var themesJsonPath = Path.Combine(subDir, "themes.json");
             if (File.Exists(themesJsonPath))
@@ -69,7 +76,7 @@ public class PluginRegistry
                 }
                 continue; // Skip DLL loading for declarative packages
             }
-            
+
             // Look for plugin.dll first, then any .dll in the folder
             var dll = Path.Combine(subDir, "plugin.dll");
             if (!File.Exists(dll))
@@ -107,11 +114,53 @@ public class PluginRegistry
         return result;
     }
 
+    /// <summary>
+    /// Calls <see cref="IKafkaLensPlugin.Initialize"/> on every plugin instance collected
+    /// during <see cref="GetInstalledPlugins"/>.  Call this once after the application DI
+    /// container has been built so that plugins receive a fully-populated
+    /// <see cref="IServiceProvider"/>.
+    /// </summary>
+    public void InitializeAll(IServiceProvider services)
+    {
+        foreach (var plugin in _pluginInstances)
+        {
+            try
+            {
+                plugin.Initialize(services);
+                Log.Information("Initialized IKafkaLensPlugin: {Type}", plugin.GetType().FullName);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to initialize IKafkaLensPlugin {Type}", plugin.GetType().FullName);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Calls <see cref="IKafkaLensPlugin.Shutdown"/> on every loaded plugin instance.
+    /// Automatically invoked when the registry is disposed.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var plugin in _pluginInstances)
+        {
+            try
+            {
+                plugin.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error during shutdown of IKafkaLensPlugin {Type}", plugin.GetType().FullName);
+            }
+        }
+        _pluginInstances.Clear();
+    }
+
     private PluginInfo? LoadPluginFromDll(string dll, string folderPath,
         Dictionary<string, bool> pluginStates)
     {
         var assembly = Assembly.LoadFrom(dll);
-        var attr = assembly.GetCustomAttribute<KafkaLensPluginAttribute>();
+        var attr     = assembly.GetCustomAttribute<KafkaLensPluginAttribute>();
 
         // Try to read plugin.json manifest (only for folder-based plugins)
         PluginManifest? manifest = null;
@@ -142,6 +191,7 @@ public class PluginRegistry
         var author   = NonEmpty(manifest?.Author,      attr?.Author)      ?? "";
         var desc     = NonEmpty(manifest?.Description, attr?.Description) ?? "";
         var homepage = NonEmpty(manifest?.Homepage,    null);
+        var category = NonEmpty(manifest?.Category,    null)              ?? "";
 
         // Check for icon
         var iconPath = "";
@@ -155,11 +205,8 @@ public class PluginRegistry
 
         if (isEnabled && _registeredIds.Add(id))
         {
-            // Register extensions declared via [KafkaLensExtension]
             RegisterExtensions(assembly);
-
-            // Call IKafkaLensPlugin.Initialize if any type implements it
-            InitializePlugin(assembly);
+            CollectPluginInstances(assembly);
         }
 
         return new PluginInfo
@@ -169,6 +216,7 @@ public class PluginRegistry
             Version     = version,
             Author      = author,
             Description = desc,
+            Category    = category,
             FilePath    = dll,
             FolderPath  = folderPath,
             IconPath    = iconPath,
@@ -181,7 +229,11 @@ public class PluginRegistry
     {
         foreach (var type in assembly.GetExportedTypes())
         {
-            // Attribute-declared extensions
+            // Only register types explicitly annotated with [KafkaLensExtension].
+            // This applies uniformly to ALL extension point types, including
+            // IMessageFormatter — there is no special-case implicit registration.
+            // Plugin authors must decorate their formatter class with
+            // [KafkaLensExtension(typeof(IMessageFormatter))].
             var extensionAttrs = type.GetCustomAttributes<KafkaLensExtensionAttribute>();
             foreach (var extAttr in extensionAttrs)
             {
@@ -204,52 +256,40 @@ public class PluginRegistry
                     Log.Warning(ex, "Failed to register extension {Type}", type.FullName);
                 }
             }
-
-            // Implicit IMessageFormatter registration (no attribute required)
-            if (!type.IsAbstract && !type.IsInterface
-                && typeof(IMessageFormatter).IsAssignableFrom(type)
-                && !type.GetCustomAttributes<KafkaLensExtensionAttribute>()
-                        .Any(a => a.ExtensionType == typeof(IMessageFormatter)))
-            {
-                try
-                {
-                    if (Activator.CreateInstance(type) is IMessageFormatter formatter)
-                    {
-                        _extensionRegistry.Register(formatter);
-                        Log.Information("Registered IMessageFormatter {Type}", type.FullName);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning(ex, "Failed to register IMessageFormatter {Type}", type.FullName);
-                }
-            }
         }
     }
 
-    private static void InitializePlugin(Assembly assembly)
+    /// <summary>
+    /// Instantiates every <see cref="IKafkaLensPlugin"/> implementation in the assembly
+    /// and stores the instances for later calls to <see cref="InitializeAll"/> /
+    /// <see cref="Dispose"/>.  Does NOT call <see cref="IKafkaLensPlugin.Initialize"/>
+    /// here because the DI container may not yet be available.
+    /// </summary>
+    private void CollectPluginInstances(Assembly assembly)
     {
         foreach (var type in assembly.GetExportedTypes())
         {
             if (!typeof(IKafkaLensPlugin).IsAssignableFrom(type) || type.IsAbstract) continue;
             try
             {
-                var plugin = (IKafkaLensPlugin?)Activator.CreateInstance(type);
-                plugin?.Initialize(services: null);
-                Log.Information("Initialized IKafkaLensPlugin: {Type}", type.FullName);
+                if (Activator.CreateInstance(type) is IKafkaLensPlugin instance)
+                {
+                    _pluginInstances.Add(instance);
+                    Log.Debug("Collected IKafkaLensPlugin instance: {Type}", type.FullName);
+                }
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "Failed to initialize IKafkaLensPlugin {Type}", type.FullName);
+                Log.Warning(ex, "Failed to instantiate IKafkaLensPlugin {Type}", type.FullName);
             }
         }
     }
 
-    private PluginInfo? LoadDeclarativeThemePackage(string subDir, string folderId, Dictionary<string, bool> pluginStates)
+    private PluginInfo? LoadDeclarativeThemePackage(string subDir, string folderId,
+        Dictionary<string, bool> pluginStates)
     {
         try
         {
-            // Read plugin.json manifest
             var manifestPath = Path.Combine(subDir, "plugin.json");
             PluginManifest? manifest = null;
             if (File.Exists(manifestPath))
@@ -261,18 +301,16 @@ public class PluginRegistry
                 });
             }
 
-            // Create a DeclarativeThemePackageWrapper instance to get metadata
             var package = new DeclarativeThemePackageWrapper(subDir);
-            
-            // Resolve metadata: manifest wins over filename
-            var id       = NonEmpty(manifest?.Id, folderId) ?? folderId;
-            var name     = NonEmpty(manifest?.Name, package.PackageName) ?? id;
-            var version  = NonEmpty(manifest?.Version, "") ?? "";
-            var author   = NonEmpty(manifest?.Author, package.Author) ?? "";
-            var desc     = NonEmpty(manifest?.Description, package.Description) ?? "";
-            var homepage = NonEmpty(manifest?.Homepage, null);
 
-            // Check for icon
+            var id       = NonEmpty(manifest?.Id,          folderId)            ?? folderId;
+            var name     = NonEmpty(manifest?.Name,        package.PackageName) ?? id;
+            var version  = NonEmpty(manifest?.Version,     "")                  ?? "";
+            var author   = NonEmpty(manifest?.Author,      package.Author)      ?? "";
+            var desc     = NonEmpty(manifest?.Description, package.Description) ?? "";
+            var homepage = NonEmpty(manifest?.Homepage,    null);
+            var category = NonEmpty(manifest?.Category,    null)                ?? "";
+
             var iconPath = "";
             var iconFile = Path.Combine(subDir, "icon.png");
             if (File.Exists(iconFile)) iconPath = iconFile;
@@ -281,7 +319,6 @@ public class PluginRegistry
 
             if (isEnabled && _registeredIds.Add(id))
             {
-                // Register the DeclarativeThemePackage as an IThemePackage extension
                 _extensionRegistry.Register<IThemePackage>(package);
                 Log.Information("Registered declarative theme package: {Id} - {Name}", id, name);
             }
@@ -293,7 +330,8 @@ public class PluginRegistry
                 Version     = version,
                 Author      = author,
                 Description = desc,
-                FilePath    = "", // No DLL file
+                Category    = category,
+                FilePath    = "",
                 FolderPath  = subDir,
                 IconPath    = iconPath,
                 Homepage    = homepage,

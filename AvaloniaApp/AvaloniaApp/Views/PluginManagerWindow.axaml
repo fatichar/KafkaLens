@@ -54,6 +54,18 @@
 
     </StackPanel>
 
+    <!-- ── Restart-required banner ── -->
+    <Border DockPanel.Dock="Bottom"
+            Background="#FFF3CD" BorderBrush="#E8A000" BorderThickness="1"
+            CornerRadius="4" Padding="10,6" Margin="0,8,0,0"
+            IsVisible="{Binding RestartRequired}">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="&#9888;" Foreground="#7A5900" FontSize="14" VerticalAlignment="Center"/>
+        <TextBlock Text="A restart is required for plugin changes to take effect."
+                   Foreground="#7A5900" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+
     <!-- ── Tab content ── -->
     <TabControl>
 

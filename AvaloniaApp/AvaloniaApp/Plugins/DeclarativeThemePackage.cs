@@ -74,10 +74,10 @@ public class DeclarativeTheme : IThemeInfo
     private readonly ThemeConfig _config;
     private readonly string _pluginPath;
 
-    public string Id => _config.Id;
-    public string DisplayName => _config.DisplayName;
-    public string Description => _config.Description ?? "";
-    public object BaseVariant => ParseThemeVariant(_config.BaseVariant);
+    public string    Id          => _config.Id;
+    public string    DisplayName => _config.DisplayName;
+    public string    Description => _config.Description ?? "";
+    public ThemeBase BaseVariant => ParseThemeBase(_config.BaseVariant);
 
     public DeclarativeTheme(ThemeConfig config, string pluginPath)
     {
@@ -122,15 +122,10 @@ public class DeclarativeTheme : IThemeInfo
         }
     }
 
-    private static ThemeVariant ParseThemeVariant(string variant)
-    {
-        return variant.ToLowerInvariant() switch
-        {
-            "dark" => ThemeVariant.Dark,
-            "light" => ThemeVariant.Light,
-            _ => ThemeVariant.Default
-        };
-    }
+    private static ThemeBase ParseThemeBase(string? variant) =>
+        string.Equals(variant?.Trim(), "dark", StringComparison.OrdinalIgnoreCase)
+            ? ThemeBase.Dark
+            : ThemeBase.Light;
 }
 
 /// <summary>

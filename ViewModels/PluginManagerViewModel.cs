@@ -31,16 +31,19 @@ public partial class AvailablePluginViewModel : ObservableObject
     /// <summary>True when the plugin has a homepage URL to display.</summary>
     public bool HasHomepage => !string.IsNullOrEmpty(Plugin.Homepage);
 
+    private readonly Action _onRestartRequired;
+
     public IAsyncRelayCommand InstallCommand { get; }
 
     public AvailablePluginViewModel(RepositoryPlugin plugin, string status,
-        PluginInstaller installer, Action onInstalled)
+        PluginInstaller installer, Action onInstalled, Action onRestartRequired)
     {
-        Plugin       = plugin;
-        _status      = status;
-        _installer   = installer;
-        _onInstalled = onInstalled;
-        InstallCommand = new AsyncRelayCommand(InstallAsync, CanInstall);
+        Plugin              = plugin;
+        _status             = status;
+        _installer          = installer;
+        _onInstalled        = onInstalled;
+        _onRestartRequired  = onRestartRequired;
+        InstallCommand      = new AsyncRelayCommand(InstallAsync, CanInstall);
     }
 
     private bool CanInstall() => Status == "Install" || Status == "Update Available";
@@ -54,6 +57,7 @@ public partial class AvailablePluginViewModel : ObservableObject
             Status = "Installed";
             InstallCommand.NotifyCanExecuteChanged();
             _onInstalled();
+            _onRestartRequired();
         }
         catch (Exception ex)
         {
@@ -73,10 +77,18 @@ public partial class InstalledPluginViewModel : ObservableObject
     private readonly PluginRegistry _registry;
     private readonly PluginInstaller _installer;
     private readonly Action<InstalledPluginViewModel> _onUninstall;
+    private readonly Action _onRestartRequired;
 
     public PluginInfo Plugin { get; }
 
     [ObservableProperty] private bool _isEnabled;
+
+    /// <summary>
+    /// Set to <c>true</c> when the user toggles the enabled state of an already-loaded
+    /// plugin.  Because assemblies cannot be unloaded at runtime, the change only takes
+    /// effect after a restart.
+    /// </summary>
+    [ObservableProperty] private bool _requiresRestart;
 
     /// <summary>True when the plugin has a homepage URL to display.</summary>
     public bool HasHomepage => !string.IsNullOrEmpty(Plugin.Homepage);
@@ -87,13 +99,16 @@ public partial class InstalledPluginViewModel : ObservableObject
     public IRelayCommand UninstallCommand { get; }
 
     public InstalledPluginViewModel(PluginInfo plugin, PluginRegistry registry,
-        PluginInstaller installer, Action<InstalledPluginViewModel> onUninstall)
+        PluginInstaller installer,
+        Action<InstalledPluginViewModel> onUninstall,
+        Action onRestartRequired)
     {
-        Plugin       = plugin;
-        _isEnabled   = plugin.IsEnabled;
-        _registry    = registry;
-        _installer   = installer;
-        _onUninstall = onUninstall;
+        Plugin             = plugin;
+        _isEnabled         = plugin.IsEnabled;
+        _registry          = registry;
+        _installer         = installer;
+        _onUninstall       = onUninstall;
+        _onRestartRequired = onRestartRequired;
 
         UninstallCommand = new RelayCommand(() =>
         {
@@ -101,6 +116,7 @@ public partial class InstalledPluginViewModel : ObservableObject
             {
                 _installer.Uninstall(plugin.FilePath, plugin.FolderPath);
                 _onUninstall(this);
+                _onRestartRequired();
             }
             catch (Exception ex)
             {
@@ -112,6 +128,10 @@ public partial class InstalledPluginViewModel : ObservableObject
     partial void OnIsEnabledChanged(bool value)
     {
         _registry.SetEnabled(Plugin.Id, value);
+
+        // Assemblies cannot be unloaded at runtime — the change requires a restart.
+        RequiresRestart = true;
+        _onRestartRequired();
     }
 }
 
@@ -133,10 +153,18 @@ public partial class PluginManagerViewModel : ViewModelBase
     [ObservableProperty] private string _newRepositoryUrl = "";
     [ObservableProperty] private bool _isAddingRepository;
 
-    public IAsyncRelayCommand  RefreshCommand          { get; }
-    public IRelayCommand        AddRepositoryCommand    { get; }
+    /// <summary>
+    /// Set to <c>true</c> when any installed plugin's enabled/disabled state has been
+    /// changed.  Because .NET assemblies cannot be unloaded at runtime, the new state
+    /// only takes effect after the application is restarted.
+    /// Bind the UI to this property to show a "Restart required" banner.
+    /// </summary>
+    [ObservableProperty] private bool _restartRequired;
+
+    public IAsyncRelayCommand   RefreshCommand          { get; }
+    public IRelayCommand         AddRepositoryCommand    { get; }
     public IRelayCommand<string> RemoveRepositoryCommand { get; }
-    public IRelayCommand        ToggleAddRepoCommand    { get; }
+    public IRelayCommand         ToggleAddRepoCommand    { get; }
 
     public PluginManagerViewModel(
         PluginRegistry registry,
@@ -161,8 +189,7 @@ public partial class PluginManagerViewModel : ViewModelBase
     private void LoadRepositories()
     {
         var currentRepos = _repoManager.GetRepositories();
-        
-        // Initialize the collection if it's null, or clear it if it exists
+
         if (_repositories == null)
         {
             _repositories = new ObservableCollection<string>(currentRepos);
@@ -171,18 +198,19 @@ public partial class PluginManagerViewModel : ViewModelBase
         {
             _repositories.Clear();
             foreach (var repo in currentRepos)
-            {
                 _repositories.Add(repo);
-            }
         }
-        
+
         SelectedRepository = _repositories.FirstOrDefault();
     }
 
     private void LoadInstalledPlugins()
     {
         var plugins = _registry.GetInstalledPlugins()
-            .Select(p => new InstalledPluginViewModel(p, _registry, _installer, RemoveInstalled));
+            .Select(p => new InstalledPluginViewModel(
+                p, _registry, _installer,
+                onUninstall:       RemoveInstalled,
+                onRestartRequired: () => RestartRequired = true));
         InstalledPlugins = new ObservableCollection<InstalledPluginViewModel>(plugins);
     }
 
@@ -214,11 +242,12 @@ public partial class PluginManagerViewModel : ViewModelBase
 
             if (index == null)
             {
-                ErrorMessage = $"Failed to fetch repository: {SelectedRepository}";
+                ErrorMessage     = $"Failed to fetch repository: {SelectedRepository}";
                 AvailablePlugins = [];
                 return;
             }
 
+            // Snapshot the installed set before the async gap to avoid TOCTOU issues
             var installedIds = InstalledPlugins
                 .ToDictionary(p => p.Plugin.Id, p => p.Plugin.Version);
 
@@ -233,7 +262,8 @@ public partial class PluginManagerViewModel : ViewModelBase
                         ? "Update Available"
                         : "Installed";
                 }
-                return new AvailablePluginViewModel(p, status, _installer, LoadInstalledPlugins);
+                return new AvailablePluginViewModel(p, status, _installer, LoadInstalledPlugins,
+                    () => RestartRequired = true);
             });
 
             AvailablePlugins = new ObservableCollection<AvailablePluginViewModel>(vms);
@@ -253,15 +283,11 @@ public partial class PluginManagerViewModel : ViewModelBase
     {
         var url = NewRepositoryUrl.Trim();
         if (string.IsNullOrEmpty(url)) return;
-        
-        // Add to settings (which has duplicate protection)
+
         _repoManager.AddRepository(url);
-        
-        // Reload repositories from settings to ensure sync
         LoadRepositories();
-        
-        // Clear the input
-        NewRepositoryUrl = string.Empty;
+
+        NewRepositoryUrl   = string.Empty;
         IsAddingRepository = false;
     }
 
@@ -269,8 +295,6 @@ public partial class PluginManagerViewModel : ViewModelBase
     {
         if (url == null) return;
         _repoManager.RemoveRepository(url);
-        
-        // Reload repositories from settings to ensure sync
         LoadRepositories();
     }
 

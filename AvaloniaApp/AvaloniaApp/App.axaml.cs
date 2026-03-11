@@ -96,8 +96,9 @@ public partial class App : Application
         foreach (var formatter in extensionRegistry.GetExtensions<IMessageFormatter>())
             FormatterFactory.Instance.AddFormatter(formatter);
 
-        // Initialize ThemeService after plugins are loaded
-        _themeService = new ThemeService(extensionRegistry);
+        // Initialize ThemeService after plugins are loaded, passing the resolved plugins directory
+        // so it can locate plugin XAML resources without hard-coding the path.
+        _themeService = new ThemeService(extensionRegistry, pluginManagerDir);
         services.AddSingleton<IThemeService>(_themeService);
 
         services.AddSingleton(new MessageViewOptions
@@ -125,7 +126,12 @@ public partial class App : Application
         services.AddLogging();
         ConfigureLogging();
 
-        return services.BuildServiceProvider();
+        var provider = services.BuildServiceProvider();
+
+        // Now that the DI container is fully built, give plugins access to it.
+        pluginRegistry.InitializeAll(provider);
+
+        return provider;
     }
 
     private static void AddLocalDependencies(
@@ -314,16 +320,7 @@ public partial class App : Application
                 // Set base theme variant based on theme info
                 var themeInfo = _themeService?.GetTheme(themeName);
                 if (themeInfo != null)
-                {
-                    if (themeName == "System")
-                    {
-                        RequestedThemeVariant = ThemeVariant.Default;
-                    }
-                    else
-                    {
-                        RequestedThemeVariant = (ThemeVariant?)themeInfo.BaseVariant ?? ThemeVariant.Default;
-                    }
-                }
+                    RequestedThemeVariant = ThemeService.ThemeBaseToVariant(themeInfo.BaseVariant);
 
                 Resources.MergedDictionaries.Add(resourceDict);
                 currentThemeResources = resourceDict;

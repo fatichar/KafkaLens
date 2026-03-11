@@ -14,19 +14,25 @@ namespace KafkaLens.ViewModels.Services;
 
 public class PluginRepositoryClient
 {
-    private readonly HttpClient _http;
-    private readonly string _appVersion;
+    // Shared across all instances to avoid socket exhaustion.
+    private static readonly HttpClient _http;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public PluginRepositoryClient()
+    private readonly string _appVersion;
+
+    static PluginRepositoryClient()
     {
         _http = new HttpClient();
-        _http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("KafkaLens", "1.0"));
+        _http.DefaultRequestHeaders.UserAgent.Add(
+            new ProductInfoHeaderValue("KafkaLens", "1.0"));
+    }
 
+    public PluginRepositoryClient()
+    {
         var version = Assembly.GetEntryAssembly()?.GetName().Version;
         _appVersion = version != null
             ? $"{version.Major}.{version.Minor}.{version.Build}"
@@ -35,15 +41,19 @@ public class PluginRepositoryClient
 
     /// <summary>
     /// Fetches and parses a plugin repository index, filtering to only compatible plugins.
-    /// Returns null on network or parse error.
+    /// Returns <c>null</c> on network or parse error.
     /// </summary>
     public async Task<RepositoryIndex?> FetchAsync(string url, CancellationToken ct = default)
     {
         try
         {
-            var json = await _http.GetStringAsync(url, ct);
+            var json  = await _http.GetStringAsync(url, ct);
             var index = JsonSerializer.Deserialize<RepositoryIndex>(json, JsonOptions);
-            if (index == null) return null;
+            if (index == null)
+            {
+                Log.Warning("Repository at {Url} returned empty or unparseable JSON", url);
+                return null;
+            }
 
             var compatible = index.Plugins
                 .Where(p => VersionCompatibility.IsCompatible(p.KafkaLensVersion, _appVersion))

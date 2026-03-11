@@ -8,6 +8,9 @@ public sealed class PluginInfo
     public string  Author      { get; init; } = "";
     public string  Description { get; init; } = "";
 
+    /// <summary>Optional category tag from plugin.json (e.g. "theme", "formatter", "auth").</summary>
+    public string  Category    { get; init; } = "";
+
     /// <summary>Path to the plugin DLL.</summary>
     public string  FilePath    { get; init; } = "";
 

@@ -83,6 +83,7 @@ public class TestApp : App
         services.AddSingleton(new PluginRepositoryClient());
         services.AddSingleton(new PluginInstaller(pluginsDir));
         services.AddSingleton(new RepositoryManager(settingsService));
+        services.AddSingleton<IThemeService>(new AvaloniaApp.Services.ThemeService(extensionRegistry, pluginsDir));
 
         services.AddSingleton<MainViewModel>();
 

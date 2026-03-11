@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using KafkaLens.Shared.Plugins;
 
 namespace KafkaLens.Shared.Services;
 
@@ -35,11 +36,21 @@ public interface IThemeService
 /// </summary>
 public class ThemeInfo
 {
-    public string Id { get; set; } = "";
+    public string Id          { get; set; } = "";
     public string DisplayName { get; set; } = "";
-    public string Author { get; set; } = "";
+    public string Author      { get; set; } = "";
     public string Description { get; set; } = "";
-    public bool IsBuiltIn { get; set; }
-    public object? BaseVariant { get; set; }
+    public bool   IsBuiltIn   { get; set; }
+
+    /// <summary>
+    /// Base variant (Light / Dark) used by the UI layer to select the underlying palette.
+    /// <c>null</c> for built-in themes that handle variant selection themselves (e.g. "System").
+    /// </summary>
+    public ThemeBase? BaseVariant { get; set; }
+
+    /// <summary>
+    /// Opaque reference to the underlying plugin theme object.
+    /// The UI layer downcasts this to its own <c>IThemeInfo</c> to load resources.
+    /// </summary>
     public object? PluginTheme { get; set; }
 }

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace KafkaLens.Shared.Plugins;
 
@@ -14,6 +16,9 @@ public interface IClusterAuthProvider
     /// <summary>
     /// Returns Confluent.Kafka configuration key-value pairs required
     /// to authenticate with the target cluster.
+    /// The method is async to support token refresh, secure-store lookups,
+    /// or any other operation that may not complete synchronously.
     /// </summary>
-    IReadOnlyDictionary<string, string> GetConfig(string clusterId);
+    Task<IReadOnlyDictionary<string, string>> GetConfigAsync(
+        string clusterId, CancellationToken ct = default);
 }

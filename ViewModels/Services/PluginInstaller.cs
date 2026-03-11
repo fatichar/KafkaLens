@@ -14,16 +14,23 @@ namespace KafkaLens.ViewModels.Services;
 
 public class PluginInstaller
 {
+    // Shared across all instances — avoids socket exhaustion from per-instance HttpClient.
+    private static readonly HttpClient _http;
+
+    static PluginInstaller()
+    {
+        _http = new HttpClient();
+        _http.DefaultRequestHeaders.UserAgent.Add(
+            new ProductInfoHeaderValue("KafkaLens", "1.0"));
+    }
+
     private readonly string _pluginsDir;
-    private readonly HttpClient _http;
     private readonly ISettingsService? _settings;
 
     public PluginInstaller(string pluginsDir, ISettingsService? settings = null)
     {
         _pluginsDir = pluginsDir;
-        _settings = settings;
-        _http = new HttpClient();
-        _http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("KafkaLens", "1.0"));
+        _settings   = settings;
     }
 
     /// <summary>
@@ -55,26 +62,7 @@ public class PluginInstaller
         var url = plugin.DownloadUrl;
         if (url.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
         {
-            // Extract ZIP into the plugin folder, overwriting existing files
-            using var ms = new MemoryStream(bytes);
-            using var zip = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: false);
-            foreach (var entry in zip.Entries)
-            {
-                // Skip directory entries and macOS metadata
-                if (string.IsNullOrEmpty(entry.Name) || entry.Name.StartsWith("__MACOSX/")) continue;
-
-                // Use the full path from the zip entry to preserve directory structure
-                var destPath = Path.Combine(pluginFolder, entry.FullName);
-                
-                // Ensure the directory exists for the file
-                var destDir = Path.GetDirectoryName(destPath);
-                if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
-                {
-                    Directory.CreateDirectory(destDir);
-                }
-                
-                entry.ExtractToFile(destPath, overwrite: true);
-            }
+            ExtractZip(bytes, pluginFolder);
             Log.Information("Plugin {Id} installed (ZIP) to {Folder}", plugin.Id, pluginFolder);
         }
         else
@@ -92,6 +80,47 @@ public class PluginInstaller
             pluginSettings.PluginStates[plugin.Id] = true;
             _settings.SavePluginSettings(pluginSettings);
             Log.Information("Plugin {Id} marked as enabled in settings", plugin.Id);
+        }
+    }
+
+    /// <summary>
+    /// Extracts a ZIP archive into <paramref name="pluginFolder"/>, guarding against
+    /// path-traversal attacks (Zip Slip): any entry whose resolved path falls outside
+    /// <paramref name="pluginFolder"/> is skipped with a warning.
+    /// </summary>
+    internal static void ExtractZip(byte[] bytes, string pluginFolder)
+    {
+        // Canonical base path — must end with separator so StartsWith works correctly
+        // even when a folder name is a prefix of a sibling (e.g. "foo" vs "foobar").
+        var canonicalBase = Path.GetFullPath(pluginFolder) + Path.DirectorySeparatorChar;
+
+        using var ms  = new MemoryStream(bytes);
+        using var zip = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: false);
+
+        foreach (var entry in zip.Entries)
+        {
+            // Skip directory-only entries and macOS resource-fork metadata.
+            // Check FullName (not just Name) so "sub/__MACOSX/file" is also caught.
+            if (string.IsNullOrEmpty(entry.Name) ||
+                entry.FullName.StartsWith("__MACOSX/", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // Resolve the full destination path and reject any entry that would escape
+            // the plugin folder (path-traversal / Zip Slip).
+            var destPath = Path.GetFullPath(Path.Combine(pluginFolder, entry.FullName));
+            if (!destPath.StartsWith(canonicalBase, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Warning(
+                    "Skipping ZIP entry '{Entry}' — resolved path '{Dest}' escapes plugin folder",
+                    entry.FullName, destPath);
+                continue;
+            }
+
+            var destDir = Path.GetDirectoryName(destPath);
+            if (!string.IsNullOrEmpty(destDir))
+                Directory.CreateDirectory(destDir);
+
+            entry.ExtractToFile(destPath, overwrite: true);
         }
     }
 

@@ -44,7 +44,7 @@ public class MainViewModelBusinessLogicTests
         pluginRegistry  = new PluginRegistry(Path.GetTempPath(), settingsService, extensionRegistry);
         pluginInstaller = new PluginInstaller(Path.GetTempPath(), settingsService);
         repoManager     = new RepositoryManager(settingsService);
-        themeService    = new ThemeService(extensionRegistry);
+        themeService    = new ThemeService(extensionRegistry, pluginsDir: Path.GetTempPath());
     }
 
     private MainViewModel CreateViewModel(ObservableCollection<ClusterViewModel>? clusters = null)
