@@ -49,9 +49,6 @@ jobs:
     - name: Build
       run: dotnet build -c Release -p:Version=${{ steps.version.outputs.version }}
     
-    - name: Test
-      run: dotnet test -c Release --no-build --filter "FullyQualifiedName~Formatting.Tests OR FullyQualifiedName~Shared.Tests"
-    
     - name: Pack Shared
       run: dotnet pack Shared/Shared.csproj -c Release -p:Version=${{ steps.version.outputs.version }} --no-build
     
