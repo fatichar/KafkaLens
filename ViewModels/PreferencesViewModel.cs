@@ -27,8 +27,26 @@ public partial class PreferencesViewModel : ViewModelBase
 
     partial void OnSelectedThemeChanged(string value) => applyTheme?.Invoke(GetThemeIdFromDisplayName(value));
 
+    partial void OnFetchCountsStringChanged(string value) => ValidateAndUpdateFetchCounts(value);
+
+    partial void OnSelectedDefaultFetchCountChanged(int? value)
+    {
+        if (value.HasValue)
+        {
+            BrowserConfig.DefaultFetchCount = value.Value;
+        }
+    }
+
     [ObservableProperty]
     private string fetchCountsString;
+
+    [ObservableProperty]
+    private string fetchCountsError = "";
+
+    public ObservableCollection<int> AvailableFetchCounts { get; } = new();
+
+    [ObservableProperty]
+    private int? selectedDefaultFetchCount;
 
     [ObservableProperty]
     private bool fastConnectionCheck;
@@ -64,6 +82,8 @@ public partial class PreferencesViewModel : ViewModelBase
         selectedTheme = originalTheme = GetThemeDisplayName(validatedThemeId, themeService);
         
         fetchCountsString = string.Join(", ", browserConfig.FetchCounts);
+        LoadAvailableFetchCounts();
+        SelectedDefaultFetchCount = browserConfig.DefaultFetchCount;
 
         FastConnectionCheck = !browserConfig.EagerLoadTopicsOnStartup;
         DeepConnectionCheck = browserConfig.EagerLoadTopicsOnStartup;
@@ -118,6 +138,104 @@ public partial class PreferencesViewModel : ViewModelBase
         }
     }
 
+    private void LoadAvailableFetchCounts()
+    {
+        // Create a new list with the updated values to avoid clearing the collection
+        var newCounts = browserConfig.FetchCounts.OrderBy(x => x).ToList();
+        
+        // Remove items that are no longer in the list
+        for (int i = AvailableFetchCounts.Count - 1; i >= 0; i--)
+        {
+            if (!newCounts.Contains(AvailableFetchCounts[i]))
+            {
+                AvailableFetchCounts.RemoveAt(i);
+            }
+        }
+        
+        // Add new items in sorted order
+        foreach (var count in newCounts)
+        {
+            if (!AvailableFetchCounts.Contains(count))
+            {
+                // Find the correct position to insert to maintain sorted order
+                int insertIndex = 0;
+                for (int j = 0; j < AvailableFetchCounts.Count; j++)
+                {
+                    if (AvailableFetchCounts[j] < count)
+                    {
+                        insertIndex = j + 1;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                AvailableFetchCounts.Insert(insertIndex, count);
+            }
+        }
+    }
+
+    private void ValidateAndUpdateFetchCounts(string fetchCountsString)
+    {
+        if (string.IsNullOrWhiteSpace(fetchCountsString))
+        {
+            FetchCountsError = "Fetch counts cannot be empty.";
+            return;
+        }
+
+        List<int> entries;
+        try
+        {
+            entries = fetchCountsString.Split(',')
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Select(int.Parse)
+                .ToList();
+        }
+        catch
+        {
+            FetchCountsError = "Fetch counts must be a comma-separated list of numbers.";
+            return;
+        }
+
+        if (entries.Count == 0)
+        {
+            FetchCountsError = "At least one fetch count must be provided.";
+            return;
+        }
+
+        if (entries.Any(entry => entry <= 0))
+        {
+            FetchCountsError = "All fetch counts must be positive numbers.";
+            return;
+        }
+
+        if (entries.Distinct().Count() != entries.Count)
+        {
+            FetchCountsError = "Duplicate fetch counts are not allowed.";
+            return;
+        }
+
+        // Clear error if validation passes
+        FetchCountsError = "";
+
+        // Update the browser config
+        BrowserConfig.FetchCounts.Clear();
+        entries.ForEach(entry => BrowserConfig.FetchCounts.Add(entry));
+
+        // If current default fetch count is not in the new list, set it to the first available
+        if (!entries.Contains(BrowserConfig.DefaultFetchCount))
+        {
+            BrowserConfig.DefaultFetchCount = entries.First();
+        }
+
+        // Update the selected item for the ComboBox
+        SelectedDefaultFetchCount = BrowserConfig.DefaultFetchCount;
+
+        // Refresh the dropdown after ensuring the default is valid
+        LoadAvailableFetchCounts();
+    }
+
     private string GetThemeDisplayName(string themeId, IThemeService? themeService)
     {
         if (themeService != null)
@@ -152,24 +270,10 @@ public partial class PreferencesViewModel : ViewModelBase
 
     private void Save()
     {
-        List<int> entries;
-        try
+        // Check if there are any validation errors
+        if (!string.IsNullOrEmpty(FetchCountsError))
         {
-            entries = FetchCountsString.Split(',')
-                .Select(s => s.Trim())
-                .Where(s => !string.IsNullOrEmpty(s))
-                .Select(int.Parse)
-                .ToList();
-        }
-        catch
-        {
-            MainViewModel.ShowMessage("Invalid Input", "Fetch counts must be a comma-separated list of numbers.");
-            return;
-        }
-
-        if (entries.Count == 0 || entries.Any(entry => entry <= 0))
-        {
-            MainViewModel.ShowMessage("Invalid Input", "Fetch counts must be positive numbers.");
+            MainViewModel.ShowMessage("Invalid Input", "Please fix the validation errors before saving.");
             return;
         }
 
@@ -178,15 +282,6 @@ public partial class PreferencesViewModel : ViewModelBase
             MainViewModel.ShowMessage("Invalid Input", "Default fetch count must be a positive number.");
             return;
         }
-
-        if (!entries.Contains(BrowserConfig.DefaultFetchCount))
-        {
-            MainViewModel.ShowMessage("Invalid Input", "Default fetch count must be one of the available fetch counts.");
-            return;
-        }
-
-        BrowserConfig.FetchCounts.Clear();
-        entries.ForEach(entry => BrowserConfig.FetchCounts.Add(entry));
 
         // Keep the latest runtime tab state instead of overwriting with a potentially stale dialog snapshot.
         var latestBrowserConfig = settingsService.GetBrowserConfig();

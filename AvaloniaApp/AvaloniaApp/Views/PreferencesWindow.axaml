@@ -7,7 +7,7 @@
         x:Class="AvaloniaApp.Views.PreferencesWindow"
         x:DataType="vm:PreferencesViewModel"
         Title="Preferences"
-        Width="600" Height="500"
+        Width="650" Height="700"
         WindowStartupLocation="CenterOwner">
 
   <Design.DataContext>
@@ -70,11 +70,12 @@
           <TextBlock Text="Font Size"/>
           <TextBox Text="{Binding BrowserConfig.FontSize}"/>
 
-          <TextBlock Text="Default Fetch Count"/>
-          <TextBox Text="{Binding BrowserConfig.DefaultFetchCount}"/>
-
           <TextBlock Text="Available Fetch Counts (comma separated)"/>
           <TextBox Text="{Binding FetchCountsString}"/>
+          <TextBlock Text="{Binding FetchCountsError}" Foreground="Red" FontSize="12" Margin="0,2,0,0"/>
+
+          <TextBlock Text="Default Fetch Count"/>
+          <ComboBox ItemsSource="{Binding AvailableFetchCounts}" SelectedItem="{Binding SelectedDefaultFetchCount}" Width="200"/>
 
           <TextBlock Text="Behavior" FontWeight="Bold" Margin="0,10,0,0"/>
           <CheckBox IsChecked="{Binding BrowserConfig.RestoreTabsOnStartup}" Content="Restore open tabs on startup"/>

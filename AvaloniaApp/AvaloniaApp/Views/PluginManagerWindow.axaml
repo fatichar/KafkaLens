@@ -13,7 +13,7 @@
   <DockPanel Margin="8">
 
     <!-- ── Top toolbar ── -->
-    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,48">
 
       <!-- Repo selector row -->
       <Grid HorizontalAlignment="Center">
