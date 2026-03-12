@@ -35,7 +35,8 @@
                              Text="{Binding StartTimeText}"
                              Watermark="HH:mm:ss"
                              MinWidth="80"
-                             HorizontalAlignment="Stretch">
+                             HorizontalAlignment="Stretch"
+                             LostFocus="OnTimeTextBoxLostFocus">
                         <TextBox.Styles>
                             <Style Selector="TextBox.error">
                                 <Setter Property="BorderBrush" Value="{DynamicResource ThemeErrorBrush}" />

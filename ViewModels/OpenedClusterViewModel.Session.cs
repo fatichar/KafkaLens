@@ -108,7 +108,13 @@ public partial class OpenedClusterViewModel
         if (state.FetchCount > 0) FetchCount = state.FetchCount;
         StartOffset = state.StartOffset;
         if (state.StartDate.HasValue) StartDate = state.StartDate.Value;
-        if (!string.IsNullOrWhiteSpace(state.StartTimeText)) StartTimeText = state.StartTimeText!;
+        if (!string.IsNullOrWhiteSpace(state.StartTimeText)) 
+        {
+            StartTimeText = state.StartTimeText!;
+            // Ensure proper formatting after setting programmatically
+            if (IsStartTimeValid)
+                UpdateStartTimeText();
+        }
 
         if (!string.IsNullOrWhiteSpace(state.FetchPosition) && FetchPositions.Contains(state.FetchPosition))
             FetchPosition = state.FetchPosition;

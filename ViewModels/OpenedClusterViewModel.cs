@@ -61,7 +61,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                 if (IsStartTimeValid)
                 {
                     startTime = time;
-                    UpdateStartTimeText();
+                    // Don't immediately reformat - let the user edit naturally
+                    // UpdateStartTimeText() will be called when needed (e.g., on focus loss)
                 }
             }
         }
@@ -216,6 +217,14 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         var updated = startTime.ToString("HH:mm:ss");
         if (!updated.Equals(StartTimeText))
             StartTimeText = updated;
+    }
+
+    public void OnStartTimeTextLostFocus()
+    {
+        if (IsStartTimeValid)
+        {
+            UpdateStartTimeText();
+        }
     }
 
     partial void OnFetchPositionChanged(string? value)
