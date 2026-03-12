@@ -74,10 +74,8 @@ public class EditClustersViewModel : IDisposable
 
     private async void CheckClientConnectionsAsync()
     {
-        foreach (var client in Clients)
-        {
-            _ = CheckClientConnectionAsync(client);
-        }
+        var tasks = Clients.Select(CheckClientConnectionAsync).ToList();
+        await Task.WhenAll(tasks);
     }
 
     private async Task CheckClientConnectionAsync(ClientInfoViewModel client)
@@ -117,7 +115,7 @@ public class EditClustersViewModel : IDisposable
         var vm = new ClusterViewModel(cluster, LocalClient);
         AllClusters.Add(vm);
         Clusters.Add(vm);
-        _ = vm.CheckConnectionAsync();
+        await vm.CheckConnectionAsync();
     }
 
     public async Task UpdateClusterAsync(ClusterViewModel cluster, string name, string address)
@@ -126,7 +124,7 @@ public class EditClustersViewModel : IDisposable
         ClusterRepository.Update(updated);
         cluster.Name = name;
         cluster.Address = address;
-        _ = cluster.CheckConnectionAsync();
+        await cluster.CheckConnectionAsync();
     }
 
     public void RemoveCluster(ClusterViewModel? cluster)
@@ -145,7 +143,7 @@ public class EditClustersViewModel : IDisposable
         ClientRepository.Add(clientInfo);
         var vm = new ClientInfoViewModel(clientInfo);
         Clients.Add(vm);
-        _ = CheckClientConnectionAsync(vm);
+        await CheckClientConnectionAsync(vm);
 
         // Load clusters from the newly added client
         await LoadClustersForClientAsync(name);
@@ -166,7 +164,7 @@ public class EditClustersViewModel : IDisposable
 
             // Update the existing ViewModel instead of replacing it
             existing.UpdateInfo(updated);
-            _ = CheckClientConnectionAsync(existing);
+            await CheckClientConnectionAsync(existing);
 
             // Only reload clusters if there are actual changes
             if (hasChanges)
@@ -194,6 +192,7 @@ public class EditClustersViewModel : IDisposable
             var client = ClientFactory.GetClient(clientName);
             var clusters = (await client.GetAllClustersAsync()).ToList();
 
+            var tasks = new List<Task>();
             foreach (var cluster in clusters)
             {
                 var existing = AllClusters.FirstOrDefault(c => c.Id == cluster.Id && c.Client.Name == client.Name);
@@ -205,9 +204,10 @@ public class EditClustersViewModel : IDisposable
                     {
                         Clusters.Add(newVm);
                     }
-                    _ = newVm.CheckConnectionAsync();
+                    tasks.Add(newVm.CheckConnectionAsync());
                 }
             }
+            await Task.WhenAll(tasks);
         }
         catch (Exception)
         {
