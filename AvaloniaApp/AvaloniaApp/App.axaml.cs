@@ -332,6 +332,24 @@ public partial class App : Application
                 Log.Warning("Theme {ThemeName} dictionary already exists or is null", themeName);
             }
         }
+        else if (_themeService?.GetTheme(themeName) != null)
+        {
+            // Theme is registered but has no resource dictionary (e.g. "System").
+            // Tell Avalonia to follow the OS variant, then load Light/Dark resources to match.
+            RequestedThemeVariant = ThemeVariant.Default;
+
+            var isDark = PlatformSettings?.GetColorValues().ThemeVariant == Avalonia.Platform.PlatformThemeVariant.Dark;
+            var variantName = isDark ? "Dark" : "Light";
+            Log.Information("System theme: OS variant is {Variant}, loading {VariantName} resources", isDark ? "Dark" : "Light", variantName);
+
+            var variantDict = _themeService!.LoadThemeResources(variantName) as ResourceDictionary;
+            if (variantDict != null && !Resources.MergedDictionaries.Contains(variantDict))
+            {
+                Resources.MergedDictionaries.Add(variantDict);
+                currentThemeResources = variantDict;
+            }
+            Log.Information("Theme {ThemeName} applied via OS-matched resources ({VariantName})", themeName, variantName);
+        }
         else
         {
             // Fallback to built-in theme loading if ThemeService fails
@@ -378,6 +396,19 @@ public partial class App : Application
         {
             ApplyTheme(m.Value);
         });
+
+        // When the OS light/dark preference changes, re-apply resources if "System" theme is active.
+        if (PlatformSettings != null)
+        {
+            PlatformSettings.ColorValuesChanged += (_, _) =>
+            {
+                if (currentThemeName == "System")
+                {
+                    Log.Information("OS color scheme changed; re-applying System theme resources");
+                    ApplyTheme("System");
+                }
+            };
+        }
 
         var viewModel = Services.GetRequiredService<MainViewModel>();
 

@@ -192,6 +192,13 @@ public class ThemeService : IThemeService
 
     private ResourceDictionary? LoadBuiltInThemeResources(string themeName)
     {
+        // "System" has no resource file — it only sets RequestedThemeVariant to Default.
+        if (themeName == "System")
+        {
+            Log.Debug("System theme has no resource dictionary; platform variant will be used");
+            return null;
+        }
+
         var uri = $"avares://AvaloniaApp/Themes/{themeName}.axaml";
         Log.Information("Loading built-in theme {ThemeName} from {Uri}", themeName, uri);
 
