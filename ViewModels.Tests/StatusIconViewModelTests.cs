@@ -7,7 +7,7 @@ public class StatusIconViewModelTests
     {
         // Arrange & Act
         var viewModel = new StatusIconViewModel();
-        
+
         // Assert
         Assert.Equal("Gray", viewModel.Color);
     }
@@ -20,10 +20,10 @@ public class StatusIconViewModelTests
     {
         // Arrange
         var viewModel = new StatusIconViewModel();
-        
+
         // Act
         viewModel.Status = status;
-        
+
         // Assert
         Assert.Equal(expectedColor, viewModel.Color);
     }
@@ -33,10 +33,10 @@ public class StatusIconViewModelTests
     {
         // Arrange
         var viewModel = new StatusIconViewModel();
-        
+
         // Act
         viewModel.Status = ConnectionState.Checking;
-        
+
         // Assert
         Assert.True(viewModel.IsLoading);
         Assert.Equal("Gray", viewModel.Color);
@@ -53,10 +53,10 @@ public class StatusIconViewModelTests
             if (args.PropertyName == nameof(StatusIconViewModel.Status))
                 propertyChangedRaised = true;
         };
-        
+
         // Act
         viewModel.Status = ConnectionState.Connected;
-        
+
         // Assert
         Assert.True(propertyChangedRaised);
     }

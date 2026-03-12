@@ -22,7 +22,6 @@ public partial class NavMenu : ComponentBase
 
     private IDictionary<string, KafkaCluster> Clusters { get; set; } = new Dictionary<string, KafkaCluster>();
 
-    //private SfTreeView<INode> tree;
     [Inject]
     NavigationManager NavigationManager { get; set; }
 

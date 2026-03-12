@@ -24,6 +24,4 @@ public class Topic
 
     public int PartitionCount => Partitions.Count;
     public List<Partition> Partitions { get; }
-
-    //public string ParentId { get; set; }
 }

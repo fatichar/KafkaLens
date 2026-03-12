@@ -188,7 +188,6 @@ public class KafkaService(ILogger<KafkaService> logger, IKafkaLensClient kafkaLe
             options.Direction = Models.FetchDirection.Backward;
         }
         return options;
-        // return new Models.FetchOptions(ToFetchPosition(request.Start), ToFetchPosition(request.End));
     }
 
     private Models.FetchPosition ToFetchPosition(FetchPosition request)

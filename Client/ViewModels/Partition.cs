@@ -21,6 +21,4 @@ public class Partition : INode
     public bool CanSelect => true;
     public IList<INode> Children => null;
     public INode.NodeType Type => INode.NodeType.PARTITION;
-
-    //public int MaxOffset { get; set; }
 }

@@ -48,24 +48,4 @@ public partial class ConnectionViewModelBase : ViewModelBase
                 break;
         }
     }
-
-    [System.Obsolete("Use Status instead")]
-    public bool? IsConnected
-    {
-        get => Status switch
-        {
-            ConnectionState.Connected => true,
-            ConnectionState.Failed => false,
-            _ => null
-        };
-        set
-        {
-            Status = value switch
-            {
-                true => ConnectionState.Connected,
-                false => ConnectionState.Failed,
-                _ => ConnectionState.Unknown
-            };
-        }
-    }
 }

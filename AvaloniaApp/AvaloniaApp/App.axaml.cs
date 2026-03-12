@@ -111,7 +111,6 @@ public partial class App : Application
         services.AddSingleton(pluginInstaller);
         services.AddSingleton(repoManager);
 
-        // services.AddSingleton<ConsumerFactory>();
         services.AddSingleton<IClusterFactory, ClusterFactory>();
         services.AddSingleton<IClientFactory, ClientFactory>();
         services.AddSingleton<IMessageSaver, MessageSaver>();

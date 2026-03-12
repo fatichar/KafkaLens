@@ -35,8 +35,6 @@ public partial class Clusters : ComponentBase
 
     private async void AddClusterAsync()
     {
-        //var state = await LocalStorage.GetItemAsync<string>("state");
-        //await LocalStorage.SetItemAsync("state", "add cluster");
         Logger.LogDebug("Adding a cluster");
         try
         {

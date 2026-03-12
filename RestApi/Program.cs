@@ -21,7 +21,6 @@ builder.Services.AddSwaggerGen(c =>
             Title = "KafkaLens Api",
             Version = "v1"
         });
-    // c.DocumentFilter<BasePathFilter>();
     // use action name as operation id
     c.CustomOperationIds(e => $"{e.ActionDescriptor.RouteValues["action"]}");
 });
@@ -61,8 +60,6 @@ else
 
 
 app.UseHttpsRedirection();
-
-//app.UseBlazorFrameworkFiles();
 
 app.UseAuthorization();
 
