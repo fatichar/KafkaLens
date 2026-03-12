@@ -25,16 +25,12 @@ public partial class MainViewModel
             var loadTasks = clients.Select(async client =>
             {
                 var loaded = await clusterFactory.LoadClustersForClientAsync(client);
-                Task? restoreTask = null;
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     ApplyClusterSnapshotForClients(loaded, new HashSet<string> { client.Name });
                     EnsureOpenedClustersSubscriptionInitialized();
                     UpdateOpenedClusters();
-                    restoreTask = TryRestoreTabsAsync();
                 });
-                if (restoreTask != null)
-                    await restoreTask;
             }).ToList();
 
             isInitialized = true;
@@ -46,6 +42,8 @@ public partial class MainViewModel
         {
             IsLoadingClusters = false;
         }
+
+        await TryRestoreTabsAsync();
     }
 
     private async Task RefreshClustersForHealthCheckAsync()
