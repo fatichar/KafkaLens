@@ -15,15 +15,25 @@ public static class OsUtils
             // Use platform-specific safe launching
             if (OperatingSystem.IsWindows())
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"\" \"{target}\"") { CreateNoWindow = true });
+                using var proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName = target,
+                    UseShellExecute = true
+                });
             }
             else if (OperatingSystem.IsMacOS())
             {
-                Process.Start("open", target);
+                using var proc = Process.Start(new ProcessStartInfo("open")
+                {
+                    ArgumentList = { target }
+                });
             }
             else if (OperatingSystem.IsLinux())
             {
-                Process.Start("xdg-open", target);
+                using var proc = Process.Start(new ProcessStartInfo("xdg-open")
+                {
+                    ArgumentList = { target }
+                });
             }
 
             return true;

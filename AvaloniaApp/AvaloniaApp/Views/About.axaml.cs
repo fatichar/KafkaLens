@@ -30,7 +30,9 @@ public partial class About : Window
 
     private void Url_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { CommandParameter: string url })
+        if (sender is Button { CommandParameter: string url } &&
+            (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+             url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)))
         {
             OsUtils.OpenExternal(url);
         }
