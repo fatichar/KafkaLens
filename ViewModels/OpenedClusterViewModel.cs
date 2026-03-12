@@ -108,6 +108,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public IList<MessageViewModel> SelectedMessages { get; set; } = new List<MessageViewModel>();
     public bool IsCurrent { get; set; }
 
+    [ObservableProperty] private bool isNavigatorOpen = true;
+    [ObservableProperty] private bool isFetchPanelOpen = true;
+
+    public IRelayCommand? CloseCommand { get; set; }
+
     public RelayCommand ToggleFetchCommand { get; }
     public RelayCommand RefreshCommand { get; }
     public RelayCommand GuessValueFormatterCommand { get; }

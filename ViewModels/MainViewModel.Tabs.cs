@@ -1,4 +1,5 @@
 using System.IO;
+using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Shared.Models;
 using Serilog;
 
@@ -40,6 +41,7 @@ public partial class MainViewModel
 
         var openedCluster = new OpenedClusterViewModel(
             settingsService, topicSettingsService, messageSaver, formatterService, clusterViewModel, newName);
+        openedCluster.CloseCommand = new RelayCommand(() => CloseTab(openedCluster));
         openedCluster.ApplyOpenedTabState(tabState);
         alreadyOpened.Add(openedCluster);
         OpenedClusters.Add(openedCluster);

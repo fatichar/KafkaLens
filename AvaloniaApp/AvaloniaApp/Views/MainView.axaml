@@ -43,15 +43,29 @@
                     Background="{DynamicResource ThemeBackgroundBrush}"
                     Padding="0"
                     BorderThickness="0,2,0,0">
+            <TabControl.Styles>
+                <Style Selector="TabItem Button.closeBtn">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="IsHitTestVisible" Value="True"/>
+                </Style>
+            </TabControl.Styles>
             <TabControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:OpenedClusterViewModel">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" VerticalAlignment="Center" IsVisible="{Binding !IsChecking}"/>
                         <ProgressBar Classes="circular" MinWidth="0" Width="12" Height="12" IsIndeterminate="True" IsVisible="{Binding IsChecking}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                        <Button Content="✕"
+                                Classes="closeBtn"
+                                Command="{Binding CloseCommand}"
+                                Padding="3,0"
+                                FontSize="10"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                BorderThickness="0" />
                     </StackPanel>
                 </DataTemplate>
-            </TabControl.ItemTemplate >
+            </TabControl.ItemTemplate>
             <TabControl.ContentTemplate>
                 <DataTemplate>
                     <DockPanel LastChildFill="True">
