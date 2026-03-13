@@ -10,7 +10,6 @@
 		         Watermark="Filter (Ctrl+F)"/>
 		<ToggleButton Grid.Column="1" Margin="5,0,0,0" VerticalAlignment="Center"
 		              IsChecked="{Binding IsLiveMode, Mode=TwoWay}"
-		              Command="{Binding ToggleLiveModeCommand}"
 		              ToolTip.Tip="Toggle live streaming (polls every 5 s)">
 			<Panel>
 				<TextBlock Text="Live" IsVisible="{Binding !IsLiveMode}"/>
