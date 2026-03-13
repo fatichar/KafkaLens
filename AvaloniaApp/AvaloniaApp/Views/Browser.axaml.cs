@@ -63,6 +63,12 @@ public partial class Browser : UserControl
         if (Context != null)
         {
             Context.CurrentMessages.PropertyChanged += OnCurrentMessagesChanged;
+            Context.SetClipboardText = async text =>
+            {
+                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+                if (clipboard != null)
+                    await clipboard.SetTextAsync(text);
+            };
             ApplySavedSort(Context);
 
             // Restore display if there's already a selected message

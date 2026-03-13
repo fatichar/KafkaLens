@@ -11,6 +11,9 @@
     </UserControl.KeyBindings>
     <UserControl.Resources>
         <ContextMenu x:Key="MessageGridContextMenu">
+            <MenuItem Header="Copy Key" Command="{Binding CopyKeyCommand}"/>
+            <MenuItem Header="Copy Value" Command="{Binding CopyValueCommand}"/>
+            <Separator/>
             <MenuItem Header="Save Selected">
                 <MenuItem Header="As RAW" Command="{Binding SaveSelectedAsRawCommand}"/>
                 <MenuItem Header="As Formatted" Command="{Binding SaveSelectedAsFormattedCommand}"/>

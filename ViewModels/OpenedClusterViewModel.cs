@@ -122,6 +122,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public AsyncRelayCommand SaveSelectedAsFormattedCommand { get; set; }
     public AsyncRelayCommand SaveAllAsRawCommand { get; set; }
     public AsyncRelayCommand SaveAllAsFormattedCommand { get; set; }
+    public AsyncRelayCommand CopyKeyCommand { get; }
+    public AsyncRelayCommand CopyValueCommand { get; }
+
+    /// <summary>Set by the view to provide clipboard access.</summary>
+    public Func<string, Task>? SetClipboardText { get; set; }
 
     private DateTime StartDateTime => StartDate.Date + startTime.ToTimeSpan();
 
@@ -183,6 +188,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         SaveAllAsFormattedCommand = new AsyncRelayCommand(
             () => messageSaver.SaveAsync(CurrentMessages.Messages, Name, true),
             () => messageSaver.CanSaveMessages(cluster.Id));
+
+        CopyKeyCommand = new AsyncRelayCommand(CopyKeyAsync);
+        CopyValueCommand = new AsyncRelayCommand(CopyValueAsync);
 
         Nodes.Add(this);
         IsSelected = true;
@@ -311,5 +319,19 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                 }
             }
         }
+    }
+
+    private async Task CopyKeyAsync()
+    {
+        var key = CurrentMessages.CurrentMessage?.Key;
+        if (key != null && SetClipboardText != null)
+            await SetClipboardText(key);
+    }
+
+    private async Task CopyValueAsync()
+    {
+        var value = CurrentMessages.CurrentMessage?.DecodedMessage;
+        if (value != null && SetClipboardText != null)
+            await SetClipboardText(value);
     }
 }
