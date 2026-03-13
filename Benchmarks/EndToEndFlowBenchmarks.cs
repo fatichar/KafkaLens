@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using BenchmarkDotNet.Attributes;
@@ -22,6 +23,11 @@ namespace Benchmarks;
 ///
 /// The Avalonia headless session is started once per process (GlobalSetup) so all
 /// iterations share the same running dispatcher.
+///
+/// <see cref="IterationSetup"/> pre-opens the benchmark cluster and stores the
+/// resulting tab in <see cref="_openedCluster"/> so individual benchmark methods
+/// that do not measure the open operation start with a fully-loaded tab and
+/// contain no artificial sleep.
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(warmupCount: 2, iterationCount: 8)]
@@ -31,6 +37,7 @@ public class EndToEndFlowBenchmarks
     private MainViewModel _mainVm = null!;
     private string _clusterId = null!;
     private BenchmarkKafkaClient _benchClient = null!;
+    private OpenedClusterViewModel _openedCluster = null!;
 
     [GlobalSetup]
     public void GlobalSetup()
@@ -43,14 +50,13 @@ public class EndToEndFlowBenchmarks
             _benchClient = (BenchmarkKafkaClient)_session.Services
                 .GetRequiredService<KafkaLens.Shared.IKafkaLensClient>();
 
-            // Add a cluster to work with.
+            // Register a cluster so LoadClusters() has something to discover.
             var cluster = new KafkaCluster(
                 Guid.NewGuid().ToString(), "Benchmark Cluster", "localhost:9092");
             await _benchClient.AddClusterAsync(cluster);
             _clusterId = cluster.Id;
 
             await _mainVm.LoadClusters();
-            await Task.Delay(100); // allow UI thread to process the cluster update
         });
     }
 
@@ -66,11 +72,32 @@ public class EndToEndFlowBenchmarks
     [IterationSetup]
     public void IterationSetup()
     {
-        _session!.Run(() =>
+        _session!.Run(async () =>
         {
             foreach (var tab in _mainVm.OpenedClusters.ToList())
                 _mainVm.CloseTab(tab);
+
+            // Pre-open the benchmark cluster so benchmarks that don't measure the
+            // open operation start with a fully-loaded tab and need no setup delay.
+            _mainVm.OpenClusterCommand.Execute(_clusterId);
+            _openedCluster = _mainVm.OpenedClusters[^1];
+            _openedCluster.IsCurrent = true;
+            await WaitForTopicsAsync(_openedCluster);
         });
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Yields the UI thread until <paramref name="vm"/>.Topics is non-empty or
+    /// <paramref name="timeoutMs"/> elapses.  Replaces fixed <c>Task.Delay</c> waits
+    /// so benchmark timings reflect actual work rather than unconditional sleep.
+    /// </summary>
+    private static async Task WaitForTopicsAsync(OpenedClusterViewModel vm, int timeoutMs = 5_000)
+    {
+        var deadline = Environment.TickCount64 + timeoutMs;
+        while (vm.Topics.Count == 0 && Environment.TickCount64 < deadline)
+            await Task.Delay(1);
     }
 
     // ── Benchmarks ────────────────────────────────────────────────────────────
@@ -85,13 +112,9 @@ public class EndToEndFlowBenchmarks
         _session!.Run(async () =>
         {
             _mainVm.OpenClusterCommand.Execute(_clusterId);
-            await Task.Delay(50);   // await first dispatcher post (status check)
-
-            var openedCluster = _mainVm.OpenedClusters[^1];
-            await Task.Delay(300);  // await topic fetch + UI update
-
-            // Ensure topics are loaded before we finish measuring.
-            _ = openedCluster.Topics.Count;
+            var tab = _mainVm.OpenedClusters[^1];
+            await WaitForTopicsAsync(tab);
+            _ = tab.Topics.Count;
         });
     }
 
@@ -104,21 +127,10 @@ public class EndToEndFlowBenchmarks
     {
         _session!.Run(async () =>
         {
-            _mainVm.OpenClusterCommand.Execute(_clusterId);
-            await Task.Delay(50);
-            var openedCluster = _mainVm.OpenedClusters[^1];
-            openedCluster.IsCurrent = true;
-            await Task.Delay(300); // topics loaded
-
-            var topicVm = openedCluster.Topics[0];
-            openedCluster.SelectedNode = topicVm;  // triggers FetchMessages()
-
-            // Flush Normal-priority dispatcher work (LoadFakeMessages + UpdateMessages)
-            // by posting at Background priority and awaiting it.
+            _openedCluster.SelectedNode = _openedCluster.Topics[0];
             await Dispatcher.UIThread.InvokeAsync(
                 static () => { }, DispatcherPriority.Background);
-
-            _ = openedCluster.CurrentMessages.Messages.Count;
+            _ = _openedCluster.CurrentMessages.Messages.Count;
         });
     }
 
@@ -131,16 +143,10 @@ public class EndToEndFlowBenchmarks
     {
         _session!.Run(async () =>
         {
-            _mainVm.OpenClusterCommand.Execute(_clusterId);
-            await Task.Delay(50);
-            var openedCluster = _mainVm.OpenedClusters[^1];
-            openedCluster.IsCurrent = true;
-            await Task.Delay(300); // topics loaded
-
             const int switchCount = 5;
             for (int i = 0; i < switchCount; i++)
             {
-                openedCluster.SelectedNode = openedCluster.Topics[i % openedCluster.Topics.Count];
+                _openedCluster.SelectedNode = _openedCluster.Topics[i % _openedCluster.Topics.Count];
                 await Dispatcher.UIThread.InvokeAsync(
                     static () => { }, DispatcherPriority.Background);
             }
@@ -156,12 +162,15 @@ public class EndToEndFlowBenchmarks
     {
         _session!.Run(async () =>
         {
-            // Open 4 tabs in quick succession (sequential on the UI thread, but each
-            // tab fetches topics asynchronously and in a real scenario would overlap).
             for (int i = 0; i < 4; i++)
                 _mainVm.OpenClusterCommand.Execute(_clusterId);
 
-            await Task.Delay(400); // allow all 4 tabs to load topics
+            // Wait for all 4 newly opened tabs to have topics loaded.
+            var newTabs = _mainVm.OpenedClusters
+                .Skip(_mainVm.OpenedClusters.Count - 4)
+                .ToList();
+            foreach (var tab in newTabs)
+                await WaitForTopicsAsync(tab);
 
             _ = _mainVm.OpenedClusters.Count;
         });
@@ -176,19 +185,15 @@ public class EndToEndFlowBenchmarks
     {
         _session!.Run(async () =>
         {
-            _mainVm.OpenClusterCommand.Execute(_clusterId);
-            await Task.Delay(50);
-            var openedCluster = _mainVm.OpenedClusters[^1];
-            openedCluster.IsCurrent = true;
-            await Task.Delay(300);
-
             // First load
-            openedCluster.SelectedNode = openedCluster.Topics[0];
-            await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
+            _openedCluster.SelectedNode = _openedCluster.Topics[0];
+            await Dispatcher.UIThread.InvokeAsync(
+                static () => { }, DispatcherPriority.Background);
 
             // Refresh (simulates user clicking Refresh)
-            openedCluster.RefreshCommand.Execute(null);
-            await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
+            _openedCluster.RefreshCommand.Execute(null);
+            await Dispatcher.UIThread.InvokeAsync(
+                static () => { }, DispatcherPriority.Background);
         });
     }
 
@@ -205,21 +210,20 @@ public class EndToEndFlowBenchmarks
                 Guid.NewGuid().ToString(), "Flow Cluster", "localhost:9092");
             await _benchClient.AddClusterAsync(cluster);
             await _mainVm.LoadClusters();
-            await Task.Delay(100);
 
             _mainVm.OpenClusterCommand.Execute(cluster.Id);
-            await Task.Delay(50);
             var openedCluster = _mainVm.OpenedClusters[^1];
             openedCluster.IsCurrent = true;
-            await Task.Delay(300);
+            await WaitForTopicsAsync(openedCluster);
 
             openedCluster.SelectedNode = openedCluster.Topics[0];
-            await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
+            await Dispatcher.UIThread.InvokeAsync(
+                static () => { }, DispatcherPriority.Background);
 
             _ = openedCluster.CurrentMessages.Messages.Count;
 
             // Teardown: close the tab and remove the temporary cluster.
-            _mainVm.OpenedClusters.Remove(openedCluster);
+            _mainVm.CloseTab(openedCluster);
             await _benchClient.RemoveClusterByIdAsync(cluster.Id);
         });
     }

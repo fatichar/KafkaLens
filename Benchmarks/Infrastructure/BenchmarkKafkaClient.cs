@@ -20,7 +20,9 @@ public sealed class BenchmarkKafkaClient : IKafkaLensClient
     private readonly IClusterInfoRepository _repo;
     private readonly Dictionary<string, List<Topic>> _topicsByCluster = new();
 
-    public string Name => "BenchmarkClient";
+    // Must be "Local" so ClientFactory.LoadClientsAsync() preserves this client
+    // when the in-memory ClientInfoRepository is empty (no persisted client entries).
+    public string Name => "Local";
     public bool CanEditClusters => true;
     public bool CanSaveMessages => false;
 
