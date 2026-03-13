@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KafkaLens.Shared.Models;
@@ -12,7 +13,15 @@ public partial class OpenedClusterViewModel
     [ObservableProperty] private bool isLiveMode;
 
     private DispatcherTimer? liveTimer;
-    private long lastLiveEpochMs;
+
+    // Last seen offset per partition id. -1 means "not yet seen any message in this partition".
+    private Dictionary<int, long> livePartitionOffsets = new();
+
+    // Active live streams paired with their CollectionChanged handlers so we can unsubscribe.
+    private readonly List<(MessageStream Stream, NotifyCollectionChangedEventHandler Handler)> liveStreams = new();
+
+    // Separate CTS for live fetches so manual Fetch/Refresh doesn't cancel live streams.
+    private CancellationTokenSource? liveFetchCts;
 
     partial void OnIsLiveModeChanged(bool value)
     {
@@ -30,8 +39,11 @@ public partial class OpenedClusterViewModel
             return;
         }
 
-        // Seed timestamp so the first poll fetches messages from the recent window
-        lastLiveEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - LiveIntervalSeconds * 1000L;
+        // Seed per-partition offsets from whatever is already displayed so we pick up exactly
+        // where the current view left off — no duplicates, no gaps.
+        livePartitionOffsets = CurrentMessages.Messages
+            .GroupBy(m => m.Partition)
+            .ToDictionary(g => g.Key, g => g.Max(m => m.Offset));
 
         liveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(LiveIntervalSeconds) };
         liveTimer.Tick += OnLiveTimerTick;
@@ -44,6 +56,9 @@ public partial class OpenedClusterViewModel
     {
         liveTimer?.Stop();
         liveTimer = null;
+        CancelAndClearLiveStreams();
+        livePartitionOffsets.Clear();
+        Log.Information("Live mode stopped");
     }
 
     private void OnLiveTimerTick(object? sender, EventArgs e)
@@ -61,44 +76,85 @@ public partial class OpenedClusterViewModel
     {
         if (selectedNode == null) return;
 
-        fetchCts?.Cancel();
-        fetchCts = new CancellationTokenSource();
+        // Unsubscribe from previous live streams (they may still be producing — cancellation
+        // stops the fetch loop, but we don't wait for it here).
+        CancelAndClearLiveStreams();
 
-        if (messages != null)
+        liveFetchCts = new CancellationTokenSource();
+
+        foreach (var partition in GetLivePartitions())
         {
-            messages.Messages.CollectionChanged -= OnMessagesChanged;
-            messages.Finished -= OnStreamFinished;
+            // -1 means "no messages seen yet for this partition" — maps to watermarks.High via
+            // WatermarkHelper (startOffset = High, limit clamped to 0), so the first poll
+            // produces nothing and just marks our position at the current tip.
+            // For subsequent polls, startOffset = lastOffset + 1 and limit is clamped to
+            // exactly (High - startOffset), i.e. all new messages with no cap.
+            var startOffset = livePartitionOffsets.TryGetValue(partition.Id, out var last)
+                ? last + 1
+                : -1L;
+
+            var fetchOptions = new FetchOptions(
+                new FetchPosition(PositionType.Offset, startOffset),
+                end: null)
+            {
+                Limit = int.MaxValue,
+                Direction = FetchDirection.Forward
+            };
+
+            var stream = KafkaLensClient.GetMessageStream(
+                cluster.Id, partition.TopicName, partition.Id, fetchOptions, liveFetchCts.Token);
+
+            var capturedPartitionId = partition.Id;
+            NotifyCollectionChangedEventHandler handler =
+                (_, args) => OnLiveMessagesArrived(args, capturedPartitionId);
+
+            stream.Messages.CollectionChanged += handler;
+            liveStreams.Add((stream, handler));
         }
+    }
 
-        // Append-only: do not clear CurrentMessages
-        IsLoading = true;
+    private IEnumerable<PartitionViewModel> GetLivePartitions() => selectedNode switch
+    {
+        TopicViewModel topic => topic.Partitions,
+        PartitionViewModel partition => new[] { partition },
+        _ => Enumerable.Empty<PartitionViewModel>()
+    };
 
-        var capturedEpochMs = lastLiveEpochMs;
-        lastLiveEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    private void OnLiveMessagesArrived(NotifyCollectionChangedEventArgs e, int partitionId)
+    {
+        var node = (IMessageSource?)SelectedNode;
+        if (node == null) return;
 
-        var fetchOptions = new FetchOptions(
-            new FetchPosition(PositionType.Timestamp, capturedEpochMs),
-            end: null)
+        lock (pendingMessages)
         {
-            Limit = FetchCount,
-            Direction = FetchDirection.Forward
-        };
+            var valueFormatterName = formatterService.NormalizeFormatterName(node.FormatterName, ValueFormatterNames);
+            var keyFormatterName = formatterService.NormalizeFormatterName(node.KeyFormatterName, KeyFormatterNames);
+            var topicName = GetCurrentTopicName();
 
-        messageLoadListeners.ForEach(l => l.MessageLoadingStarted());
+            foreach (Message msg in e.NewItems ?? (System.Collections.IList)Array.Empty<object>())
+            {
+                // Advance the per-partition bookmark.
+                if (!livePartitionOffsets.TryGetValue(partitionId, out var current) || msg.Offset > current)
+                    livePartitionOffsets[partitionId] = msg.Offset;
 
-        messages = selectedNode switch
-        {
-            TopicViewModel topic => KafkaLensClient.GetMessageStream(
-                cluster.Id, topic.Name, fetchOptions, fetchCts.Token),
-            PartitionViewModel partition => KafkaLensClient.GetMessageStream(
-                cluster.Id, partition.TopicName, partition.Id, fetchOptions, fetchCts.Token),
-            _ => null
-        };
+                pendingMessages.Add(new MessageViewModel(msg, valueFormatterName, keyFormatterName)
+                {
+                    Topic = topicName
+                });
+            }
 
-        if (messages != null)
-        {
-            messages.Messages.CollectionChanged += OnMessagesChanged;
-            messages.Finished += OnStreamFinished;
+            Dispatcher.UIThread.InvokeAsync(UpdateMessages);
         }
+    }
+
+    private void CancelAndClearLiveStreams()
+    {
+        liveFetchCts?.Cancel();
+        liveFetchCts = null;
+
+        foreach (var (stream, handler) in liveStreams)
+            stream.Messages.CollectionChanged -= handler;
+
+        liveStreams.Clear();
     }
 }
