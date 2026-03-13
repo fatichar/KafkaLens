@@ -23,7 +23,6 @@ public class PartitionViewModelTests
         Assert.Equal(ITreeNode.NodeType.Partition, viewModel.Type);
         Assert.NotNull(viewModel.Children);
         Assert.NotNull(viewModel.Messages);
-        Assert.NotNull(viewModel.LoadMessagesCommand);
     }
 
     [Fact]
@@ -96,20 +95,6 @@ public class PartitionViewModelTests
         
         // Assert
         Assert.Equal("Avro", viewModel.KeyFormatterName);
-    }
-
-    [Fact]
-    public async Task LoadMessagesCommand_ShouldThrowNotImplementedException()
-    {
-        // Arrange
-        var topic = new Topic("test-topic", new List<Partition>());
-        var topicViewModel = new TopicViewModel(topic, "JSON", "Text");
-        var partition = new Partition(0);
-        var viewModel = new PartitionViewModel(topicViewModel, partition);
-        
-        // Act & Assert
-        await Assert.ThrowsAsync<NotImplementedException>(
-            () => viewModel.LoadMessagesCommand.ExecuteAsync(null));
     }
 
     [Fact]

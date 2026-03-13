@@ -1,6 +1,5 @@
 ﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using KafkaLens.Shared.Models;
@@ -24,7 +23,6 @@ public partial class PartitionViewModel: ViewModelBase, IMessageSource {
     public ITreeNode.NodeType Type => ITreeNode.NodeType.Partition;
 
     public PartitionViewModel(TopicViewModel topic, Partition partition) {
-        LoadMessagesCommand = new AsyncRelayCommand(LoadMessagesAsync);
         this.partition = partition;
         this.topic = topic;
         this.topic.PropertyChanged += (s, e) => {
@@ -36,11 +34,9 @@ public partial class PartitionViewModel: ViewModelBase, IMessageSource {
     }
 
     protected override void OnActivated() {
-        // We use a method group here, but a lambda expression is also valid
         Messenger.Register<PartitionViewModel, PropertyChangedMessage<TopicPartition>>(this, (r, m) => r.Receive(m));
     }
 
-    public IAsyncRelayCommand LoadMessagesCommand { get; }
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
     public string? FormatterName
@@ -53,10 +49,6 @@ public partial class PartitionViewModel: ViewModelBase, IMessageSource {
     {
         get => topic.KeyFormatterName;
         set => topic.KeyFormatterName = value;
-    }
-
-    private Task LoadMessagesAsync() {
-        throw new NotImplementedException();
     }
 
     public void Receive(PropertyChangedMessage<TopicPartition> message) {
