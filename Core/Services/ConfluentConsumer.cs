@@ -383,56 +383,55 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
         // Null returns mean the consumer is still connecting or waiting for metadata.
         var maxEmptyPolls = 10;
 
-        lock (consumer)
+        // No lock needed: the consumer is exclusively leased from ConsumerPool,
+        // ensuring only one task accesses it at a time.
+        while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
         {
-            while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
+            try
             {
-                try
+                var result = consumer.Consume(consumeTimeout);
+                if (result == null)
                 {
-                    var result = consumer.Consume(consumeTimeout);
-                    if (result == null)
+                    consecutiveEmptyPolls++;
+                    Log.Debug("Waiting for consumer connection/metadata (poll timeout {Current}/{Max})",
+                        consecutiveEmptyPolls, maxEmptyPolls);
+                    if (consecutiveEmptyPolls >= maxEmptyPolls)
                     {
-                        consecutiveEmptyPolls++;
-                        Log.Debug("Waiting for consumer connection/metadata (poll timeout {Current}/{Max})",
-                            consecutiveEmptyPolls, maxEmptyPolls);
-                        if (consecutiveEmptyPolls >= maxEmptyPolls)
-                        {
-                            Log.Information("Stopping fetch after {Count} consecutive empty polls (connection timeout)",
-                                consecutiveEmptyPolls);
-                            break;
-                        }
-
-                        continue;
-                    }
-
-                    consecutiveEmptyPolls = 0;
-
-                    if (result.IsPartitionEOF)
-                    {
-                        Log.Information("End of partition reached");
+                        Log.Information("Stopping fetch after {Count} consecutive empty polls (connection timeout)",
+                            consecutiveEmptyPolls);
                         break;
                     }
 
-                    var message = MessageConverter.CreateMessage(result);
-                    batch.Add(message);
-                    --requiredCount;
+                    continue;
+                }
 
-                    if (batch.Count >= 100 || DateTime.Now - lastFlushTime >= batchInterval)
-                    {
-                        FlushBatch(messages, batch);
-                        lastFlushTime = DateTime.Now;
-                    }
-                }
-                catch (ConsumeException e)
+                consecutiveEmptyPolls = 0;
+
+                if (result.IsPartitionEOF)
                 {
-                    Log.Error(e, "Error while consuming message");
+                    Log.Information("End of partition reached");
                     break;
                 }
-                catch (Exception e)
+
+                var message = MessageConverter.CreateMessage(result);
+                batch.Add(message);
+                --requiredCount;
+
+                if (batch.Count >= 100 || DateTime.Now - lastFlushTime >= batchInterval)
                 {
-                    Log.Error(e, "Error while consuming message");
-                    break;
+                    FlushBatch(messages, batch);
+                    lastFlushTime = DateTime.Now;
                 }
+            }
+            catch (ConsumeException e)
+            {
+                Log.Error(e, "Error while consuming message");
+                break;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Error while consuming message");
+                break;
             }
         }
 
