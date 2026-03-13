@@ -99,7 +99,7 @@ public partial class EditClustersDialog : Window
 
             if (result != null)
             {
-                Context.AddClient(result.Name, result.Address, result.Protocol);
+                await Context.AddClientAsync(result.Name, result.Address, result.Protocol);
             }
         }
         catch (Exception ex)
@@ -122,7 +122,7 @@ public partial class EditClustersDialog : Window
 
             if (result != null)
             {
-                Context.UpdateClient(result);
+                await Context.UpdateClientAsync(result);
             }
         }
         catch (Exception ex)

@@ -136,20 +136,24 @@ public class EditClustersViewModel : IDisposable
     }
 
     // Clients
-    public async void AddClient(string name, string address, string protocol = "grpc")
+    public async Task AddClientAsync(string name, string address, string protocol = "grpc")
     {
         var id = Guid.NewGuid().ToString();
         var clientInfo = new ClientInfo(id, name, address, protocol);
         ClientRepository.Add(clientInfo);
         var vm = new ClientInfoViewModel(clientInfo);
         Clients.Add(vm);
+
+        // Register the new client in the factory before trying to use it
+        await ClientFactory.LoadClientsAsync();
+
         await CheckClientConnectionAsync(vm);
 
         // Load clusters from the newly added client
         await LoadClustersForClientAsync(name);
     }
 
-    public async void UpdateClient(ClientInfo updated)
+    public async Task UpdateClientAsync(ClientInfo updated)
     {
         ClientRepository.Update(updated);
         var existing = Clients.FirstOrDefault(c => c.Id == updated.Id);
