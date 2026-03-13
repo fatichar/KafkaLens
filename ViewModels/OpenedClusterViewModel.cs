@@ -115,6 +115,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public RelayCommand ToggleFetchCommand { get; }
     public RelayCommand RefreshCommand { get; }
+    public RelayCommand ToggleLiveModeCommand { get; }
     public RelayCommand GuessValueFormatterCommand { get; }
     public RelayCommand GuessKeyFormatterCommand { get; }
     public IAsyncRelayCommand SaveTopicSettingsCommand { get; }
@@ -167,6 +168,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             if (IsLoading) StopLoading();
             FetchMessages();
         });
+        ToggleLiveModeCommand = new RelayCommand(
+            () => IsLiveMode = !IsLiveMode,
+            () => IsFetchOptionsEnabled);
         GuessValueFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: false));
         GuessKeyFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: true));
         SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
@@ -289,10 +293,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             if (SetProperty(ref selectedNode, value))
             {
                 SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.None;
+                ToggleLiveModeCommand.NotifyCanExecuteChanged();
                 var logicalNodeChanged = !AreSameLogicalNode(previousNode, selectedNode);
 
                 if (logicalNodeChanged)
                 {
+                    if (IsLiveMode) IsLiveMode = false;
                     var newFetchPositions = SelectedNodeType == ITreeNode.NodeType.Partition
                         ? FetchPositionsForPartition
                         : FetchPositionsForTopic;

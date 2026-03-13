@@ -3,12 +3,21 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
 	x:DataType="vm:OpenedClusterViewModel">
-	<Grid ColumnDefinitions="*, Auto" Margin="5">
+	<Grid ColumnDefinitions="*, Auto, Auto" Margin="5">
 		<TextBox Grid.Column="0" x:Name="FilterBox"
 		         VerticalContentAlignment="Center" VerticalAlignment="Center"
 		         Text="{Binding CurrentMessages.PositiveFilter}"
 		         Watermark="Filter (Ctrl+F)"/>
-		<Button Grid.Column="1" Content="?" VerticalAlignment="Center" Margin="5,0,0,0"
+		<ToggleButton Grid.Column="1" Margin="5,0,0,0" VerticalAlignment="Center"
+		              IsChecked="{Binding IsLiveMode, Mode=TwoWay}"
+		              Command="{Binding ToggleLiveModeCommand}"
+		              ToolTip.Tip="Toggle live streaming (polls every 5 s)">
+			<Panel>
+				<TextBlock Text="Live" IsVisible="{Binding !IsLiveMode}"/>
+				<TextBlock Text="Stop Live" IsVisible="{Binding IsLiveMode}"/>
+			</Panel>
+		</ToggleButton>
+		<Button Grid.Column="2" Content="?" VerticalAlignment="Center" Margin="5,0,0,0"
 		        ToolTip.Tip="Filter syntax help">
 			<Button.Flyout>
 				<Flyout>
