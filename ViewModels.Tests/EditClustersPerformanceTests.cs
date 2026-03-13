@@ -30,14 +30,10 @@ public class EditClustersPerformanceTests
 
             var mockClient = Substitute.For<IKafkaLensClient>();
             mockClient.Name.Returns(name);
-            mockClient.GetAllClustersAsync().Returns(async _ =>
-            {
-                await Task.Delay(10); // Simulate network delay
-                return new List<KafkaCluster>();
-            });
+            mockClient.GetAllClustersAsync().Returns(Task.FromResult<IEnumerable<KafkaCluster>>(new List<KafkaCluster>()));
             clientFactory.GetClient(name).Returns(mockClient);
         }
-        clientRepo.GetAll().Returns(clientInfos);
+        clientRepo.GetAll().Returns(new ReadOnlyDictionary<string, ClientInfo>(clientInfos));
 
         // Act
         var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory);

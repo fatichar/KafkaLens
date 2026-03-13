@@ -38,7 +38,7 @@ public class FilterBenchmarks
             {
                 // Spread names across several realistic categories so partial-match
                 // benchmarks exercise the Contains path with varying hit rates.
-                var category = i % 5 switch
+                var category = (i % 5) switch
                 {
                     0 => "orders",
                     1 => "payments",
