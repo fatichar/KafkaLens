@@ -74,7 +74,9 @@ public class SharedClient(
     {
         try
         {
-            return consumers.GetOrAdd(clusterInfo.Id, _ => CreateConsumer(clusterInfo.Address));
+            // CreateConsumer is called directly here; the outer GetOrAdd in GetConsumer
+            // handles the ConcurrentDictionary insertion, so no nested GetOrAdd needed.
+            return CreateConsumer(clusterInfo.Address);
         }
         catch (Exception e)
         {
