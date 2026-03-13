@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KafkaLens.Shared.Models;
 using KafkaLens.Formatting;
@@ -16,6 +19,7 @@ public sealed partial class MessageViewModel : ViewModelBase
 
     public int Partition => message.Partition;
     public long Offset => message.Offset;
+    public IReadOnlyList<MessageHeaderViewModel> Headers { get; }
     [ObservableProperty] private string? key;
     [ObservableProperty] private string summary = null!;
     [ObservableProperty] private string decodedMessage = null!;
@@ -66,6 +70,9 @@ public sealed partial class MessageViewModel : ViewModelBase
     public MessageViewModel(Message message, string formatterName, string keyFormatterName)
     {
         this.message = message;
+        Headers = message.Headers
+            .Select(h => new MessageHeaderViewModel(h.Key, Encoding.UTF8.GetString(h.Value)))
+            .ToList();
         FormatterName = formatterName;
         KeyFormatterName = keyFormatterName;
 

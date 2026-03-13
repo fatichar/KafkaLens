@@ -68,12 +68,29 @@
                                                  VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
                                                  Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ThemeBorderBrush}">
                     </views:MessageDisplayToolbar>
-                    <avaloniaEdit:TextEditor
-                        Name="MessageViewer"
-                        FontFamily="Consolas"
-                        FontSize="{Binding FontSize}"
-                        IsReadOnly="True"
-                        />
+                    <TabControl Padding="0" BorderThickness="0">
+                        <TabItem Header="Body">
+                            <avaloniaEdit:TextEditor
+                                Name="MessageViewer"
+                                FontFamily="Consolas"
+                                FontSize="{Binding FontSize}"
+                                IsReadOnly="True"
+                                />
+                        </TabItem>
+                        <TabItem Header="Headers">
+                            <DataGrid AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      HeadersVisibility="Column"
+                                      ItemsSource="{Binding CurrentMessages.CurrentMessage.Headers}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn x:DataType="vm:MessageHeaderViewModel"
+                                                        Header="Name" Binding="{Binding Name}" Width="*"/>
+                                    <DataGridTextColumn x:DataType="vm:MessageHeaderViewModel"
+                                                        Header="Value" Binding="{Binding Value}" Width="2*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                    </TabControl>
                 </DockPanel>
             </Grid>
         </TabItem>
