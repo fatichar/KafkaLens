@@ -94,7 +94,7 @@ public sealed class FakeSyncKafkaClient : IKafkaLensClient
     public Task<List<Message>> GetMessagesAsync(
         string clusterId, string topic, int partition, FetchOptions options,
         CancellationToken cancellationToken = default) =>
-        Task.FromResult(GenerateMessages(options.Limit));
+        Task.FromResult(GenerateMessages(options.Limit, partition));
 
     /// <summary>
     /// Fills the stream synchronously before returning.  Only suitable for benchmarks
@@ -116,7 +116,7 @@ public sealed class FakeSyncKafkaClient : IKafkaLensClient
         CancellationToken cancellationToken = default)
     {
         var stream = new MessageStream();
-        var messages = GenerateMessages(options.Limit);
+        var messages = GenerateMessages(options.Limit, partition);
         stream.Messages.AddRange(messages);
         stream.HasMore = false;
         return stream;
@@ -129,7 +129,7 @@ public sealed class FakeSyncKafkaClient : IKafkaLensClient
             .Select(i => new Topic($"benchmark-topic-{i:D4}", partitions))
             .ToList();
 
-    internal static List<Message> GenerateMessages(int count)
+    internal static List<Message> GenerateMessages(int count, int partition = -1)
     {
         if (count <= 0) count = 10;
         var rng = new Random(42); // deterministic seed
@@ -146,7 +146,7 @@ public sealed class FakeSyncKafkaClient : IKafkaLensClient
                 key,
                 value)
             {
-                Partition = i % 4,
+                Partition = partition >= 0 ? partition : i % 4,
                 Offset = 10_000 + i
             };
             messages.Add(msg);

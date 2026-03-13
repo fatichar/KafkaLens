@@ -68,7 +68,8 @@ public class EndToEndFlowBenchmarks
     {
         _session!.Run(() =>
         {
-            _mainVm.OpenedClusters.Clear();
+            foreach (var tab in _mainVm.OpenedClusters.ToList())
+                _mainVm.CloseTab(tab);
         });
     }
 

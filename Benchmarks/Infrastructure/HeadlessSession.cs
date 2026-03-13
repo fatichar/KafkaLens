@@ -51,7 +51,9 @@ public sealed class HeadlessSession : IDisposable
         thread.IsBackground = true;
         thread.Name = "Avalonia-Headless-Benchmark";
         // STA is required on Windows for COM/COM-adjacent APIs used by Avalonia.
-        thread.SetApartmentState(ApartmentState.STA);
+        // The API throws PlatformNotSupportedException on Linux/macOS.
+        if (OperatingSystem.IsWindows())
+            thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
 
         if (!ready.Wait(TimeSpan.FromSeconds(timeoutSeconds)))
