@@ -27,6 +27,9 @@
   <Project Path="AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj" />
   <Project Path="Updater/KafkaLens.Updater/KafkaLens.Updater.csproj" />
   
+  <!-- Benchmark Projects -->
+  <Project Path="Benchmarks/Benchmarks.csproj" />
+
   <!-- Test Projects -->
   <Project Path="Core.Tests/Core.Tests.csproj" />
   <Project Path="Formatting.Tests/Formatting.Tests.csproj" />
