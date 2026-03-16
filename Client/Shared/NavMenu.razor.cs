@@ -46,10 +46,13 @@ public partial class NavMenu : ComponentBase
         }
         Clusters = await KafkaContext.GetAllClustersAsync();
 
-        foreach (var cluster in Clusters.Values)
+        var tasks = Clusters.Values.Select(async cluster =>
         {
             cluster.Children = await KafkaContext.GetTopicsAsync(cluster.Id);
-        }
+        });
+
+        await Task.WhenAll(tasks);
+
         if (Clusters.Count > 0)
         {
             Clusters.Values.First().Expanded = true;
