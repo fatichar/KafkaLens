@@ -90,19 +90,19 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
             CancellationToken = cancellationToken
         };
 
-        // Scan all partitions in parallel, and files within partitions in parallel
-        await Parallel.ForEachAsync(partitionDirs, parallelOptions, async (partitionDir, ct) =>
+        var allFiles = partitionDirs.SelectMany(partitionDir =>
         {
             var partition = int.Parse(Path.GetFileName(partitionDir));
             var messageFiles = Directory.EnumerateFiles(partitionDir, "*.klm");
             var textFiles = Directory.EnumerateFiles(partitionDir, "*.txt");
-            var allFiles = messageFiles.Concat(textFiles);
+            return messageFiles.Concat(textFiles).Select(file => (file, partition));
+        });
 
-            await Parallel.ForEachAsync(allFiles, parallelOptions, async (file, innerCt) =>
-            {
-                var timestamp = await GetMessageTimestampAsync(file);
-                allFilesWithTimestamp.Add((file, partition, timestamp));
-            });
+        // Scan all files in parallel
+        await Parallel.ForEachAsync(allFiles, parallelOptions, async (fileMeta, ct) =>
+        {
+            var timestamp = await GetMessageTimestampAsync(fileMeta.file);
+            allFilesWithTimestamp.Add((fileMeta.file, fileMeta.partition, timestamp));
         });
 
         if (cancellationToken.IsCancellationRequested) return;
@@ -216,39 +216,28 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
         if (options.Start.Type == PositionType.Timestamp)
         {
             var messages = new List<(string file, long offset)>();
+
+            // To avoid sequential await bottleneck, we load timestamps for all potential files in parallel.
+            // Since we need to find an anchor based on timestamp, we can query timestamps using GetMessageTimestampAsync.
+            var fileTimestamps = new long[fileOffsets.Count];
+            var timestampParallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 20,
+                CancellationToken = cancellationToken
+            };
+
+            await Parallel.ForEachAsync(Enumerable.Range(0, fileOffsets.Count), timestampParallelOptions, async (i, ct) =>
+            {
+                fileTimestamps[i] = await GetMessageTimestampAsync(fileOffsets[i].file);
+            });
+
             if (options.Direction == FetchDirection.Backward)
             {
-                // Backward from Timestamp
-                for (int i = fileOffsets.Count - 1; i >= 0; i--)
-                {
-                    if (cancellationToken.IsCancellationRequested) return;
-                    var fileOffset = fileOffsets[i];
-                    var message = await CreateMessageAsync(fileOffset.file);
-
-                    // We want messages BEFORE or AT the timestamp (depending on semantics)
-                    // Usually "Backward from T" means find first message >= T, then go back?
-                    // Or find messages <= T?
-                    // ConfluentConsumer implementation: Resolve T -> Offset O. Then O - Limit + 1.
-                    // So we find the first message with Timestamp >= T. Let's call it Anchor.
-                    // Then we take Anchor and (Limit-1) messages before it.
-
-                    // Actually, let's stick to ConfluentConsumer logic:
-                    // 1. Find the offset corresponding to Timestamp.
-                    // 2. Adjust offset backward.
-                    // 3. Fetch forward.
-
-                    // But here we are iterating.
-                    // Let's find the Anchor index first.
-                }
-
-                // Optimized approach:
                 // Find index of first message >= Timestamp.
                 int anchorIndex = -1;
                 for (int i = 0; i < fileOffsets.Count; i++)
                 {
-                    if (cancellationToken.IsCancellationRequested) return;
-                    var msg = await CreateMessageAsync(fileOffsets[i].file);
-                    if (msg.EpochMillis >= options.Start.Timestamp)
+                    if (fileTimestamps[i] >= options.Start.Timestamp)
                     {
                         anchorIndex = i;
                         break;
@@ -257,49 +246,20 @@ public class SavedMessagesConsumer(string clusterDir) : ConsumerBase
 
                 if (anchorIndex == -1)
                 {
-                    // All messages are older than timestamp? Or none exist?
-                    // If all older, anchor is effectively "End".
-                    // But if we want >= Timestamp, and none exist, then offset is HighWatermark.
-                    // If we go backward from HighWatermark, we get the last messages.
                     anchorIndex = fileOffsets.Count;
                 }
 
                 int startIndex = Math.Max(0, anchorIndex - options.Limit + 1);
-                // We want to fetch UP TO anchorIndex (inclusive)
-                // If anchorIndex is count (non-existent), we fetch up to end?
-                // If anchorIndex is 5. We want [?, 5]. Limit 3. -> [3, 4, 5].
-                // Start index = 5 - 3 + 1 = 3.
-                // Count = 3.
-
-                // If anchorIndex is fileOffsets.Count (none found >= T).
-                // ConfluentConsumer behavior: T -> Offset. If T > all, Offset = HighWatermark.
-                // Backward from HighWatermark: [High-Limit+1, High].
-                // So [Count-Limit+1, Count].
-
-                startIndex = Math.Max(0, anchorIndex - options.Limit + 1);
                 int count = Math.Min(options.Limit, anchorIndex - startIndex + 1);
                 filesToProcess = fileOffsets.Skip(startIndex).Take(count);
             }
             else
             {
-                // Forward (Existing Logic but simpler)
-                // Find first message >= Timestamp
-                // Take Limit.
-
-                // This linear scan is slow but consistent with existing code structure
-                // Optimization: Binary search if timestamps are monotonic?
-                // Saved messages are sorted by offset (filename). Timestamps usually correlate but not guaranteed.
-                // We'll stick to linear scan as existing code did.
-
-                // Actually existing code scanned and added to list.
-                foreach (var fileOffset in fileOffsets)
+                for (int i = 0; i < fileOffsets.Count; i++)
                 {
-                    if (cancellationToken.IsCancellationRequested) return;
-
-                    var message = await CreateMessageAsync(fileOffset.file);
-                    if (message.EpochMillis >= options.Start.Timestamp)
+                    if (fileTimestamps[i] >= options.Start.Timestamp)
                     {
-                        messages.Add(fileOffset);
+                        messages.Add(fileOffsets[i]);
                         if (messages.Count >= options.Limit)
                         {
                             break;
