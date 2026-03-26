@@ -11,8 +11,14 @@
     </UserControl.KeyBindings>
     <UserControl.Resources>
         <ContextMenu x:Key="MessageGridContextMenu">
-            <MenuItem Header="Copy Key" Command="{Binding CopyKeyCommand}"/>
-            <MenuItem Header="Copy Value" Command="{Binding CopyValueCommand}"/>
+            <MenuItem Header="Copy">
+                <MenuItem Header="Key" Command="{Binding CopyKeyCommand}"/>
+                <MenuItem Header="Value" Command="{Binding CopyValueCommand}"/>
+                <MenuItem Header="Offset" Command="{Binding CopyOffsetCommand}"/>
+                <MenuItem Header="Timestamp" Command="{Binding CopyTimestampCommand}"/>
+                <Separator/>
+                <MenuItem Header="All" Command="{Binding CopyAllCommand}"/>
+            </MenuItem>
             <Separator/>
             <MenuItem Header="Save Selected">
                 <MenuItem Header="As RAW" Command="{Binding SaveSelectedAsRawCommand}"/>
@@ -55,7 +61,7 @@
                             <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp"
                                                 Binding="{Binding Timestamp}" />
                             <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }" />
-                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Body" Binding="{Binding Summary }" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Value" Binding="{Binding Summary }" />
                         </DataGrid.Columns>
                         <DataGrid.RowDetailsTemplate></DataGrid.RowDetailsTemplate>
                     </DataGrid>

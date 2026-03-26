@@ -124,6 +124,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public AsyncRelayCommand SaveAllAsFormattedCommand { get; set; }
     public AsyncRelayCommand CopyKeyCommand { get; }
     public AsyncRelayCommand CopyValueCommand { get; }
+    public AsyncRelayCommand CopyOffsetCommand { get; }
+    public AsyncRelayCommand CopyTimestampCommand { get; }
+    public AsyncRelayCommand CopyAllCommand { get; }
 
     /// <summary>Set by the view to provide clipboard access.</summary>
     public Func<string, Task>? SetClipboardText { get; set; }
@@ -191,6 +194,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
         CopyKeyCommand = new AsyncRelayCommand(CopyKeyAsync);
         CopyValueCommand = new AsyncRelayCommand(CopyValueAsync);
+        CopyOffsetCommand = new AsyncRelayCommand(CopyOffsetAsync);
+        CopyTimestampCommand = new AsyncRelayCommand(CopyTimestampAsync);
+        CopyAllCommand = new AsyncRelayCommand(CopyAllAsync);
 
         Nodes.Add(this);
         IsSelected = true;
@@ -333,5 +339,32 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         var value = CurrentMessages.CurrentMessage?.DecodedMessage;
         if (value != null && SetClipboardText != null)
             await SetClipboardText(value);
+    }
+
+    private async Task CopyOffsetAsync()
+    {
+        var offset = CurrentMessages.CurrentMessage?.Offset;
+        if (offset != null && SetClipboardText != null)
+            await SetClipboardText(offset.Value.ToString());
+    }
+
+    private async Task CopyTimestampAsync()
+    {
+        var timestamp = CurrentMessages.CurrentMessage?.Timestamp;
+        if (timestamp != null && SetClipboardText != null)
+            await SetClipboardText(timestamp);
+    }
+
+    private async Task CopyAllAsync()
+    {
+        var msg = CurrentMessages.CurrentMessage;
+        if (msg == null || SetClipboardText == null) return;
+
+        var text = $"Partition: {msg.Partition}{Environment.NewLine}" +
+                   $"Offset: {msg.Offset}{Environment.NewLine}" +
+                   $"Timestamp: {msg.Timestamp}{Environment.NewLine}" +
+                   $"Key: {msg.Key}{Environment.NewLine}" +
+                   $"Value: {msg.DecodedMessage}";
+        await SetClipboardText(text);
     }
 }
