@@ -8,10 +8,10 @@
     <Grid Margin="20" RowDefinitions="Auto, Auto">
         <StackPanel Grid.Row="0" Spacing="10">
             <Label Content="Cluster Name"/>
-            <TextBox Name="NameBox" Watermark="e.g. Production"/>
+            <TextBox Name="NameBox" PlaceholderText="e.g. Production"/>
 
             <Label Content="Bootstrap Servers"/>
-            <TextBox Name="AddressBox" Watermark="e.g. localhost:9092"/>
+            <TextBox Name="AddressBox" PlaceholderText="e.g. localhost:9092"/>
 
             <TextBlock Name="ErrorTextBlock" Foreground="{DynamicResource ThemeErrorBrush}" TextWrapping="Wrap" Margin="0,10,0,0"/>
             <TextBlock Name="StatusTextBlock" Foreground="{DynamicResource StatusConnectedBrush}" TextWrapping="Wrap" Margin="0,5,0,0"/>

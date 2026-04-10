@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AvaloniaApp.Views.SimpleMessageBox"
+        Width="420"
+        MinWidth="360"
+        SizeToContent="Height"
+        MaxHeight="320"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+  <Border Padding="20">
+    <Grid RowDefinitions="Auto,Auto,Auto"
+          RowSpacing="16">
+      <TextBlock x:Name="TitleTextBlock"
+                 FontSize="18"
+                 FontWeight="SemiBold"
+                 TextWrapping="Wrap" />
+
+      <TextBlock x:Name="MessageTextBlock"
+                 Grid.Row="1"
+                 MaxWidth="380"
+                 TextWrapping="Wrap" />
+
+      <StackPanel Grid.Row="2"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="12">
+        <Button x:Name="SecondaryButton"
+                MinWidth="90"
+                IsVisible="False"
+                HorizontalContentAlignment="Center"
+                Click="SecondaryButton_OnClick" />
+        <Button x:Name="PrimaryButton"
+                MinWidth="90"
+                IsDefault="True"
+                HorizontalContentAlignment="Center"
+                Click="PrimaryButton_OnClick" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

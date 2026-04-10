@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Linq;
 using System;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Controls;
 using Avalonia.Styling;
 using AvaloniaEdit.Document;

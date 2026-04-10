@@ -15,8 +15,8 @@ namespace IntegrationTests;
 public class ComprehensiveTests
 {
     private TestApp App => (TestApp)AvaloniaApp.App.Current;
-    private MainViewModel MainViewModel => App.Services.GetRequiredService<MainViewModel>();
-    private FakeKafkaClient FakeKafkaClient => (FakeKafkaClient)App.Services.GetRequiredService<KafkaLens.Shared.IKafkaLensClient>();
+    private MainViewModel MainViewModel => App.Services!.GetRequiredService<MainViewModel>();
+    private FakeKafkaClient FakeKafkaClient => (FakeKafkaClient)App.Services!.GetRequiredService<KafkaLens.Shared.IKafkaLensClient>();
 
     private async Task ResetStateAsync()
     {

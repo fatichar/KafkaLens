@@ -44,7 +44,7 @@ public class EditClustersPerformanceTests
         var start = DateTime.Now;
         while (viewModel.Clients.Any(c => c.Status == ConnectionState.Checking) && (DateTime.Now - start).TotalSeconds < 5)
         {
-            await Task.Delay(50);
+            await Task.Delay(50, TestContext.Current.CancellationToken);
         }
 
         // Assert

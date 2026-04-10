@@ -154,7 +154,7 @@ public partial class PreferencesViewModel : ViewModelBase
     private void LoadAvailableFetchCounts()
     {
         // Create a new list with the updated values to avoid clearing the collection
-        var newCounts = browserConfig.FetchCounts.OrderBy(x => x).ToList();
+        var newCounts = BrowserConfig.FetchCounts.OrderBy(x => x).ToList();
         
         // Remove items that are no longer in the list
         for (int i = AvailableFetchCounts.Count - 1; i >= 0; i--)

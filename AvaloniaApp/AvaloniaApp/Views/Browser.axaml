@@ -78,6 +78,10 @@
                         <TabItem Header="Body">
                             <avaloniaEdit:TextEditor
                                 Name="MessageViewer"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Background="{DynamicResource ThemeBackgroundBrush}"
+                                Foreground="{DynamicResource ThemeForegroundBrush}"
                                 FontFamily="Consolas"
                                 FontSize="{Binding FontSize}"
                                 IsReadOnly="True"

@@ -190,18 +190,18 @@ public partial class PluginManagerViewModel : ViewModelBase
     {
         var currentRepos = _repoManager.GetRepositories();
 
-        if (_repositories == null)
+        if (Repositories == null)
         {
-            _repositories = new ObservableCollection<string>(currentRepos);
+            Repositories = new ObservableCollection<string>(currentRepos);
         }
         else
         {
-            _repositories.Clear();
+            Repositories.Clear();
             foreach (var repo in currentRepos)
-                _repositories.Add(repo);
+                Repositories.Add(repo);
         }
 
-        SelectedRepository = _repositories.FirstOrDefault();
+        SelectedRepository = Repositories.FirstOrDefault();
     }
 
     private void LoadInstalledPlugins()

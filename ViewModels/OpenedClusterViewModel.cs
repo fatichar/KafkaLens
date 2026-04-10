@@ -166,6 +166,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         FetchCount = browserConfig.DefaultFetchCount;
         FontSize = browserConfig.FontSize;
 
+        FormatterNames = Array.Empty<string>();
+        ValueFormatterNames = Array.Empty<string>();
+        KeyFormatterNames = Array.Empty<string>();
+
         ToggleFetchCommand = new RelayCommand(() =>
         {
             if (IsLoading) StopLoading();

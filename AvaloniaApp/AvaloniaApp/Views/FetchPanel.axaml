@@ -33,7 +33,7 @@
                 <StackPanel Orientation="Vertical" Spacing="4">
                     <TextBox Name="TimeTextBox"
                              Text="{Binding StartTimeText}"
-                             Watermark="HH:mm:ss"
+                             PlaceholderText="HH:mm:ss"
                              MinWidth="80"
                              HorizontalAlignment="Stretch"
                              LostFocus="OnTimeTextBoxLostFocus">
@@ -58,7 +58,7 @@
                         Margin="5">
                 <TextBox Name="OffsetTextBox"
                          Text="{Binding StartOffset}"
-                         Watermark="Offset"
+                         PlaceholderText="Offset"
                          MinWidth="80"
                          HorizontalAlignment="Stretch" />
             </StackPanel>

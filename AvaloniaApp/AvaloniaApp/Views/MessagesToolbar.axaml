@@ -7,7 +7,7 @@
 		<TextBox Grid.Column="0" x:Name="FilterBox"
 		         VerticalContentAlignment="Center" VerticalAlignment="Center"
 		         Text="{Binding CurrentMessages.PositiveFilter}"
-		         Watermark="Filter (Ctrl+F)"/>
+		         PlaceholderText="Filter (Ctrl+F)"/>
 		<Button Grid.Column="1" Content="?" VerticalAlignment="Center" Margin="5,0,0,0"
 		        ToolTip.Tip="Filter syntax help">
 			<Button.Flyout>

@@ -24,7 +24,7 @@ public partial class About : Window
 
     private void CheckForUpdates_OnClick(object? sender, RoutedEventArgs e)
     {
-        var mainViewModel = App.Current.Services.GetRequiredService<MainViewModel>();
+        var mainViewModel = App.Current.Services!.GetRequiredService<MainViewModel>();
         _ = mainViewModel.CheckForUpdatesAsync(false);
     }
 

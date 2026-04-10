@@ -8,10 +8,10 @@
     <Grid Margin="20" RowDefinitions="Auto, Auto">
         <StackPanel Grid.Row="0" Spacing="10">
             <Label Content="Client Name"/>
-            <TextBox Name="NameBox" Watermark="e.g. MyClient"/>
+            <TextBox Name="NameBox" PlaceholderText="e.g. MyClient"/>
 
             <Label Content="Address"/>
-            <TextBox Name="AddressBox" Watermark="e.g. localhost:5000"/>
+            <TextBox Name="AddressBox" PlaceholderText="e.g. localhost:5000"/>
 
             <Label Content="Protocol"/>
             <ComboBox Name="ProtocolBox" SelectedIndex="0" HorizontalAlignment="Stretch">
