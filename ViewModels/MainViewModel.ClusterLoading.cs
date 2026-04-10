@@ -9,7 +9,6 @@ namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel
 {
-    private bool isInitialized;
     private bool isStartupLoadCompleted;
     private bool isOpenedClustersSubscriptionInitialized;
     private readonly SemaphoreSlim clusterRefreshLock = new(1, 1);
@@ -33,7 +32,6 @@ public partial class MainViewModel
                 });
             }).ToList();
 
-            isInitialized = true;
             isStartupLoadCompleted = true;
 
             await Task.WhenAll(loadTasks);

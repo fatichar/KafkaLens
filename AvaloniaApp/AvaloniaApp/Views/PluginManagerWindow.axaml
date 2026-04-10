@@ -57,7 +57,7 @@
       <StackPanel Orientation="Horizontal" Spacing="6"
                   IsVisible="{Binding IsAddingRepository}">
         <TextBox Text="{Binding NewRepositoryUrl}"
-                 Watermark="https://example.com/plugins.json"
+                 PlaceholderText="https://example.com/plugins.json"
                  Width="400"/>
         <Button Content="Add" Command="{Binding AddRepositoryCommand}"/>
         <Button Content="Cancel" Command="{Binding ToggleAddRepoCommand}"/>

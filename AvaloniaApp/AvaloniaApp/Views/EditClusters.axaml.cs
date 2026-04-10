@@ -7,8 +7,6 @@ using AvaloniaApp.Utils;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared.Entities;
 using KafkaLens.ViewModels;
-using MsBox.Avalonia;
-using MsBox.Avalonia.Enums;
 
 namespace AvaloniaApp.Views;
 
@@ -147,9 +145,8 @@ public partial class EditClustersDialog : Window
 
     private async System.Threading.Tasks.Task ShowError(string message)
     {
-         var box = MessageBoxManager
-            .GetMessageBoxStandard("Error", message, ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.Error);
-         await box.ShowAsync();
+        var box = new SimpleMessageBox("Error", message, isConfirmation: false);
+        await box.ShowMessageAsync(this);
     }
 
     private void OpenSettingsButton_OnClick(object? sender, RoutedEventArgs e)

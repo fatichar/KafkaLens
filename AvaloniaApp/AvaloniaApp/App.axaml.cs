@@ -9,6 +9,7 @@ using KafkaLens.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Avalonia.Styling;
@@ -24,9 +25,9 @@ using KafkaLens.Shared.Models;
 
 namespace AvaloniaApp;
 
-public partial class App : Application
+public class App : Application
 {
-    public IServiceProvider Services { get; protected set; }
+    public IServiceProvider? Services { get; protected set; }
     public new static App Current => (App)Application.Current!;
     private IThemeService? _themeService;
 
@@ -363,13 +364,13 @@ public partial class App : Application
                 {
                     RequestedThemeVariant = ThemeVariant.Default;
                 }
-                else
-                {
-                    RequestedThemeVariant = themeName is "Dark" or "Gray" ? ThemeVariant.Dark : ThemeVariant.Light;
-                }
 
-                Resources.MergedDictionaries.Add(themeDict as ResourceDictionary);
-                currentThemeResources = themeDict as ResourceDictionary;
+                var resourceDict = themeDict as ResourceDictionary;
+                if (resourceDict != null)
+                {
+                    Resources.MergedDictionaries.Add(resourceDict);
+                    currentThemeResources = resourceDict;
+                }
                 Log.Information("Theme {ThemeName} applied via fallback built-in loading", themeName);
             }
             else
@@ -388,8 +389,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var settingsService = Services.GetRequiredService<ISettingsService>();
-        var theme = settingsService.GetValue("Theme") ?? "Light";
+        var settingsService = Services!.GetService<ISettingsService>();
+        var theme = settingsService?.GetValue("Theme") ?? "Light";
         ApplyTheme(theme);
 
         WeakReferenceMessenger.Default.Register<ThemeChangedMessage>(this, (r, m) =>
@@ -410,7 +411,7 @@ public partial class App : Application
             };
         }
 
-        var viewModel = Services.GetRequiredService<MainViewModel>();
+        var viewModel = Services!.GetService<MainViewModel>();
 
         MainViewModel.ShowPreferencesDialog = (vm) =>
         {
@@ -419,7 +420,7 @@ public partial class App : Application
                 DataContext = vm
             };
             vm.CloseAction = window.Close;
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
             {
                 window.ShowDialog(desktop.MainWindow);
             }
@@ -427,11 +428,16 @@ public partial class App : Application
 
         MainViewModel.ShowFormatterPreferences = () =>
         {
+            Debug.Assert(viewModel != null, nameof(viewModel) + " != null");
+            Debug.Assert(Services != null, nameof(Services) + " != null");
             var vm = new PreferencesViewModel(
-                Services.GetRequiredService<ISettingsService>(),
+                Services.GetService<ISettingsService>()!,
                 Services.GetService<IThemeService>(),
-                theme => viewModel.CurrentTheme = theme,
-                Services.GetRequiredService<IFormatterService>())
+                theme =>
+                {
+                    viewModel.CurrentTheme = theme;
+                },
+                Services.GetService<IFormatterService>())
             {
                 SelectedTabIndex = 3
             };
@@ -442,7 +448,7 @@ public partial class App : Application
         {
             Log.Information("ShowPluginManagerDialog called with PluginManagerViewModel");
             var window = new PluginManagerWindow { DataContext = vm };
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
                 window.ShowDialog(desktop.MainWindow);
         };
 

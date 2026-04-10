@@ -63,14 +63,14 @@ public partial class MainViewModel
         processStartInfo.ArgumentList.Add("--pid");
         processStartInfo.ArgumentList.Add(Environment.ProcessId.ToString());
         processStartInfo.ArgumentList.Add("--url");
-        processStartInfo.ArgumentList.Add(result.DownloadUrl);
+        processStartInfo.ArgumentList.Add(result.DownloadUrl!);
         if (result.ChecksumUrl != null)
         {
             processStartInfo.ArgumentList.Add("--checksum-url");
             processStartInfo.ArgumentList.Add(result.ChecksumUrl);
         }
         processStartInfo.ArgumentList.Add("--asset-name");
-        processStartInfo.ArgumentList.Add(result.AssetName);
+        processStartInfo.ArgumentList.Add(result.AssetName!);
         processStartInfo.ArgumentList.Add("--dest");
         processStartInfo.ArgumentList.Add(appDir);
         processStartInfo.ArgumentList.Add("--executable");

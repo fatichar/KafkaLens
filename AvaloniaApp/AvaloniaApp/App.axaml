@@ -19,8 +19,8 @@
     <Application.Styles>
         <FluentTheme />
         <hyperlink:HyperLinkStyle/>
-        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
 
         <Style Selector="Ellipse.status">
             <Setter Property="Fill" Value="{DynamicResource StatusUnknownBrush}"/>

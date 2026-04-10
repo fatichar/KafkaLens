@@ -5,7 +5,7 @@
              xmlns:av="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
              x:DataType="vm:OpenedClusterViewModel">
     <Grid RowDefinitions="Auto,*">
-        <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Watermark="Filter topics..." Margin="5"/>
+        <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Filter topics..." Margin="5"/>
         <TreeView Grid.Row="1" Name="TopicsTree" ItemsSource="{Binding Children}"
                   SelectedItem="{Binding SelectedNode}">
             <TreeView.Styles>

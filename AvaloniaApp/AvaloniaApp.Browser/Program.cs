@@ -11,5 +11,9 @@ internal partial class Program
         .SetupBrowserApp("out");
 
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>();
+        => AppBuilder.Configure<App>()
+#if DEBUG
+            .WithDeveloperTools()
+#endif
+        ;
 }

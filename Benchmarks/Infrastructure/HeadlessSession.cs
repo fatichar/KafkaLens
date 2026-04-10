@@ -22,7 +22,8 @@ public sealed class HeadlessSession : IDisposable
     private HeadlessSession() { }
 
     public IServiceProvider Services =>
-        ((BenchmarkApp)Application.Current!).Services;
+        ((BenchmarkApp)Application.Current!).Services
+        ?? throw new InvalidOperationException("Services not initialized");
 
     /// <summary>
     /// Starts the Avalonia headless app and blocks until initialisation completes.

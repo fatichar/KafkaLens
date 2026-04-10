@@ -2,8 +2,6 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using KafkaLens.ViewModels;
-using MsBox.Avalonia;
-using MsBox.Avalonia.Enums;
 
 namespace AvaloniaApp.Views;
 
@@ -39,19 +37,30 @@ public partial class MainView : UserControl
 
         MainViewModel.ShowMessage += (title, message) =>
         {
-            var box = MessageBoxManager.GetMessageBoxStandard(title, message, ButtonEnum.Ok);
-            box.ShowAsync();
+            var mainWindow = GetMainWindow();
+            if (mainWindow == null)
+            {
+                return;
+            }
+
+            var box = new SimpleMessageBox(title, message, isConfirmation: false);
+            _ = box.ShowMessageAsync(mainWindow);
         };
 
         MainViewModel.ConfirmRestoreTabs = async (count) =>
         {
-            var box = MessageBoxManager.GetMessageBoxStandard(
+            var mainWindow = GetMainWindow();
+            if (mainWindow == null)
+            {
+                return false;
+            }
+
+            var box = new SimpleMessageBox(
                 "Restore Tabs",
                 $"You had {count} {(count > 1 ? "tabs" : "tab")} open in the previous session, restore now?",
-                ButtonEnum.YesNo);
+                isConfirmation: true);
 
-            var result = await box.ShowAsync();
-            return result == ButtonResult.Yes;
+            return await box.ShowConfirmationAsync(mainWindow);
         };
     }
 
@@ -67,7 +76,7 @@ public partial class MainView : UserControl
 
     private Window? GetMainWindow()
     {
-        return this.GetVisualRoot() as Window;
+        return TopLevel.GetTopLevel(this) as Window;
     }
 
     private async void OnShowFolderOpenDialog()

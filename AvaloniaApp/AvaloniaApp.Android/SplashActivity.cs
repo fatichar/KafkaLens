@@ -13,8 +13,14 @@ namespace AvaloniaApp.Android
     {
         protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
         {
-            return base.CustomizeAppBuilder(builder)
+            builder = base.CustomizeAppBuilder(builder)
                 .UseReactiveUI();
+
+#if DEBUG
+            builder = builder.WithDeveloperTools();
+#endif
+
+            return builder;
         }
 
         protected override void OnCreate(Bundle? savedInstanceState)

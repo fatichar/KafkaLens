@@ -4,7 +4,7 @@ global using System.Collections.Generic;
 global using System.Threading.Tasks;
 global using Xunit;
 global using AutoFixture;
-global using AutoFixture.Xunit2;
+global using AutoFixture.Xunit3;
 global using NSubstitute;
 global using FluentAssertions;
 global using KafkaLens.ViewModels;
