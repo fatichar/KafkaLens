@@ -14,8 +14,8 @@ namespace KafkaLens.ViewModels;
 public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 {
     private const int SELECTED_ITEM_DELAY_MS = 3;
-    private const string KEY_FORMATTER_NAMES_SETTINGS_KEY = "KeyFormatterNames";
-    private const string VALUE_FORMATTER_NAMES_SETTINGS_KEY = "ValueFormatterNames";
+    private const string HIDDEN_KEY_FORMATTERS_SETTINGS_KEY = "HiddenKeyFormatters";
+    private const string HIDDEN_VALUE_FORMATTERS_SETTINGS_KEY = "HiddenValueFormatters";
 
     private readonly ISettingsService settingsService;
     private readonly ITopicSettingsService topicSettingsService;
@@ -117,6 +117,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public RelayCommand RefreshCommand { get; }
     public RelayCommand GuessValueFormatterCommand { get; }
     public RelayCommand GuessKeyFormatterCommand { get; }
+    public RelayCommand OpenFormatterPreferencesCommand { get; }
     public IAsyncRelayCommand SaveTopicSettingsCommand { get; }
     public AsyncRelayCommand SaveSelectedAsRawCommand { get; set; }
     public AsyncRelayCommand SaveSelectedAsFormattedCommand { get; set; }
@@ -177,6 +178,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         });
         GuessValueFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: false));
         GuessKeyFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: true));
+        OpenFormatterPreferencesCommand = new RelayCommand(() => MainViewModel.ShowFormatterPreferences());
         SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
 
         SaveSelectedAsRawCommand = new AsyncRelayCommand(
@@ -217,18 +219,22 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             var config = settingsService.GetBrowserConfig();
             FontSize = config.FontSize;
             OnPropertyChanged(nameof(FetchCounts));
+            InitializeFormatters();
         });
     }
 
     private void InitializeFormatters()
     {
         var allFormatterNames = formatterService.GetAllFormatterNames();
-        FormatterNames = allFormatterNames;
         ValueFormatterNames = formatterService.BuildFormatterNames(
-            settingsService.GetValue(VALUE_FORMATTER_NAMES_SETTINGS_KEY), allFormatterNames);
+            settingsService.GetValue(HIDDEN_VALUE_FORMATTERS_SETTINGS_KEY),
+            allFormatterNames);
+        FormatterNames = ValueFormatterNames
+            .Where(name => !formatterService.IsUnknownFormatter(name))
+            .ToList();
         KeyFormatterNames = formatterService.BuildFormatterNames(
-            settingsService.GetValue(KEY_FORMATTER_NAMES_SETTINGS_KEY),
-            formatterService.GetBuiltInKeyFormatterNames());
+            settingsService.GetValue(HIDDEN_KEY_FORMATTERS_SETTINGS_KEY),
+            allFormatterNames);
     }
 
     private void UpdateStartTimeText()

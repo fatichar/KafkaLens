@@ -20,7 +20,7 @@
       <Button Command="{Binding CancelCommand}" Content="Cancel" IsCancel="True"/>
     </StackPanel>
 
-    <TabControl>
+    <TabControl SelectedIndex="{Binding SelectedTabIndex}">
       <TabItem Header="General">
         <StackPanel Spacing="10" Margin="10">
           <TextBlock Text="Theme" FontWeight="Bold"/>
@@ -90,6 +90,35 @@
                            Content="Deep (Load Topics) - Takes longer and uses more memory, ensures accurate status, opens clusters instantly." />
           </StackPanel>
         </StackPanel>
+      </TabItem>
+
+      <TabItem Header="Message Format">
+        <DockPanel Margin="10">
+          <TextBlock DockPanel.Dock="Top" Text="Enable or disable formatters for message keys and values." Margin="0,0,0,8" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,80,80" Margin="0,0,0,4">
+            <TextBlock Grid.Column="0" Text="Formatter" FontWeight="SemiBold" Margin="4,0,0,0"/>
+            <TextBlock Grid.Column="1" Text="Keys" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            <TextBlock Grid.Column="2" Text="Values" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+          </Grid>
+          <Rectangle DockPanel.Dock="Top" Height="1" Fill="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,0,0,4"/>
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding FormatterSettings}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:FormatterSettingViewModel">
+                  <Grid ColumnDefinitions="*,80,80" Margin="0,2,0,2">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    <CheckBox Grid.Column="1"
+                              IsChecked="{Binding IsEnabledForKeys}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <CheckBox Grid.Column="2"
+                              IsChecked="{Binding IsEnabledForValues}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
       </TabItem>
     </TabControl>
   </DockPanel>

@@ -7,6 +7,10 @@ public class FormatterFactory
 {
     public static FormatterFactory Instance { get; }
     private readonly IDictionary<string, IMessageFormatter> formatters = new Dictionary<string, IMessageFormatter>();
+    private readonly List<string> builtInFormatterNames = new();
+    private readonly HashSet<string> builtInFormatterNamesSet = new(StringComparer.Ordinal);
+    private readonly List<string> pluginFormatterNames = new();
+    private readonly HashSet<string> pluginFormatterNamesSet = new(StringComparer.Ordinal);
     private readonly List<string> builtInKeyFormatterNames = new();
     private readonly HashSet<string> builtInKeyFormatterNamesSet = new(StringComparer.Ordinal);
     private const string JSON = "Json";
@@ -27,7 +31,7 @@ public class FormatterFactory
 
     private FormatterFactory()
     {
-        AddBuiltInFormatter(new JsonFormatter(), supportsKeyFormatting: false);
+        AddBuiltInFormatter(new JsonFormatter(), supportsKeyFormatting: true);
         AddBuiltInFormatter(new TextFormatter(), supportsKeyFormatting: true);
         AddBuiltInFormatter(new Int8Formatter(), supportsKeyFormatting: true);
         AddBuiltInFormatter(new UInt8Formatter(), supportsKeyFormatting: true);
@@ -56,11 +60,19 @@ public class FormatterFactory
     public void AddFormatter(IMessageFormatter formatter)
     {
         formatters.Add(formatter.Name, formatter);
+        if (!builtInFormatterNamesSet.Contains(formatter.Name) && pluginFormatterNamesSet.Add(formatter.Name))
+        {
+            pluginFormatterNames.Add(formatter.Name);
+        }
     }
 
     public void RemoveFormatter(string name)
     {
         formatters.Remove(name);
+        if (pluginFormatterNamesSet.Remove(name))
+        {
+            pluginFormatterNames.Remove(name);
+        }
     }
 
     public IEnumerable<string> GetFormatterNames()
@@ -73,6 +85,16 @@ public class FormatterFactory
         return builtInKeyFormatterNames.ToList();
     }
 
+    public IList<string> GetBuiltInFormatterNames()
+    {
+        return builtInFormatterNames.ToList();
+    }
+
+    public IList<string> GetPluginFormatterNames()
+    {
+        return pluginFormatterNames.ToList();
+    }
+
     public List<IMessageFormatter> GetFormatters()
     {
         return formatters.Values.ToList();
@@ -81,6 +103,10 @@ public class FormatterFactory
     private void AddBuiltInFormatter(IMessageFormatter formatter, bool supportsKeyFormatting)
     {
         formatters.Add(formatter.Name, formatter);
+        if (builtInFormatterNamesSet.Add(formatter.Name))
+        {
+            builtInFormatterNames.Add(formatter.Name);
+        }
         if (supportsKeyFormatting && builtInKeyFormatterNamesSet.Add(formatter.Name))
         {
             builtInKeyFormatterNames.Add(formatter.Name);

@@ -97,4 +97,18 @@ public class OpenedClusterViewModelTests
         // Assert
         Assert.False(result);
     }
+
+    [Fact]
+    public void BuildFormatterNames_WhenConfiguredListExists_ShouldAppendNewPluginFormatterNames()
+    {
+        // Arrange
+        var service = new FormatterService();
+        var allowedNames = new List<string> { "Json", "Text", "TestPluginFormatter" };
+
+        // Act
+        var result = service.BuildFormatterNames("[\"Text\"]", allowedNames);
+
+        // Assert
+        Assert.Equal(new List<string> { "Unknown", "Text", "TestPluginFormatter" }, result);
+    }
 }

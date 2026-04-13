@@ -4,6 +4,8 @@ using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared.Services;
 using KafkaLens.ViewModels.Messages;
+using KafkaLens.ViewModels.Services;
+using Newtonsoft.Json;
 using Serilog;
 using System.Collections.ObjectModel;
 
@@ -11,8 +13,12 @@ namespace KafkaLens.ViewModels;
 
 public partial class PreferencesViewModel : ViewModelBase
 {
+    private const string HiddenKeyFormattersKey = "HiddenKeyFormatters";
+    private const string HiddenValueFormattersKey = "HiddenValueFormatters";
+
     private readonly ISettingsService settingsService;
     private readonly IThemeService? themeService;
+    private readonly IFormatterService? formatterService;
 
     [ObservableProperty]
     private KafkaConfig kafkaConfig;
@@ -21,6 +27,7 @@ public partial class PreferencesViewModel : ViewModelBase
     private BrowserConfig browserConfig;
 
     public ObservableCollection<string> Themes { get; } = new();
+    public ObservableCollection<FormatterSettingViewModel> FormatterSettings { get; } = new();
 
     [ObservableProperty]
     private string selectedTheme;
@@ -54,6 +61,9 @@ public partial class PreferencesViewModel : ViewModelBase
     [ObservableProperty]
     private bool deepConnectionCheck;
 
+    [ObservableProperty]
+    private int selectedTabIndex;
+
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand CancelCommand { get; }
 
@@ -62,11 +72,12 @@ public partial class PreferencesViewModel : ViewModelBase
     private readonly Action<string>? applyTheme;
     private readonly string originalTheme;
 
-    public PreferencesViewModel(ISettingsService settingsService, IThemeService? themeService = null, Action<string>? applyTheme = null)
+    public PreferencesViewModel(ISettingsService settingsService, IThemeService? themeService = null, Action<string>? applyTheme = null, IFormatterService? formatterService = null)
     {
         this.settingsService = settingsService;
         this.themeService = themeService;
         this.applyTheme = applyTheme;
+        this.formatterService = formatterService;
 
         kafkaConfig = settingsService.GetKafkaConfig();
         browserConfig = settingsService.GetBrowserConfig();
@@ -87,6 +98,8 @@ public partial class PreferencesViewModel : ViewModelBase
 
         FastConnectionCheck = !browserConfig.EagerLoadTopicsOnStartup;
         DeepConnectionCheck = browserConfig.EagerLoadTopicsOnStartup;
+
+        LoadFormatterSettings();
 
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
@@ -268,6 +281,56 @@ public partial class PreferencesViewModel : ViewModelBase
         return displayName;
     }
 
+    private void LoadFormatterSettings()
+    {
+        if (formatterService == null) return;
+
+        var allNames = formatterService.GetAllFormatterNames();
+        var hiddenValues = ParseHiddenSet(settingsService.GetValue(HiddenValueFormattersKey));
+        var hiddenKeys = ParseHiddenSet(settingsService.GetValue(HiddenKeyFormattersKey));
+
+        FormatterSettings.Clear();
+        foreach (var name in allNames)
+        {
+            FormatterSettings.Add(new FormatterSettingViewModel(
+                name,
+                isEnabledForValues: !hiddenValues.Contains(name),
+                isEnabledForKeys: !hiddenKeys.Contains(name)));
+        }
+    }
+
+    private void SaveFormatterSettings()
+    {
+        var hiddenValues = FormatterSettings
+            .Where(f => !f.IsEnabledForValues)
+            .Select(f => f.Name)
+            .ToList();
+
+        var hiddenKeys = FormatterSettings
+            .Where(f => !f.IsEnabledForKeys)
+            .Select(f => f.Name)
+            .ToList();
+
+        settingsService.SetValue(HiddenValueFormattersKey, JsonConvert.SerializeObject(hiddenValues));
+        settingsService.SetValue(HiddenKeyFormattersKey, JsonConvert.SerializeObject(hiddenKeys));
+    }
+
+    private static HashSet<string> ParseHiddenSet(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return new HashSet<string>();
+        try
+        {
+            var parsed = JsonConvert.DeserializeObject<List<string>>(raw);
+            if (parsed != null)
+                return new HashSet<string>(parsed.Where(v => !string.IsNullOrWhiteSpace(v)), StringComparer.Ordinal);
+        }
+        catch { }
+        return new HashSet<string>(
+            raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+               .Where(v => !string.IsNullOrWhiteSpace(v)),
+            StringComparer.Ordinal);
+    }
+
     private void Save()
     {
         // Check if there are any validation errors
@@ -291,6 +354,7 @@ public partial class PreferencesViewModel : ViewModelBase
 
         settingsService.SaveKafkaConfig(KafkaConfig);
         settingsService.SaveBrowserConfig(BrowserConfig);
+        SaveFormatterSettings();
 
         WeakReferenceMessenger.Default.Send(new ConfigurationChangedMessage());
 

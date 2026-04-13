@@ -110,33 +110,41 @@ public class FormatterService : IFormatterService
     public IList<string> GetAllFormatterNames() =>
         FormatterFactory.Instance.GetFormatters().ConvertAll(f => f.Name);
 
+    public IList<string> GetBuiltInFormatterNames() =>
+        FormatterFactory.Instance.GetBuiltInFormatterNames();
+
     public IList<string> GetBuiltInKeyFormatterNames() =>
         FormatterFactory.Instance.GetBuiltInKeyFormatterNames();
 
-    public IList<string> BuildFormatterNames(string? configuredRaw, IList<string> allowed)
+    public IList<string> GetPluginFormatterNames() =>
+        FormatterFactory.Instance.GetPluginFormatterNames();
+
+    public IList<string> BuildFormatterNames(string? exludededRaw, IList<string> allNames)
     {
-        var configured = ParseConfiguredFormatterNames(configuredRaw, allowed);
-        var names = configured.Count > 0 ? configured : allowed;
-        var result = new List<string>(names.Count + 1) { UnknownFormatterName };
-        result.AddRange(names);
+        var excluded = ParseConfiguredFormatterNames(exludededRaw, allNames);
+        var result = new List<string>(allNames.Count + 1) { UnknownFormatterName };
+
+        AddDistinct(result, allNames);
+        result.RemoveAll(name => excluded.Contains(name));
+
         return result;
     }
 
-    private static IList<string> ParseConfiguredFormatterNames(string? configuredRaw, IList<string> allowed)
+    private static ISet<string> ParseConfiguredFormatterNames(string? configuredRaw, IList<string> allowed)
     {
         if (string.IsNullOrWhiteSpace(configuredRaw))
         {
-            return new List<string>();
+            return new HashSet<string>();
         }
 
         var configured = TryParseFormatterList(configuredRaw);
         if (configured.Count == 0)
         {
-            return new List<string>();
+            return new HashSet<string>();
         }
 
         var allowedSet = new HashSet<string>(allowed, StringComparer.Ordinal);
-        var filtered = new List<string>();
+        var filtered = new HashSet<string>();
         foreach (var name in configured)
         {
             if (allowedSet.Contains(name) && !filtered.Contains(name))
@@ -167,5 +175,16 @@ public class FormatterService : IFormatterService
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(v => !string.IsNullOrWhiteSpace(v))
             .ToList();
+    }
+
+    private static void AddDistinct(ICollection<string> target, IEnumerable<string> names)
+    {
+        foreach (var name in names)
+        {
+            if (!target.Contains(name))
+            {
+                target.Add(name);
+            }
+        }
     }
 }

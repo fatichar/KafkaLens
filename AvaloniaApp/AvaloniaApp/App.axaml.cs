@@ -425,6 +425,19 @@ public partial class App : Application
             }
         };
 
+        MainViewModel.ShowFormatterPreferences = () =>
+        {
+            var vm = new PreferencesViewModel(
+                Services.GetRequiredService<ISettingsService>(),
+                Services.GetService<IThemeService>(),
+                theme => viewModel.CurrentTheme = theme,
+                Services.GetRequiredService<IFormatterService>())
+            {
+                SelectedTabIndex = 3
+            };
+            MainViewModel.ShowPreferencesDialog(vm);
+        };
+
         MainViewModel.ShowPluginManagerDialog = (vm) =>
         {
             Log.Information("ShowPluginManagerDialog called with PluginManagerViewModel");

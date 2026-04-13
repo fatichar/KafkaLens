@@ -9,10 +9,12 @@ public interface IFormatterService
     IMessageFormatter? GuessKeyFormatter(Message message, IList<string> allowedKeyFormatterNames);
     string NormalizeFormatterName(string? formatterName, IList<string> allowedNames);
     bool CanApplyFormatterToLoadedMessages(string? formatterName, IList<string> allowedNames);
-    IList<string> BuildFormatterNames(string? configuredRaw, IList<string> allowed);
+    IList<string> BuildFormatterNames(string? exludededRaw, IList<string> allNames);
     bool IsUnknownFormatter(string? formatterName);
     string? ToKnownFormatterOrNull(string? formatterName);
     string GetDefaultFormatterName();
     IList<string> GetAllFormatterNames();
+    IList<string> GetBuiltInFormatterNames();
     IList<string> GetBuiltInKeyFormatterNames();
+    IList<string> GetPluginFormatterNames();
 }

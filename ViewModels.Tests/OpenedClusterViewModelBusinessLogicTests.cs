@@ -77,6 +77,18 @@ public class OpenedClusterViewModelBusinessLogicTests
     }
 
     [Fact]
+    public void Constructor_WhenNoFormatterSetting_ShouldExposeToolbarFormattersWithoutUnknown()
+    {
+        // Arrange & Act
+        var vm = CreateViewModel();
+
+        // Assert
+        Assert.DoesNotContain("Unknown", vm.FormatterNames);
+        Assert.Contains("Json", vm.FormatterNames);
+        Assert.Contains("Text", vm.FormatterNames);
+    }
+
+    [Fact]
     public void Constructor_WhenConfiguredValueFormatterNames_ShouldAllowConfiguredSubsetIncludingPlugins()
     {
         // Arrange

@@ -51,6 +51,7 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand CloseCurrentTabCommand { get; }
     public IAsyncRelayCommand CheckForUpdatesCommand { get; }
     public IRelayCommand ShowPreferencesCommand { get; }
+    public IRelayCommand ShowFormatterPreferencesCommand { get; }
     public IRelayCommand ShowPluginManagerCommand { get; }
 
     // UI callbacks (set by the view layer)
@@ -59,6 +60,7 @@ public partial class MainViewModel : ViewModelBase
     public static Action ShowEditClustersDialog { get; set; } = () => { };
     public static Action<UpdateViewModel> ShowUpdateDialog { get; set; } = _ => { };
     public static Action<PreferencesViewModel> ShowPreferencesDialog { get; set; } = _ => { };
+    public static Action ShowFormatterPreferences { get; set; } = () => { };
     public static Action<PluginManagerViewModel> ShowPluginManagerDialog { get; set; } = _ => { };
     public static Action<string, string> ShowMessage { get; set; } = (_, _) => { };
     public static Func<int, Task<bool>> ConfirmRestoreTabs { get; set; } = _ => Task.FromResult(false);
@@ -142,6 +144,7 @@ public partial class MainViewModel : ViewModelBase
         CloseCurrentTabCommand = new RelayCommand(CloseCurrentTab);
         CheckForUpdatesCommand = new AsyncRelayCommand(() => CheckForUpdatesAsync(false));
         ShowPreferencesCommand = new RelayCommand(ShowPreferences);
+        ShowFormatterPreferencesCommand = new RelayCommand(() => ShowFormatterPreferences());
         ShowPluginManagerCommand = new RelayCommand(OpenPluginManager);
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
@@ -201,7 +204,7 @@ public partial class MainViewModel : ViewModelBase
         return _startupTask = LoadClustersOnStartupAsync();
     }
 
-    private void ShowPreferences() => ShowPreferencesDialog(new PreferencesViewModel(settingsService, _themeService, theme => CurrentTheme = theme));
+    private void ShowPreferences() => ShowPreferencesDialog(new PreferencesViewModel(settingsService, _themeService, theme => CurrentTheme = theme, formatterService));
 
     private string ValidateTheme(string themeName)
     {

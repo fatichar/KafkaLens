@@ -30,5 +30,15 @@
 
         <Button Content="Save" Command="{Binding SaveTopicSettingsCommand}"
                 HorizontalAlignment="Right" Width="100" Margin="0,20,0,0"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" Margin="0,16,0,0" VerticalAlignment="Center">
+            <TextBlock Text="Expected formatters missing from the lists?"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       FontSize="12"/>
+            <HyperlinkButton Content="Configure formatters"
+                             Command="{Binding OpenFormatterPreferencesCommand}"
+                             FontSize="12" Padding="0" VerticalAlignment="Center"/>
+        </StackPanel>
     </StackPanel>
 </UserControl>
