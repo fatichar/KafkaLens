@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Reflection;
 using Avalonia.Threading;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
@@ -150,7 +151,7 @@ public partial class MainViewModel : ViewModelBase
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
         Clusters.CollectionChanged += OnClustersChanged;
 
-        Title = appConfig.Title;
+        Title = BuildWindowTitle(appConfig.Title);
         
         // Validate and set current theme
         var savedTheme = settingsService.GetValue("Theme") ?? "System";
@@ -248,5 +249,15 @@ public partial class MainViewModel : ViewModelBase
         {
             Log.Error(ex, "Failed to create or show PluginManagerViewModel");
         }
+    }
+
+    private static string BuildWindowTitle(string? baseTitle)
+    {
+        var title = string.IsNullOrWhiteSpace(baseTitle) ? "KafkaLens" : baseTitle;
+        var version = Assembly.GetEntryAssembly()?.GetName().Version;
+
+        return version == null
+            ? title
+            : $"{title} {version.ToString(3)}";
     }
 }

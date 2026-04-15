@@ -17,7 +17,7 @@ public partial class About : Window
     public About()
     {
         var version = Assembly.GetEntryAssembly()?.GetName().Version;
-        AppVersion = version != null ? $"Version: {version.ToString(2)}" : "Version: unknown";
+        AppVersion = version != null ? $"Version: {version.ToString(3)}" : "Version: unknown";
         DataContext = this;
         InitializeComponent();
     }
