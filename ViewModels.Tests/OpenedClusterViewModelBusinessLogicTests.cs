@@ -35,6 +35,22 @@ public class OpenedClusterViewModelBusinessLogicTests
         return new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, clusterName);
     }
 
+    private static BrowserConfig CreateBrowserConfig(int defaultFetchCount, params int[] fetchCounts)
+    {
+        var config = new BrowserConfig
+        {
+            DefaultFetchCount = defaultFetchCount
+        };
+
+        config.FetchCounts.Clear();
+        foreach (var fetchCount in fetchCounts)
+        {
+            config.FetchCounts.Add(fetchCount);
+        }
+
+        return config;
+    }
+
     [Fact]
     public void Constructor_WhenNoKeyFormatterSetting_ShouldUseDefaultBasicKeyFormatters()
     {
@@ -733,17 +749,8 @@ public class OpenedClusterViewModelBusinessLogicTests
     public void ConfigurationChangedMessage_ShouldRefreshFetchCountsWithoutChangingSelectedFetchCount()
     {
         // Arrange
-        var initialConfig = new BrowserConfig
-        {
-            DefaultFetchCount = 10,
-            FetchCounts = new SortedSet<int> { 10, 25, 50 }
-        };
-
-        var updatedConfig = new BrowserConfig
-        {
-            DefaultFetchCount = 100,
-            FetchCounts = new SortedSet<int> { 100, 200, 500 }
-        };
+        var initialConfig = CreateBrowserConfig(10, 10, 25, 50);
+        var updatedConfig = CreateBrowserConfig(100, 100, 200, 500);
 
         var currentConfig = initialConfig;
         settingsService.GetBrowserConfig().Returns(_ => currentConfig);

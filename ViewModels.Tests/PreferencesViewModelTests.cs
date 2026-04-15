@@ -8,17 +8,29 @@ namespace KafkaLens.ViewModels.Tests;
 
 public class PreferencesViewModelTests
 {
+    private static BrowserConfig CreateBrowserConfig(int defaultFetchCount, params int[] fetchCounts)
+    {
+        var config = new BrowserConfig
+        {
+            DefaultFetchCount = defaultFetchCount
+        };
+
+        config.FetchCounts.Clear();
+        foreach (var fetchCount in fetchCounts)
+        {
+            config.FetchCounts.Add(fetchCount);
+        }
+
+        return config;
+    }
+
     [Fact]
     public void Save_WhenValidationErrorsExist_ShouldNotSave()
     {
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            DefaultFetchCount = 10,
-            FetchCounts = new SortedSet<int> { 10, 25, 50 }
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);
@@ -59,26 +71,18 @@ public class PreferencesViewModelTests
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
 
-        var configFromDialogOpen = new BrowserConfig
-        {
-            DefaultFetchCount = 10,
-            FetchCounts = new SortedSet<int> { 10, 25, 50 },
-            OpenedTabs = new List<OpenedTabState>
-            {
-                new() { ClusterId = "stale-cluster-id", PositiveFilter = "stale" }
-            }
-        };
+        var configFromDialogOpen = CreateBrowserConfig(10, 10, 25, 50);
+        configFromDialogOpen.OpenedTabs =
+        [
+            new() { ClusterId = "stale-cluster-id", PositiveFilter = "stale" }
+        ];
 
-        var latestConfigAtSaveTime = new BrowserConfig
-        {
-            DefaultFetchCount = 10,
-            FetchCounts = new SortedSet<int> { 10, 25, 50 },
-            OpenedTabs = new List<OpenedTabState>
-            {
-                new() { ClusterId = "c1", PositiveFilter = "err" },
-                new() { ClusterId = "c2", PositiveFilter = "warn" }
-            }
-        };
+        var latestConfigAtSaveTime = CreateBrowserConfig(10, 10, 25, 50);
+        latestConfigAtSaveTime.OpenedTabs =
+        [
+            new() { ClusterId = "c1", PositiveFilter = "err" },
+            new() { ClusterId = "c2", PositiveFilter = "warn" }
+        ];
 
         settingsService.GetBrowserConfig().Returns(configFromDialogOpen, latestConfigAtSaveTime);
 
@@ -106,11 +110,7 @@ public class PreferencesViewModelTests
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            FetchCounts = new SortedSet<int> { 10, 25, 50, 100 },
-            DefaultFetchCount = 10
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50, 100));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);
@@ -134,11 +134,7 @@ public class PreferencesViewModelTests
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            FetchCounts = new SortedSet<int> { 10, 25, 50, 100 },
-            DefaultFetchCount = 10
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50, 100));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);
@@ -157,11 +153,7 @@ public class PreferencesViewModelTests
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            FetchCounts = new SortedSet<int> { 10, 25, 50, 100 },
-            DefaultFetchCount = 10
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50, 100));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);
@@ -180,11 +172,7 @@ public class PreferencesViewModelTests
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            FetchCounts = new SortedSet<int> { 10, 25, 50, 100 },
-            DefaultFetchCount = 10
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50, 100));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);
@@ -203,11 +191,7 @@ public class PreferencesViewModelTests
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            FetchCounts = new SortedSet<int> { 10, 25, 50, 100 },
-            DefaultFetchCount = 10
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50, 100));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);
@@ -226,11 +210,7 @@ public class PreferencesViewModelTests
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            FetchCounts = new SortedSet<int> { 10, 25, 50, 100 },
-            DefaultFetchCount = 10
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50, 100));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);
@@ -253,11 +233,7 @@ public class PreferencesViewModelTests
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            FetchCounts = new SortedSet<int> { 10, 25, 50, 100 },
-            DefaultFetchCount = 10
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50, 100));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);
@@ -279,11 +255,7 @@ public class PreferencesViewModelTests
         // Arrange
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.GetKafkaConfig().Returns(new KafkaConfig());
-        settingsService.GetBrowserConfig().Returns(new BrowserConfig
-        {
-            FetchCounts = new SortedSet<int> { 100, 10, 50, 25 }, // Unordered input
-            DefaultFetchCount = 10
-        });
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 100, 10, 50, 25));
         settingsService.GetValue("Theme").Returns("System");
 
         var vm = new PreferencesViewModel(settingsService);

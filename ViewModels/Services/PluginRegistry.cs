@@ -52,7 +52,9 @@ public class PluginRegistry : IDisposable
         if (!Directory.Exists(_pluginsDir))
             return [];
 
-        var pluginStates = _settings.GetPluginSettings().PluginStates;
+        var pluginSettings = _settings.GetPluginSettings();
+        var pluginStates = pluginSettings.PluginStates;
+        var pluginStatesChanged = false;
         var result = new List<PluginInfo>();
 
         // 1. Folder-based plugins: plugins/{id}/ subdirectories
@@ -66,7 +68,7 @@ public class PluginRegistry : IDisposable
             {
                 try
                 {
-                    var info = LoadDeclarativeThemePackage(subDir, folderId, pluginStates);
+                    var info = LoadDeclarativeThemePackage(subDir, folderId, pluginStates, ref pluginStatesChanged);
                     if (info != null)
                         result.Add(info);
                 }
@@ -86,7 +88,7 @@ public class PluginRegistry : IDisposable
 
             try
             {
-                var info = LoadPluginFromDll(dll, subDir, pluginStates);
+                var info = LoadPluginFromDll(dll, subDir, pluginStates, ref pluginStatesChanged);
                 if (info != null)
                     result.Add(info);
             }
@@ -101,7 +103,7 @@ public class PluginRegistry : IDisposable
         {
             try
             {
-                var info = LoadPluginFromDll(dll, folderPath: "", pluginStates);
+                var info = LoadPluginFromDll(dll, folderPath: "", pluginStates, ref pluginStatesChanged);
                 if (info != null)
                     result.Add(info);
             }
@@ -109,6 +111,11 @@ public class PluginRegistry : IDisposable
             {
                 Log.Warning(ex, "Failed to load plugin metadata from {Dll}", dll);
             }
+        }
+
+        if (pluginStatesChanged)
+        {
+            _settings.SavePluginSettings(pluginSettings);
         }
 
         return result;
@@ -157,7 +164,7 @@ public class PluginRegistry : IDisposable
     }
 
     private PluginInfo? LoadPluginFromDll(string dll, string folderPath,
-        Dictionary<string, bool> pluginStates)
+        Dictionary<string, bool> pluginStates, ref bool pluginStatesChanged)
     {
         var assembly = Assembly.LoadFrom(dll);
         var attr     = assembly.GetCustomAttribute<KafkaLensPluginAttribute>();
@@ -192,6 +199,7 @@ public class PluginRegistry : IDisposable
         var desc     = NonEmpty(manifest?.Description, attr?.Description) ?? "";
         var homepage = NonEmpty(manifest?.Homepage,    null);
         var category = NonEmpty(manifest?.Category,    null)              ?? "";
+        EnsurePluginStateDefault(id, pluginStates, ref pluginStatesChanged);
 
         // Check for icon
         var iconPath = "";
@@ -297,7 +305,7 @@ public class PluginRegistry : IDisposable
     }
 
     private PluginInfo? LoadDeclarativeThemePackage(string subDir, string folderId,
-        Dictionary<string, bool> pluginStates)
+        Dictionary<string, bool> pluginStates, ref bool pluginStatesChanged)
     {
         try
         {
@@ -321,6 +329,7 @@ public class PluginRegistry : IDisposable
             var desc     = NonEmpty(manifest?.Description, package.Description) ?? "";
             var homepage = NonEmpty(manifest?.Homepage,    null);
             var category = NonEmpty(manifest?.Category,    null)                ?? "";
+            EnsurePluginStateDefault(id, pluginStates, ref pluginStatesChanged);
 
             var iconPath = "";
             var iconFile = Path.Combine(subDir, "icon.png");
@@ -374,5 +383,16 @@ public class PluginRegistry : IDisposable
         if (!string.IsNullOrWhiteSpace(first)) return first;
         if (!string.IsNullOrWhiteSpace(second)) return second;
         return null;
+    }
+
+    private static void EnsurePluginStateDefault(string id, Dictionary<string, bool> pluginStates, ref bool pluginStatesChanged)
+    {
+        if (pluginStates.ContainsKey(id))
+        {
+            return;
+        }
+
+        pluginStates[id] = true;
+        pluginStatesChanged = true;
     }
 }

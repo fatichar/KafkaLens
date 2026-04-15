@@ -13,8 +13,8 @@ namespace KafkaLens.ViewModels;
 
 public partial class PreferencesViewModel : ViewModelBase
 {
-    private const string HiddenKeyFormattersKey = "HiddenKeyFormatters";
-    private const string HiddenValueFormattersKey = "HiddenValueFormatters";
+    private const string HIDDEN_KEY_FORMATTERS_KEY = "HiddenKeyFormatters";
+    private const string HIDDEN_VALUE_FORMATTERS_KEY = "HiddenValueFormatters";
 
     private readonly ISettingsService settingsService;
     private readonly IThemeService? themeService;
@@ -81,17 +81,17 @@ public partial class PreferencesViewModel : ViewModelBase
 
         kafkaConfig = settingsService.GetKafkaConfig();
         browserConfig = settingsService.GetBrowserConfig();
-        
+
         // Load themes first to validate the current theme
         LoadThemes(themeService);
-        
+
         // Get current theme from settings, but validate it exists
         var currentTheme = settingsService.GetValue("Theme") ?? "System";
         var validatedThemeId = ValidateTheme(currentTheme, themeService);
-        
+
         // Convert theme ID to DisplayName for selection in the dialog
         selectedTheme = originalTheme = GetThemeDisplayName(validatedThemeId, themeService);
-        
+
         fetchCountsString = string.Join(", ", browserConfig.FetchCounts);
         LoadAvailableFetchCounts();
         SelectedDefaultFetchCount = browserConfig.DefaultFetchCount;
@@ -113,27 +113,27 @@ public partial class PreferencesViewModel : ViewModelBase
             // Try exact match first, then case-insensitive
             var theme = availableThemes.FirstOrDefault(t => t.Id == themeName) ??
                        availableThemes.FirstOrDefault(t => string.Equals(t.Id, themeName, StringComparison.OrdinalIgnoreCase));
-            
+
             if (theme != null)
             {
                 return theme.Id; // Return the actual theme ID (case-corrected)
             }
         }
-        
+
         // If theme not found or ThemeService unavailable, fall back to System
         if (themeName != "System")
         {
             Log.Warning("Theme {ThemeName} not found, falling back to System theme", themeName);
             return "System";
         }
-        
+
         return "System";
     }
 
     private void LoadThemes(IThemeService? themeService)
     {
         Themes.Clear();
-        
+
         if (themeService != null)
         {
             var availableThemes = themeService.GetAvailableThemes();
@@ -155,7 +155,7 @@ public partial class PreferencesViewModel : ViewModelBase
     {
         // Create a new list with the updated values to avoid clearing the collection
         var newCounts = BrowserConfig.FetchCounts.OrderBy(x => x).ToList();
-        
+
         // Remove items that are no longer in the list
         for (int i = AvailableFetchCounts.Count - 1; i >= 0; i--)
         {
@@ -164,7 +164,7 @@ public partial class PreferencesViewModel : ViewModelBase
                 AvailableFetchCounts.RemoveAt(i);
             }
         }
-        
+
         // Add new items in sorted order
         foreach (var count in newCounts)
         {
@@ -260,7 +260,7 @@ public partial class PreferencesViewModel : ViewModelBase
                 return theme.DisplayName;
             }
         }
-        
+
         // Fallback for basic themes or if ThemeService unavailable
         return themeId;
     }
@@ -276,7 +276,7 @@ public partial class PreferencesViewModel : ViewModelBase
                 return theme.Id;
             }
         }
-        
+
         // Fallback for basic themes or if ThemeService unavailable
         return displayName;
     }
@@ -286,8 +286,8 @@ public partial class PreferencesViewModel : ViewModelBase
         if (formatterService == null) return;
 
         var allNames = formatterService.GetAllFormatterNames();
-        var hiddenValues = ParseHiddenSet(settingsService.GetValue(HiddenValueFormattersKey));
-        var hiddenKeys = ParseHiddenSet(settingsService.GetValue(HiddenKeyFormattersKey));
+        var hiddenValues = ParseHiddenSet(settingsService.GetValue(HIDDEN_VALUE_FORMATTERS_KEY));
+        var hiddenKeys = ParseHiddenSet(settingsService.GetValue(HIDDEN_KEY_FORMATTERS_KEY));
 
         FormatterSettings.Clear();
         foreach (var name in allNames)
@@ -311,8 +311,8 @@ public partial class PreferencesViewModel : ViewModelBase
             .Select(f => f.Name)
             .ToList();
 
-        settingsService.SetValue(HiddenValueFormattersKey, JsonConvert.SerializeObject(hiddenValues));
-        settingsService.SetValue(HiddenKeyFormattersKey, JsonConvert.SerializeObject(hiddenKeys));
+        settingsService.SetValue(HIDDEN_VALUE_FORMATTERS_KEY, JsonConvert.SerializeObject(hiddenValues));
+        settingsService.SetValue(HIDDEN_KEY_FORMATTERS_KEY, JsonConvert.SerializeObject(hiddenKeys));
     }
 
     private static HashSet<string> ParseHiddenSet(string? raw)

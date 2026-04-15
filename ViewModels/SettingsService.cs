@@ -9,6 +9,7 @@ public class SettingsService : ISettingsService
 {
     private readonly string filePath;
     private JObject settings = new();
+    private bool defaultsAddedDuringLoad;
 
     public SettingsService(string filePath)
     {
@@ -31,6 +32,13 @@ public class SettingsService : ISettingsService
                 settings = new JObject();
             }
         }
+
+        EnsureDefaults();
+
+        if (defaultsAddedDuringLoad)
+        {
+            Save();
+        }
     }
 
     private void Save()
@@ -49,6 +57,87 @@ public class SettingsService : ISettingsService
         {
             Serilog.Log.Error(ex, "Failed to save settings to {FilePath}", filePath);
         }
+    }
+
+    private void EnsureDefaults()
+    {
+        defaultsAddedDuringLoad = false;
+        MergeDefaults("Theme", JValue.CreateString("System"));
+        MergeDefaults("AutoCheckForUpdates", JValue.CreateString("true"));
+        MergeDefaults("HiddenKeyFormatters", JValue.CreateString("[]"));
+        MergeDefaults("HiddenValueFormatters", JValue.CreateString("[]"));
+        MergeDefaults(nameof(KafkaConfig), JObject.FromObject(new KafkaConfig()));
+        MergeDefaults(nameof(BrowserConfig), JObject.FromObject(new BrowserConfig()));
+        MergeDefaults(nameof(PluginSettings), JObject.FromObject(new PluginSettings()));
+        EnsurePluginSettingsDefaults();
+    }
+
+    private void EnsurePluginSettingsDefaults()
+    {
+        if (!settings.TryGetValue(nameof(PluginSettings), out var token) || token is not JObject pluginSettings)
+        {
+            return;
+        }
+
+        var defaultRepositories = new PluginSettings().Repositories;
+        if (defaultRepositories.Count == 0)
+        {
+            return;
+        }
+
+        if (!pluginSettings.TryGetValue(nameof(PluginSettings.Repositories), out var repositoriesToken) ||
+            repositoriesToken.Type == JTokenType.Null)
+        {
+            pluginSettings[nameof(PluginSettings.Repositories)] = JArray.FromObject(defaultRepositories);
+            defaultsAddedDuringLoad = true;
+            return;
+        }
+
+        if (repositoriesToken is JArray repositoriesArray && repositoriesArray.Count == 0)
+        {
+            pluginSettings[nameof(PluginSettings.Repositories)] = JArray.FromObject(defaultRepositories);
+            defaultsAddedDuringLoad = true;
+        }
+    }
+
+    private void MergeDefaults(string key, JToken defaultValue)
+    {
+        if (!settings.TryGetValue(key, out var existingValue) || existingValue.Type == JTokenType.Null)
+        {
+            settings[key] = defaultValue.DeepClone();
+            defaultsAddedDuringLoad = true;
+            return;
+        }
+
+        if (existingValue.Type == JTokenType.Object && defaultValue.Type == JTokenType.Object)
+        {
+            if (MergeObjectDefaults((JObject)existingValue, (JObject)defaultValue))
+            {
+                defaultsAddedDuringLoad = true;
+            }
+        }
+    }
+
+    private static bool MergeObjectDefaults(JObject target, JObject defaults)
+    {
+        var changed = false;
+
+        foreach (var property in defaults.Properties())
+        {
+            if (!target.TryGetValue(property.Name, out var existingValue) || existingValue.Type == JTokenType.Null)
+            {
+                target[property.Name] = property.Value.DeepClone();
+                changed = true;
+                continue;
+            }
+
+            if (existingValue.Type == JTokenType.Object && property.Value.Type == JTokenType.Object)
+            {
+                changed |= MergeObjectDefaults((JObject)existingValue, (JObject)property.Value);
+            }
+        }
+
+        return changed;
     }
 
     public string? GetValue(string key)

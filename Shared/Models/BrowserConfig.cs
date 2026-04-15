@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace KafkaLens.Shared.Models;
 
 public class BrowserConfig
 {
     public int FontSize { get; set; } = 14;
+    public ISet<int> FetchCounts { get; } = new SortedSet<int>{10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000 };
     public int DefaultFetchCount { get; set; } = 10;
-    public ISet<int> FetchCounts { get; set; } = new SortedSet<int>();
     public bool RestoreTabsOnStartup { get; set; } = true;
-    public bool EagerLoadTopicsOnStartup { get; set; } = false;
-    public List<OpenedTabState> OpenedTabs { get; set; } = new List<OpenedTabState>();
+    public bool EagerLoadTopicsOnStartup { get; set; }
+    public List<OpenedTabState> OpenedTabs { get; set; } = new();
 }
 
 public class OpenedTabState
