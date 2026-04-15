@@ -3,30 +3,26 @@
     <Platform Name="Any CPU" />
     <Platform Name="arm64" />
     <Platform Name="x64" />
-    <Platform Name="x86" />
   </Configurations>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
-  
+
   <!-- Core Projects -->
   <Project Path="Core/Core.csproj" />
   <Project Path="Shared/Shared.csproj" />
   <Project Path="Formatting/Formatting.csproj" />
-  
+
   <!-- Client Projects -->
   <Project Path="GrpcClient/GrpcClient.csproj" />
   <Project Path="LocalClient/LocalClient.csproj" />
-  
-  <!-- API Projects -->
-  <Project Path="GrpcApi/GrpcApi.csproj" />
-  
+
   <!-- UI Projects -->
   <Project Path="ViewModels/ViewModels.csproj" />
   <Project Path="AvaloniaApp/AvaloniaApp/AvaloniaApp.csproj" />
   <Project Path="AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj" />
   <Project Path="Updater/KafkaLens.Updater/KafkaLens.Updater.csproj" />
-  
+
   <!-- Benchmark Projects -->
   <Project Path="Benchmarks/Benchmarks.csproj" />
 
@@ -36,6 +32,5 @@
   <Project Path="GrpcClient.Tests/GrpcClient.Tests.csproj" />
   <Project Path="IntegrationTests/IntegrationTests.csproj" />
   <Project Path="LocalClient.Tests/LocalClient.Tests.csproj" />
-  <Project Path="GrpcApi.Tests/GrpcApi.Tests.csproj" />
   <Project Path="ViewModels.Tests/ViewModels.Tests.csproj" />
 </Solution>

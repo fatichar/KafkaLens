@@ -1,0 +1,21 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="arm64" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+
+  <!-- Core Projects -->
+  <Project Path="Core/Core.csproj" />
+  <Project Path="Shared/Shared.csproj" />
+
+  <!-- API Projects -->
+  <Project Path="GrpcApi/GrpcApi.csproj" />
+
+  <!-- Test Projects -->
+  <Project Path="Core.Tests/Core.Tests.csproj" />
+  <Project Path="GrpcApi.Tests/GrpcApi.Tests.csproj" />
+</Solution>

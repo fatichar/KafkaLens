@@ -6,7 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <OutputType>Library</OutputType>
         <AssemblyName>KafkaLens.Core</AssemblyName>
-        <RootNamespace>$(SolutionName).$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+        <RootNamespace>KafkaLens.Core</RootNamespace>
         <LangVersion>latestmajor</LangVersion>
     </PropertyGroup>
 
@@ -34,7 +34,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!--<ProjectReference Include="..\Client\KafkaLens.Client.csproj" />-->
         <ProjectReference Include="..\Shared\Shared.csproj" />
     </ItemGroup>
 
