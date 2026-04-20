@@ -27,12 +27,15 @@ public class OpenedClusterViewModelBusinessLogicTests
             .Returns(new TopicSettings());
     }
 
-    private OpenedClusterViewModel CreateViewModel(string clusterId = "c1", string clusterName = "TestCluster")
+    private OpenedClusterViewModel CreateViewModel(
+        string clusterId = "c1",
+        string clusterName = "TestCluster",
+        IAppLogService? appLogService = null)
     {
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         var cluster = new KafkaCluster(clusterId, clusterName, "localhost:9092");
         var clusterVm = new ClusterViewModel(cluster, mockClient);
-        return new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, clusterName);
+        return new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, clusterName, appLogService);
     }
 
     private static BrowserConfig CreateBrowserConfig(int defaultFetchCount, params int[] fetchCounts)
@@ -293,6 +296,55 @@ public class OpenedClusterViewModelBusinessLogicTests
         Assert.Equal(ITreeNode.NodeType.Topic, vm.SelectedNodeType);
         Assert.True(vm.IsFetchOptionsEnabled);
         mockClient.Received(1).GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaFact]
+    public async Task FetchMessages_ShouldLogStartAndCompletionCounts()
+    {
+        // Arrange
+        var appLogService = new AppLogService();
+        var vm = CreateViewModel(appLogService: appLogService);
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+        vm.FetchCount = 2;
+
+        var messageStream = new MessageStream();
+        mockClient.GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(messageStream);
+
+        // Act
+        vm.SelectedNode = vm.Topics[0];
+        messageStream.Messages.Add(new Message(1640995200000, new Dictionary<string, byte[]>(), null, []));
+        messageStream.Messages.Add(new Message(1640995200001, new Dictionary<string, byte[]>(), null, []));
+        messageStream.HasMore = false;
+        await Task.Delay(50);
+
+        // Assert
+        Assert.Contains(appLogService.Entries, e => e.Message == "Fetching 2 messages from topic test-topic");
+        Assert.Contains(appLogService.Entries, e => e.Message == "Fetched 2 of 2 messages from topic test-topic");
+    }
+
+    [AvaloniaFact]
+    public async Task FetchMessages_WhenStopped_ShouldLogCancellation()
+    {
+        // Arrange
+        var appLogService = new AppLogService();
+        var vm = CreateViewModel(appLogService: appLogService);
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+        mockClient.GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new MessageStream());
+
+        // Act
+        vm.SelectedNode = vm.Topics[0];
+        vm.ToggleFetchCommand.Execute(null);
+
+        // Assert
+        Assert.Contains(appLogService.Entries, e => e.Message == "Cancelled fetch from topic test-topic");
     }
 
     [AvaloniaFact]

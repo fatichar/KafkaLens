@@ -16,10 +16,12 @@ public partial class MainViewModel
     private async Task LoadClustersOnStartupAsync()
     {
         IsLoadingClusters = true;
+        AppLogService.LogInfo("Loading clusters and clients", "Startup");
         try
         {
             await ClientFactory.LoadClientsAsync();
             var clients = ClientFactory.GetAllClients();
+            AppLogService.LogInfo($"Loaded {clients.Count} clients", "Startup");
 
             var loadTasks = clients.Select(async client =>
             {
@@ -35,6 +37,7 @@ public partial class MainViewModel
             isStartupLoadCompleted = true;
 
             await Task.WhenAll(loadTasks);
+            AppLogService.LogInfo($"Loaded {Clusters.Count} clusters", "Startup");
         }
         finally
         {

@@ -2,6 +2,7 @@ using KafkaLens.Clients;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
+using KafkaLens.ViewModels.Services;
 using Serilog;
 
 namespace KafkaLens.ViewModels;
@@ -11,26 +12,31 @@ public class ClientFactory : IClientFactory
     private const string HTTP_PROTOCOL_PREFIX = "http://";
 
     private readonly IClientInfoRepository infoRepository;
+    private readonly IAppLogService? appLogService;
 
     private readonly IDictionary<string, IKafkaLensClient> clients = new Dictionary<string, IKafkaLensClient>();
 
-    public ClientFactory(IClientInfoRepository infoRepository, IKafkaLensClient localClient)
+    public ClientFactory(IClientInfoRepository infoRepository, IKafkaLensClient localClient, IAppLogService? appLogService = null)
     {
         this.infoRepository = infoRepository;
+        this.appLogService = appLogService;
         clients.Add(localClient.Name, localClient);
     }
 
-    public ClientFactory(IClientInfoRepository infoRepository)
+    public ClientFactory(IClientInfoRepository infoRepository, IAppLogService? appLogService = null)
     {
         this.infoRepository = infoRepository;
+        this.appLogService = appLogService;
     }
 
     public Task LoadClientsAsync()
     {
         var clientInfos = infoRepository.GetAll();
+        appLogService?.LogInfo($"Loading {clientInfos.Count} configured clients", "Startup");
         foreach (var clientInfosKey in clientInfos.Values)
         {
             Log.Information("Found client: {ClientName} in config", clientInfosKey.Name);
+            appLogService?.LogInfo($"Found client {clientInfosKey.Name} in config", "Startup");
         }
 
         var toRemove = clients.Keys
@@ -50,10 +56,12 @@ public class ClientFactory : IClientFactory
                 clients.Remove(clientInfo.Name);
                 var client = CreateClient(clientInfo);
                 clients.Add(client.Name, client);
+                appLogService?.LogInfo($"Loaded client {client.Name}", "Startup");
             }
             catch (Exception)
             {
                 Log.Error("Failed to load client {}", clientInfo.Name);
+                appLogService?.LogError($"Could not load client {clientInfo.Name}", "Startup");
             }
         }
 

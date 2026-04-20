@@ -22,6 +22,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     private readonly IMessageSaver messageSaver;
     private readonly IFormatterService formatterService;
     private readonly ClusterViewModel cluster;
+    private readonly IAppLogService appLogService;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
 
     private static IList<string> FetchPositionsForTopic { get; } = new List<string>();
@@ -152,13 +153,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         IMessageSaver messageSaver,
         IFormatterService formatterService,
         ClusterViewModel cluster,
-        string name)
+        string name,
+        IAppLogService? appLogService = null)
     {
         this.settingsService = settingsService;
         this.topicSettingsService = topicSettingsService;
         this.messageSaver = messageSaver;
         this.formatterService = formatterService;
         this.cluster = cluster;
+        this.appLogService = appLogService ?? new AppLogService();
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
 

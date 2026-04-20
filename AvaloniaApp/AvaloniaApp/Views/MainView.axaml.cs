@@ -1,12 +1,20 @@
+using System;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
+using AvaloniaApp.Services;
+using AvaloniaApp.Utils;
 using KafkaLens.ViewModels;
 
 namespace AvaloniaApp.Views;
 
 public partial class MainView : UserControl
 {
+    private MainViewModel? subscribedViewModel;
+
     public MainView()
     {
         InitializeComponent();
@@ -22,6 +30,7 @@ public partial class MainView : UserControl
         };
 
         MainViewModel.ShowFolderOpenDialog += OnShowFolderOpenDialog;
+        MainViewModel.OpenDiagnosticLogFile += OnOpenDiagnosticLogFile;
 
         MainViewModel.ShowEditClustersDialog += OnShowEditClustersDialog;
 
@@ -64,6 +73,24 @@ public partial class MainView : UserControl
         };
     }
 
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        if (subscribedViewModel != null)
+        {
+            subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            subscribedViewModel.AppLogService.Entries.CollectionChanged -= OnAppLogEntriesChanged;
+        }
+
+        base.OnDataContextChanged(e);
+
+        subscribedViewModel = DataContext as MainViewModel;
+        if (subscribedViewModel != null)
+        {
+            subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            subscribedViewModel.AppLogService.Entries.CollectionChanged += OnAppLogEntriesChanged;
+        }
+    }
+
     private void OnShowEditClustersDialog()
     {
         var mainWindow = GetMainWindow();
@@ -103,5 +130,44 @@ public partial class MainView : UserControl
 
         var dataContext = DataContext as MainViewModel;
         dataContext?.OpenSavedMessages(path);
+    }
+
+    private void OnOpenDiagnosticLogFile()
+    {
+        var locator = new SerilogLogFileLocator(App.GetLogPath());
+        var logFile = locator.FindLatestLogFile();
+        if (string.IsNullOrWhiteSpace(logFile))
+        {
+            MainViewModel.ShowMessage("Log File", "No diagnostic log file was found yet.");
+            return;
+        }
+
+        if (!OsUtils.OpenExternal(logFile))
+            MainViewModel.ShowMessage("Log File", "Could not open the diagnostic log file.");
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsAppLogPanelVisible) &&
+            subscribedViewModel?.IsAppLogPanelVisible == true)
+        {
+            ScrollAppLogToBottom();
+        }
+    }
+
+    private void OnAppLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (subscribedViewModel?.IsAppLogPanelVisible == true && AppLogGrid.SelectedItem == null)
+            ScrollAppLogToBottom();
+    }
+
+    private void ScrollAppLogToBottom()
+    {
+        var entries = subscribedViewModel?.AppLogService.Entries;
+        if (entries is not { Count: > 0 })
+            return;
+
+        var lastEntry = entries[^1];
+        Dispatcher.UIThread.Post(() => AppLogGrid.ScrollIntoView(lastEntry, null));
     }
 }

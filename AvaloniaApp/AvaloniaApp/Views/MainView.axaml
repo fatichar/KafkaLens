@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             xmlns:svc="clr-namespace:KafkaLens.ViewModels.Services;assembly=KafkaLens.ViewModels"
              xmlns:views="clr-namespace:AvaloniaApp.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaApp.Views.MainView"
@@ -38,6 +39,93 @@
                 </DataTemplate>
             </Menu.DataTemplates>
         </Menu>
+        <Border DockPanel.Dock="Bottom"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Background="{DynamicResource ThemeToolbarBackgroundBrush}">
+            <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="26">
+                <Button Grid.Column="0"
+                        Content="Log"
+                        Command="{Binding ToggleAppLogPanelCommand}"
+                        Margin="4,2"
+                        Padding="8,2"
+                        VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding AppLogService.LatestEntry.Message, TargetNullValue=Ready}"
+                           Foreground="{DynamicResource ThemeForegroundBrush}"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="4,0"/>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding AppLogService.LatestEntry.Timestamp, StringFormat={}{0:HH:mm:ss}}"
+                           Foreground="{DynamicResource ThemeForegroundBrush}"
+                           VerticalAlignment="Center"
+                           Margin="8,0"/>
+            </Grid>
+        </Border>
+        <Border DockPanel.Dock="Bottom"
+                IsVisible="{Binding IsAppLogPanelVisible}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Background="{DynamicResource ThemeBackgroundBrush}">
+            <Grid RowDefinitions="Auto,*" MinHeight="160" MaxHeight="260">
+                <DockPanel Grid.Row="0"
+                           LastChildFill="False"
+                           Background="{DynamicResource ThemeToolbarBackgroundBrush}"
+                           Margin="0">
+                    <TextBlock DockPanel.Dock="Left"
+                               Text="Application Log"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ThemeForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="8,4"/>
+                    <Button DockPanel.Dock="Right"
+                            Content="Open Log File"
+                            Command="{Binding OpenDiagnosticLogFileCommand}"
+                            Margin="4"
+                            Padding="8,2"/>
+                    <Button DockPanel.Dock="Right"
+                            Content="Clear"
+                            Command="{Binding ClearAppLogCommand}"
+                            Margin="4"
+                            Padding="8,2"/>
+                </DockPanel>
+                <DataGrid x:Name="AppLogGrid"
+                          Grid.Row="1"
+                          ItemsSource="{Binding AppLogService.Entries}"
+                          AutoGenerateColumns="False"
+                          CanUserSortColumns="True"
+                          IsReadOnly="True"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          Background="{DynamicResource ThemeBackgroundBrush}"
+                          Foreground="{DynamicResource ThemeForegroundBrush}"
+                          BorderThickness="0">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn x:DataType="svc:AppLogEntry"
+                                            Header="Time"
+                                            Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"
+                                            SortMemberPath="Timestamp"
+                                            Width="90"/>
+                        <DataGridTextColumn x:DataType="svc:AppLogEntry"
+                                            Header="Level"
+                                            Binding="{Binding Level}"
+                                            SortMemberPath="Level"
+                                            Width="90"/>
+                        <DataGridTextColumn x:DataType="svc:AppLogEntry"
+                                            Header="Source"
+                                            Binding="{Binding Source}"
+                                            SortMemberPath="Source"
+                                            Width="120"/>
+                        <DataGridTextColumn x:DataType="svc:AppLogEntry"
+                                            Header="Message"
+                                            Binding="{Binding Message}"
+                                            SortMemberPath="Message"
+                                            Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
         <TabControl ItemsSource="{Binding OpenedClusters}"
                     SelectedIndex="{Binding SelectedIndex}"
                     Background="{DynamicResource ThemeBackgroundBrush}"

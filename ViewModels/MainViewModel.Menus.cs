@@ -13,6 +13,7 @@ public partial class MainViewModel
     private readonly ObservableCollection<MenuItemViewModel> openClusterMenuItems = new();
     private MenuItemViewModel openMenu = null!;
     private MenuItemViewModel closeTabMenuItem = null!;
+    private MenuItemViewModel appLogMenuItem = null!;
 
     private void CreateMenuItems()
     {
@@ -130,8 +131,24 @@ public partial class MainViewModel
     private MenuItemViewModel CreateViewMenu() => new()
     {
         Header = "_View",
-        Items = new() { new MenuItemViewModel { Header = "Theme", Items = CreateThemeMenuItems() } }
+        Items = new()
+        {
+            new MenuItemViewModel { Header = "Theme", Items = CreateThemeMenuItems() },
+            CreateAppLogMenuItem()
+        }
     };
+
+    private MenuItemViewModel CreateAppLogMenuItem()
+    {
+        appLogMenuItem = new MenuItemViewModel
+        {
+            Header = "_Application Log",
+            Command = ToggleAppLogPanelCommand,
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = IsAppLogPanelVisible
+        };
+        return appLogMenuItem;
+    }
 
     private ObservableCollection<MenuItemViewModel> CreateThemeMenuItems()
     {
@@ -213,5 +230,11 @@ public partial class MainViewModel
             ?.Items?.FirstOrDefault(m => m.Header?.Contains("Auto-check") == true);
         if (autoCheckMenu != null)
             autoCheckMenu.IsChecked = AutoCheckForUpdates;
+    }
+
+    partial void OnIsAppLogPanelVisibleChanged(bool value)
+    {
+        if (appLogMenuItem != null)
+            appLogMenuItem.IsChecked = value;
     }
 }

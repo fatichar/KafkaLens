@@ -23,6 +23,7 @@ public class MainViewModelBusinessLogicTests
     private readonly IMessageSaver messageSaver = Substitute.For<IMessageSaver>();
     private readonly IFormatterService formatterService = Substitute.For<IFormatterService>();
     private readonly IUpdateService updateService = Substitute.For<IUpdateService>();
+    private readonly IAppLogService appLogService = new AppLogService();
     private readonly IKafkaLensClient mockClient = Substitute.For<IKafkaLensClient>();
     private readonly AppConfig appConfig = new() { Title = "Test", ClusterRefreshIntervalSeconds = 100 };
     private readonly PluginRegistry pluginRegistry;
@@ -81,7 +82,8 @@ public class MainViewModelBusinessLogicTests
             repoClient,
             pluginInstaller,
             repoManager,
-            themeService);
+            themeService,
+            appLogService);
     }
 
     private (ClusterViewModel vm, KafkaCluster model) CreateClusterVmWithModel(string id = "c1", string name = "Cluster1", string address = "localhost:9092")
@@ -197,6 +199,21 @@ public class MainViewModelBusinessLogicTests
         Assert.Single(vm.OpenedClusters);
         Assert.Equal(cluster.Name, vm.OpenedClusters[0].Name);
         Assert.Equal(0, vm.SelectedIndex);
+    }
+
+    [AvaloniaFact]
+    public async Task OpenCluster_ShouldLogUserFacingEvent()
+    {
+        // Arrange
+        var cluster = CreateClusterVm();
+        var vm = CreateViewModel(new ObservableCollection<ClusterViewModel> { cluster });
+        await vm.LoadClusters();
+
+        // Act
+        vm.OpenCluster(cluster);
+
+        // Assert
+        Assert.Contains(appLogService.Entries, e => e.Message == "Opening cluster Cluster1");
     }
 
     // [AvaloniaFact]

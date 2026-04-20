@@ -20,6 +20,7 @@ public partial class OpenedClusterViewModel
         isSyncingTopics = true;
         try
         {
+            appLogService.LogInfo($"Loading topics for {Name}", "Topics");
             await cluster.LoadTopicsCommand.ExecuteAsync(null);
             Topics.Clear();
             foreach (var topic in cluster.Topics)
@@ -32,10 +33,12 @@ public partial class OpenedClusterViewModel
 
             FilterTopics();
             RestorePendingSessionState();
+            appLogService.LogInfo($"Loaded {Topics.Count} topics for {Name}", "Topics");
         }
         catch (Exception e)
         {
             Log.Error(e, "Failed to load topics for opened cluster {ClusterName}", Name);
+            appLogService.LogError($"Could not load topics for {Name}: {e.Message}", "Topics");
         }
         finally
         {

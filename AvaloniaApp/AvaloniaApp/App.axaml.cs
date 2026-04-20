@@ -58,6 +58,7 @@ public class App : Application
 
         var services = new ServiceCollection();
         services.AddSingleton(config);
+        services.AddSingleton<IAppLogService, AppLogService>();
 
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var kafkaLensDataPath = Path.Combine(appDataPath, "KafkaLens");
@@ -245,7 +246,7 @@ public class App : Application
         System.Diagnostics.Debug.WriteLine("Log to console");
     }
 
-    private static string GetLogPath()
+    public static string GetLogPath()
     {
 #if RELEASE
         // In Release, use AppData\Local\KafkaLens

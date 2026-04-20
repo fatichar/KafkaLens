@@ -23,6 +23,7 @@ public partial class MainViewModel : ViewModelBase
     public IClientInfoRepository ClientInfoRepository { get; }
     public IClientFactory ClientFactory { get; }
     public IUpdateService UpdateService { get; }
+    public IAppLogService AppLogService { get; }
 
     // Services
     internal readonly IMessageSaver messageSaver;
@@ -54,10 +55,14 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand ShowPreferencesCommand { get; }
     public IRelayCommand ShowFormatterPreferencesCommand { get; }
     public IRelayCommand ShowPluginManagerCommand { get; }
+    public IRelayCommand ToggleAppLogPanelCommand { get; }
+    public IRelayCommand ClearAppLogCommand { get; }
+    public IRelayCommand OpenDiagnosticLogFileCommand { get; }
 
     // UI callbacks (set by the view layer)
     public static Action ShowAboutDialog { get; set; } = () => { };
     public static Action ShowFolderOpenDialog { get; set; } = () => { };
+    public static Action OpenDiagnosticLogFile { get; set; } = () => { };
     public static Action ShowEditClustersDialog { get; set; } = () => { };
     public static Action<UpdateViewModel> ShowUpdateDialog { get; set; } = _ => { };
     public static Action<PreferencesViewModel> ShowPreferencesDialog { get; set; } = _ => { };
@@ -71,6 +76,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string currentTheme;
     [ObservableProperty] private bool autoCheckForUpdates;
     [ObservableProperty] private bool isLoadingClusters;
+    [ObservableProperty] private bool isAppLogPanelVisible;
 
     private DispatcherTimer? timer;
     private Task? _startupTask;
@@ -116,7 +122,8 @@ public partial class MainViewModel : ViewModelBase
         PluginRepositoryClient repoClient,
         PluginInstaller pluginInstaller,
         RepositoryManager repoManager,
-        IThemeService themeService)
+        IThemeService themeService,
+        IAppLogService? appLogService = null)
     {
         this.messageSaver = messageSaver;
         this.formatterService = formatterService;
@@ -133,8 +140,10 @@ public partial class MainViewModel : ViewModelBase
         _pluginInstaller = pluginInstaller;
         _repoManager     = repoManager;
         _themeService    = themeService;
+        AppLogService = appLogService ?? new AppLogService();
 
         Log.Information("Creating MainViewModel");
+        AppLogService.LogInfo("KafkaLens started", "Startup");
 
         EditClustersCommand = new RelayCommand(EditClustersAsync);
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
@@ -147,6 +156,9 @@ public partial class MainViewModel : ViewModelBase
         ShowPreferencesCommand = new RelayCommand(ShowPreferences);
         ShowFormatterPreferencesCommand = new RelayCommand(() => ShowFormatterPreferences());
         ShowPluginManagerCommand = new RelayCommand(OpenPluginManager);
+        ToggleAppLogPanelCommand = new RelayCommand(() => IsAppLogPanelVisible = !IsAppLogPanelVisible);
+        ClearAppLogCommand = new RelayCommand(AppLogService.Clear);
+        OpenDiagnosticLogFileCommand = new RelayCommand(() => OpenDiagnosticLogFile());
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
         Clusters.CollectionChanged += OnClustersChanged;

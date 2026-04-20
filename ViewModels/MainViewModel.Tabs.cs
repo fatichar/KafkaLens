@@ -18,6 +18,7 @@ public partial class MainViewModel
         if (cluster == null)
         {
             Log.Error("Failed to find cluster with id {ClusterId}", clusterId);
+            AppLogService.LogError("Could not open cluster: cluster was not found", "Cluster");
             return;
         }
         OpenCluster(cluster);
@@ -26,6 +27,7 @@ public partial class MainViewModel
     private void OpenCluster(ClusterViewModel clusterViewModel, OpenedTabState? tabState)
     {
         Log.Information("Opening cluster: {ClusterName}", clusterViewModel.Name);
+        AppLogService.LogInfo($"Opening cluster {clusterViewModel.Name}", "Cluster");
         var newName = clusterViewModel.Name;
 
         openedClustersMap.TryGetValue(clusterViewModel.Id, out var alreadyOpened);
@@ -40,7 +42,7 @@ public partial class MainViewModel
         }
 
         var openedCluster = new OpenedClusterViewModel(
-            settingsService, topicSettingsService, messageSaver, formatterService, clusterViewModel, newName);
+            settingsService, topicSettingsService, messageSaver, formatterService, clusterViewModel, newName, AppLogService);
         openedCluster.CloseCommand = new RelayCommand(() => CloseTab(openedCluster));
         openedCluster.ApplyOpenedTabState(tabState);
         alreadyOpened.Add(openedCluster);
@@ -68,7 +70,7 @@ public partial class MainViewModel
 
         var newCluster = new NewKafkaCluster(clusterName, path);
         var cluster = await savedMessagesClient.AddAsync(newCluster);
-        var clusterViewModel = new ClusterViewModel(cluster, savedMessagesClient);
+        var clusterViewModel = new ClusterViewModel(cluster, savedMessagesClient, AppLogService);
         Clusters.Add(clusterViewModel);
         return clusterViewModel;
     }
@@ -76,6 +78,7 @@ public partial class MainViewModel
     internal void CloseTab(OpenedClusterViewModel openedCluster)
     {
         Log.Information("Closing tab: {TabName}", openedCluster.Name);
+        AppLogService.LogInfo($"Closed {openedCluster.Name}", "Cluster");
         if (openedClustersMap.TryGetValue(openedCluster.ClusterId, out var openedList))
         {
             openedList.Remove(openedCluster);

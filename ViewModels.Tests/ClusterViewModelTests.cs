@@ -1,4 +1,6 @@
+using Avalonia.Headless.XUnit;
 using KafkaLens.Shared;
+using KafkaLens.ViewModels.Services;
 
 namespace KafkaLens.ViewModels.Tests;
 
@@ -138,5 +140,44 @@ public class ClusterViewModelTests
         Assert.Equal(ConnectionState.Failed, viewModel.Status);
         Assert.Equal("Disconnected", viewModel.ConnectionStatus);
         Assert.Equal("Red", viewModel.StatusColor);
+    }
+
+    [Fact]
+    public async Task CheckConnectionAsync_WhenValidationReturnsFalseButTopicsLoad_ShouldSetStatusToConnected()
+    {
+        // Arrange
+        var viewModel = new ClusterViewModel(cluster, mockClient);
+        var topics = fixture.CreateMany<Topic>(2).ToList();
+        mockClient.ValidateConnectionAsync(cluster.Address).Returns(Task.FromResult(false));
+        mockClient.GetTopicsAsync(cluster.Id).Returns((IList<Topic>)topics);
+
+        // Act
+        await viewModel.CheckConnectionAsync();
+
+        // Assert
+        Assert.Equal(ConnectionState.Connected, viewModel.Status);
+        Assert.Null(viewModel.LastError);
+        Assert.Equal(topics.Count, viewModel.Topics.Count);
+        await mockClient.Received(1).ValidateConnectionAsync(cluster.Address);
+        await mockClient.Received(1).GetTopicsAsync(cluster.Id);
+    }
+
+    [AvaloniaFact]
+    public async Task CheckConnectionAsync_WhenThrows_ShouldLogFriendlyErrorWithoutStackTrace()
+    {
+        // Arrange
+        var appLogService = new AppLogService();
+        var viewModel = new ClusterViewModel(cluster, mockClient, appLogService);
+        mockClient.ValidateConnectionAsync(cluster.Address)
+            .Returns(Task.FromException<bool>(new Exception("Broker unavailable")));
+
+        // Act
+        await viewModel.CheckConnectionAsync();
+
+        // Assert
+        var entry = Assert.Single(appLogService.Entries.Where(e => e.Level == AppLogLevel.Error));
+        Assert.Contains("Broker unavailable", entry.Message);
+        Assert.DoesNotContain(" at ", entry.Message);
+        Assert.DoesNotContain(nameof(Exception), entry.Message);
     }
 }

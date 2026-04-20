@@ -12,18 +12,25 @@ public partial class OpenedClusterViewModel
     private readonly List<IMessageLoadListener> messageLoadListeners = new();
     private readonly List<MessageViewModel> pendingMessages = new();
     private CancellationTokenSource? fetchCts;
+    private string? activeFetchDescription;
+    private int activeFetchRequestedCount;
 
     private void OnStreamFinished()
     {
         Dispatcher.UIThread.InvokeAsync(() =>
         {
             IsLoading = false;
+            appLogService.LogInfo(
+                $"Fetched {messages?.Messages.Count ?? 0} of {activeFetchRequestedCount} messages from {activeFetchDescription}",
+                "Fetch");
             messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
         });
     }
 
     private void StopLoading()
     {
+        if (IsLoading && activeFetchDescription != null)
+            appLogService.LogInfo($"Cancelled fetch from {activeFetchDescription}", "Fetch");
         fetchCts?.Cancel();
         IsLoading = false;
     }
@@ -45,16 +52,31 @@ public partial class OpenedClusterViewModel
         IsLoading = true;
 
         var fetchOptions = CreateFetchOptions();
+        activeFetchDescription = GetFetchDescription(selectedNode);
+        activeFetchRequestedCount = fetchOptions.Limit;
+        appLogService.LogInfo(
+            $"Fetching {fetchOptions.Limit} messages from {activeFetchDescription}",
+            "Fetch");
         messageLoadListeners.ForEach(l => l.MessageLoadingStarted());
 
-        messages = selectedNode switch
+        try
         {
-            TopicViewModel topic => KafkaLensClient.GetMessageStream(
-                cluster.Id, topic.Name, fetchOptions, fetchCts.Token),
-            PartitionViewModel partition => KafkaLensClient.GetMessageStream(
-                cluster.Id, partition.TopicName, partition.Id, fetchOptions, fetchCts.Token),
-            _ => null
-        };
+            messages = selectedNode switch
+            {
+                TopicViewModel topic => KafkaLensClient.GetMessageStream(
+                    cluster.Id, topic.Name, fetchOptions, fetchCts.Token),
+                PartitionViewModel partition => KafkaLensClient.GetMessageStream(
+                    cluster.Id, partition.TopicName, partition.Id, fetchOptions, fetchCts.Token),
+                _ => null
+            };
+        }
+        catch (Exception e)
+        {
+            IsLoading = false;
+            Log.Error(e, "Failed to fetch messages for {ClusterName}", Name);
+            appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {e.Message}", "Fetch");
+            return;
+        }
 
         if (messages != null)
         {
@@ -62,6 +84,13 @@ public partial class OpenedClusterViewModel
             messages.Finished += OnStreamFinished;
         }
     }
+
+    private static string GetFetchDescription(ITreeNode node) => node switch
+    {
+        TopicViewModel topic => $"topic {topic.Name}",
+        PartitionViewModel partition => $"topic {partition.TopicName}, partition {partition.Id}",
+        _ => node.Name
+    };
 
     private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {

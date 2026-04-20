@@ -1,9 +1,10 @@
 using KafkaLens.Shared;
+using KafkaLens.ViewModels.Services;
 using Serilog;
 
 namespace KafkaLens.ViewModels;
 
-public class ClusterFactory(IClientFactory clientFactory) : IClusterFactory
+public class ClusterFactory(IClientFactory clientFactory, IAppLogService? appLogService = null) : IClusterFactory
 {
     public async Task<IReadOnlyList<ClusterViewModel>> LoadClustersAsync()
     {
@@ -55,12 +56,16 @@ public class ClusterFactory(IClientFactory clientFactory) : IClusterFactory
         try
         {
             Log.Information("Loading clusters for client: {ClientName}", client.Name);
+            appLogService?.LogInfo($"Loading clusters from {client.Name}", "Startup");
             var clusters = await client.GetAllClustersAsync();
-            return clusters.Select(cluster => new ClusterViewModel(cluster, client)).ToList();
+            var result = clusters.Select(cluster => new ClusterViewModel(cluster, client, appLogService)).ToList();
+            appLogService?.LogInfo($"Loaded {result.Count} clusters from {client.Name}", "Startup");
+            return result;
         }
         catch (Exception e)
         {
             Log.Error(e, "Error loading clusters for client: {ClientName}", client.Name);
+            appLogService?.LogError($"Could not load clusters from {client.Name}: {e.Message}", "Startup");
             return Array.Empty<ClusterViewModel>();
         }
     }
