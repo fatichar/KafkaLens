@@ -90,7 +90,7 @@ public partial class MainViewModel
             {
                 existing.Name = loaded.Name;
                 existing.Address = loaded.Address;
-                existing.Status = loaded.Status;
+                ApplyLoadedStatus(existing, loaded);
             }
             else
             {
@@ -117,7 +117,7 @@ public partial class MainViewModel
             {
                 existing.Name = loaded.Name;
                 existing.Address = loaded.Address;
-                existing.Status = loaded.Status;
+                ApplyLoadedStatus(existing, loaded);
             }
             else
             {
@@ -204,4 +204,10 @@ public partial class MainViewModel
     }
 
     private static string GetClusterKey(ClusterViewModel cluster) => $"{cluster.Client.Name}:{cluster.Id}";
+
+    private static void ApplyLoadedStatus(ClusterViewModel existing, ClusterViewModel loaded)
+    {
+        if (loaded.Status != ConnectionState.Unknown || existing.Status == ConnectionState.Unknown)
+            existing.Status = loaded.Status;
+    }
 }

@@ -158,6 +158,31 @@ public class MainViewModelBusinessLogicTests
     }
 
     [AvaloniaFact]
+    public async Task LoadClusters_WhenExistingClusterHasKnownStatus_ShouldIgnoreUnknownSnapshotStatus()
+    {
+        // Arrange
+        var cluster = CreateClusterVm("c1", "Cluster1");
+        cluster.Status = ConnectionState.Connected;
+        mockClient.ValidateConnectionAsync(cluster.Address).Returns(Task.FromResult(true));
+
+        var vm = CreateViewModel(new ObservableCollection<ClusterViewModel> { cluster });
+        await vm.LoadClusters();
+
+        var unknownSnapshotCluster = CreateClusterVm("c1", "Cluster1");
+        unknownSnapshotCluster.Status = ConnectionState.Unknown;
+        clusterFactory.LoadClustersForClientAsync(mockClient).Returns(
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel> { unknownSnapshotCluster }));
+
+        // Act
+        await vm.LoadClusters();
+
+        // Assert
+        Assert.Single(vm.Clusters);
+        Assert.Equal(ConnectionState.Connected, vm.Clusters[0].Status);
+        Assert.Equal("Green", vm.Clusters[0].StatusColor);
+    }
+
+    [AvaloniaFact]
     public async Task OpenCluster_ShouldAddToOpenedClusters()
     {
         // Arrange

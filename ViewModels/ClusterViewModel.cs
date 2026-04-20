@@ -35,7 +35,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
 
     public async Task CheckConnectionAsync(bool eagerLoadTopics = false)
     {
-        Status = ConnectionState.Checking;
+        SetCheckingIfStatusIsUnknown();
         if (eagerLoadTopics)
         {
             // By loading topics, we implicitly validate the connection
@@ -64,7 +64,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         isLoadingTopics = true;
         try
         {
-            Status = ConnectionState.Checking;
+            SetCheckingIfStatusIsUnknown();
             Topics.Clear();
             var topics = await Client.GetTopicsAsync(cluster.Id);
             foreach (var topic in topics)
@@ -83,5 +83,11 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         {
             isLoadingTopics = false;
         }
+    }
+
+    private void SetCheckingIfStatusIsUnknown()
+    {
+        if (Status == ConnectionState.Unknown)
+            Status = ConnectionState.Checking;
     }
 }

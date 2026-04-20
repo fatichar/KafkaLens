@@ -47,6 +47,51 @@ public class ClusterViewModelTests
     }
 
     [Fact]
+    public async Task CheckConnectionAsync_WhenStatusIsKnown_ShouldKeepPreviousStatusWhileChecking()
+    {
+        // Arrange
+        cluster.Status = ConnectionState.Connected;
+        var viewModel = new ClusterViewModel(cluster, mockClient);
+        var pendingResult = new TaskCompletionSource<bool>();
+        mockClient.ValidateConnectionAsync(cluster.Address).Returns(pendingResult.Task);
+
+        // Act
+        var checkTask = viewModel.CheckConnectionAsync();
+
+        // Assert
+        Assert.Equal(ConnectionState.Connected, viewModel.Status);
+        Assert.Equal("Green", viewModel.StatusColor);
+        Assert.False(viewModel.IsChecking);
+
+        pendingResult.SetResult(false);
+        await checkTask;
+
+        Assert.Equal(ConnectionState.Failed, viewModel.Status);
+    }
+
+    [Fact]
+    public async Task CheckConnectionAsync_WhenStatusIsUnknown_ShouldShowCheckingUntilResultIsAvailable()
+    {
+        // Arrange
+        cluster.Status = ConnectionState.Unknown;
+        var viewModel = new ClusterViewModel(cluster, mockClient);
+        var pendingResult = new TaskCompletionSource<bool>();
+        mockClient.ValidateConnectionAsync(cluster.Address).Returns(pendingResult.Task);
+
+        // Act
+        var checkTask = viewModel.CheckConnectionAsync();
+
+        // Assert
+        Assert.Equal(ConnectionState.Checking, viewModel.Status);
+        Assert.True(viewModel.IsChecking);
+
+        pendingResult.SetResult(true);
+        await checkTask;
+
+        Assert.Equal(ConnectionState.Connected, viewModel.Status);
+    }
+
+    [Fact]
     public async Task LoadTopicsAsync_ShouldLoadTopicsSuccessfully()
     {
         // Arrange
