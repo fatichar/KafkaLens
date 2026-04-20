@@ -36,46 +36,42 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         LoadTopicsCommand = new AsyncRelayCommand(LoadTopicsAsync);
     }
 
-    public async Task CheckConnectionAsync(bool eagerLoadTopics = false)
+    public async Task CheckConnectionAsync()
+    {
+        await CheckConnectionAsync(logTopicLoad: true);
+    }
+
+    private async Task CheckConnectionAsync(bool logTopicLoad)
     {
         SetCheckingIfStatusIsUnknown();
         appLogService?.LogInfo($"Connecting to {Name}", "Connection");
-        if (eagerLoadTopics)
+        try
         {
-            // By loading topics, we implicitly validate the connection
-            // AND cache the topics for instantaneous UI loading.
-            await LoadTopicsAsync();
+            var isConnected = await Client.ValidateConnectionAsync(Address);
+            if (isConnected)
+            {
+                LastError = null;
+                Status = ConnectionState.Connected;
+                appLogService?.LogInfo($"Connected to {Name}", "Connection");
+            }
+            else
+            {
+                await ConfirmConnectionByLoadingTopicsAsync(logTopicLoad);
+            }
         }
-        else
+        catch (Exception e)
         {
-            try
-            {
-                var isConnected = await Client.ValidateConnectionAsync(Address);
-                if (isConnected)
-                {
-                    LastError = null;
-                    Status = ConnectionState.Connected;
-                    appLogService?.LogInfo($"Connected to {Name}", "Connection");
-                }
-                else
-                {
-                    await ConfirmConnectionByLoadingTopicsAsync();
-                }
-            }
-            catch (Exception e)
-            {
-                LastError = e.Message;
-                Status = ConnectionState.Failed;
-                appLogService?.LogError($"Could not connect to {Name}: {e.Message}", "Connection");
-            }
+            LastError = e.Message;
+            Status = ConnectionState.Failed;
+            appLogService?.LogError($"Could not connect to {Name}: {e.Message}", "Connection");
         }
     }
 
-    private async Task ConfirmConnectionByLoadingTopicsAsync()
+    private async Task ConfirmConnectionByLoadingTopicsAsync(bool logTopicLoad)
     {
         try
         {
-            await LoadTopicsAsync();
+            await LoadTopicsAsync(logTopicLoad);
         }
         catch (Exception e)
         {
@@ -97,12 +93,18 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     private bool isLoadingTopics;
     private async Task LoadTopicsAsync()
     {
+        await LoadTopicsAsync(logTopicLoad: true);
+    }
+
+    internal async Task LoadTopicsAsync(bool logTopicLoad)
+    {
         if (isLoadingTopics) return;
         isLoadingTopics = true;
         try
         {
             SetCheckingIfStatusIsUnknown();
-            appLogService?.LogInfo($"Loading topics for {Name}", "Topics");
+            if (logTopicLoad)
+                appLogService?.LogInfo($"Loading topics for {Name}", "Topics");
             Topics.Clear();
             var topics = await Client.GetTopicsAsync(cluster.Id);
             foreach (var topic in topics)
@@ -111,14 +113,16 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
             }
             Status = ConnectionState.Connected;
             LastError = null;
-            appLogService?.LogInfo($"Loaded {Topics.Count} topics for {Name}", "Topics");
+            if (logTopicLoad)
+                appLogService?.LogInfo($"Loaded {Topics.Count} topics for {Name}", "Topics");
         }
         catch (Exception e)
         {
             Serilog.Log.Error(e, "Failed to load topics for cluster {ClusterName}", Name);
             LastError = e.Message;
             Status = ConnectionState.Failed;
-            appLogService?.LogError($"Could not load topics for {Name}: {e.Message}", "Topics");
+            if (logTopicLoad)
+                appLogService?.LogError($"Could not load topics for {Name}: {e.Message}", "Topics");
         }
         finally
         {

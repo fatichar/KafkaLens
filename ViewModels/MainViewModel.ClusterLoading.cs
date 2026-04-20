@@ -9,6 +9,12 @@ namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel
 {
+    private static readonly TimeSpan[] StartupHealthCheckDelays =
+    [
+        TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(15)
+    ];
+
     private bool isStartupLoadCompleted;
     private bool isOpenedClustersSubscriptionInitialized;
     private readonly SemaphoreSlim clusterRefreshLock = new(1, 1);
@@ -45,6 +51,7 @@ public partial class MainViewModel
         }
 
         await TryRestoreTabsAsync();
+        ScheduleStartupHealthChecks();
     }
 
     private async Task RefreshClustersForHealthCheckAsync()
@@ -84,8 +91,6 @@ public partial class MainViewModel
     {
         var existingByKey = Clusters.ToDictionary(GetClusterKey);
         var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
-        var config = settingsService.GetBrowserConfig();
-
         foreach (var loaded in loadedClusters)
         {
             var key = GetClusterKey(loaded);
@@ -98,7 +103,7 @@ public partial class MainViewModel
             else
             {
                 Clusters.Add(loaded);
-                _ = loaded.CheckConnectionAsync(config.EagerLoadTopicsOnStartup);
+                _ = loaded.CheckConnectionAsync();
             }
         }
 
@@ -111,8 +116,6 @@ public partial class MainViewModel
         var existingForClients = Clusters.Where(c => clientNames.Contains(c.Client.Name)).ToList();
         var existingByKey = existingForClients.ToDictionary(GetClusterKey);
         var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
-        var config = settingsService.GetBrowserConfig();
-
         foreach (var loaded in loadedClusters)
         {
             var key = GetClusterKey(loaded);
@@ -125,7 +128,7 @@ public partial class MainViewModel
             else
             {
                 Clusters.Add(loaded);
-                _ = loaded.CheckConnectionAsync(config.EagerLoadTopicsOnStartup);
+                _ = loaded.CheckConnectionAsync();
             }
         }
 
@@ -135,22 +138,33 @@ public partial class MainViewModel
 
     private async Task RefreshDisconnectedClustersAsync()
     {
-        var config = settingsService.GetBrowserConfig();
         var disconnected = Clusters.Where(c => c.Status != ConnectionState.Connected).ToList();
-        await Task.WhenAll(disconnected.Select(c => CheckConnectionSafeAsync(c, config.EagerLoadTopicsOnStartup)));
+        await Task.WhenAll(disconnected.Select(CheckConnectionSafeAsync));
     }
 
-    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster, bool eagerLoadTopics)
+    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster)
     {
         try
         {
-            await cluster.CheckConnectionAsync(eagerLoadTopics);
+            await cluster.CheckConnectionAsync();
         }
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed connection check for cluster {ClusterName}", cluster.Name);
             cluster.Status = ConnectionState.Failed;
         }
+    }
+
+    private void ScheduleStartupHealthChecks()
+    {
+        foreach (var delay in StartupHealthCheckDelays)
+            _ = RunDelayedHealthCheckAsync(delay);
+    }
+
+    private async Task RunDelayedHealthCheckAsync(TimeSpan delay)
+    {
+        await Task.Delay(delay);
+        await RefreshClustersForHealthCheckAsync();
     }
 
     private async Task DiscoverClientsNeedingRefreshAsync()

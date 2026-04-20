@@ -21,7 +21,15 @@ public partial class OpenedClusterViewModel
         try
         {
             appLogService.LogInfo($"Loading topics for {Name}", "Topics");
-            await cluster.LoadTopicsCommand.ExecuteAsync(null);
+            await cluster.LoadTopicsAsync(logTopicLoad: false);
+            if (cluster.Status == ConnectionState.Failed)
+            {
+                appLogService.LogError(
+                    $"Could not load topics for {Name}: {cluster.LastError ?? "Failed to load topics"}",
+                    "Topics");
+                return;
+            }
+
             Topics.Clear();
             foreach (var topic in cluster.Topics)
             {

@@ -56,12 +56,6 @@ public partial class PreferencesViewModel : ViewModelBase
     private int? selectedDefaultFetchCount;
 
     [ObservableProperty]
-    private bool fastConnectionCheck;
-
-    [ObservableProperty]
-    private bool deepConnectionCheck;
-
-    [ObservableProperty]
     private int selectedTabIndex;
 
     public IRelayCommand SaveCommand { get; }
@@ -95,9 +89,6 @@ public partial class PreferencesViewModel : ViewModelBase
         fetchCountsString = string.Join(", ", browserConfig.FetchCounts);
         LoadAvailableFetchCounts();
         SelectedDefaultFetchCount = browserConfig.DefaultFetchCount;
-
-        FastConnectionCheck = !browserConfig.EagerLoadTopicsOnStartup;
-        DeepConnectionCheck = browserConfig.EagerLoadTopicsOnStartup;
 
         LoadFormatterSettings();
 
@@ -349,8 +340,6 @@ public partial class PreferencesViewModel : ViewModelBase
         // Keep the latest runtime tab state instead of overwriting with a potentially stale dialog snapshot.
         var latestBrowserConfig = settingsService.GetBrowserConfig();
         BrowserConfig.OpenedTabs = latestBrowserConfig.OpenedTabs?.ToList() ?? new List<OpenedTabState>();
-
-        BrowserConfig.EagerLoadTopicsOnStartup = DeepConnectionCheck;
 
         settingsService.SaveKafkaConfig(KafkaConfig);
         settingsService.SaveBrowserConfig(BrowserConfig);
