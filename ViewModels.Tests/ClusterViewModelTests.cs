@@ -175,7 +175,7 @@ public class ClusterViewModelTests
         await viewModel.CheckConnectionAsync();
 
         // Assert
-        var entry = Assert.Single(appLogService.Entries.Where(e => e.Level == AppLogLevel.Error));
+        var entry = Assert.Single(appLogService.Entries, e => e.Level == AppLogLevel.Error);
         Assert.Contains("Broker unavailable", entry.Message);
         Assert.DoesNotContain(" at ", entry.Message);
         Assert.DoesNotContain(nameof(Exception), entry.Message);
