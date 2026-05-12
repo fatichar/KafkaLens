@@ -32,22 +32,22 @@ public partial class MainWindow : Window
         {
             Log.Information("Started KafkaLens Updater - Initializing UI");
             Log.Information("Current working directory: {CurrentDir}", Directory.GetCurrentDirectory());
-            
+
             InitializeComponent();
             Log.Information("UI components initialized");
-            
+
             var args = Environment.GetCommandLineArgs();
             Log.Information("Retrieved command line arguments: {ArgCount} args", args.Length);
-            
+
             ParseArgs(args);
             Log.Information("Arguments parsed successfully");
 
-            Opened += async (s, e) => 
+            Opened += async (s, e) =>
             {
                 Log.Information("Window opened, starting update process");
                 await StartUpdate();
             };
-            
+
             Log.Information("MainWindow constructor completed successfully");
         }
         catch (Exception ex)
@@ -172,10 +172,10 @@ public partial class MainWindow : Window
             {
                 Log.Information("Installer launched successfully with PID {Pid}", installProcess.Id);
                 await UpdateStatus("Installer launched", "Please follow the installer instructions to complete the update.");
-                
+
                 // Give user time to see the message
                 await Task.Delay(3000);
-                
+
                 Log.Information("Updater exiting - installer will handle the rest");
                 Environment.Exit(0);
             }
@@ -378,7 +378,7 @@ public partial class MainWindow : Window
         var startInfo = new ProcessStartInfo
         {
             FileName = "tar",
-            Arguments = $"-xzf \"{archivePath}\" -C \"{destination}\"",
+            ArgumentList = { "-xzf", archivePath, "-C", destination },
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
