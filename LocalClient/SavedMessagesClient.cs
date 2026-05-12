@@ -32,7 +32,7 @@ public class SavedMessagesClient : ISavedMessagesClient
     {
         Validate(newCluster);
 
-        var cluster = CreateCluster(newCluster);
+        var cluster = ClusterInfo.Create(newCluster);
         clusters.Add(cluster.Id, cluster);
 
         return ToModel(cluster);
@@ -49,14 +49,6 @@ public class SavedMessagesClient : ISavedMessagesClient
             Log.Error(e, "Failed to create consumer", clusterInfo);
             throw;
         }
-    }
-
-    private static ClusterInfo CreateCluster(NewKafkaCluster newCluster)
-    {
-        return new ClusterInfo(
-            Guid.NewGuid().ToString(),
-            newCluster.Name,
-            newCluster.Address);
     }
 
     private IKafkaConsumer CreateConsumer(string bootstrapServers)

@@ -56,7 +56,7 @@ public class SharedClient(
     {
         Validate(newCluster);
 
-        var cluster = CreateCluster(newCluster);
+        var cluster = Shared.Entities.ClusterInfo.Create(newCluster);
         try
         {
             infoRepository.Add(cluster);
@@ -83,14 +83,6 @@ public class SharedClient(
             Log.Error(e, "Failed to create consumer", clusterInfo);
             throw;
         }
-    }
-
-    private static Shared.Entities.ClusterInfo CreateCluster(NewKafkaCluster newCluster)
-    {
-        return new Shared.Entities.ClusterInfo(
-            Guid.NewGuid().ToString(),
-            newCluster.Name,
-            newCluster.Address);
     }
 
     private IKafkaConsumer CreateConsumer(string address)

@@ -56,7 +56,7 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     {
         Validate(newCluster);
 
-        var cluster = CreateCluster(newCluster);
+        var cluster = ClusterInfo.Create(newCluster);
         try
         {
             infoRepository.Add(cluster);
@@ -81,14 +81,6 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
             Log.Error(e, "Failed to create consumer", clusterInfo);
             throw;
         }
-    }
-
-    private static ClusterInfo CreateCluster(NewKafkaCluster newCluster)
-    {
-        return new ClusterInfo(
-            Guid.NewGuid().ToString(),
-            newCluster.Name,
-            newCluster.Address);
     }
 
     private IKafkaConsumer CreateConsumer(string address)

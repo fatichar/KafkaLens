@@ -61,11 +61,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
             throw new Exception($"Cluster with name \"{name}\" already exists. Names are not case sensitive.");
         }
 
-        var clusterInfo = new ClusterInfo(
-            Guid.NewGuid().ToString(),
-            name,
-            address
-        );
+        var clusterInfo = ClusterInfo.Create(name, address);
         Add(clusterInfo);
         return clusterInfo;
     }
