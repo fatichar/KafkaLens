@@ -36,7 +36,7 @@ public class ClientFactory : IClientFactory
         foreach (var clientInfosKey in clientInfos.Values)
         {
             Log.Information("Found client: {ClientName} in config", clientInfosKey.Name);
-            appLogService?.LogInfo($"Found client {clientInfosKey.Name} in config", "Startup");
+            appLogService?.LogInfo($"Found client: {clientInfosKey.Name} in config", "Startup");
         }
 
         var toRemove = clients.Keys
@@ -56,12 +56,12 @@ public class ClientFactory : IClientFactory
                 clients.Remove(clientInfo.Name);
                 var client = CreateClient(clientInfo);
                 clients.Add(client.Name, client);
-                appLogService?.LogInfo($"Loaded client {client.Name}", "Startup");
+                appLogService?.LogInfo($"Loaded client: {client.Name}", "Startup");
             }
             catch (Exception)
             {
                 Log.Error("Failed to load client {}", clientInfo.Name);
-                appLogService?.LogError($"Could not load client {clientInfo.Name}", "Startup");
+                appLogService?.LogError($"Could not load client: {clientInfo.Name}", "Startup");
             }
         }
 
