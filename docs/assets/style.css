@@ -685,6 +685,52 @@ nav {
     line-height: 1.7;
 }
 
+/* Media Placeholder */
+.media-placeholder {
+    background: var(--background-secondary);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 3rem 1rem;
+    text-align: center;
+    margin: 1.5rem 0;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+/* Shortcuts Grid */
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.shortcut-item {
+    background: white;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.shortcut-item code {
+    background: var(--text-primary);
+    color: white;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.85rem;
+}
+
+.shortcut-item span {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
 /* Footer */
 footer {
     background: var(--text-primary);

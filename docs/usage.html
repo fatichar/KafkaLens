@@ -14,7 +14,7 @@
     <header>
         <nav>
             <div class="nav-container">
-                <a href="/" class="nav-brand">
+                <a href="index.html" class="nav-brand">
                     <img src="assets/images/KafkaLens_logo_cyan_512.png" alt="KafkaLens Logo">
                     <span class="brand-text">KafkaLens</span>
                 </a>
@@ -37,86 +37,130 @@
         <section class="page-header">
             <div class="container">
                 <h1>Usage Documentation</h1>
-                <p>Get the most out of KafkaLens with this step-by-step guide.</p>
+                <p>Master KafkaLens with our comprehensive guide to managing clusters and exploring data.</p>
             </div>
         </section>
 
         <section class="usage-content">
             <div class="container">
+                <!-- Getting Started -->
                 <div class="usage-section">
                     <h2>🏗️ Getting Started</h2>
-                    
+
                     <div class="subsection">
-                        <h3>1. Adding your first Cluster</h3>
-                        <p>To begin, you need to tell KafkaLens where your Kafka brokers are located.</p>
+                        <h3>1. Managing Clusters</h3>
+                        <p>To begin, you need to configure your Kafka clusters. KafkaLens supports both direct and remote connections.</p>
                         <ol>
-                            <li>Click the <strong>Edit Clusters</strong> button in the sidebar.</li>
-                            <li>Click <strong>Add Cluster</strong>.</li>
-                            <li>Enter a friendly name and your bootstrap servers (e.g., <code>localhost:9092</code>).</li>
-                            <li>Click <strong>Save</strong>.</li>
+                            <li>Click <strong>Cluster -> Edit Clusters</strong> (or press <code>Ctrl+E</code>).</li>
+                            <li><strong>Local Clusters</strong>: Add a cluster by providing a name and bootstrap servers (e.g., <code>localhost:9092</code>).</li>
+                            <li><strong>Remote Gateways</strong>: Add a gRPC client to connect to clusters behind a firewall or in a VPC.</li>
                         </ol>
+                        <div class="media-placeholder">
+                            <p>[Screenshot: Cluster Management Dialog showing Add/Edit options]</p>
+                        </div>
                     </div>
 
                     <div class="subsection">
                         <h3>2. Navigation</h3>
-                        <p>The sidebar contains all your configured clusters. Click a cluster to connect. Once connected, you can browse:</p>
+                        <p>The sidebar displays a hierarchical tree of your configured clusters. Click a cluster to connect and expand it to see:</p>
                         <ul>
-                            <li><strong>Topics</strong>: All available topics in the cluster.</li>
-                            <li><strong>Partitions</strong>: Drill down into specific partitions to see message distribution.</li>
+                            <li><strong>Topics</strong>: Use the search bar at the top of the tree to filter topics by name.</li>
+                            <li><strong>Partitions</strong>: Drill down into specific partitions to inspect message distribution and lag.</li>
                         </ul>
+                        <div class="media-placeholder">
+                            <p>[Screenshot: Sidebar showing Cluster Tree with Topic Search]</p>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Exploring Data -->
                 <div class="usage-section">
                     <h2>🔍 Exploring Data</h2>
-                    
+
                     <div class="subsection">
-                        <h3>Browsing Messages</h3>
-                        <p>Double-click a topic or partition to open a new data tab.</p>
+                        <h3>Fetching Messages</h3>
+                        <p>Click a topic or partition to open its data view. Use the 'Fetch Panel' on the right to load data:</p>
                         <ul>
-                            <li><strong>Fetch</strong>: Click "Load" to fetch the most recent messages.</li>
-                            <li><strong>Seek</strong>: Use the offset controls to jump to a specific point in time or a specific offset.</li>
+                            <li><strong>Load Latest</strong>: Fetches the most recent messages from the topic.</li>
+                            <li><strong>Seek by Offset</strong>: Jump to a specific offset for precise debugging.</li>
+                            <li><strong>Seek by Time</strong>: Jump to messages from a specific point in time (e.g., "5 minutes ago" or a specific date).</li>
                         </ul>
                     </div>
+
+                    <div class="subsection">
+                        <h3>Advanced Filtering</h3>
+                        <p>Filter through thousands of messages instantly using the search bar. We support powerful boolean logic:</p>
+                        <ul>
+                            <li><strong>Simple Match</strong>: <code>error</code></li>
+                            <li><strong>Logical AND/OR</strong>: <code>error && !timeout</code> or <code>"order created" || "payment success"</code></li>
+                            <li><strong>Grouping</strong>: <code>(error || warning) && user_id_123</code></li>
+                        </ul>
+                        <div class="media-placeholder">
+                            <p>[Screenshot: Message View with Filter Bar active]</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deep Dive -->
+                <div class="usage-section">
+                    <h2>🔬 Deep Dive into Messages</h2>
 
                     <div class="subsection">
                         <h3>Message Inspection</h3>
-                        <p>Select any message to view its details in the side panel. KafkaLens provides specialized formatters:</p>
+                        <p>Select any message to view its full details in the inspection panel. KafkaLens automatically detects and formats data:</p>
                         <ul>
-                            <li><strong>JSON</strong>: Pretty-prints JSON payloads for easy reading.</li>
-                            <li><strong>String</strong>: Displays the raw UTF-8 string.</li>
-                            <li><strong>Hex</strong>: Perfect for debugging binary or proprietary formats.</li>
+                            <li><strong>JSON</strong>: Pretty-printed, collapsible, and searchable.</li>
+                            <li><strong>Text</strong>: Raw UTF-8 string display.</li>
+                            <li><strong>Numeric</strong>: Interpret bytes as Int32, Int64, Float, or Double.</li>
+                        </ul>
+                        <div class="media-placeholder">
+                            <p>[Screenshot: Message Detail Panel with JSON Formatter]</p>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Headers & Metadata</h3>
+                        <p>Inspect Kafka headers and metadata (Partition, Offset, Key, Timestamp) alongside the message payload. Right-click any value to copy it to your clipboard.</p>
+                    </div>
+                </div>
+
+                <!-- Power Features -->
+                <div class="usage-section">
+                    <h2>⚡ Power Features</h2>
+
+                    <div class="subsection">
+                        <h3>Plugin Manager</h3>
+                        <p>Extend KafkaLens with custom decoders. If you use proprietary formats (like custom Avro or Protobuf), you can install or develop plugins to visualize them as JSON.</p>
+                        <div class="media-placeholder">
+                            <p>[Screenshot: Plugin Manager showing installed decoders]</p>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Saving & Loading</h3>
+                        <p>Export messages for offline analysis or sharing:</p>
+                        <ul>
+                            <li><strong>Save Message</strong>: Right-click a message and choose <strong>Save Raw (.klm)</strong> or <strong>Save Formatted (.txt)</strong>.</li>
+                            <li><strong>Open Saved</strong>: Use <code>Ctrl+O</code> to open and inspect <code>.klm</code> files as if they were live data.</li>
                         </ul>
                     </div>
                 </div>
 
+                <!-- Shortcuts & Tips -->
                 <div class="usage-section">
-                    <h2>💾 Advanced Features</h2>
-                    
-                    <div class="subsection">
-                        <h3>Saving Messages</h3>
-                        <p>Found a message you need to keep? Right-click any message in the list and select <strong>Save Message</strong>. This will export the full message (including headers and metadata) into a <code>.klm</code> file.</p>
-                    </div>
-
-                    <div class="subsection">
-                        <h3>Filtering</h3>
-                        <p>Use the search bar in the message view to filter through loaded messages. You can use simple text matching or advanced boolean logic (e.g., <code>error && !timeout</code>).</p>
+                    <h2>💡 Shortcuts & Tips</h2>
+                    <div class="shortcuts-grid">
+                        <div class="shortcut-item"><code>Ctrl + E</code> <span>Edit Clusters</span></div>
+                        <div class="shortcut-item"><code>Ctrl + O</code> <span>Open Saved Message</span></div>
+                        <div class="shortcut-item"><code>Ctrl + W</code> <span>Close Current Tab</span></div>
+                        <div class="shortcut-item"><code>Ctrl + F</code> <span>Focus Search Bar</span></div>
+                        <div class="shortcut-item"><code>F5</code> <span>Refresh/Load Latest</span></div>
                     </div>
                 </div>
 
                 <div class="usage-section">
                     <h2>❓ Need Help?</h2>
-                    <p>If you encounter issues or have feature requests, please open an issue on our <a href="https://github.com/fatichar/KafkaLens/issues" target="_blank">GitHub repository</a>.</p>
-                    
-                    <div class="help-card">
-                        <h3>Quick Tips</h3>
-                        <ul>
-                            <li>Use <strong>Ctrl+F</strong> (or <strong>Cmd+F</strong> on Mac) to quickly search through messages.</li>
-                            <li>Right-click on topics for additional context menu options.</li>
-                            <li>Pin frequently accessed tabs to keep them organized.</li>
-                            <li>Use the offset controls to navigate through large message sets efficiently.</li>
-                        </ul>
-                    </div>
+                    <p>Encountered a bug or have a feature idea? Join our community on <a href="https://github.com/fatichar/KafkaLens" target="_blank">GitHub</a>.</p>
                 </div>
             </div>
         </section>
@@ -146,7 +190,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 KafkaLens. Open source and available under the MIT License.</p>
+                <p>&copy; 2026 KafkaLens. Open source and available under the AGPLv3 License.</p>
             </div>
         </div>
     </footer>
