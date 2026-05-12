@@ -113,4 +113,76 @@ public class SearchParserTests
         var expression = SearchParser.Parse(query);
         expression.Matches(text).Should().Be(expected);
     }
+
+    [Theory]
+    [InlineData(null, "anything", true)]
+    [InlineData("", "anything", true)]
+    [InlineData("   ", "anything", true)]
+    public void TestEmptyQuery(string query, string text, bool expected)
+    {
+        var expression = SearchParser.Parse(query);
+        expression.Matches(text).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null, false, "anything", false)]
+    [InlineData("", false, "anything", false)]
+    [InlineData("   ", false, "anything", false)]
+    [InlineData(null, true, "anything", true)]
+    public void TestDefaultMatch(string query, bool defaultMatch, string text, bool expected)
+    {
+        var expression = SearchParser.Parse(query, defaultMatch);
+        expression.Matches(text).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("!!India", "India", true)]
+    [InlineData("!!!India", "India", false)]
+    [InlineData("!!!India", "Russia", true)]
+    public void TestMultipleNot(string query, string text, bool expected)
+    {
+        var expression = SearchParser.Parse(query);
+        expression.Matches(text).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("(India", "India", true)]
+    [InlineData("(India", "Russia", false)]
+    [InlineData("India)", "India", true)]
+    [InlineData("India)", "Russia", false)]
+    [InlineData("((India", "India", true)]
+    public void TestUnmatchedParentheses(string query, string text, bool expected)
+    {
+        var expression = SearchParser.Parse(query);
+        expression.Matches(text).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("()", "anything", true)]
+    [InlineData("() India", "India", true)]
+    public void TestEmptyParentheses(string query, string text, bool expected)
+    {
+        var expression = SearchParser.Parse(query);
+        expression.Matches(text).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("\"India", "India", true)]
+    [InlineData("\"India", "Russia", false)]
+    [InlineData("\"India Russia", "India Russia", true)]
+    public void TestUnterminatedQuote(string query, string text, bool expected)
+    {
+        var expression = SearchParser.Parse(query);
+        expression.Matches(text).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("  India   &&   Russia  ", "India Russia", true)]
+    [InlineData("India||Russia", "India", true)]
+    [InlineData("India&&Russia", "India Russia", true)]
+    public void TestWhitespace(string query, string text, bool expected)
+    {
+        var expression = SearchParser.Parse(query);
+        expression.Matches(text).Should().Be(expected);
+    }
 }
