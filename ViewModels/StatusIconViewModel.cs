@@ -6,8 +6,7 @@ namespace KafkaLens.ViewModels;
 public partial class StatusIconViewModel : ViewModelBase
 {
     [ObservableProperty]
-    [System.Obsolete("Use Status instead")]
-    private string color = "Gray";
+    private string statusColor = "Gray";
 
     [ObservableProperty]
     private ConnectionState status = ConnectionState.Unknown;
@@ -18,7 +17,7 @@ public partial class StatusIconViewModel : ViewModelBase
     partial void OnStatusChanged(ConnectionState value)
     {
         IsLoading = value == ConnectionState.Checking;
-        Color = value switch
+        StatusColor = value switch
         {
             ConnectionState.Connected => "Green",
             ConnectionState.Failed => "Red",

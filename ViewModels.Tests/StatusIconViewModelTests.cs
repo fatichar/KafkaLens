@@ -9,7 +9,7 @@ public class StatusIconViewModelTests
         var viewModel = new StatusIconViewModel();
 
         // Assert
-        Assert.Equal("Gray", viewModel.Color);
+        Assert.Equal("Gray", viewModel.StatusColor);
     }
 
     [Theory]
@@ -25,7 +25,7 @@ public class StatusIconViewModelTests
         viewModel.Status = status;
 
         // Assert
-        Assert.Equal(expectedColor, viewModel.Color);
+        Assert.Equal(expectedColor, viewModel.StatusColor);
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class StatusIconViewModelTests
 
         // Assert
         Assert.True(viewModel.IsLoading);
-        Assert.Equal("Gray", viewModel.Color);
+        Assert.Equal("Gray", viewModel.StatusColor);
     }
 
     [Fact]

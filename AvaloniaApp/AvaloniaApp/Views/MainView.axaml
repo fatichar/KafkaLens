@@ -33,7 +33,7 @@
             <Menu.DataTemplates>
                 <DataTemplate DataType="{x:Type vm:StatusIconViewModel}">
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding Color}" VerticalAlignment="Center" IsVisible="{Binding !IsLoading}"/>
+                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" VerticalAlignment="Center" IsVisible="{Binding !IsLoading}"/>
                         <ProgressBar Classes="circular" MinWidth="0" Width="12" Height="12" IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </DataTemplate>
