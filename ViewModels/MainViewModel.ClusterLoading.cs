@@ -107,8 +107,13 @@ public partial class MainViewModel
             }
         }
 
-        foreach (var item in Clusters.Where(c => !loadedByKey.ContainsKey(GetClusterKey(c))).ToList())
-            Clusters.Remove(item);
+        foreach (var (key, cluster) in existingByKey)
+        {
+            if (!loadedByKey.ContainsKey(key))
+            {
+                Clusters.Remove(cluster);
+            }
+        }
     }
 
     private void ApplyClusterSnapshotForClients(IReadOnlyList<ClusterViewModel> loadedClusters, ISet<string> clientNames)
@@ -132,8 +137,13 @@ public partial class MainViewModel
             }
         }
 
-        foreach (var item in existingForClients.Where(c => !loadedByKey.ContainsKey(GetClusterKey(c))).ToList())
-            Clusters.Remove(item);
+        foreach (var (key, cluster) in existingByKey)
+        {
+            if (!loadedByKey.ContainsKey(key))
+            {
+                Clusters.Remove(cluster);
+            }
+        }
     }
 
     private async Task RefreshDisconnectedClustersAsync()
