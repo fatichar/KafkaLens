@@ -25,7 +25,6 @@ public class ClusterInfoRepository : IClusterInfoRepository
             Log.Warning("Clusters config file path not specified, using default: {DefaultPath}",
                 DEFAULT_FILE_PATH);
             filePath = DEFAULT_FILE_PATH;
-            File.CreateText(filePath);
         }
         this.filePath = filePath;
 

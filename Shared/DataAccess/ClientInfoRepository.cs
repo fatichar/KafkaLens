@@ -26,7 +26,6 @@ public class ClientInfoRepository : IClientInfoRepository
             Log.Warning("Clients config file path not specified, using default: {DefaultPath}",
                 DEFAULT_FILE_PATH);
             filePath = DEFAULT_FILE_PATH;
-            File.CreateText(filePath);
         }
         this.filePath = filePath;
 

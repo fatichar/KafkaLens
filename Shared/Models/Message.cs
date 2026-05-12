@@ -60,17 +60,13 @@ public class Message
 
     private static int GetIntValue(byte[] bytes)
     {
+        var buffer = (byte[])bytes.Clone();
         if (BitConverter.IsLittleEndian)
         {
-            Array.Reverse(bytes);
+            Array.Reverse(buffer);
         }
 
-        int intValue = BitConverter.ToInt32(bytes, 0);
-        if (BitConverter.IsLittleEndian)
-        {
-            Array.Reverse(bytes);
-        }
-        return intValue;
+        return BitConverter.ToInt32(buffer, 0);
     }
 
     private static bool IsAscii(char obj)

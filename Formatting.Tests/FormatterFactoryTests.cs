@@ -106,6 +106,6 @@ public class FormatterFactoryTests
         Assert.Contains("UInt32", names);
         Assert.Contains("Int64", names);
         Assert.Contains("UInt64", names);
-        Assert.DoesNotContain("Json", names);
+        Assert.Contains("Json", names);
     }
 }
