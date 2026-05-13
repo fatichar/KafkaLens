@@ -108,7 +108,70 @@ public class ClusterViewModelTests
         Assert.Equal(topics.Count, viewModel.Topics.Count);
         viewModel.Topics.Should().BeEquivalentTo(topics);
         Assert.Equal(ConnectionState.Connected, viewModel.Status);
+        Assert.Equal(TopicLoadState.Loaded, viewModel.TopicLoadState);
         await mockClient.Received(1).GetTopicsAsync(cluster.Id);
+    }
+
+    [Fact]
+    public async Task LoadTopicsAsync_WhenAlreadyLoading_ShouldAwaitInFlightLoad()
+    {
+        // Arrange
+        var viewModel = new ClusterViewModel(cluster, mockClient);
+        var topics = fixture.CreateMany<Topic>().ToList();
+        var topicsTask = new TaskCompletionSource<IList<Topic>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        mockClient.GetTopicsAsync(cluster.Id).Returns(_ => topicsTask.Task);
+
+        // Act
+        var firstLoad = viewModel.EnsureTopicsLoadedAsync();
+        var secondLoad = viewModel.EnsureTopicsLoadedAsync();
+
+        Assert.False(secondLoad.IsCompleted);
+        topicsTask.SetResult(topics);
+        await Task.WhenAll(firstLoad, secondLoad);
+
+        // Assert
+        viewModel.Topics.Should().BeEquivalentTo(topics);
+        Assert.Equal(TopicLoadState.Loaded, viewModel.TopicLoadState);
+        await mockClient.Received(1).GetTopicsAsync(cluster.Id);
+    }
+
+    [Fact]
+    public async Task EnsureTopicsLoadedAsync_WhenAlreadyLoaded_ShouldReplayLoadedState()
+    {
+        // Arrange
+        var viewModel = new ClusterViewModel(cluster, mockClient);
+        var topics = fixture.CreateMany<Topic>().ToList();
+        mockClient.GetTopicsAsync(cluster.Id).Returns((IList<Topic>)topics);
+
+        // Act
+        await viewModel.EnsureTopicsLoadedAsync();
+        await viewModel.EnsureTopicsLoadedAsync();
+
+        // Assert
+        viewModel.Topics.Should().BeEquivalentTo(topics);
+        Assert.Equal(TopicLoadState.Loaded, viewModel.TopicLoadState);
+        await mockClient.Received(1).GetTopicsAsync(cluster.Id);
+    }
+
+    [Fact]
+    public async Task EnsureTopicsLoadedAsync_WhenRefreshFails_ShouldKeepPreviousTopics()
+    {
+        // Arrange
+        var viewModel = new ClusterViewModel(cluster, mockClient);
+        var topics = fixture.CreateMany<Topic>().ToList();
+        mockClient.GetTopicsAsync(cluster.Id).Returns(
+            Task.FromResult<IList<Topic>>(topics),
+            Task.FromException<IList<Topic>>(new Exception("Refresh failed")),
+            Task.FromException<IList<Topic>>(new Exception("Refresh failed")),
+            Task.FromException<IList<Topic>>(new Exception("Refresh failed")));
+
+        // Act
+        await viewModel.EnsureTopicsLoadedAsync();
+        await viewModel.EnsureTopicsLoadedAsync(forceRefresh: true);
+
+        // Assert
+        viewModel.Topics.Should().BeEquivalentTo(topics);
+        Assert.Equal(TopicLoadState.Failed, viewModel.TopicLoadState);
     }
 
     [Fact]
@@ -124,6 +187,7 @@ public class ClusterViewModelTests
         // Assert
         Assert.Empty(viewModel.Topics);
         Assert.Equal(ConnectionState.Failed, viewModel.Status);
+        Assert.Equal(TopicLoadState.Failed, viewModel.TopicLoadState);
     }
 
     [Fact]

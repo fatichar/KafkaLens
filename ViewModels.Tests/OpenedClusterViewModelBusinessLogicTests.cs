@@ -178,6 +178,25 @@ public class OpenedClusterViewModelBusinessLogicTests
     }
 
     [AvaloniaFact]
+    public async Task LoadTopicsAsync_WhenInitialLoadFails_ShouldRetryAndPopulateTopics()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var topics = new List<Topic> { new("topic-after-retry", new List<Partition> { new(0) }) };
+        mockClient.GetTopicsAsync("c1").Returns(
+            Task.FromException<IList<Topic>>(new Exception("Startup metadata failure")),
+            Task.FromResult<IList<Topic>>(topics));
+
+        // Act
+        await vm.LoadTopicsAsync();
+
+        // Assert
+        Assert.Single(vm.Topics);
+        Assert.Equal("topic-after-retry", vm.Topics[0].Name);
+        await mockClient.Received(2).GetTopicsAsync("c1");
+    }
+
+    [AvaloniaFact]
     public async Task LoadTopicsAsync_CalledTwice_ShouldReplacePreviousTopics()
     {
         // Arrange
@@ -201,6 +220,41 @@ public class OpenedClusterViewModelBusinessLogicTests
         Assert.Equal(2, vm.Topics.Count);
         Assert.Equal("topic-a", vm.Topics[0].Name);
         Assert.Equal("topic-b", vm.Topics[1].Name);
+    }
+
+    [AvaloniaFact]
+    public async Task LoadTopicsAsync_WhenTwoTabsShareCluster_ShouldPopulateBothTabs()
+    {
+        // Arrange
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092");
+        var clusterVm = new ClusterViewModel(cluster, mockClient);
+        var firstTab = new OpenedClusterViewModel(
+            settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, "TestCluster");
+        var secondTab = new OpenedClusterViewModel(
+            settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, "TestCluster (1)");
+
+        var topics = new List<Topic>
+        {
+            new("topic-1", new List<Partition> { new(0) }),
+            new("topic-2", new List<Partition> { new(0) })
+        };
+        var topicsTask = new TaskCompletionSource<IList<Topic>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        mockClient.GetTopicsAsync("c1").Returns(_ => topicsTask.Task);
+
+        // Act
+        var firstLoad = firstTab.LoadTopicsAsync();
+        var secondLoad = secondTab.LoadTopicsAsync();
+
+        topicsTask.SetResult(topics);
+        await Task.WhenAll(firstLoad, secondLoad);
+
+        // Assert
+        Assert.Equal(2, firstTab.Topics.Count);
+        Assert.Equal(2, secondTab.Topics.Count);
+        Assert.Equal("topic-1", firstTab.Topics[0].Name);
+        Assert.Equal("topic-1", secondTab.Topics[0].Name);
+        await mockClient.Received(1).GetTopicsAsync("c1");
     }
 
     #endregion

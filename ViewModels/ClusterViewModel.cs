@@ -7,8 +7,19 @@ using KafkaLens.ViewModels.Services;
 
 namespace KafkaLens.ViewModels;
 
+public enum TopicLoadState
+{
+    NotLoaded,
+    Loading,
+    Loaded,
+    Failed
+}
+
 public sealed partial class ClusterViewModel: ConnectionViewModelBase
 {
+    private const int TOPIC_LOAD_RETRY_COUNT = 2;
+    private static readonly TimeSpan TopicLoadRetryDelay = TimeSpan.FromMilliseconds(750);
+
     public IKafkaLensClient Client { get; }
     public IAsyncRelayCommand LoadTopicsCommand { get; }
     private readonly KafkaCluster cluster;
@@ -22,6 +33,9 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
 
     [ObservableProperty]
     private string address;
+
+    [ObservableProperty]
+    private TopicLoadState topicLoadState = TopicLoadState.NotLoaded;
 
     public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient client, IAppLogService? appLogService = null)
     {
@@ -71,7 +85,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     {
         try
         {
-            await LoadTopicsAsync(logTopicLoad);
+            await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: logTopicLoad);
         }
         catch (Exception e)
         {
@@ -90,29 +104,69 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         }
     }
 
-    private bool isLoadingTopics;
+    private readonly object topicsLoadLock = new();
+    private Task? topicsLoadTask;
+
     private async Task LoadTopicsAsync()
     {
-        await LoadTopicsAsync(logTopicLoad: true);
+        await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: true);
     }
 
-    internal async Task LoadTopicsAsync(bool logTopicLoad)
+    internal async Task EnsureTopicsLoadedAsync(bool forceRefresh = false, bool logTopicLoad = false)
     {
-        if (isLoadingTopics) return;
-        isLoadingTopics = true;
+        Task loadTask;
+        lock (topicsLoadLock)
+        {
+            if (!forceRefresh && TopicLoadState == TopicLoadState.Loaded)
+            {
+                return;
+            }
+
+            if (topicsLoadTask == null || topicsLoadTask.IsCompleted)
+            {
+                topicsLoadTask = LoadTopicsWithRetryAsync(logTopicLoad);
+            }
+
+            loadTask = topicsLoadTask;
+        }
+
+        await loadTask;
+    }
+
+    private async Task LoadTopicsWithRetryAsync(bool logTopicLoad)
+    {
+        for (var attempt = 0; attempt <= TOPIC_LOAD_RETRY_COUNT; attempt++)
+        {
+            await LoadTopicsCoreAsync(logTopicLoad);
+            if (TopicLoadState == TopicLoadState.Loaded)
+            {
+                return;
+            }
+
+            if (attempt < TOPIC_LOAD_RETRY_COUNT)
+            {
+                await Task.Delay(TopicLoadRetryDelay);
+            }
+        }
+    }
+
+    private async Task LoadTopicsCoreAsync(bool logTopicLoad)
+    {
         try
         {
+            TopicLoadState = TopicLoadState.Loading;
             SetCheckingIfStatusIsUnknown();
             if (logTopicLoad)
                 appLogService?.LogInfo($"Loading topics for {Name}", "Topics");
-            Topics.Clear();
             var topics = await Client.GetTopicsAsync(cluster.Id);
+            Topics.Clear();
             foreach (var topic in topics)
             {
                 Topics.Add(topic);
             }
             Status = ConnectionState.Connected;
             LastError = null;
+            TopicLoadState = TopicLoadState.Loaded;
             if (logTopicLoad)
                 appLogService?.LogInfo($"Loaded {Topics.Count} topics for {Name}", "Topics");
         }
@@ -121,12 +175,9 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
             Serilog.Log.Error(e, "Failed to load topics for cluster {ClusterName}", Name);
             LastError = e.Message;
             Status = ConnectionState.Failed;
+            TopicLoadState = TopicLoadState.Failed;
             if (logTopicLoad)
                 appLogService?.LogError($"Could not load topics for {Name}: {e.Message}", "Topics");
-        }
-        finally
-        {
-            isLoadingTopics = false;
         }
     }
 
