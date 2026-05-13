@@ -65,21 +65,24 @@ public class OpenedClusterViewModelBusinessLogicTests
         Assert.Contains("Text", vm.KeyFormatterNames);
         Assert.Contains("Int32", vm.KeyFormatterNames);
         Assert.Contains("UInt64", vm.KeyFormatterNames);
-        Assert.DoesNotContain("Json", vm.KeyFormatterNames);
+        Assert.Contains("Json", vm.KeyFormatterNames);
     }
 
     [Fact]
-    public void Constructor_WhenConfiguredKeyFormatterNames_ShouldFilterToSupportedBuiltIns()
+    public void Constructor_WhenHiddenKeyFormatterNames_ShouldExcludeHiddenNames()
     {
         // Arrange
-        settingsService.GetValue("KeyFormatterNames")
-            .Returns("[\"Int16\", \"Text\", \"CustomPlugin\"]");
+        settingsService.GetValue("HiddenKeyFormatters")
+            .Returns("[\"Json\", \"Int8\", \"CustomPlugin\"]");
 
         // Act
         var vm = CreateViewModel();
 
         // Assert
-        Assert.Equal(new List<string> { "Unknown", "Int16", "Text" }, vm.KeyFormatterNames);
+        Assert.DoesNotContain("Json", vm.KeyFormatterNames);
+        Assert.DoesNotContain("Int8", vm.KeyFormatterNames);
+        Assert.Contains("Text", vm.KeyFormatterNames);
+        Assert.Contains("Int16", vm.KeyFormatterNames);
     }
 
     [Fact]
@@ -108,17 +111,21 @@ public class OpenedClusterViewModelBusinessLogicTests
     }
 
     [Fact]
-    public void Constructor_WhenConfiguredValueFormatterNames_ShouldAllowConfiguredSubsetIncludingPlugins()
+    public void Constructor_WhenHiddenValueFormatterNames_ShouldExcludeHiddenNames()
     {
         // Arrange
-        settingsService.GetValue("ValueFormatterNames")
-            .Returns("[\"Json\", \"Text\", \"PluginX\"]");
+        settingsService.GetValue("HiddenValueFormatters")
+            .Returns("[\"Int8\", \"UInt8\", \"PluginX\"]");
 
         // Act
         var vm = CreateViewModel();
 
         // Assert
-        Assert.Equal(new List<string> { "Unknown", "Json", "Text" }, vm.ValueFormatterNames);
+        Assert.Equal("Unknown", vm.ValueFormatterNames[0]);
+        Assert.Contains("Json", vm.ValueFormatterNames);
+        Assert.Contains("Text", vm.ValueFormatterNames);
+        Assert.DoesNotContain("Int8", vm.ValueFormatterNames);
+        Assert.DoesNotContain("UInt8", vm.ValueFormatterNames);
     }
 
     #region LoadTopicsAsync

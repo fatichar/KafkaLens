@@ -358,7 +358,7 @@ public class MainViewModelBusinessLogicTests
         var vm = CreateViewModel();
 
         // Assert
-        Assert.Equal("Test", vm.Title);
+        Assert.Matches(@"^Test \d+\.\d+\.\d+$", vm.Title!);
     }
 
     [AvaloniaFact]

@@ -56,6 +56,8 @@ public class ClusterViewModelTests
         var viewModel = new ClusterViewModel(cluster, mockClient);
         var pendingResult = new TaskCompletionSource<bool>();
         mockClient.ValidateConnectionAsync(cluster.Address).Returns(pendingResult.Task);
+        mockClient.GetTopicsAsync(cluster.Id)
+            .Returns(Task.FromException<IList<Topic>>(new Exception("Topic load failed")));
 
         // Act
         var checkTask = viewModel.CheckConnectionAsync();
@@ -196,6 +198,8 @@ public class ClusterViewModelTests
         // Arrange
         var viewModel = new ClusterViewModel(cluster, mockClient);
         mockClient.ValidateConnectionAsync(cluster.Address).Returns(Task.FromResult(false));
+        mockClient.GetTopicsAsync(cluster.Id)
+            .Returns(Task.FromException<IList<Topic>>(new Exception("Topic load failed")));
 
         // Act
         await viewModel.CheckConnectionAsync();
