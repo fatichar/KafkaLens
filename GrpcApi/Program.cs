@@ -31,6 +31,9 @@ builder.WebHost.ConfigureKestrel(options =>
 var services = builder.Services;
 services.AddGrpc();
 services.AddSingleton(config);
+services.AddSingleton(config.GrpcFetch);
+services.AddSingleton(new KafkaLens.Shared.Models.KafkaConfig());
+services.AddSingleton<GrpcFetchLimiter>();
 var clusterRepo = new ClusterInfoRepository(config.DatabasePath);
 services.AddSingleton<IClusterInfoRepository>(clusterRepo);
 services.AddSingleton<IKafkaLensClient, SharedClient>();

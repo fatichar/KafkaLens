@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using KafkaLens.Core.Utils;
@@ -8,18 +10,19 @@ using TopicPartition = Confluent.Kafka.TopicPartition;
 
 namespace KafkaLens.Core.Services;
 
-internal class ConfluentConsumer : ConsumerBase, IDisposable
+internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDisposable
 {
-    private const int MAX_PARTITION_COUNT = 100000;
+    private const int MAX_PARTITION_COUNT = 10000;
+    private const int STREAM_CHANNEL_CAPACITY = 512;
     private readonly TimeSpan queryWatermarkTimeout;
     private readonly TimeSpan queryTopicsTimeout;
     private readonly TimeSpan consumeTimeout;
     private readonly KafkaConfig kafkaConfig;
 
     private readonly ConsumerPool consumerPool;
-    protected ConsumerConfig Config { get; set; }
+    private ConsumerConfig Config { get; set; }
 
-    protected IAdminClient AdminClient { get; }
+    private IAdminClient AdminClient { get; }
 
     private class ConsumerPool : IDisposable
     {
@@ -215,6 +218,83 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
         await GetMessagesAsync(tps, options, messages, cancellationToken);
     }
 
+    public async IAsyncEnumerable<Message> StreamMessagesAsync(
+        string topic,
+        FetchOptions options,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var topicInfo = ValidateTopic(topic);
+        var tps = topicInfo.Partitions.Select(partition => new TopicPartition(topic, partition.Id)).ToList();
+
+        await foreach (var message in StreamMessagesAsync(tps, options, cancellationToken)
+                           .WithCancellation(cancellationToken))
+        {
+            yield return message;
+        }
+    }
+
+    public async IAsyncEnumerable<Message> StreamMessagesAsync(
+        string topic,
+        int partition,
+        FetchOptions options,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var tp = ValidateTopicPartition(topic, partition);
+
+        await foreach (var message in StreamMessagesAsync(new List<TopicPartition> { tp }, options, cancellationToken)
+                           .WithCancellation(cancellationToken))
+        {
+            yield return message;
+        }
+    }
+
+    private async IAsyncEnumerable<Message> StreamMessagesAsync(
+        List<TopicPartition> tps,
+        FetchOptions options,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var channel = Channel.CreateBounded<Message>(new BoundedChannelOptions(STREAM_CHANNEL_CAPACITY)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false
+        });
+
+        var producer = Task.Run(async () =>
+        {
+            try
+            {
+                await GetMessagesAsync(tps, options, channel.Writer, cancellationToken);
+                channel.Writer.TryComplete();
+            }
+            catch (OperationCanceledException e) when (cancellationToken.IsCancellationRequested)
+            {
+                channel.Writer.TryComplete(e);
+            }
+            catch (Exception e)
+            {
+                channel.Writer.TryComplete(e);
+            }
+        }, CancellationToken.None);
+
+        try
+        {
+            await foreach (var message in channel.Reader.ReadAllAsync(cancellationToken))
+            {
+                yield return message;
+            }
+
+            await producer;
+        }
+        finally
+        {
+            if (!producer.IsCompleted)
+            {
+                channel.Writer.TryComplete();
+            }
+        }
+    }
+
     private async Task GetMessagesAsync(List<TopicPartition> tps, FetchOptions options,
         MessageStream messages, CancellationToken cancellationToken)
     {
@@ -230,6 +310,26 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
         }
 
         await FetchMessagesAsync(tpoLimits, messages, cancellationToken);
+    }
+
+    private async Task GetMessagesAsync(
+        List<TopicPartition> tps,
+        FetchOptions options,
+        ChannelWriter<Message> writer,
+        CancellationToken cancellationToken)
+    {
+        var watermarks = await QueryWatermarkOffsetsAsync(tps, cancellationToken);
+        var partitionOptions = await CreateOptionsForPartitionAsync(tps, options, cancellationToken);
+        var tpos = CreateTopicPartitionOffsets(tps, watermarks, partitionOptions);
+
+        var tpoLimits = new List<(TopicPartitionOffset Tpo, int Limit)>();
+        for (var i = 0; i < tpos.Count; i++)
+        {
+            var tpoLimit = (Tpo: tpos[i], Limit: partitionOptions[i].Limit);
+            tpoLimits.Add(tpoLimit);
+        }
+
+        await FetchMessagesAsync(tpoLimits, writer, cancellationToken);
     }
 
     private async Task FetchMessagesAsync(IReadOnlyList<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
@@ -253,6 +353,37 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
                 consumer.Assign(tpoLimit.Tpo);
                 FetchMessages(consumer, messages, tpoLimit.Limit, ct);
                 consumer.Unassign();
+            }, ct);
+        });
+    }
+
+    private async Task FetchMessagesAsync(
+        IReadOnlyList<(TopicPartitionOffset Tpo, int Limit)> tpoLimits,
+        ChannelWriter<Message> writer,
+        CancellationToken cancellationToken)
+    {
+        var parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = 20,
+            CancellationToken = cancellationToken
+        };
+
+        await Parallel.ForEachAsync(tpoLimits, parallelOptions, async (tpoLimit, ct) =>
+        {
+            await using var lease = await consumerPool.LeaseAsync(ct);
+            var consumer = lease.Consumer;
+
+            await Task.Run(() =>
+            {
+                consumer.Assign(tpoLimit.Tpo);
+                try
+                {
+                    FetchMessages(consumer, writer, tpoLimit.Limit, ct);
+                }
+                finally
+                {
+                    consumer.Unassign();
+                }
             }, ct);
         });
     }
@@ -436,6 +567,71 @@ internal class ConfluentConsumer : ConsumerBase, IDisposable
         }
 
         FlushBatch(messages, batch);
+        return requiredCount;
+    }
+
+    private int FetchMessages(
+        IConsumer<byte[], byte[]> consumer,
+        ChannelWriter<Message> writer,
+        int requiredCount,
+        CancellationToken cancellationToken)
+    {
+        if (requiredCount <= 0)
+        {
+            return 0;
+        }
+
+        var consecutiveEmptyPolls = 0;
+        var maxEmptyPolls = 10;
+
+        while (requiredCount > 0 && !cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                var result = consumer.Consume(consumeTimeout);
+                if (result == null)
+                {
+                    consecutiveEmptyPolls++;
+                    Log.Debug("Waiting for consumer connection/metadata (poll timeout {Current}/{Max})",
+                        consecutiveEmptyPolls, maxEmptyPolls);
+                    if (consecutiveEmptyPolls >= maxEmptyPolls)
+                    {
+                        Log.Information("Stopping fetch after {Count} consecutive empty polls (connection timeout)",
+                            consecutiveEmptyPolls);
+                        break;
+                    }
+
+                    continue;
+                }
+
+                consecutiveEmptyPolls = 0;
+
+                if (result.IsPartitionEOF)
+                {
+                    Log.Information("End of partition reached");
+                    break;
+                }
+
+                var message = MessageConverter.CreateMessage(result);
+                writer.WriteAsync(message, cancellationToken).AsTask().GetAwaiter().GetResult();
+                --requiredCount;
+            }
+            catch (ConsumeException e)
+            {
+                Log.Error(e, "Error while consuming message");
+                break;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Error while consuming message");
+                break;
+            }
+        }
+
         return requiredCount;
     }
 

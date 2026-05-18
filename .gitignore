@@ -365,3 +365,6 @@ MigrationBackup/
 FodyWeavers.xsd
 KafkaDB.db
 .idea
+
+# Codex
+.edge-codex-profile/

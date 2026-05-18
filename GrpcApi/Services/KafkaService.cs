@@ -2,6 +2,7 @@ using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using GrpcApi.Config;
 using KafkaLens.Grpc;
 using KafkaLens.Shared;
 using Models = KafkaLens.Shared.Models;
@@ -9,12 +10,18 @@ using Topic = KafkaLens.Grpc.Topic;
 
 namespace GrpcApi.Services;
 
-public class KafkaService(ILogger<KafkaService> logger, IKafkaLensClient kafkaLensClient)
+public class KafkaService(
+    ILogger<KafkaService> logger,
+    IKafkaLensClient kafkaLensClient,
+    GrpcFetchConfig? fetchConfig = null,
+    GrpcFetchLimiter? fetchLimiter = null)
     : KafkaApi.KafkaApiBase
 {
     #region fields
 
     private readonly ILogger<KafkaService> logger = logger;
+    private readonly GrpcFetchConfig fetchConfig = fetchConfig ?? new GrpcFetchConfig();
+    private readonly GrpcFetchLimiter fetchLimiter = fetchLimiter ?? new GrpcFetchLimiter(fetchConfig ?? new GrpcFetchConfig());
 
     #endregion
 
@@ -64,30 +71,14 @@ public class KafkaService(ILogger<KafkaService> logger, IKafkaLensClient kafkaLe
         IServerStreamWriter<Message> responseStream,
         ServerCallContext context)
     {
-        var messagesStream = kafkaLensClient.GetMessageStream(request.ClusterId, request.TopicName, ToFetchOptions(request.FetchOptions));
-
-        var writtenCount = 0;
-        while (messagesStream.HasMore)
-        {
-            writtenCount = await WriteMessagesAsync(responseStream, messagesStream, writtenCount);
-            await Task.Delay(100);
-        }
-        if (writtenCount < messagesStream.Messages.Count)
-        {
-            await WriteMessagesAsync(responseStream, messagesStream, writtenCount);
-        }
-    }
-
-    private static async Task<int> WriteMessagesAsync(IServerStreamWriter<Message> responseStream,
-        Models.MessageStream messagesStream,
-        int writtenCount)
-    {
-        for (; writtenCount < messagesStream.Messages.Count; ++writtenCount)
-        {
-            var grpcMessage = ToMessageResponse(messagesStream.Messages[writtenCount]);
-            await responseStream.WriteAsync(grpcMessage);
-        }
-        return writtenCount;
+        var options = ToFetchOptions(request.FetchOptions);
+        await StreamFetchAsync(
+            request.ClusterId,
+            request.TopicName,
+            null,
+            options,
+            responseStream,
+            context);
     }
 
     public override async Task GetPartitionMessages(
@@ -95,17 +86,133 @@ public class KafkaService(ILogger<KafkaService> logger, IKafkaLensClient kafkaLe
         IServerStreamWriter<Message> responseStream,
         ServerCallContext context)
     {
-        var messagesStream = kafkaLensClient.GetMessageStream(request.ClusterId, request.TopicName, (int) request.Partition, ToFetchOptions(request.FetchOptions));
+        var options = ToFetchOptions(request.FetchOptions);
+        await StreamFetchAsync(
+            request.ClusterId,
+            request.TopicName,
+            (int)request.Partition,
+            options,
+            responseStream,
+            context);
+    }
 
-        var writtenCount = 0;
-        while (messagesStream.HasMore)
+    private async Task StreamFetchAsync(
+        string clusterId,
+        string topic,
+        int? partition,
+        Models.FetchOptions options,
+        IServerStreamWriter<Message> responseStream,
+        ServerCallContext context)
+    {
+        ValidateFetchRequest(options);
+
+        var queueTimeout = TimeSpan.FromMilliseconds(Math.Max(0, fetchConfig.QueueTimeoutMs));
+        var acquired = false;
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Math.Max(1, fetchConfig.FetchTimeoutMs)));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, timeoutCts.Token);
+
+        try
         {
-            writtenCount = await WriteMessagesAsync(responseStream, messagesStream, writtenCount);
-            await Task.Delay(100);
+            acquired = await fetchLimiter.TryAcquireAsync(queueTimeout, context.CancellationToken);
+            if (!acquired)
+            {
+                throw new RpcException(new Status(
+                    StatusCode.ResourceExhausted,
+                    "The gRPC server is busy with other fetch requests. Try again later."));
+            }
+
+            var messages = CreateMessageEnumerable(clusterId, topic, partition, options, linkedCts.Token);
+            var writtenCount = 0;
+            await foreach (var message in messages.WithCancellation(linkedCts.Token))
+            {
+                await responseStream.WriteAsync(ToMessageResponse(message));
+                writtenCount++;
+            }
+
+            logger.LogInformation(
+                "Streamed {MessageCount} messages for topic {Topic} partition {Partition}",
+                writtenCount,
+                topic,
+                partition);
         }
-        if (writtenCount < messagesStream.Messages.Count)
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
         {
-            await WriteMessagesAsync(responseStream, messagesStream, writtenCount);
+            throw new RpcException(new Status(StatusCode.Cancelled, "The fetch request was cancelled."));
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            throw new RpcException(new Status(StatusCode.DeadlineExceeded, "The fetch request exceeded the server timeout."));
+        }
+        catch (RpcException)
+        {
+            throw;
+        }
+        catch (ArgumentException e)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, e.Message));
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Unhandled error while streaming messages for topic {Topic} partition {Partition}", topic, partition);
+            throw new RpcException(new Status(StatusCode.Internal, "The fetch request failed."));
+        }
+        finally
+        {
+            await linkedCts.CancelAsync();
+            if (acquired)
+            {
+                fetchLimiter.Release();
+            }
+        }
+    }
+
+    private void ValidateFetchRequest(Models.FetchOptions options)
+    {
+        if (options.Limit <= 0)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Fetch count must be greater than zero."));
+        }
+
+        if (options.Limit > fetchConfig.MaxMessagesPerRequest)
+        {
+            throw new RpcException(new Status(
+                StatusCode.ResourceExhausted,
+                $"Fetch count {options.Limit} exceeds the server limit of {fetchConfig.MaxMessagesPerRequest}."));
+        }
+    }
+
+    private IAsyncEnumerable<Models.Message> CreateMessageEnumerable(
+        string clusterId,
+        string topic,
+        int? partition,
+        Models.FetchOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (kafkaLensClient is IStreamingKafkaLensClient streamingClient)
+        {
+            return partition.HasValue
+                ? streamingClient.StreamMessagesAsync(clusterId, topic, partition.Value, options, cancellationToken)
+                : streamingClient.StreamMessagesAsync(clusterId, topic, options, cancellationToken);
+        }
+
+        return CreateFallbackEnumerable(clusterId, topic, partition, options, cancellationToken);
+    }
+
+    private async IAsyncEnumerable<Models.Message> CreateFallbackEnumerable(
+        string clusterId,
+        string topic,
+        int? partition,
+        Models.FetchOptions options,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var messages = partition.HasValue
+            ? await kafkaLensClient.GetMessagesAsync(clusterId, topic, partition.Value, options, cancellationToken)
+            : await kafkaLensClient.GetMessagesAsync(clusterId, topic, options, cancellationToken);
+
+        foreach (var message in messages)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return message;
         }
     }
     #endregion Read

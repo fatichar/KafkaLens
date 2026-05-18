@@ -12,7 +12,7 @@ namespace KafkaLens.Core.Services;
 public class SharedClient(
     IClusterInfoRepository infoRepository,
     ConsumerFactory consumerFactory)
-    : IKafkaLensClient
+    : IKafkaLensClient, IStreamingKafkaLensClient
 {
     public string Name => "Shared";
     public bool CanEditClusters => false;
@@ -179,6 +179,27 @@ public class SharedClient(
         var consumer = GetConsumer(clusterId);
         return await consumer.GetMessagesAsync(topic, partition, options, cancellationToken);
     }
+
+    public IAsyncEnumerable<Message> StreamMessagesAsync(
+        string clusterId,
+        string topic,
+        FetchOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        var consumer = GetStreamingConsumer(clusterId);
+        return consumer.StreamMessagesAsync(topic, options, cancellationToken);
+    }
+
+    public IAsyncEnumerable<Message> StreamMessagesAsync(
+        string clusterId,
+        string topic,
+        int partition,
+        FetchOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        var consumer = GetStreamingConsumer(clusterId);
+        return consumer.StreamMessagesAsync(topic, partition, options, cancellationToken);
+    }
     #endregion Read
 
     #region update
@@ -230,6 +251,17 @@ public class SharedClient(
             return consumers.GetOrAdd(clusterId, _ => Connect(cluster));
         }
         throw new ArgumentException("Unknown clusterInfo", nameof(clusterId));
+    }
+
+    private IStreamingKafkaConsumer GetStreamingConsumer(string clusterId)
+    {
+        var consumer = GetConsumer(clusterId);
+        if (consumer is IStreamingKafkaConsumer streamingConsumer)
+        {
+            return streamingConsumer;
+        }
+
+        throw new NotSupportedException("The configured Kafka consumer does not support bounded streaming.");
     }
     #endregion Validations
 

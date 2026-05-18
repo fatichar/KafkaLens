@@ -387,6 +387,75 @@ public class SharedClientTests
 
     #endregion GetMessageStream
 
+    #region StreamMessagesAsync
+
+    [Fact]
+    public async Task StreamMessagesAsync_TopicOnly_DelegatesToStreamingConsumer()
+    {
+        // Arrange
+        var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
+        var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+
+        var mockConsumer = Substitute.For<IKafkaConsumer, IStreamingKafkaConsumer>();
+        consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
+
+        ((IStreamingKafkaConsumer)mockConsumer)
+            .StreamMessagesAsync("test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(CreateMessages(1));
+
+        var options = new FetchOptions(FetchPosition.Start, 10);
+
+        // Act
+        var result = new List<Message>();
+        await foreach (var message in sut.StreamMessagesAsync("id1", "test-topic", options))
+        {
+            result.Add(message);
+        }
+
+        // Assert
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public async Task StreamMessagesAsync_WithPartition_DelegatesToStreamingConsumer()
+    {
+        // Arrange
+        var cluster = new Shared.Entities.ClusterInfo("id1", "cluster1", "localhost:9092");
+        var dict = new Dictionary<string, Shared.Entities.ClusterInfo> { { "id1", cluster } };
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(dict));
+
+        var mockConsumer = Substitute.For<IKafkaConsumer, IStreamingKafkaConsumer>();
+        consumerFactory.CreateNew("localhost:9092").Returns(mockConsumer);
+
+        ((IStreamingKafkaConsumer)mockConsumer)
+            .StreamMessagesAsync("test-topic", 0, Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(CreateMessages(1));
+
+        var options = new FetchOptions(FetchPosition.Start, 10);
+
+        // Act
+        var result = new List<Message>();
+        await foreach (var message in sut.StreamMessagesAsync("id1", "test-topic", 0, options))
+        {
+            result.Add(message);
+        }
+
+        // Assert
+        Assert.Single(result);
+    }
+
+    private static async IAsyncEnumerable<Message> CreateMessages(int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            yield return new Message(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), new Dictionary<string, byte[]>(), null, null);
+            await Task.Yield();
+        }
+    }
+
+    #endregion StreamMessagesAsync
+
     #region Consumer Caching
 
     [Fact]

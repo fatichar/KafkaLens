@@ -2,13 +2,17 @@ using AutoFixture;
 using AutoFixture.AutoNSubstitute;
 using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
+using GrpcApi.Config;
 using GrpcApi.Services;
 using KafkaLens.Grpc;
 using KafkaLens.Shared;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using System.Runtime.CompilerServices;
 using Xunit;
 using Models = KafkaLens.Shared.Models;
+using GrpcMessage = KafkaLens.Grpc.Message;
 
 namespace KafkaLens.GrpcApi.Tests.Services;
 
@@ -96,5 +100,150 @@ public class KafkaServiceTests
 
         // Assert
         await kafkaLensClient.Received(1).RemoveClusterByIdAsync(request.ClusterId);
+    }
+
+    [Fact]
+    public async Task GetTopicMessages_WhenRequestExceedsServerLimit_ThrowsResourceExhausted()
+    {
+        // Arrange
+        var streamingClient = Substitute.For<IKafkaLensClient, IStreamingKafkaLensClient>();
+        var config = new GrpcFetchConfig { MaxMessagesPerRequest = 1 };
+        var service = CreateService(streamingClient, config);
+        var request = CreateTopicMessagesRequest(maxCount: 2);
+        var writer = CreateWriter();
+        var context = CreateContext();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<RpcException>(() => service.GetTopicMessages(request, writer, context));
+
+        // Assert
+        exception.StatusCode.Should().Be(StatusCode.ResourceExhausted);
+        ((IStreamingKafkaLensClient)streamingClient)
+            .DidNotReceive()
+            .StreamMessagesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Models.FetchOptions>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetTopicMessages_WhenLimiterIsBusy_ThrowsResourceExhausted()
+    {
+        // Arrange
+        var streamingClient = Substitute.For<IKafkaLensClient, IStreamingKafkaLensClient>();
+        var config = new GrpcFetchConfig
+        {
+            MaxMessagesPerRequest = 10,
+            MaxConcurrentFetches = 1,
+            QueueTimeoutMs = 1
+        };
+        var limiter = new GrpcFetchLimiter(config);
+        var service = CreateService(streamingClient, config, limiter);
+        var request = CreateTopicMessagesRequest(maxCount: 1);
+        var writer = CreateWriter();
+        var context = CreateContext();
+
+        var acquired = await limiter.TryAcquireAsync(TimeSpan.Zero, CancellationToken.None);
+        acquired.Should().BeTrue();
+
+        try
+        {
+            // Act
+            var exception = await Assert.ThrowsAsync<RpcException>(() => service.GetTopicMessages(request, writer, context));
+
+            // Assert
+            exception.StatusCode.Should().Be(StatusCode.ResourceExhausted);
+        }
+        finally
+        {
+            limiter.Release();
+        }
+    }
+
+    [Fact]
+    public async Task GetTopicMessages_AfterSuccessfulFetch_ReleasesLimiterSlot()
+    {
+        // Arrange
+        var streamingClient = Substitute.For<IKafkaLensClient, IStreamingKafkaLensClient>();
+        var streaming = (IStreamingKafkaLensClient)streamingClient;
+        streaming.StreamMessagesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Models.FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(_ => CreateMessages(1));
+
+        var config = new GrpcFetchConfig
+        {
+            MaxMessagesPerRequest = 10,
+            MaxConcurrentFetches = 1,
+            QueueTimeoutMs = 1_000
+        };
+        var limiter = new GrpcFetchLimiter(config);
+        var service = CreateService(streamingClient, config, limiter);
+        var request = CreateTopicMessagesRequest(maxCount: 1);
+        var writer = CreateWriter();
+        var context = CreateContext();
+
+        // Act
+        await service.GetTopicMessages(request, writer, context);
+        var acquiredAfterFetch = await limiter.TryAcquireAsync(TimeSpan.Zero, CancellationToken.None);
+
+        // Assert
+        acquiredAfterFetch.Should().BeTrue();
+        await writer.Received(1).WriteAsync(Arg.Any<GrpcMessage>());
+        limiter.Release();
+    }
+
+    private KafkaService CreateService(
+        IKafkaLensClient client,
+        GrpcFetchConfig? config = null,
+        GrpcFetchLimiter? limiter = null)
+    {
+        return new KafkaService(
+            fixture.Freeze<ILogger<KafkaService>>(),
+            client,
+            config ?? new GrpcFetchConfig(),
+            limiter);
+    }
+
+    private static GetTopicMessagesRequest CreateTopicMessagesRequest(uint maxCount)
+    {
+        return new GetTopicMessagesRequest
+        {
+            ClusterId = "cluster",
+            TopicName = "topic",
+            FetchOptions = new FetchOptions
+            {
+                MaxCount = maxCount,
+                Start = new FetchPosition
+                {
+                    Offset = 0
+                }
+            }
+        };
+    }
+
+    private static IServerStreamWriter<GrpcMessage> CreateWriter()
+    {
+        var writer = Substitute.For<IServerStreamWriter<GrpcMessage>>();
+        writer.WriteAsync(Arg.Any<GrpcMessage>()).Returns(Task.CompletedTask);
+        return writer;
+    }
+
+    private static ServerCallContext CreateContext(CancellationToken cancellationToken = default)
+    {
+        var context = Substitute.For<ServerCallContext>();
+        context.CancellationToken.Returns(cancellationToken);
+        return context;
+    }
+
+    private static async IAsyncEnumerable<Models.Message> CreateMessages(
+        int count,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return new Models.Message(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), new Dictionary<string, byte[]>(), null, null)
+            {
+                Offset = i,
+                Partition = 0
+            };
+            await Task.Yield();
+        }
     }
 }
