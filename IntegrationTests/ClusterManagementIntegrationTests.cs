@@ -19,7 +19,8 @@ public class ClusterManagementIntegrationTests : IntegrationTestBase
 
         await editClustersVm.AddClusterAsync(clusterName, clusterAddress);
 
-        MainViewModel.Clusters.Should().Contain(c => c.Name == clusterName && c.Address == clusterAddress);
+        MainViewModel.Clusters.Should().ContainSingle(c => c.Name == clusterName && c.Address == clusterAddress);
+        editClustersVm.Clusters.Should().ContainSingle(c => c.Name == clusterName && c.Address == clusterAddress);
     }
 
     [AvaloniaFact]

@@ -114,7 +114,6 @@ public class EditClustersViewModel : IDisposable
         var cluster = await LocalClient.GetClusterByIdAsync(clusterInfo.Id);
         var vm = new ClusterViewModel(cluster, LocalClient);
         AllClusters.Add(vm);
-        Clusters.Add(vm);
         await vm.CheckConnectionAsync();
     }
 
@@ -204,10 +203,6 @@ public class EditClustersViewModel : IDisposable
                 {
                     var newVm = new ClusterViewModel(cluster, client);
                     AllClusters.Add(newVm);
-                    if (client.CanEditClusters)
-                    {
-                        Clusters.Add(newVm);
-                    }
                     tasks.Add(newVm.CheckConnectionAsync());
                 }
             }
