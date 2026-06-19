@@ -56,10 +56,9 @@ public class ClusterFactory(IClientFactory clientFactory, IAppLogService? appLog
         try
         {
             Log.Information("Loading clusters for client: {ClientName}", client.Name);
-            appLogService?.LogInfo($"Loading clusters from {client.Name}", "Startup");
             var clusters = await client.GetAllClustersAsync();
             var result = clusters.Select(cluster => new ClusterViewModel(cluster, client, appLogService)).ToList();
-            appLogService?.LogInfo($"Loaded {result.Count} clusters from {client.Name}", "Startup");
+            Log.Information("Loaded {Count} clusters from {ClientName}", result.Count, client.Name);
             return result;
         }
         catch (Exception e)

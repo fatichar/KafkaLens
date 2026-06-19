@@ -50,12 +50,13 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         LoadTopicsCommand = new AsyncRelayCommand(LoadTopicsAsync);
     }
 
-    public async Task CheckConnectionAsync()
+    public async Task CheckConnectionAsync(bool allowRetries = true)
     {
-        await CheckConnectionAsync(logTopicLoad: true);
+        await CheckConnectionAsync(logTopicLoad: true,
+            maxRetries: allowRetries ? TOPIC_LOAD_RETRY_COUNT : 0);
     }
 
-    private async Task CheckConnectionAsync(bool logTopicLoad)
+    private async Task CheckConnectionAsync(bool logTopicLoad, int maxRetries)
     {
         SetCheckingIfStatusIsUnknown();
         appLogService?.LogInfo($"Connecting to {Name}", "Connection");
@@ -70,7 +71,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
             }
             else
             {
-                await ConfirmConnectionByLoadingTopicsAsync(logTopicLoad);
+                await ConfirmConnectionByLoadingTopicsAsync(logTopicLoad, maxRetries);
             }
         }
         catch (Exception e)
@@ -81,11 +82,11 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         }
     }
 
-    private async Task ConfirmConnectionByLoadingTopicsAsync(bool logTopicLoad)
+    private async Task ConfirmConnectionByLoadingTopicsAsync(bool logTopicLoad, int maxRetries)
     {
         try
         {
-            await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: logTopicLoad);
+            await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: logTopicLoad, maxRetries: maxRetries);
         }
         catch (Exception e)
         {
@@ -112,7 +113,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: true);
     }
 
-    internal async Task EnsureTopicsLoadedAsync(bool forceRefresh = false, bool logTopicLoad = false)
+    internal async Task EnsureTopicsLoadedAsync(bool forceRefresh = false, bool logTopicLoad = false, int maxRetries = TOPIC_LOAD_RETRY_COUNT)
     {
         Task loadTask;
         lock (topicsLoadLock)
@@ -124,7 +125,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
 
             if (topicsLoadTask == null || topicsLoadTask.IsCompleted)
             {
-                topicsLoadTask = LoadTopicsWithRetryAsync(logTopicLoad);
+                topicsLoadTask = LoadTopicsWithRetryAsync(logTopicLoad, maxRetries);
             }
 
             loadTask = topicsLoadTask;
@@ -133,31 +134,33 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         await loadTask;
     }
 
-    private async Task LoadTopicsWithRetryAsync(bool logTopicLoad)
+    private async Task LoadTopicsWithRetryAsync(bool logTopicLoad, int maxRetries)
     {
-        for (var attempt = 0; attempt <= TOPIC_LOAD_RETRY_COUNT; attempt++)
+        if (logTopicLoad)
+            appLogService?.LogInfo($"Loading topics for {Name}", "Topics");
+
+        for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
-            await LoadTopicsCoreAsync(logTopicLoad);
+            var isLastAttempt = attempt == maxRetries;
+            await LoadTopicsCoreAsync(logTopicLoad, isLastAttempt);
             if (TopicLoadState == TopicLoadState.Loaded)
             {
                 return;
             }
 
-            if (attempt < TOPIC_LOAD_RETRY_COUNT)
+            if (!isLastAttempt)
             {
                 await Task.Delay(TopicLoadRetryDelay);
             }
         }
     }
 
-    private async Task LoadTopicsCoreAsync(bool logTopicLoad)
+    private async Task LoadTopicsCoreAsync(bool logTopicLoad, bool isLastAttempt)
     {
         try
         {
             TopicLoadState = TopicLoadState.Loading;
             SetCheckingIfStatusIsUnknown();
-            if (logTopicLoad)
-                appLogService?.LogInfo($"Loading topics for {Name}", "Topics");
             var topics = await Client.GetTopicsAsync(cluster.Id);
             Topics.Clear();
             foreach (var topic in topics)
@@ -176,7 +179,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
             LastError = e.Message;
             Status = ConnectionState.Failed;
             TopicLoadState = TopicLoadState.Failed;
-            if (logTopicLoad)
+            if (logTopicLoad && isLastAttempt)
                 appLogService?.LogError($"Could not load topics for {Name}: {e.Message}", "Topics");
         }
     }

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using Avalonia.Threading;
 using KafkaLens.Shared;
@@ -57,12 +58,14 @@ public partial class MainViewModel : ViewModelBase
     public IRelayCommand ShowPluginManagerCommand { get; }
     public IRelayCommand ToggleAppLogPanelCommand { get; }
     public IRelayCommand ClearAppLogCommand { get; }
+    public IRelayCommand CopyAppLogCommand { get; }
     public IRelayCommand OpenDiagnosticLogFileCommand { get; }
 
     // UI callbacks (set by the view layer)
     public static Action ShowAboutDialog { get; set; } = () => { };
     public static Action ShowFolderOpenDialog { get; set; } = () => { };
     public static Action OpenDiagnosticLogFile { get; set; } = () => { };
+    public static Action<string> CopyTextToClipboard { get; set; } = _ => { };
     public static Action ShowEditClustersDialog { get; set; } = () => { };
     public static Action<UpdateViewModel> ShowUpdateDialog { get; set; } = _ => { };
     public static Action<PreferencesViewModel> ShowPreferencesDialog { get; set; } = _ => { };
@@ -158,17 +161,18 @@ public partial class MainViewModel : ViewModelBase
         ShowPluginManagerCommand = new RelayCommand(OpenPluginManager);
         ToggleAppLogPanelCommand = new RelayCommand(() => IsAppLogPanelVisible = !IsAppLogPanelVisible);
         ClearAppLogCommand = new RelayCommand(AppLogService.Clear);
+        CopyAppLogCommand = new RelayCommand(CopyAppLog);
         OpenDiagnosticLogFileCommand = new RelayCommand(() => OpenDiagnosticLogFile());
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
         Clusters.CollectionChanged += OnClustersChanged;
 
         Title = BuildWindowTitle(appConfig.Title);
-        
+
         // Validate and set current theme
         var savedTheme = settingsService.GetValue("Theme") ?? "System";
         currentTheme = ValidateTheme(savedTheme);
-        
+
         autoCheckForUpdates =
             bool.TryParse(settingsService.GetValue("AutoCheckForUpdates") ?? "true", out var autoCheck) && autoCheck;
 
@@ -184,10 +188,17 @@ public partial class MainViewModel : ViewModelBase
         {
             Interval = TimeSpan.FromSeconds(appConfig.ClusterRefreshIntervalSeconds > 0
                 ? appConfig.ClusterRefreshIntervalSeconds
-                : 60)
+                : 300)
         };
         timer.Tick += (_, _) => _ = RefreshClustersForHealthCheckAsync();
         timer.Start();
+    }
+
+    private void CopyAppLog()
+    {
+        var lines = AppLogService.Entries.Select(e =>
+            $"{e.Timestamp:yyyy-MM-dd HH:mm:ss.fff}\t{e.Level}\t{e.Source}\t{e.Message}");
+        CopyTextToClipboard(string.Join(Environment.NewLine, lines));
     }
 
     protected override void OnActivated()
@@ -227,13 +238,13 @@ public partial class MainViewModel : ViewModelBase
             // Try exact match first, then case-insensitive
             var theme = availableThemes.FirstOrDefault(t => t.Id == themeName) ??
                        availableThemes.FirstOrDefault(t => string.Equals(t.Id, themeName, StringComparison.OrdinalIgnoreCase));
-            
+
             if (theme != null)
             {
                 return theme.Id; // Return the actual theme ID (case-corrected)
             }
         }
-        
+
         // If theme not found or ThemeService unavailable, fall back to System
         if (themeName != "System")
         {
@@ -242,7 +253,7 @@ public partial class MainViewModel : ViewModelBase
             settingsService.SetValue("Theme", "System");
             return "System";
         }
-        
+
         return "System";
     }
 

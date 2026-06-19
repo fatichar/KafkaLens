@@ -32,11 +32,9 @@ public class ClientFactory : IClientFactory
     public Task LoadClientsAsync()
     {
         var clientInfos = infoRepository.GetAll();
-        appLogService?.LogInfo($"Loading {clientInfos.Count} configured clients", "Startup");
         foreach (var clientInfosKey in clientInfos.Values)
         {
             Log.Information("Found client: {ClientName} in config", clientInfosKey.Name);
-            appLogService?.LogInfo($"Found client {clientInfosKey.Name} in config", "Startup");
         }
 
         var toRemove = clients.Keys
@@ -56,7 +54,6 @@ public class ClientFactory : IClientFactory
                 clients.Remove(clientInfo.Name);
                 var client = CreateClient(clientInfo);
                 clients.Add(client.Name, client);
-                appLogService?.LogInfo($"Loaded client {client.Name}", "Startup");
             }
             catch (Exception)
             {

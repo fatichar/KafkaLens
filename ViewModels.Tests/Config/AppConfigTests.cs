@@ -9,12 +9,12 @@ public class AppConfigTests
     {
         // Arrange & Act
         var config = new AppConfig();
-        
+
         // Assert
         Assert.Null(config.Title);
         Assert.Equal("cluster_info.json", config.ClusterInfoFilePath);
         Assert.Equal("client_info.json", config.ClientInfoFilePath);
-        Assert.Equal(100, config.ClusterRefreshIntervalSeconds);
+        Assert.Equal(300, config.ClusterRefreshIntervalSeconds);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class AppConfigTests
             ClientInfoFilePath = "custom_clients.json",
             ClusterRefreshIntervalSeconds = 300
         };
-        
+
         // Assert
         Assert.Equal("KafkaLens", config.Title);
         Assert.Equal("custom_clusters.json", config.ClusterInfoFilePath);
@@ -43,7 +43,7 @@ public class AppConfigTests
         var config1 = new AppConfig { Title = "Test" };
         var config2 = config1 with { Title = "Test" };
         var config3 = config1 with { Title = "Different" };
-        
+
         // Assert
         Assert.Equal(config1, config2);
         Assert.NotEqual(config1, config3);

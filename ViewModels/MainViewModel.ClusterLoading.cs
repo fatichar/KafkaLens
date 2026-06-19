@@ -9,12 +9,6 @@ namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel
 {
-    private static readonly TimeSpan[] StartupHealthCheckDelays =
-    [
-        TimeSpan.FromSeconds(5),
-        TimeSpan.FromSeconds(15)
-    ];
-
     private bool isStartupLoadCompleted;
     private bool isOpenedClustersSubscriptionInitialized;
     private readonly SemaphoreSlim clusterRefreshLock = new(1, 1);
@@ -51,7 +45,6 @@ public partial class MainViewModel
         }
 
         await TryRestoreTabsAsync();
-        ScheduleStartupHealthChecks();
     }
 
     private async Task RefreshClustersForHealthCheckAsync()
@@ -60,7 +53,7 @@ public partial class MainViewModel
 
         await RunSerializedClusterFlowAsync(async () =>
         {
-            await RefreshDisconnectedClustersAsync();
+            await RefreshClustersAsync();
             await DiscoverClientsNeedingRefreshAsync();
             EnsureOpenedClustersSubscriptionInitialized();
             UpdateOpenedClusters();
@@ -146,35 +139,23 @@ public partial class MainViewModel
         }
     }
 
-    private async Task RefreshDisconnectedClustersAsync()
+    private async Task RefreshClustersAsync()
     {
-        var disconnected = Clusters.Where(c => c.Status != ConnectionState.Connected).ToList();
-        await Task.WhenAll(disconnected.Select(CheckConnectionSafeAsync));
+        // Periodic health check: single attempt per cluster, no retries.
+        await Task.WhenAll(Clusters.Select(c => CheckConnectionSafeAsync(c, allowRetries: false)));
     }
 
-    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster)
+    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster, bool allowRetries = true)
     {
         try
         {
-            await cluster.CheckConnectionAsync();
+            await cluster.CheckConnectionAsync(allowRetries);
         }
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed connection check for cluster {ClusterName}", cluster.Name);
             cluster.Status = ConnectionState.Failed;
         }
-    }
-
-    private void ScheduleStartupHealthChecks()
-    {
-        foreach (var delay in StartupHealthCheckDelays)
-            _ = RunDelayedHealthCheckAsync(delay);
-    }
-
-    private async Task RunDelayedHealthCheckAsync(TimeSpan delay)
-    {
-        await Task.Delay(delay);
-        await RefreshClustersForHealthCheckAsync();
     }
 
     private async Task DiscoverClientsNeedingRefreshAsync()

@@ -24,9 +24,6 @@ public partial class OpenedClusterViewModel
             await cluster.EnsureTopicsLoadedAsync(forceRefresh: Topics.Count > 0);
             if (cluster.TopicLoadState == TopicLoadState.Failed && cluster.Topics.Count == 0)
             {
-                appLogService.LogError(
-                    $"Could not load topics for {Name}: {cluster.LastError ?? "Failed to load topics"}",
-                    "Topics");
                 return;
             }
 
@@ -46,7 +43,6 @@ public partial class OpenedClusterViewModel
         catch (Exception e)
         {
             Log.Error(e, "Failed to load topics for opened cluster {ClusterName}", Name);
-            appLogService.LogError($"Could not load topics for {Name}: {e.Message}", "Topics");
         }
         finally
         {

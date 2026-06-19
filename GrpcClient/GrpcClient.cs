@@ -99,7 +99,7 @@ public class GrpcClient : IKafkaLensClient
             Log.Error($"Failed to connect to grpc server: {url}", e);
             return new List<KafkaCluster>()
             {
-                new KafkaCluster(Guid.NewGuid().ToString(), Name, url)
+                new KafkaCluster($"grpc-unavailable:{url}", Name, url)
                 {
                     Status = ConnectionState.Failed
                 }
