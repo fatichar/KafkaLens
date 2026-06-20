@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
@@ -80,6 +81,15 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool autoCheckForUpdates;
     [ObservableProperty] private bool isLoadingClusters;
     [ObservableProperty] private bool isAppLogPanelVisible;
+
+    // App log filtering. AppLogFilterMode: false = Search (show all, highlight matches),
+    // true = Filter (hide non-matching rows). AppLogView is what the grid binds to.
+    [ObservableProperty] private string appLogFilterText = string.Empty;
+    [ObservableProperty] private bool appLogFilterMode;
+    public ObservableCollection<AppLogEntry> AppLogView { get; } = new();
+
+    partial void OnAppLogFilterTextChanged(string value) => RebuildAppLogView();
+    partial void OnAppLogFilterModeChanged(bool value) => RebuildAppLogView();
 
     private DispatcherTimer? timer;
     private Task? _startupTask;
@@ -166,6 +176,8 @@ public partial class MainViewModel : ViewModelBase
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
         Clusters.CollectionChanged += OnClustersChanged;
+        AppLogService.Entries.CollectionChanged += OnAppLogEntriesChanged;
+        RebuildAppLogView();
 
         Title = BuildWindowTitle(appConfig.Title);
 
@@ -196,9 +208,52 @@ public partial class MainViewModel : ViewModelBase
 
     private void CopyAppLog()
     {
-        var lines = AppLogService.Entries.Select(e =>
+        var lines = AppLogView.Select(e =>
             $"{e.Timestamp:yyyy-MM-dd HH:mm:ss.fff}\t{e.Level}\t{e.Source}\t{e.Message}");
         CopyTextToClipboard(string.Join(Environment.NewLine, lines));
+    }
+
+    private void OnAppLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Incrementally mirror appends in Filter mode (only matching rows) and Search mode
+        // (all rows) to keep the common "new log line" path cheap. Other changes (removals
+        // when the buffer overflows, Clear, resets) fall back to a full rebuild.
+        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is { Count: > 0 })
+        {
+            foreach (AppLogEntry entry in e.NewItems)
+            {
+                if (!AppLogFilterMode || MatchesAppLogFilter(entry))
+                    AppLogView.Add(entry);
+            }
+            return;
+        }
+
+        RebuildAppLogView();
+    }
+
+    private void RebuildAppLogView()
+    {
+        AppLogView.Clear();
+
+        var entries = AppLogFilterMode && AppLogFilterText.Length > 0
+            ? AppLogService.Entries.Where(MatchesAppLogFilter)
+            : AppLogService.Entries;
+
+        foreach (var entry in entries)
+            AppLogView.Add(entry);
+    }
+
+    // True when the entry matches the current filter text (case-insensitive substring over
+    // level, source and message). Empty filter text matches everything.
+    public bool MatchesAppLogFilter(AppLogEntry entry)
+    {
+        if (string.IsNullOrEmpty(AppLogFilterText))
+            return true;
+
+        var text = AppLogFilterText;
+        return entry.Message.Contains(text, StringComparison.OrdinalIgnoreCase)
+            || (entry.Source?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false)
+            || entry.Level.ToString().Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
     protected override void OnActivated()
