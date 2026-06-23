@@ -1,6 +1,13 @@
-// Inject navbar and footer fragments
+// Inject navbar, footer, and analytics
 async function loadFragments() {
     try {
+        // Inject Umami analytics script directly to head
+        const analyticsScript = document.createElement('script');
+        analyticsScript.defer = true;
+        analyticsScript.src = 'https://analytics.greenfit.in/script.js';
+        analyticsScript.setAttribute('data-website-id', 'b9d3274a-0dbd-46d3-b1e9-762c04e02461');
+        document.head.appendChild(analyticsScript);
+
         // Load navbar
         const navbarResponse = await fetch('navbar.html');
         const navbarHtml = await navbarResponse.text();
