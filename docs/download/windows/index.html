@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Downloading KafkaLens for Windows...</title>
+    <script src="../../assets/config.js"></script>
+    <script src="../../assets/analytics.js"></script>
+    <script>
+        (async function() {
+            try {
+                if (!window.umami) {
+                    const script = document.createElement('script');
+                    script.src = KAFKALENS_CONFIG.umami.scriptUrl;
+                    script.setAttribute('data-website-id', KAFKALENS_CONFIG.umami.websiteId);
+                    document.head.appendChild(script);
+                    await new Promise(resolve => script.onload = resolve);
+                }
+
+                const os = 'windows';
+                const downloadUrl = getDownloadUrl(os);
+                if (downloadUrl) {
+                    await Analytics.trackEvent(`download_${os}`);
+                    window.location.href = Analytics.mergeParamsIntoUrl(downloadUrl);
+                } else {
+                    window.location.href = '/download.html';
+                }
+            } catch (err) {
+                window.location.href = '/download.html';
+            }
+        })();
+    </script>
+</head>
+<body>
+    <p>Redirecting to download... If it doesn't start, <a href="/download.html">click here</a>.</p>
+</body>
+</html>

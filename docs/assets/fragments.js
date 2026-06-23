@@ -1,11 +1,27 @@
 // Inject navbar, footer, and analytics
 async function loadFragments() {
     try {
+        // Load configuration
+        if (typeof KAFKALENS_CONFIG === 'undefined') {
+            const configScript = document.createElement('script');
+            configScript.src = '/assets/config.js';
+            document.head.appendChild(configScript);
+            await new Promise(resolve => configScript.onload = resolve);
+        }
+
+        // Load analytics logic
+        if (typeof Analytics === 'undefined') {
+            const analyticsLogicScript = document.createElement('script');
+            analyticsLogicScript.src = '/assets/analytics.js';
+            document.head.appendChild(analyticsLogicScript);
+            await new Promise(resolve => analyticsLogicScript.onload = resolve);
+        }
+
         // Inject Umami analytics script directly to head
         const analyticsScript = document.createElement('script');
         analyticsScript.defer = true;
-        analyticsScript.src = 'https://analytics.greenfit.in/script.js';
-        analyticsScript.setAttribute('data-website-id', 'b9d3274a-0dbd-46d3-b1e9-762c04e02461');
+        analyticsScript.src = KAFKALENS_CONFIG.umami.scriptUrl;
+        analyticsScript.setAttribute('data-website-id', KAFKALENS_CONFIG.umami.websiteId);
         document.head.appendChild(analyticsScript);
 
         // Load navbar
