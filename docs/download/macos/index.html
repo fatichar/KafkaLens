@@ -12,8 +12,13 @@
                     const script = document.createElement('script');
                     script.src = KAFKALENS_CONFIG.umami.scriptUrl;
                     script.setAttribute('data-website-id', KAFKALENS_CONFIG.umami.websiteId);
+                    const analyticsLoadTimeoutMs = 1500;
                     document.head.appendChild(script);
-                    await new Promise(resolve => script.onload = resolve);
+                    await new Promise(resolve => {
+                        script.onload = resolve;
+                        script.onerror = resolve;
+                        setTimeout(resolve, analyticsLoadTimeoutMs);
+                    });
                 }
 
                 const os = 'macos';
