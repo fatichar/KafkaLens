@@ -287,6 +287,7 @@ public partial class PluginManagerViewModel : ViewModelBase
         _repoManager.AddRepository(url);
         LoadRepositories();
 
+        SelectedRepository = url;
         NewRepositoryUrl   = string.Empty;
         IsAddingRepository = false;
     }
