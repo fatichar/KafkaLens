@@ -76,7 +76,15 @@ public partial class EditClustersDialog : Window
         try
         {
             var selected = ClustersGrid.SelectedItem as ClusterViewModel;
-            Context?.RemoveCluster(selected);
+            if (selected == null) return;
+
+            var confirmBox = new SimpleMessageBox("Confirm Removal",
+                $"Are you sure you want to remove cluster '{selected.Name}'?", isConfirmation: true);
+            var confirmed = await confirmBox.ShowConfirmationAsync(this);
+            if (confirmed == true)
+            {
+                Context?.RemoveCluster(selected);
+            }
         }
         catch (Exception ex)
         {
@@ -134,7 +142,15 @@ public partial class EditClustersDialog : Window
         try
         {
             var selected = ClientsGrid.SelectedItem as ClientInfoViewModel;
-            Context?.RemoveClient(selected);
+            if (selected == null) return;
+
+            var confirmBox = new SimpleMessageBox("Confirm Removal",
+                $"Are you sure you want to remove client '{selected.Name}'?", isConfirmation: true);
+            var confirmed = await confirmBox.ShowConfirmationAsync(this);
+            if (confirmed == true)
+            {
+                Context?.RemoveClient(selected);
+            }
         }
         catch (Exception ex)
         {

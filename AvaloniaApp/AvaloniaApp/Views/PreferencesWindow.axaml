@@ -34,24 +34,24 @@
               <TextBlock Text="Timeouts (ms)" FontWeight="Bold"/>
 
               <TextBlock Text="Query Watermark Timeout"/>
-              <TextBox Text="{Binding KafkaConfig.QueryWatermarkTimeoutMs}"/>
+              <TextBox Text="{Binding KafkaConfig.QueryWatermarkTimeoutMs}" PlaceholderText="30000"/>
 
               <TextBlock Text="Query Topics Timeout"/>
-              <TextBox Text="{Binding KafkaConfig.QueryTopicsTimeoutMs}"/>
+              <TextBox Text="{Binding KafkaConfig.QueryTopicsTimeoutMs}" PlaceholderText="30000"/>
 
               <TextBlock Text="Consume Timeout"/>
-              <TextBox Text="{Binding KafkaConfig.ConsumeTimeoutMs}"/>
+              <TextBox Text="{Binding KafkaConfig.ConsumeTimeoutMs}" PlaceholderText="5000"/>
 
               <TextBlock Text="Admin Metadata Timeout"/>
-              <TextBox Text="{Binding KafkaConfig.AdminMetadataTimeoutMs}"/>
+              <TextBox Text="{Binding KafkaConfig.AdminMetadataTimeoutMs}" PlaceholderText="30000"/>
 
               <TextBlock Text="Limits" FontWeight="Bold" Margin="0,10,0,0"/>
 
               <TextBlock Text="Fetch Max Bytes"/>
-              <TextBox Text="{Binding KafkaConfig.FetchMaxBytes}"/>
+              <TextBox Text="{Binding KafkaConfig.FetchMaxBytes}" PlaceholderText="52428800"/>
 
               <TextBlock Text="Statistics Interval (ms)"/>
-              <TextBox Text="{Binding KafkaConfig.StatisticsIntervalMs}"/>
+              <TextBox Text="{Binding KafkaConfig.StatisticsIntervalMs}" PlaceholderText="0"/>
 
               <TextBlock Text="Consumer Config" FontWeight="Bold" Margin="0,10,0,0"/>
               <TextBlock Text="Group ID"/>

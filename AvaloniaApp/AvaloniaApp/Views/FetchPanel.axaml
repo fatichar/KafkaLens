@@ -68,7 +68,8 @@
                           OnContent="Fetch backwards"
                           OffContent="Fetch backwards"
                           IsChecked="{Binding FetchBackward}"
-                          IsEnabled="{Binding IsFetchBackwardEnabled}"/>
+                          IsEnabled="{Binding IsFetchBackwardEnabled}"
+                          ToolTip.Tip="Fetch messages from the end of the topic instead of the beginning"/>
 
             <Label Grid.Row="3" Grid.Column="0"
                    VerticalAlignment="Center"

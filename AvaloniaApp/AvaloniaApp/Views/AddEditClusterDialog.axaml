@@ -18,7 +18,7 @@
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
-            <Button Name="TestButton" Content="Test Connection" Click="TestButton_Click" IsVisible="False"/>
+            <Button Name="TestButton" Content="Test Connection" Click="TestButton_Click" IsVisible="False" ToolTip.Tip="Test connection to the Kafka cluster"/>
             <Button Name="OkButton" Content="OK" IsDefault="True" Click="OkButton_Click"/>
             <Button Name="CancelButton" Content="Cancel" IsCancel="True" Click="CancelButton_Click"/>
         </StackPanel>

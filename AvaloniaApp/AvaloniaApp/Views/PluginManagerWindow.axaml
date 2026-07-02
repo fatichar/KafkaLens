@@ -56,9 +56,11 @@
       <!-- Add-repo input row (toggled) -->
       <StackPanel Orientation="Horizontal" Spacing="6"
                   IsVisible="{Binding IsAddingRepository}">
-        <TextBox Text="{Binding NewRepositoryUrl}"
+        <TextBox Name="NewRepoUrlBox"
+                 Text="{Binding NewRepositoryUrl}"
                  PlaceholderText="https://example.com/plugins.json"
-                 Width="400"/>
+                 Width="400"
+                 KeyDown="OnNewRepoUrlBoxKeyDown"/>
         <Button Content="Add" Command="{Binding AddRepositoryCommand}"/>
         <Button Content="Cancel" Command="{Binding ToggleAddRepoCommand}"/>
       </StackPanel>

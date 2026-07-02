@@ -14,7 +14,7 @@
 
     <DockPanel Margin="10">
         <Button Name="OpenSettingsButton" DockPanel.Dock="Bottom" HorizontalAlignment="Right"
-                Click="OpenSettingsButton_OnClick">Open Settings dir...</Button>
+                Click="OpenSettingsButton_OnClick" ToolTip.Tip="Open the application settings directory in file explorer">Open Settings dir...</Button>
 
         <TabControl>
             <!-- DIRECT CLUSTERS TAB -->

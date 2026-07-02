@@ -49,7 +49,8 @@
                         Command="{Binding ToggleAppLogPanelCommand}"
                         Margin="4,2"
                         Padding="8,2"
-                        VerticalAlignment="Center"/>
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Toggle application log panel"/>
                 <TextBlock Grid.Column="1"
                            Text="{Binding AppLogService.LatestEntry.Message, TargetNullValue=Ready}"
                            Foreground="{DynamicResource ThemeForegroundBrush}"
