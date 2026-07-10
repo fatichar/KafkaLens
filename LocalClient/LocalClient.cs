@@ -10,7 +10,7 @@ using Serilog;
 
 namespace KafkaLens.Clients;
 
-public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafkaConfig) : IKafkaLensClient
+public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafkaConfig) : IKafkaLensClient, IConnectionTestClient
 {
     public string Name { get; } = "Local";
     public bool CanEditClusters => true;
@@ -25,18 +25,25 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     private readonly ConcurrentDictionary<string, IKafkaConsumer> consumers = new();
 
     #region Create
-    public Task<bool> ValidateConnectionAsync(string address)
+    public async Task<bool> ValidateConnectionAsync(string address)
+    {
+        var result = await ValidateConnectionWithDetailsAsync(address);
+        return result.Succeeded;
+    }
+
+    public Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(string address)
     {
         return Task.Run(() =>
         {
             try
             {
                 var consumer = GetOrCreateConsumerByAddress(address);
-                return consumer.ValidateConnection();
+                return consumer.ValidateConnectionWithDetails();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return false;
+                Log.Error(e, "Connection validation failed for {Address}", address);
+                return ConnectionValidationResult.Failed(e.Message, e.ToString());
             }
         });
     }

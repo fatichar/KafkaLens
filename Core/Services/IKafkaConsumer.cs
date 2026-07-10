@@ -8,6 +8,7 @@ namespace KafkaLens.Core.Services;
 public interface IKafkaConsumer : IDisposable
 {
     bool ValidateConnection();
+    ConnectionValidationResult ValidateConnectionWithDetails();
     List<Topic> GetTopics();
     MessageStream GetMessageStream(string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default);
     MessageStream GetMessageStream(string topic, FetchOptions options, CancellationToken cancellationToken = default);

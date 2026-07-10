@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using AvaloniaApp.Utils;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared.Entities;
+using KafkaLens.Shared.Models;
 using KafkaLens.ViewModels;
 
 namespace AvaloniaApp.Views;
@@ -31,7 +32,7 @@ public partial class EditClustersDialog : DialogBase
         {
             if (Context == null) return;
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
-            var validator = new Func<string, System.Threading.Tasks.Task<bool>>(Context.ValidateConnectionAsync);
+            var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(Context.TestConnectionAsync);
             var dialog = new AddEditClusterDialog(existingNames, validator);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
@@ -55,7 +56,7 @@ public partial class EditClustersDialog : DialogBase
 
             if (Context == null) return;
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
-            var validator = new Func<string, System.Threading.Tasks.Task<bool>>(Context.ValidateConnectionAsync);
+            var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(Context.TestConnectionAsync);
             var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address);
             var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);

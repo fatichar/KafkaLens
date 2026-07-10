@@ -107,6 +107,18 @@ public class EditClustersViewModel : IDisposable
         return await LocalClient.ValidateConnectionAsync(address);
     }
 
+    public async Task<ConnectionValidationResult> TestConnectionAsync(string address)
+    {
+        if (LocalClient is IConnectionTestClient diagnosticClient)
+        {
+            return await diagnosticClient.ValidateConnectionWithDetailsAsync(address);
+        }
+
+        return await LocalClient.ValidateConnectionAsync(address)
+            ? ConnectionValidationResult.Success()
+            : ConnectionValidationResult.Failed("Connection validation returned false.");
+    }
+
     // Clusters
     public async Task AddClusterAsync(string name, string address)
     {

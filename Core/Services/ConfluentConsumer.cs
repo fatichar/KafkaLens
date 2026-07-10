@@ -167,16 +167,22 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
     public override bool ValidateConnection()
     {
+        return ValidateConnectionWithDetails().Succeeded;
+    }
+
+    public override ConnectionValidationResult ValidateConnectionWithDetails()
+    {
         try
         {
             var metadata = AdminClient.GetMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
-            return metadata.OriginatingBrokerId != -1;
+            return metadata.OriginatingBrokerId != -1
+                ? ConnectionValidationResult.Success()
+                : ConnectionValidationResult.Failed();
         }
         catch (Exception e)
         {
-            // Logging only the message to avoid stack trace clutter for expected timeouts
-            Log.Debug("Connection validation failed: {Message}", e.Message);
-            return false;
+            Log.Error(e, "Connection validation failed");
+            return ConnectionValidationResult.Failed(e.Message, e.ToString());
         }
     }
 

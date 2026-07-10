@@ -5,6 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using KafkaLens.Shared.Entities;
+using KafkaLens.Shared.Models;
+using Serilog;
 
 namespace AvaloniaApp.Views;
 
@@ -14,7 +16,7 @@ public partial class AddEditClusterDialog : DialogBase
     private readonly string? originalName;
     private readonly string? originalId;
     private readonly HashSet<string> existingNames;
-    private readonly Func<string, Task<bool>>? connectionValidator;
+    private readonly Func<string, Task<ConnectionValidationResult>>? connectionValidator;
 
     public AddEditClusterDialog()
     {
@@ -22,14 +24,14 @@ public partial class AddEditClusterDialog : DialogBase
         existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
-    public AddEditClusterDialog(IEnumerable<string> existingNames, Func<string, Task<bool>>? connectionValidator = null) : this()
+    public AddEditClusterDialog(IEnumerable<string> existingNames, Func<string, Task<ConnectionValidationResult>>? connectionValidator = null) : this()
     {
         this.existingNames = new HashSet<string>(existingNames, StringComparer.OrdinalIgnoreCase);
         this.connectionValidator = connectionValidator;
         UpdateTestButton();
     }
 
-    public AddEditClusterDialog(ClusterInfo existing, IEnumerable<string> existingNames, Func<string, Task<bool>>? connectionValidator = null) : this(existingNames, connectionValidator)
+    public AddEditClusterDialog(ClusterInfo existing, IEnumerable<string> existingNames, Func<string, Task<ConnectionValidationResult>>? connectionValidator = null) : this(existingNames, connectionValidator)
     {
         originalName = existing.Name;
         originalId = existing.Id;
@@ -54,11 +56,14 @@ public partial class AddEditClusterDialog : DialogBase
         StatusTextBlock.Text = "Testing connection...";
         StatusTextBlock.Foreground = Brushes.Blue;
         ErrorTextBlock.Text = "";
+        DetailsExpander.IsVisible = false;
+        DetailsExpander.IsExpanded = false;
+        DetailsTextBox.Text = "";
 
         try
         {
-            bool connected = await connectionValidator(AddressBox.Text.Trim());
-            if (connected)
+            var result = await connectionValidator(AddressBox.Text.Trim());
+            if (result.Succeeded)
             {
                 StatusTextBlock.Text = "Connected successfully.";
                 StatusTextBlock.Foreground = Brushes.Green;
@@ -66,13 +71,20 @@ public partial class AddEditClusterDialog : DialogBase
             else
             {
                 StatusTextBlock.Text = "";
-                ErrorTextBlock.Text = "Failed to connect.";
+                ErrorTextBlock.Text = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "Failed to connect."
+                    : $"Failed to connect: {result.ErrorMessage}";
+                DetailsTextBox.Text = result.ErrorDetails ?? "The connection check failed without additional technical details.";
+                DetailsExpander.IsVisible = true;
             }
         }
         catch (Exception ex)
         {
+            Log.Error(ex, "Unexpected error while testing Kafka connection to {Address}", AddressBox.Text.Trim());
             StatusTextBlock.Text = "";
             ErrorTextBlock.Text = $"Error: {ex.Message}";
+            DetailsTextBox.Text = ex.ToString();
+            DetailsExpander.IsVisible = true;
         }
         finally
         {
@@ -84,6 +96,9 @@ public partial class AddEditClusterDialog : DialogBase
     {
         StatusTextBlock.Text = "";
         ErrorTextBlock.Text = "";
+        DetailsExpander.IsVisible = false;
+        DetailsExpander.IsExpanded = false;
+        DetailsTextBox.Text = "";
 
         if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(AddressBox.Text))
         {

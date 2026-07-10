@@ -14,6 +14,20 @@ public abstract class ConsumerBase : IKafkaConsumer
 
     public abstract bool ValidateConnection();
 
+    public virtual ConnectionValidationResult ValidateConnectionWithDetails()
+    {
+        try
+        {
+            return ValidateConnection()
+                ? ConnectionValidationResult.Success()
+                : ConnectionValidationResult.Failed();
+        }
+        catch (Exception e)
+        {
+            return ConnectionValidationResult.Failed(e.Message, e.ToString());
+        }
+    }
+
     public virtual List<Topic> GetTopics()
     {
         // if topics were loaded in the last 60 minutes, return them
