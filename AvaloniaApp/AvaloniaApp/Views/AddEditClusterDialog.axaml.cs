@@ -8,7 +8,7 @@ using KafkaLens.Shared.Entities;
 
 namespace AvaloniaApp.Views;
 
-public partial class AddEditClusterDialog : Window
+public partial class AddEditClusterDialog : DialogBase
 {
     public ClusterInfo? Result { get; private set; }
     private readonly string? originalName;

@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AvaloniaApp.Views;
 
-public partial class About : Window
+public partial class About : DialogBase
 {
     private const string AUTHOR = "Pravin Chaudhary";
     public string AppVersion { get; }

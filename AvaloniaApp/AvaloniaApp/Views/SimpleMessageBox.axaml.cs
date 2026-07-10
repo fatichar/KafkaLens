@@ -3,7 +3,7 @@ using Avalonia.Controls;
 
 namespace AvaloniaApp.Views;
 
-public partial class SimpleMessageBox : Window
+public partial class SimpleMessageBox : DialogBase
 {
     private bool isConfirmation;
 
@@ -52,6 +52,14 @@ public partial class SimpleMessageBox : Window
         }
 
         Close();
+    }
+
+    protected override void OnCancel()
+    {
+        if (isConfirmation)
+            Close(false);
+        else
+            Close();
     }
 
     private void SecondaryButton_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

@@ -1,5 +1,6 @@
-<Window xmlns="https://github.com/avaloniaui"
+<views:DialogBase xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:AvaloniaApp.Views"
         x:Class="AvaloniaApp.Views.AddEditClientDialog"
         Title="Add/Edit Client"
         Width="400" MinWidth="350" MinHeight="400"
@@ -26,4 +27,4 @@
             <Button Name="CancelButton" Content="Cancel" IsCancel="True" Click="CancelButton_Click"/>
         </StackPanel>
     </Grid>
-</Window>
+</views:DialogBase>

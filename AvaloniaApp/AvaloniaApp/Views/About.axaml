@@ -1,12 +1,12 @@
-<Window xmlns="https://github.com/avaloniaui"
+<views:DialogBase xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+        xmlns:views="clr-namespace:AvaloniaApp.Views"
         mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
         x:Class="AvaloniaApp.Views.About"
         Title="About KafkaLens"
-        xmlns:views="clr-namespace:AvaloniaApp.Views"
         x:DataType="views:About"
         Width="400" Height="400"
         WindowStartupLocation="CenterOwner"
@@ -83,4 +83,4 @@
                      FontSize="12"/>
         </StackPanel>
     </Border>
-</Window>
+</views:DialogBase>

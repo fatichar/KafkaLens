@@ -4,7 +4,7 @@ using KafkaLens.ViewModels;
 
 namespace AvaloniaApp.Views;
 
-public partial class UpdateDialog : Window
+public partial class UpdateDialog : DialogBase
 {
     public UpdateDialog()
     {
@@ -19,5 +19,13 @@ public partial class UpdateDialog : Window
             vm.OnUpdate += () => Close(true);
             vm.OnSkip += () => Close(false);
         }
+    }
+
+    protected override void OnCancel()
+    {
+        if (DataContext is UpdateViewModel vm)
+            vm.SkipCommand.Execute(null);
+        else
+            base.OnCancel();
     }
 }

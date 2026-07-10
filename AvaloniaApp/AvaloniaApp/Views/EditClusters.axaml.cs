@@ -10,7 +10,7 @@ using KafkaLens.ViewModels;
 
 namespace AvaloniaApp.Views;
 
-public partial class EditClustersDialog : Window
+public partial class EditClustersDialog : DialogBase
 {
     private string AppDataPath { get; set; }
 

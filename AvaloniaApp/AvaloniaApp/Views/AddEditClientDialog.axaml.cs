@@ -6,7 +6,7 @@ using KafkaLens.Clients.Entities;
 
 namespace AvaloniaApp.Views;
 
-public partial class AddEditClientDialog : Window
+public partial class AddEditClientDialog : DialogBase
 {
     public ClientInfo? Result { get; private set; }
     private readonly string? originalName;

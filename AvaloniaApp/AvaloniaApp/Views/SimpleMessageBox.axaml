@@ -1,5 +1,6 @@
-<Window xmlns="https://github.com/avaloniaui"
+<views:DialogBase xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:AvaloniaApp.Views"
         x:Class="AvaloniaApp.Views.SimpleMessageBox"
         Width="420"
         MinWidth="360"
@@ -38,4 +39,4 @@
       </StackPanel>
     </Grid>
   </Border>
-</Window>
+</views:DialogBase>

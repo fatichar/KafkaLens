@@ -5,7 +5,7 @@ using KafkaLens.ViewModels;
 
 namespace AvaloniaApp.Views;
 
-public partial class PluginManagerWindow : Window
+public partial class PluginManagerWindow : DialogBase
 {
     public PluginManagerWindow()
     {
