@@ -90,6 +90,7 @@ Do **not** use the `AvaloniaApp.sln` — use `KafkaLens.slnx`.
 ## Communication & Workflow Rules
 
 - **Discuss before doing.** Answer questions and propose an approach before writing code.
+- **Always present alternatives for bug fixes too.** Even when a bug fix seems small/trivial, present the root cause and at least 2 candidate fixes with tradeoffs, and wait for the user to pick one before editing any files. Do not jump straight to implementing the first viable fix.
 - **Do not run the application.** The user runs it themselves.
 - **Verify before editing.** Read a file before modifying it.
 
