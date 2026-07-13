@@ -196,7 +196,7 @@ public partial class MainViewModel
         {
             var cluster = Clusters.FirstOrDefault(c => c.Id == opened.ClusterId);
             if (cluster != null)
-                opened.Name = cluster.Name;
+                opened.UpdateClusterName(cluster.Name);
         }
     }
 

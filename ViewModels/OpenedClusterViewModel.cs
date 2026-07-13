@@ -23,6 +23,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     private readonly IFormatterService formatterService;
     private readonly ClusterViewModel cluster;
     private readonly IAppLogService appLogService;
+    private readonly string tabSuffix;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
 
     private static IList<string> FetchPositionsForTopic { get; } = new List<string>();
@@ -162,6 +163,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         this.formatterService = formatterService;
         this.cluster = cluster;
         this.appLogService = appLogService ?? new AppLogService();
+        tabSuffix = name.StartsWith(cluster.Name, StringComparison.Ordinal)
+            ? name[cluster.Name.Length..]
+            : string.Empty;
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
         Name = name;
 
@@ -265,6 +269,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         FetchBackward = value == "End";
     }
 
+    internal void UpdateClusterName(string clusterName) => Name = clusterName + tabSuffix;
+
     private void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ClusterViewModel.StatusColor))
@@ -276,7 +282,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                 Dispatcher.UIThread.Post(() => _ = LoadTopicsAsync());
         }
         else if (e.PropertyName == nameof(ClusterViewModel.Name))
-            Name = cluster.Name;
+            UpdateClusterName(cluster.Name);
     }
 
     private static bool AreSameLogicalNode(ITreeNode? first, ITreeNode? second)

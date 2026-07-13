@@ -67,4 +67,24 @@ public class MainViewModelTests
         // Assert
         Assert.Equal("MyCluster (2)", result);
     }
+
+    [Fact]
+    public void RenamingCluster_ShouldPreserveEachOpenedTabSuffix()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        var topicSettingsService = Substitute.For<ITopicSettingsService>();
+        var messageSaver = Substitute.For<IMessageSaver>();
+        var formatterService = Substitute.For<IFormatterService>();
+        var cluster = new KafkaCluster("1", "MyCluster", "localhost");
+        var client = Substitute.For<IKafkaLensClient>();
+        var clusterVm = new ClusterViewModel(cluster, client);
+        var firstTab = new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, "MyCluster");
+        var secondTab = new OpenedClusterViewModel(settingsService, topicSettingsService, messageSaver, formatterService, clusterVm, "MyCluster (1)");
+
+        clusterVm.Name = "RenamedCluster";
+
+        Assert.Equal("RenamedCluster", firstTab.Name);
+        Assert.Equal("RenamedCluster (1)", secondTab.Name);
+    }
 }
