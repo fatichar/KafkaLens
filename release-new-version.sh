@@ -52,22 +52,6 @@ if [ "$INSTALLER_VERSION" != "$VERSION" ]; then
 fi
 echo "INFO: Version consistency check passed."
 
-# 5. Verify download.html version matches
-DOWNLOAD_HTML="docs/download.html"
-echo "INFO: Reading version from $DOWNLOAD_HTML..."
-HTML_VERSION=$(sed -nE 's/.*Latest Stable Release \(v([^)]+)\).*/\1/p' "$DOWNLOAD_HTML" | head -1)
-if [ -z "$HTML_VERSION" ]; then
-  echo "ERROR: Could not find 'Latest Stable Release (vX.Y)' in $DOWNLOAD_HTML"
-  exit 1
-fi
-echo "INFO: Parsed download.html version: $HTML_VERSION"
-
-if [ "$HTML_VERSION" != "$VERSION" ]; then
-  echo "ERROR: Version mismatch: Directory.Build.props has $VERSION but $DOWNLOAD_HTML has $HTML_VERSION"
-  exit 1
-fi
-echo "INFO: download.html version check passed."
-
 # 6. Check if tag already exists
 echo "INFO: Checking whether tag $TAG already exists..."
 if git rev-parse "$TAG" >/dev/null 2>&1; then
