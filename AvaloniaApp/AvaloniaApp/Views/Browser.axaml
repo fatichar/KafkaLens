@@ -56,12 +56,12 @@
                               ContextMenu="{StaticResource MessageGridContextMenu}">
                         <DataGrid.Columns>
                             <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition"
-                                                Binding="{Binding Partition }" />
-                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}" />
+                                                Binding="{Binding Partition }" SortMemberPath="Partition" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}" SortMemberPath="Offset" />
                             <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp"
-                                                Binding="{Binding Timestamp}" />
-                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }" />
-                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Value" Binding="{Binding Summary }" />
+                                                Binding="{Binding Timestamp}" SortMemberPath="Timestamp" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }" SortMemberPath="Key" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Value" Binding="{Binding Summary }" SortMemberPath="Summary" />
                         </DataGrid.Columns>
                         <DataGrid.RowDetailsTemplate></DataGrid.RowDetailsTemplate>
                     </DataGrid>

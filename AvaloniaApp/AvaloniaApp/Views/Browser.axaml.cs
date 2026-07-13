@@ -1,10 +1,13 @@
+using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Controls;
 using Avalonia.Styling;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.TextMate;
 using CommunityToolkit.Mvvm.Messaging;
@@ -52,6 +55,7 @@ public partial class Browser : UserControl
         if (previousContext != null)
         {
             previousContext.CurrentMessages.PropertyChanged -= OnCurrentMessagesChanged;
+            previousContext.CurrentMessages.Filtered.CollectionChanged -= OnFilteredMessagesChanged;
         }
         if (subscribedMessage != null)
         {
@@ -64,6 +68,7 @@ public partial class Browser : UserControl
         if (Context != null)
         {
             Context.CurrentMessages.PropertyChanged += OnCurrentMessagesChanged;
+            Context.CurrentMessages.Filtered.CollectionChanged += OnFilteredMessagesChanged;
             Context.SetClipboardText = async text =>
             {
                 var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
@@ -148,6 +153,20 @@ public partial class Browser : UserControl
 
         Context.MessagesSortColumn = clickedColumn;
         Context.MessagesSortAscending = nextAscending;
+        Dispatcher.UIThread.Post(RefreshMessageRowHeaders);
+    }
+
+    private void OnFilteredMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        Dispatcher.UIThread.Post(RefreshMessageRowHeaders);
+    }
+
+    private void RefreshMessageRowHeaders()
+    {
+        foreach (var row in MessagesGrid.GetVisualDescendants().OfType<DataGridRow>())
+        {
+            row.Header = row.Index + 1;
+        }
     }
 
     private void ApplySavedSort(OpenedClusterViewModel context)
@@ -246,7 +265,7 @@ public partial class Browser : UserControl
 
     private void messagesGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
-        e.Row.Header = 1 + e.Row.Index;
+        e.Row.Header = e.Row.Index + 1;
     }
 
     private void UserControl_KeyDown(object? sender, KeyEventArgs e)
