@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fatichar.github.io/KafkaLens/sitemap.xml
+Sitemap: https://kafkalens.com/sitemap.xml

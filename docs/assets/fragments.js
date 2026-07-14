@@ -4,7 +4,7 @@ async function loadFragments() {
         // Load configuration
         if (typeof KAFKALENS_CONFIG === 'undefined') {
             const configScript = document.createElement('script');
-            configScript.src = '/assets/config.js';
+            configScript.src = 'assets/config.js';
             document.head.appendChild(configScript);
             await new Promise(resolve => configScript.onload = resolve);
         }
@@ -12,7 +12,7 @@ async function loadFragments() {
         // Load analytics logic
         if (typeof Analytics === 'undefined') {
             const analyticsLogicScript = document.createElement('script');
-            analyticsLogicScript.src = '/assets/analytics.js';
+            analyticsLogicScript.src = 'assets/analytics.js';
             document.head.appendChild(analyticsLogicScript);
             await new Promise(resolve => analyticsLogicScript.onload = resolve);
         }
