@@ -104,22 +104,22 @@ public sealed class MessagesViewModel: ViewModelBase
 
     private void ApplyFilter()
     {
-        var filtered = Messages.Where(m => FilterAccepts(m.DecodedMessage)).ToList();
+        var filtered = Messages.Where(FilterAccepts).ToList();
         Filtered.ReplaceRange(filtered);
     }
 
-    private bool FilterAccepts(string message)
+    private bool FilterAccepts(MessageViewModel message)
     {
         return NegativeFilterAccepts(message)
                && PositiveFilterAccepts(message);
     }
 
-    private bool PositiveFilterAccepts(string message)
+    private bool PositiveFilterAccepts(MessageViewModel message)
     {
         return positiveExpression.Matches(message);
     }
 
-    private bool NegativeFilterAccepts(string message)
+    private bool NegativeFilterAccepts(MessageViewModel message)
     {
         return !negativeExpression.Matches(message);
     }
@@ -134,7 +134,7 @@ public sealed class MessagesViewModel: ViewModelBase
     internal void Add(MessageViewModel message)
     {
         Messages.Add(message);
-        if (FilterAccepts(message.DecodedMessage))
+        if (FilterAccepts(message))
         {
             Filtered.Add(message);
         }
@@ -147,10 +147,29 @@ public sealed class MessagesViewModel: ViewModelBase
 
         Messages.AddRange(list);
 
-        var filteredList = list.Where(m => FilterAccepts(m.DecodedMessage)).ToList();
+        var filteredList = list.Where(FilterAccepts).ToList();
         if (filteredList.Count > 0)
         {
             Filtered.AddRange(filteredList);
         }
+    }
+
+    /// <summary>
+    /// Drops every message belonging to <paramref name="topicName"/>. Used when a topic is
+    /// unchecked so its rows leave the viewer without disturbing the other topics.
+    /// </summary>
+    internal void RemoveTopic(string topicName)
+    {
+        Predicate<MessageViewModel> belongsToTopic = m =>
+            string.Equals(m.Topic, topicName, StringComparison.Ordinal);
+
+        var selectionRemoved = currentMessage != null && belongsToTopic(currentMessage);
+
+        Messages.RemoveAll(belongsToTopic);
+        Filtered.RemoveAll(belongsToTopic);
+
+        // Cleared after removal: the CurrentMessage setter ignores null while the
+        // selection is still present in Filtered.
+        if (selectionRemoved) CurrentMessage = null;
     }
 }

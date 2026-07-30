@@ -305,10 +305,159 @@ public class MessagesViewModelTests
         Assert.False(viewModel.UseObjectFilter);
     }
 
+    // The key deliberately shares no text with the filter terms used above, so these tests
+    // exercise body matching rather than the key matching added for cross-field search.
     private MessageViewModel CreateMockMessageViewModel(string decodedMessage = "test message")
     {
-        var message = new Message(1640995200000, new Dictionary<string, byte[]>(), 
-            Encoding.UTF8.GetBytes("test key"), Encoding.UTF8.GetBytes(decodedMessage));
+        var message = new Message(1640995200000, new Dictionary<string, byte[]>(),
+            Encoding.UTF8.GetBytes("msg-key"), Encoding.UTF8.GetBytes(decodedMessage));
         return new MessageViewModel(message, "Text", "Text");
     }
+
+    private static MessageViewModel CreateMessageViewModel(
+        string body,
+        string key = "msg-key",
+        string? topic = null,
+        Dictionary<string, byte[]>? headers = null)
+    {
+        var message = new Message(1640995200000, headers ?? new Dictionary<string, byte[]>(),
+            Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(body));
+        var viewModel = new MessageViewModel(message, "Text", "Text");
+        if (topic != null) viewModel.Topic = topic;
+        return viewModel;
+    }
+
+    #region cross-field filtering
+
+    [Fact]
+    public void PositiveFilter_ShouldMatchOnKey()
+    {
+        var viewModel = new MessagesViewModel();
+        var matching = CreateMessageViewModel("body one", key: "customer-42");
+        var nonMatching = CreateMessageViewModel("body two", key: "order-7");
+        viewModel.Add(matching);
+        viewModel.Add(nonMatching);
+
+        viewModel.PositiveFilter = "customer";
+
+        Assert.Single(viewModel.Filtered);
+        Assert.Equal(matching, viewModel.Filtered.First());
+    }
+
+    [Fact]
+    public void PositiveFilter_ShouldMatchOnHeaderName()
+    {
+        var viewModel = new MessagesViewModel();
+        var matching = CreateMessageViewModel("body one",
+            headers: new Dictionary<string, byte[]> { ["trace-id"] = Encoding.UTF8.GetBytes("abc") });
+        var nonMatching = CreateMessageViewModel("body two");
+        viewModel.Add(matching);
+        viewModel.Add(nonMatching);
+
+        viewModel.PositiveFilter = "trace-id";
+
+        Assert.Single(viewModel.Filtered);
+        Assert.Equal(matching, viewModel.Filtered.First());
+    }
+
+    [Fact]
+    public void PositiveFilter_ShouldMatchOnHeaderValue()
+    {
+        var viewModel = new MessagesViewModel();
+        var matching = CreateMessageViewModel("body one",
+            headers: new Dictionary<string, byte[]> { ["source"] = Encoding.UTF8.GetBytes("billing-service") });
+        var nonMatching = CreateMessageViewModel("body two",
+            headers: new Dictionary<string, byte[]> { ["source"] = Encoding.UTF8.GetBytes("shipping-service") });
+        viewModel.Add(matching);
+        viewModel.Add(nonMatching);
+
+        viewModel.PositiveFilter = "billing";
+
+        Assert.Single(viewModel.Filtered);
+        Assert.Equal(matching, viewModel.Filtered.First());
+    }
+
+    [Fact]
+    public void PositiveFilter_ShouldMatchOnTopicName()
+    {
+        var viewModel = new MessagesViewModel();
+        var matching = CreateMessageViewModel("body one", topic: "orders");
+        var nonMatching = CreateMessageViewModel("body two", topic: "payments");
+        viewModel.Add(matching);
+        viewModel.Add(nonMatching);
+
+        viewModel.PositiveFilter = "orders";
+
+        Assert.Single(viewModel.Filtered);
+        Assert.Equal(matching, viewModel.Filtered.First());
+    }
+
+    [Fact]
+    public void NegativeFilter_ShouldExcludeOnHeaderValue()
+    {
+        var viewModel = new MessagesViewModel();
+        var kept = CreateMessageViewModel("body one",
+            headers: new Dictionary<string, byte[]> { ["level"] = Encoding.UTF8.GetBytes("info") });
+        var excluded = CreateMessageViewModel("body two",
+            headers: new Dictionary<string, byte[]> { ["level"] = Encoding.UTF8.GetBytes("debug") });
+        viewModel.Add(kept);
+        viewModel.Add(excluded);
+
+        viewModel.NegativeFilter = "debug";
+
+        Assert.Single(viewModel.Filtered);
+        Assert.Equal(kept, viewModel.Filtered.First());
+    }
+
+    #endregion
+
+    #region RemoveTopic
+
+    [Fact]
+    public void RemoveTopic_ShouldDropOnlyThatTopicsMessages()
+    {
+        var viewModel = new MessagesViewModel();
+        var orders = CreateMessageViewModel("body one", topic: "orders");
+        var payments = CreateMessageViewModel("body two", topic: "payments");
+        viewModel.Add(orders);
+        viewModel.Add(payments);
+
+        viewModel.RemoveTopic("orders");
+
+        Assert.Single(viewModel.Messages);
+        Assert.Equal(payments, viewModel.Messages.First());
+        Assert.Single(viewModel.Filtered);
+        Assert.Equal(payments, viewModel.Filtered.First());
+    }
+
+    [Fact]
+    public void RemoveTopic_WhenSelectionRemoved_ShouldClearCurrentMessage()
+    {
+        var viewModel = new MessagesViewModel();
+        var orders = CreateMessageViewModel("body one", topic: "orders");
+        viewModel.Add(orders);
+        viewModel.CurrentMessage = orders;
+
+        viewModel.RemoveTopic("orders");
+
+        Assert.Empty(viewModel.Messages);
+        Assert.Null(viewModel.CurrentMessage);
+    }
+
+    [Fact]
+    public void RemoveTopic_WhenSelectionBelongsToAnotherTopic_ShouldKeepSelection()
+    {
+        var viewModel = new MessagesViewModel();
+        var orders = CreateMessageViewModel("body one", topic: "orders");
+        var payments = CreateMessageViewModel("body two", topic: "payments");
+        viewModel.Add(orders);
+        viewModel.Add(payments);
+        viewModel.CurrentMessage = payments;
+
+        viewModel.RemoveTopic("orders");
+
+        Assert.Equal(payments, viewModel.CurrentMessage);
+    }
+
+    #endregion
 }

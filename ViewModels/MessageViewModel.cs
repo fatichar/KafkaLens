@@ -4,12 +4,15 @@ using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KafkaLens.Shared.Models;
 using KafkaLens.Formatting;
+using KafkaLens.ViewModels.Search;
 
 namespace KafkaLens.ViewModels;
 
-public sealed partial class MessageViewModel : ViewModelBase
+public sealed partial class MessageViewModel : ViewModelBase, ISearchTarget
 {
     public const int MAX_SUMMARY_LEN = 150;
+
+    private const StringComparison SearchComparison = StringComparison.OrdinalIgnoreCase;
 
     private readonly Message message;
 
@@ -105,6 +108,24 @@ public sealed partial class MessageViewModel : ViewModelBase
     }
 
     public string Topic { get; set; } = null!;
+
+    /// <summary>
+    /// Matches a search term against the topic name, key, headers and decoded body.
+    /// Cheap fields are checked before the body, which is typically the largest.
+    /// </summary>
+    public bool ContainsTerm(string term)
+    {
+        if (Topic?.Contains(term, SearchComparison) == true) return true;
+        if (Key?.Contains(term, SearchComparison) == true) return true;
+
+        foreach (var header in Headers)
+        {
+            if (header.Name.Contains(term, SearchComparison)) return true;
+            if (header.Value.Contains(term, SearchComparison)) return true;
+        }
+
+        return DecodedMessage?.Contains(term, SearchComparison) == true;
+    }
 
     private void UpdateText()
     {

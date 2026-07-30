@@ -7,7 +7,7 @@
 		<TextBox Grid.Column="0" x:Name="FilterBox"
 		         VerticalContentAlignment="Center" VerticalAlignment="Center"
 		         Text="{Binding CurrentMessages.PositiveFilter}"
-		         PlaceholderText="Filter (Ctrl+F)"/>
+		         PlaceholderText="Filter body, key, headers, topic (Ctrl+F)"/>
 		<TextBlock Grid.Column="1" Text="F5 to refresh" VerticalAlignment="Center" Margin="8,0,0,0"
 		           FontSize="11" Foreground="Gray" IsVisible="{Binding !IsLoading}"/>
 		<Button Grid.Column="2" Content="?" VerticalAlignment="Center" Margin="5,0,0,0"
@@ -16,8 +16,11 @@
 				<Flyout>
 					<StackPanel Margin="10" MaxWidth="320">
 						<TextBlock FontWeight="Bold" Margin="0,0,0,8">Filter Syntax</TextBlock>
-						<TextBlock TextWrapping="Wrap" Margin="0,0,0,10">
+						<TextBlock TextWrapping="Wrap" Margin="0,0,0,6">
 							Combine search terms using boolean operators. Multiple words without an operator are treated as OR.
+						</TextBlock>
+						<TextBlock TextWrapping="Wrap" Margin="0,0,0,10" FontSize="11" Foreground="Gray">
+							A term matches if it is found in the message body, the key, any header name or value, or the topic name.
 						</TextBlock>
 						<Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto">
 							<TextBlock Grid.Row="0" Grid.Column="0" FontFamily="Courier New" FontWeight="Bold" Margin="0,0,12,4">&amp;&amp;</TextBlock>

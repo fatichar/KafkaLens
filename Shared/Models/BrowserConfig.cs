@@ -21,6 +21,8 @@ public class OpenedTabState
     public string? SelectedNodeType { get; set; }
     public string? SelectedTopicName { get; set; }
     public int? SelectedPartitionId { get; set; }
+    /// <summary>Topics checked for multi-topic viewing. Empty means single-node mode.</summary>
+    public List<string> CheckedTopicNames { get; set; } = new();
     public string? FetchPosition { get; set; }
     public int FetchCount { get; set; }
     public bool FetchBackward { get; set; }

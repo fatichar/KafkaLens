@@ -13,11 +13,14 @@ public partial class TopicViewModel: ViewModelBase, IMessageSource
 
     public string Name => topic.Name;
     public bool IsExpandable => true;
+    public bool IsCheckable => true;
 
     [ObservableProperty]
     private bool isSelected;
     [ObservableProperty]
     private bool isExpanded;
+    [ObservableProperty]
+    private bool isChecked;
 
     [ObservableProperty] private List<IMessageFormatter> formatters;
     [ObservableProperty] private string? formatterName;
