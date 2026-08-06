@@ -39,6 +39,40 @@
                 </DataTemplate>
             </Menu.DataTemplates>
         </Menu>
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding IsSaveNotificationVisible}"
+                Background="{DynamicResource ThemeToolbarBackgroundBrush}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="8,4">
+            <Grid>
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Margin="0,0,28,0">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding SaveNotificationMessage}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1"
+                            Content="Open folder"
+                            Command="{Binding OpenSavedMessagesDirectoryCommand}"
+                            Padding="8,2"/>
+                    <Button Grid.Column="2"
+                            Content="Hide for this session"
+                            Command="{Binding HideSaveNotificationsForSessionCommand}"
+                            Padding="8,2"/>
+                    <Button Grid.Column="3"
+                            Content="Never show again"
+                            Command="{Binding NeverShowSaveNotificationsCommand}"
+                            Padding="8,2"/>
+                </Grid>
+                <Button Content="×"
+                        Command="{Binding CloseSaveNotificationCommand}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        ToolTip.Tip="Dismiss"
+                        Padding="4,0"
+                        FontSize="14"/>
+            </Grid>
+        </Border>
         <Border DockPanel.Dock="Bottom"
                 BorderBrush="{DynamicResource ThemeBorderBrush}"
                 BorderThickness="0,1,0,0"

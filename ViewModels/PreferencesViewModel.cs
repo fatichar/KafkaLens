@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.IO;
 using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared.Services;
@@ -58,9 +59,14 @@ public partial class PreferencesViewModel : ViewModelBase
     [ObservableProperty]
     private int selectedTabIndex;
 
+    [ObservableProperty]
+    private string savedMessagesDirectoryError = "";
+
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand CancelCommand { get; }
+    public IAsyncRelayCommand BrowseSavedMessagesDirectoryCommand { get; }
 
+    public Func<Task<string?>>? BrowseFolderAsync { get; set; }
     public Action CloseAction { get; set; } = () => { };
 
     private readonly Action<string>? applyTheme;
@@ -94,6 +100,7 @@ public partial class PreferencesViewModel : ViewModelBase
 
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
+        BrowseSavedMessagesDirectoryCommand = new AsyncRelayCommand(BrowseSavedMessagesDirectoryAsync);
     }
 
     private string ValidateTheme(string themeName, IThemeService? themeService)
@@ -322,8 +329,25 @@ public partial class PreferencesViewModel : ViewModelBase
             StringComparer.Ordinal);
     }
 
+    private async Task BrowseSavedMessagesDirectoryAsync()
+    {
+        if (BrowseFolderAsync == null)
+            return;
+
+        var selectedDirectory = await BrowseFolderAsync();
+        if (!string.IsNullOrWhiteSpace(selectedDirectory))
+        {
+            BrowserConfig.SavedMessagesDirectory = selectedDirectory;
+            SavedMessagesDirectoryError = "";
+        }
+    }
+
     private void Save()
     {
+        SavedMessagesDirectoryError = ValidateSavedMessagesDirectory(BrowserConfig.SavedMessagesDirectory);
+        if (!string.IsNullOrEmpty(SavedMessagesDirectoryError))
+            return;
+
         // Check if there are any validation errors
         if (!string.IsNullOrEmpty(FetchCountsError))
         {
@@ -348,6 +372,22 @@ public partial class PreferencesViewModel : ViewModelBase
         WeakReferenceMessenger.Default.Send(new ConfigurationChangedMessage());
 
         CloseAction();
+    }
+
+    private static string ValidateSavedMessagesDirectory(string directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+            return "Saved messages folder cannot be empty.";
+
+        try
+        {
+            _ = Path.GetFullPath(directory);
+            return "";
+        }
+        catch (Exception)
+        {
+            return "Saved messages folder is not a valid path.";
+        }
     }
 
     private void Cancel()

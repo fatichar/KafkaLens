@@ -1,3 +1,4 @@
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared.Services;
@@ -247,6 +248,69 @@ public class PreferencesViewModelTests
         Assert.NotEqual("", vm.FetchCountsError); // Has validation error
         Assert.Equal(originalAvailableCount, vm.AvailableFetchCounts.Count); // Dropdown not updated
         Assert.Equal(originalDefault, vm.BrowserConfig.DefaultFetchCount); // Default not changed
+    }
+
+    [Fact]
+    public void Save_WhenSavedMessagesDirectoryIsEmpty_ShouldNotSave()
+    {
+        // Arrange
+        var settingsService = Substitute.For<ISettingsService>();
+        settingsService.GetKafkaConfig().Returns(new KafkaConfig());
+        var browserConfig = CreateBrowserConfig(10, 10, 25, 50);
+        browserConfig.SavedMessagesDirectory = "";
+        settingsService.GetBrowserConfig().Returns(browserConfig);
+        settingsService.GetValue("Theme").Returns("System");
+
+        var vm = new PreferencesViewModel(settingsService);
+
+        // Act
+        vm.SaveCommand.Execute(null);
+
+        // Assert
+        Assert.Equal("Saved messages folder cannot be empty.", vm.SavedMessagesDirectoryError);
+        settingsService.DidNotReceive().SaveBrowserConfig(Arg.Any<BrowserConfig>());
+    }
+
+    [Fact]
+    public async Task BrowseSavedMessagesDirectoryCommand_WhenFolderSelected_ShouldUpdateDirectory()
+    {
+        // Arrange
+        var settingsService = Substitute.For<ISettingsService>();
+        settingsService.GetKafkaConfig().Returns(new KafkaConfig());
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50));
+        settingsService.GetValue("Theme").Returns("System");
+        var vm = new PreferencesViewModel(settingsService)
+        {
+            BrowseFolderAsync = () => Task.FromResult<string?>(Path.Combine(Path.GetTempPath(), "saved-messages"))
+        };
+
+        // Act
+        await vm.BrowseSavedMessagesDirectoryCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.EndsWith(Path.Combine("saved-messages"), vm.BrowserConfig.SavedMessagesDirectory);
+        Assert.Equal("", vm.SavedMessagesDirectoryError);
+    }
+
+    [Fact]
+    public void Save_WhenShowSaveNotificationsIsEnabled_ShouldPersistSetting()
+    {
+        // Arrange
+        var settingsService = Substitute.For<ISettingsService>();
+        settingsService.GetKafkaConfig().Returns(new KafkaConfig());
+        var browserConfig = CreateBrowserConfig(10, 10, 25, 50);
+        browserConfig.ShowSaveNotification = false;
+        settingsService.GetBrowserConfig().Returns(browserConfig);
+        settingsService.GetValue("Theme").Returns("System");
+        var vm = new PreferencesViewModel(settingsService);
+        vm.BrowserConfig.ShowSaveNotification = true;
+
+        // Act
+        vm.SaveCommand.Execute(null);
+
+        // Assert
+        settingsService.Received(1).SaveBrowserConfig(
+            Arg.Is<BrowserConfig>(config => config.ShowSaveNotification));
     }
 
     [Fact]

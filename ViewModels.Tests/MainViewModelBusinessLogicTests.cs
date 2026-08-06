@@ -1,11 +1,14 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared.Services;
 using KafkaLens.ViewModels.Config;
+using KafkaLens.ViewModels.Messages;
 using KafkaLens.ViewModels.Services;
 using AvaloniaApp.Services;
 
@@ -469,5 +472,51 @@ public class MainViewModelBusinessLogicTests
         Assert.Equal("debug", opened.CurrentMessages.NegativeFilter);
         Assert.Equal("tenantId", opened.CurrentMessages.LineFilter);
         Assert.False(opened.CurrentMessages.UseObjectFilter);
+    }
+
+    [AvaloniaFact]
+    public async Task SaveNotification_WhenMessagesSaved_ShouldShowDestinationAndCount()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+
+        // Act
+        WeakReferenceMessenger.Default.Send(new MessagesSavedMessage("C:\\saved", 2));
+        await Dispatcher.UIThread.InvokeAsync(() => { });
+
+        // Assert
+        Assert.True(vm.IsSaveNotificationVisible);
+        Assert.Contains("Saved 2 messages to C:\\saved", vm.SaveNotificationMessage);
+    }
+
+    [AvaloniaFact]
+    public async Task HideSaveNotificationsForSession_ShouldSuppressLaterNotifications()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        vm.HideSaveNotificationsForSessionCommand.Execute(null);
+
+        // Act
+        WeakReferenceMessenger.Default.Send(new MessagesSavedMessage("C:\\saved", 1));
+        await Dispatcher.UIThread.InvokeAsync(() => { });
+
+        // Assert
+        Assert.False(vm.IsSaveNotificationVisible);
+        settingsService.DidNotReceive().SaveBrowserConfig(Arg.Any<BrowserConfig>());
+    }
+
+    [Fact]
+    public void NeverShowSaveNotifications_ShouldPersistSuppression()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+
+        // Act
+        vm.NeverShowSaveNotificationsCommand.Execute(null);
+
+        // Assert
+        Assert.False(settingsService.GetBrowserConfig().ShowSaveNotification);
+        settingsService.Received(1).SaveBrowserConfig(Arg.Is<BrowserConfig>(config => !config.ShowSaveNotification));
+        Assert.False(vm.IsSaveNotificationVisible);
     }
 }

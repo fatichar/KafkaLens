@@ -1,16 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace KafkaLens.Shared.Models;
 
 public class BrowserConfig
 {
+    public static string DefaultSavedMessagesDirectory => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "KafkaLens",
+        "SavedMessages");
+
     public int FontSize { get; set; } = 14;
     public ISet<int> FetchCounts { get; } = new SortedSet<int>{10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000 };
     public int DefaultFetchCount { get; set; } = 10;
     public bool RestoreTabsOnStartup { get; set; } = true;
     public bool EagerLoadTopicsOnStartup { get; set; }
+    public string SavedMessagesDirectory { get; set; } = DefaultSavedMessagesDirectory;
+    public bool ShowSaveNotification { get; set; } = true;
     public List<OpenedTabState> OpenedTabs { get; set; } = new();
 }
 

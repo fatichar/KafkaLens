@@ -421,6 +421,7 @@ public class App : Application
                 DataContext = vm
             };
             vm.CloseAction = window.Close;
+            vm.BrowseFolderAsync = window.PickFolderAsync;
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
             {
                 window.ShowDialog(desktop.MainWindow);

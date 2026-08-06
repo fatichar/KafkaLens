@@ -193,16 +193,16 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
 
         SaveSelectedAsRawCommand = new AsyncRelayCommand(
-            () => messageSaver.SaveAsync(SelectedMessages, Name, false),
+            () => SaveMessagesAsync(SelectedMessages, false),
             () => cluster.Client.CanSaveMessages);
         SaveSelectedAsFormattedCommand = new AsyncRelayCommand(
-            () => messageSaver.SaveAsync(SelectedMessages, Name, true),
+            () => SaveMessagesAsync(SelectedMessages, true),
             () => cluster.Client.CanSaveMessages);
         SaveAllAsRawCommand = new AsyncRelayCommand(
-            () => messageSaver.SaveAsync(CurrentMessages.Messages, Name, false),
+            () => SaveMessagesAsync(CurrentMessages.Messages, false),
             () => cluster.Client.CanSaveMessages);
         SaveAllAsFormattedCommand = new AsyncRelayCommand(
-            () => messageSaver.SaveAsync(CurrentMessages.Messages, Name, true),
+            () => SaveMessagesAsync(CurrentMessages.Messages, true),
             () => cluster.Client.CanSaveMessages);
 
         CopyKeyCommand = new AsyncRelayCommand(CopyKeyAsync);
@@ -232,6 +232,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             OnPropertyChanged(nameof(FetchCounts));
             InitializeFormatters();
         });
+    }
+
+    private async Task SaveMessagesAsync(IList<MessageViewModel> messages, bool formatted)
+    {
+        var result = await messageSaver.SaveAsync(messages, Name, formatted);
+        if (result != null)
+        {
+            WeakReferenceMessenger.Default.Send(new MessagesSavedMessage(result.Directory, result.Count));
+        }
     }
 
     private void InitializeFormatters()

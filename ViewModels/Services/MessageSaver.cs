@@ -1,36 +1,40 @@
 using System.Text;
+using KafkaLens.Shared.Models;
 using Serilog;
 using System.IO;
 using System.Threading;
 
 namespace KafkaLens.ViewModels.Services;
 
-public class MessageSaver(IClientFactory clientFactory) : IMessageSaver
+public class MessageSaver(IClientFactory clientFactory, ISettingsService settingsService) : IMessageSaver
 {
-    private static readonly string SaveMessagesDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "KafkaLens",
-        "SavedMessages");
-
     public bool CanSaveMessages(string clusterId)
     {
         var client = clientFactory.GetClient(clusterId);
         return client?.CanSaveMessages ?? false;
     }
 
-    public async Task SaveAsync(IList<MessageViewModel> messages, string clusterName, bool formatted)
+    public async Task<MessageSaveResult?> SaveAsync(IList<MessageViewModel> messages, string clusterName, bool formatted)
     {
         if (messages.Count == 0)
-            return;
+            return null;
 
-        await Task.Run(() => SaveAllInternal(messages, clusterName, formatted));
+        var saveDirectory = settingsService.GetBrowserConfig().SavedMessagesDirectory;
+        if (string.IsNullOrWhiteSpace(saveDirectory))
+            saveDirectory = BrowserConfig.DefaultSavedMessagesDirectory;
+
+        return await Task.Run(() => SaveAllInternal(messages, clusterName, formatted, saveDirectory));
     }
 
-    private async Task SaveAllInternal(IList<MessageViewModel> messages, string clusterName, bool formatted)
+    private async Task<MessageSaveResult> SaveAllInternal(
+        IList<MessageViewModel> messages,
+        string clusterName,
+        bool formatted,
+        string saveDirectory)
     {
-        Log.Information("Saving {Count} messages for cluster {ClusterName}", messages.Count, clusterName);
+        Log.Information("Saving {Count} messages for cluster {ClusterName} to {SaveDirectory}", messages.Count, clusterName, saveDirectory);
 
-        var baseDir = Path.Join(SaveMessagesDir, clusterName);
+        var baseDir = Path.Join(saveDirectory, clusterName);
         var dirCache = new Dictionary<(string Topic, int Partition), string>();
 
         foreach (var m in messages)
@@ -63,7 +67,8 @@ public class MessageSaver(IClientFactory clientFactory) : IMessageSaver
         });
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
-        Log.Information("Saved {Count} messages", messages.Count);
+        Log.Information("Saved {Count} messages to {SaveDirectory}", messages.Count, saveDirectory);
+        return new MessageSaveResult(saveDirectory, messages.Count);
     }
 
     private async Task SaveSingleAsync(

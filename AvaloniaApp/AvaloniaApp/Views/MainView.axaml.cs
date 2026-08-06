@@ -34,6 +34,7 @@ public partial class MainView : UserControl
         };
 
         MainViewModel.ShowFolderOpenDialog += OnShowFolderOpenDialog;
+        MainViewModel.OpenExternalFolder += OnOpenExternalFolder;
         MainViewModel.OpenDiagnosticLogFile += OnOpenDiagnosticLogFile;
         MainViewModel.CopyTextToClipboard += OnCopyTextToClipboard;
 
@@ -142,6 +143,12 @@ public partial class MainView : UserControl
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard != null)
             _ = clipboard.SetTextAsync(text);
+    }
+
+    private void OnOpenExternalFolder(string path)
+    {
+        if (!OsUtils.OpenExternal(path))
+            MainViewModel.ShowMessage("Saved Messages", "Could not open the saved messages folder.");
     }
 
     private void OnOpenDiagnosticLogFile()

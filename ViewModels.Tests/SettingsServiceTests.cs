@@ -107,6 +107,8 @@ public class SettingsServiceTests : IDisposable
             Assert.Equal(new KafkaConfig().QueryWatermarkTimeoutMs, kafkaConfig.QueryWatermarkTimeoutMs);
             Assert.Equal(new BrowserConfig().DefaultFetchCount, browserConfig.DefaultFetchCount);
             Assert.Equal(new BrowserConfig().FetchCounts, browserConfig.FetchCounts);
+            Assert.Equal(BrowserConfig.DefaultSavedMessagesDirectory, browserConfig.SavedMessagesDirectory);
+            Assert.True(browserConfig.ShowSaveNotification);
             Assert.Equal(["https://fatichar.github.io/kafkalens-plugin-index/plugins.json"], pluginSettings.Repositories);
             Assert.Empty(pluginSettings.PluginStates);
             Assert.Equal("System", service.GetValue("Theme"));
@@ -157,6 +159,8 @@ public class SettingsServiceTests : IDisposable
         Assert.Equal(18, browserConfig.FontSize);
         Assert.Equal(new BrowserConfig().DefaultFetchCount, browserConfig.DefaultFetchCount);
         Assert.Equal(new BrowserConfig().FetchCounts, browserConfig.FetchCounts);
+        Assert.Equal(BrowserConfig.DefaultSavedMessagesDirectory, browserConfig.SavedMessagesDirectory);
+        Assert.True(browserConfig.ShowSaveNotification);
 
         Assert.Equal(["https://example.test/index.json"], pluginSettings.Repositories);
         Assert.Empty(pluginSettings.PluginStates);

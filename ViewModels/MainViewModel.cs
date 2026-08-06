@@ -73,6 +73,7 @@ public partial class MainViewModel : ViewModelBase
     public static Action ShowFormatterPreferences { get; set; } = () => { };
     public static Action<PluginManagerViewModel> ShowPluginManagerDialog { get; set; } = _ => { };
     public static Action<string, string> ShowMessage { get; set; } = (_, _) => { };
+    public static Action<string> OpenExternalFolder { get; set; } = _ => { };
     public static Func<int, Task<bool>> ConfirmRestoreTabs { get; set; } = _ => Task.FromResult(false);
 
     [ObservableProperty] private ObservableCollection<MenuItemViewModel>? menuItems;
@@ -173,6 +174,7 @@ public partial class MainViewModel : ViewModelBase
         ClearAppLogCommand = new RelayCommand(AppLogService.Clear);
         CopyAppLogCommand = new RelayCommand(CopyAppLog);
         OpenDiagnosticLogFileCommand = new RelayCommand(() => OpenDiagnosticLogFile());
+        InitializeSaveNotifications();
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
         Clusters.CollectionChanged += OnClustersChanged;
