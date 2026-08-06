@@ -86,6 +86,9 @@ public class App : Application
 
         AddLocalDependencies(services, clusterRepo, kafkaConfig);
 
+        services.AddLogging();
+        ConfigureLogging();
+
         var pluginManagerDir = Path.Combine(kafkaLensDataPath, "plugins");
         Directory.CreateDirectory(pluginManagerDir);
         var extensionRegistry = new ExtensionRegistry();
@@ -119,9 +122,6 @@ public class App : Application
         services.AddSingleton<IFormatterService, FormatterService>();
         services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<MainViewModel>();
-
-        services.AddLogging();
-        ConfigureLogging();
 
         var provider = services.BuildServiceProvider();
 

@@ -7,7 +7,7 @@ public static class VersionCompatibility
 {
     // Valid format: operator followed by a 3- or 4-component version, e.g. ">=1.2.3" or "=1.0.0.0"
     private static readonly Regex ConstraintRegex =
-        new(@"^(>=|>|<=|<|=)\s*(\d+\.\d+\.\d+(?:\.\d+)?)$", RegexOptions.Compiled);
+        new(@"^(>=|>|<=|<|=)\s*(\d+\.\d+(?:\.\d+)?(?:\.\d+)?)$", RegexOptions.Compiled);
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="appVersion"/> satisfies

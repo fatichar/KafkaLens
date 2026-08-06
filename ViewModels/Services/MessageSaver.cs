@@ -26,7 +26,7 @@ public class MessageSaver(IClientFactory clientFactory) : IMessageSaver
         await Task.Run(() => SaveAllInternal(messages, clusterName, formatted));
     }
 
-    private void SaveAllInternal(IList<MessageViewModel> messages, string clusterName, bool formatted)
+    private async Task SaveAllInternal(IList<MessageViewModel> messages, string clusterName, bool formatted)
     {
         Log.Information("Saving {Count} messages for cluster {ClusterName}", messages.Count, clusterName);
 
@@ -62,9 +62,8 @@ public class MessageSaver(IClientFactory clientFactory) : IMessageSaver
             }
         });
 
-        Task.WhenAll(tasks)
-            .ContinueWith(t => { Log.Information("Saved {Count} messages", messages.Count); })
-            .ConfigureAwait(false);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+        Log.Information("Saved {Count} messages", messages.Count);
     }
 
     private async Task SaveSingleAsync(

@@ -194,16 +194,16 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
         SaveSelectedAsRawCommand = new AsyncRelayCommand(
             () => messageSaver.SaveAsync(SelectedMessages, Name, false),
-            () => messageSaver.CanSaveMessages(cluster.Id));
+            () => cluster.Client.CanSaveMessages);
         SaveSelectedAsFormattedCommand = new AsyncRelayCommand(
             () => messageSaver.SaveAsync(SelectedMessages, Name, true),
-            () => messageSaver.CanSaveMessages(cluster.Id));
+            () => cluster.Client.CanSaveMessages);
         SaveAllAsRawCommand = new AsyncRelayCommand(
             () => messageSaver.SaveAsync(CurrentMessages.Messages, Name, false),
-            () => messageSaver.CanSaveMessages(cluster.Id));
+            () => cluster.Client.CanSaveMessages);
         SaveAllAsFormattedCommand = new AsyncRelayCommand(
             () => messageSaver.SaveAsync(CurrentMessages.Messages, Name, true),
-            () => messageSaver.CanSaveMessages(cluster.Id));
+            () => cluster.Client.CanSaveMessages);
 
         CopyKeyCommand = new AsyncRelayCommand(CopyKeyAsync);
         CopyValueCommand = new AsyncRelayCommand(CopyValueAsync);

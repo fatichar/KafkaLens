@@ -74,7 +74,14 @@ public class VersionCompatibilityTests
         VersionCompatibility.IsCompatible(constraint, version).Should().Be(expected);
     }
 
-    // ── Four-component versions ────────────────────────────────────────────────
+    // ── Two- and four-component versions ───────────────────────────────────────
+
+    [Fact]
+    public void TwoPartVersion_IsSupported()
+    {
+        VersionCompatibility.IsCompatible(">=0.9", "1.0.0").Should().BeTrue();
+        VersionCompatibility.IsCompatible(">=1.1", "1.0.0").Should().BeFalse();
+    }
 
     [Fact]
     public void FourPartVersion_IsSupported()
@@ -87,7 +94,7 @@ public class VersionCompatibilityTests
 
     [Theory]
     [InlineData("1.0.0")]         // missing operator
-    [InlineData(">=1.0")]         // only two parts
+    [InlineData(">=1")]            // only one part
     [InlineData("~=1.0.0")]       // unsupported operator
     [InlineData(">=abc")]         // non-numeric version
     [InlineData("latest")]        // free-text

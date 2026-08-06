@@ -55,6 +55,22 @@ public class OpenedClusterViewModelBusinessLogicTests
     }
 
     [Fact]
+    public void SaveCommands_ShouldUseClusterClientCapabilityWithoutLookingUpClusterId()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        mockClient.CanSaveMessages.Returns(true);
+        messageSaver.CanSaveMessages(Arg.Any<string>())
+            .Returns(_ => throw new InvalidOperationException("The save capability should come from the cluster client."));
+
+        // Act & Assert
+        Assert.True(vm.SaveSelectedAsRawCommand.CanExecute(null));
+        Assert.True(vm.SaveSelectedAsFormattedCommand.CanExecute(null));
+        Assert.True(vm.SaveAllAsRawCommand.CanExecute(null));
+        Assert.True(vm.SaveAllAsFormattedCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void Constructor_WhenNoKeyFormatterSetting_ShouldUseDefaultBasicKeyFormatters()
     {
         // Arrange & Act
