@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -11,6 +12,31 @@ public sealed class SerilogLogFileLocator
     public SerilogLogFileLocator(string configuredLogPath)
     {
         this.configuredLogPath = configuredLogPath;
+    }
+
+    public string? ArchiveActiveLogFile(DateTime launchTime)
+    {
+        if (!File.Exists(configuredLogPath))
+            return null;
+
+        var directory = Path.GetDirectoryName(configuredLogPath);
+        if (string.IsNullOrWhiteSpace(directory))
+            directory = Directory.GetCurrentDirectory();
+
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(configuredLogPath);
+        var extension = Path.GetExtension(configuredLogPath);
+        var timestamp = launchTime.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+        var archivePath = Path.Combine(directory, $"{fileNameWithoutExtension}-{timestamp}{extension}");
+        var suffix = 1;
+
+        while (File.Exists(archivePath))
+        {
+            archivePath = Path.Combine(directory, $"{fileNameWithoutExtension}-{timestamp}-{suffix}{extension}");
+            suffix++;
+        }
+
+        File.Move(configuredLogPath, archivePath);
+        return archivePath;
     }
 
     public string? FindLatestLogFile()

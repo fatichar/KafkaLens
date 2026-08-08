@@ -23,10 +23,25 @@ public class SerilogLogFileLocatorTests : IDisposable
     }
 
     [Fact]
-    public void FindLatestLogFile_ShouldReturnNewestMatchingSerilogFile()
+    public void ArchiveActiveLogFile_ShouldMoveActiveFileToTimestampedArchive()
     {
-        var older = Path.Combine(tempDirectory, "log20260419.txt");
-        var newer = Path.Combine(tempDirectory, "log20260420.txt");
+        var active = Path.Combine(tempDirectory, "KafkaLens.log");
+        File.WriteAllText(active, "current session");
+        var locator = new SerilogLogFileLocator(active);
+
+        var result = locator.ArchiveActiveLogFile(new DateTime(2026, 4, 20, 10, 30, 45));
+
+        var expected = Path.Combine(tempDirectory, "KafkaLens-20260420-103045.log");
+        Assert.Equal(expected, result);
+        Assert.False(File.Exists(active));
+        Assert.Equal("current session", File.ReadAllText(expected));
+    }
+
+    [Fact]
+    public void FindLatestLogFile_ShouldReturnNewestActiveOrArchivedFile()
+    {
+        var older = Path.Combine(tempDirectory, "KafkaLens-20260419-100000.log");
+        var newer = Path.Combine(tempDirectory, "KafkaLens-20260420-100000.log");
         var unrelated = Path.Combine(tempDirectory, "other.txt");
         File.WriteAllText(older, "older");
         File.WriteAllText(newer, "newer");
@@ -35,7 +50,7 @@ public class SerilogLogFileLocatorTests : IDisposable
         File.SetLastWriteTimeUtc(newer, new DateTime(2026, 4, 20, 10, 0, 0, DateTimeKind.Utc));
         File.SetLastWriteTimeUtc(unrelated, new DateTime(2026, 4, 21, 10, 0, 0, DateTimeKind.Utc));
 
-        var locator = new SerilogLogFileLocator(Path.Combine(tempDirectory, "log.txt"));
+        var locator = new SerilogLogFileLocator(Path.Combine(tempDirectory, "KafkaLens.log"));
 
         var result = locator.FindLatestLogFile();
 

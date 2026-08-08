@@ -230,18 +230,45 @@ public class App : Application
             catch
             {
                 // Fallback to local logs if AppData creation fails
-                logPath = "logs/log.txt";
+                logPath = "logs/KafkaLens.log";
             }
         }
+
+        Log.CloseAndFlush();
+        var logFileLocator = new SerilogLogFileLocator(logPath);
+        logFileLocator.ArchiveActiveLogFile(DateTime.Now);
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console(
                 outputTemplate:
                 "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u4}] {Message:lj}{NewLine}{Exception}")
-            .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
+            .WriteTo.File(logPath)
             .CreateLogger();
 
+        Log.Information("Starting KafkaLens");
+        Log.Information("{KafkaLensBanner}", """
+
+
+KKKKKKKKK    KKKKKKK                     ffffffffffffffff  kkkkkkkk                           LLLLLLLLLLL                                                                    
+K:::::::K    K:::::K                    f::::::::::::::::f k::::::k                           L:::::::::L                                                                    
+K:::::::K    K:::::K                   f::::::::::::::::::fk::::::k                           L:::::::::L                                                                    
+K:::::::K   K::::::K                   f::::::fffffff:::::fk::::::k                           LL:::::::LL                                                                    
+KK::::::K  K:::::KKK  aaaaaaaaaaaaa    f:::::f       ffffff k:::::k    kkkkkkkaaaaaaaaaaaaa     L:::::L                   eeeeeeeeeeee    nnnn  nnnnnnnn        ssssssssss   
+  K:::::K K:::::K     a::::::::::::a   f:::::f              k:::::k   k:::::k a::::::::::::a    L:::::L                 ee::::::::::::ee  n:::nn::::::::nn    ss::::::::::s  
+  K::::::K:::::K      aaaaaaaaa:::::a f:::::::ffffff        k:::::k  k:::::k  aaaaaaaaa:::::a   L:::::L                e::::::eeeee:::::een::::::::::::::nn ss:::::::::::::s 
+  K:::::::::::K                a::::a f::::::::::::f        k:::::k k:::::k            a::::a   L:::::L               e::::::e     e:::::enn:::::::::::::::ns::::::ssss:::::s
+  K:::::::::::K         aaaaaaa:::::a f::::::::::::f        k::::::k:::::k      aaaaaaa:::::a   L:::::L               e:::::::eeeee::::::e  n:::::nnnn:::::n s:::::s  ssssss 
+  K::::::K:::::K      aa::::::::::::a f:::::::ffffff        k:::::::::::k     aa::::::::::::a   L:::::L               e:::::::::::::::::e   n::::n    n::::n   s::::::s      
+  K:::::K K:::::K    a::::aaaa::::::a  f:::::f              k:::::::::::k    a::::aaaa::::::a   L:::::L               e::::::eeeeeeeeeee    n::::n    n::::n      s::::::s   
+KK::::::K  K:::::KKKa::::a    a:::::a  f:::::f              k::::::k:::::k  a::::a    a:::::a   L:::::L         LLLLLLe:::::::e             n::::n    n::::nssssss   s:::::s 
+K:::::::K   K::::::Ka::::a    a:::::a f:::::::f            k::::::k k:::::k a::::a    a:::::a LL:::::::LLLLLLLLL:::::Le::::::::e            n::::n    n::::ns:::::ssss::::::s
+K:::::::K    K:::::Ka:::::aaaa::::::a f:::::::f            k::::::k  k:::::ka:::::aaaa::::::a L::::::::::::::::::::::L e::::::::eeeeeeee    n::::n    n::::ns::::::::::::::s 
+K:::::::K    K:::::K a::::::::::aa:::af:::::::f            k::::::k   k:::::ka::::::::::aa:::aL::::::::::::::::::::::L  ee:::::::::::::e    n::::n    n::::n s:::::::::::ss  
+KKKKKKKKK    KKKKKKK  aaaaaaaaaa  aaaafffffffff            kkkkkkkk    kkkkkkkaaaaaaaaaa  aaaaLLLLLLLLLLLLLLLLLLLLLLLL    eeeeeeeeeeeeee    nnnnnn    nnnnnn  sssssssssss    
+
+
+""");
         Log.Information("The global logger has been configured with log path: {LogPath}", logPath);
         System.Diagnostics.Debug.WriteLine("Log to console");
     }
@@ -251,10 +278,10 @@ public class App : Application
 #if RELEASE
         // In Release, use AppData\Local\KafkaLens
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(appDataPath, "KafkaLens", "logs", "log.txt");
+        return Path.Combine(appDataPath, "KafkaLens", "logs", "KafkaLens.log");
 #else
         // In Debug, use local logs directory
-        return "logs/log.txt";
+        return "logs/KafkaLens.log";
 #endif
     }
 
