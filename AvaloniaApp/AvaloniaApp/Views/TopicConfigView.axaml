@@ -6,19 +6,19 @@
     <StackPanel Margin="20" Spacing="10">
         <TextBlock Text="Topic Configuration" FontSize="18" FontWeight="Bold"/>
 
-        <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="Auto, Auto, Auto, Auto" Margin="0,10,0,0">
+        <Grid ColumnDefinitions="Auto, 320, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto" Margin="0,10,0,0">
             <Label Grid.Row="0" Grid.Column="0" Content="Topic Name:" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBlock Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding SelectedNode.Name}" VerticalAlignment="Center"/>
 
             <Label Grid.Row="1" Grid.Column="0" Content="Key Formatter:" VerticalAlignment="Center" Margin="0,10,10,0"/>
-            <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" HorizontalAlignment="Stretch"
+            <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" Width="320"
                       ItemsSource="{Binding KeyFormatterNames}"
                       SelectedItem="{Binding ((vm:IMessageSource)SelectedNode).KeyFormatterName}"/>
             <Button Grid.Row="1" Grid.Column="2" Margin="8,10,0,0" Content="Guess"
                     Command="{Binding GuessKeyFormatterCommand}"/>
 
             <Label Grid.Row="2" Grid.Column="0" Content="Value Formatter:" VerticalAlignment="Center" Margin="0,10,10,0"/>
-            <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" HorizontalAlignment="Stretch"
+            <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" Width="320"
                       ItemsSource="{Binding ValueFormatterNames}"
                       SelectedItem="{Binding ((vm:IMessageSource)SelectedNode).FormatterName}"/>
             <Button Grid.Row="2" Grid.Column="2" Margin="8,10,0,0" Content="Guess"
@@ -26,19 +26,19 @@
 
             <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Content="Apply to every cluster"
                       Margin="0,10,0,0" IsChecked="{Binding ApplyToAllClusters}"/>
+
+            <Button Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Content="Save" Command="{Binding SaveTopicSettingsCommand}"
+                    HorizontalAlignment="Right" Width="100" Margin="0,20,0,0"/>
+            <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal"
+                        Spacing="4" HorizontalAlignment="Center" Margin="0,16,0,0" VerticalAlignment="Center">
+                <TextBlock Text="Expected formatters missing from the lists?"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                           FontSize="12"/>
+                <HyperlinkButton Content="Configure formatters"
+                                 Command="{Binding OpenFormatterPreferencesCommand}"
+                                 FontSize="12" Padding="0" VerticalAlignment="Center"/>
+            </StackPanel>
         </Grid>
-
-        <Button Content="Save" Command="{Binding SaveTopicSettingsCommand}"
-                HorizontalAlignment="Right" Width="100" Margin="0,20,0,0"/>
-
-        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" Margin="0,16,0,0" VerticalAlignment="Center">
-            <TextBlock Text="Expected formatters missing from the lists?"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                       FontSize="12"/>
-            <HyperlinkButton Content="Configure formatters"
-                             Command="{Binding OpenFormatterPreferencesCommand}"
-                             FontSize="12" Padding="0" VerticalAlignment="Center"/>
-        </StackPanel>
     </StackPanel>
 </UserControl>
