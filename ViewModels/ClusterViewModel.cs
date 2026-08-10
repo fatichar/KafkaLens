@@ -20,7 +20,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     private const int TOPIC_LOAD_RETRY_COUNT = 2;
     private static readonly TimeSpan TopicLoadRetryDelay = TimeSpan.FromMilliseconds(750);
 
-    public IKafkaLensClient Client { get; }
+    public IKafkaLensClient Client { get; private set; }
     public IAsyncRelayCommand LoadTopicsCommand { get; }
     private readonly KafkaCluster cluster;
     private readonly IAppLogService? appLogService;
@@ -54,6 +54,31 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     {
         await CheckConnectionAsync(logTopicLoad: true,
             maxRetries: allowRetries ? TOPIC_LOAD_RETRY_COUNT : 0);
+    }
+
+    internal void ReplaceClient(IKafkaLensClient client, bool resetTopics)
+    {
+        if (ReferenceEquals(Client, client)) return;
+
+        Client = client;
+        if (resetTopics)
+        {
+            TopicLoadState = TopicLoadState.NotLoaded;
+            Topics.Clear();
+        }
+    }
+
+    internal async Task RecheckConnectionAsync()
+    {
+        TopicLoadState = TopicLoadState.NotLoaded;
+        Topics.Clear();
+        Status = ConnectionState.Checking;
+        await CheckConnectionAsync();
+
+        if (Status == ConnectionState.Connected && TopicLoadState != TopicLoadState.Loaded)
+        {
+            await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: true);
+        }
     }
 
     private async Task CheckConnectionAsync(bool logTopicLoad, int maxRetries)

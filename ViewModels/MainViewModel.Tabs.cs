@@ -49,6 +49,13 @@ public partial class MainViewModel
         OpenedClusters.Add(openedCluster);
         _ = openedCluster.LoadTopicsAsync();
         SelectedIndex = OpenedClusters.Count - 1;
+
+        // If this client hasn't produced a real cluster list yet (e.g. it was unreachable at
+        // startup and we're still showing a placeholder), kick off a fresh discovery now instead
+        // of waiting for the periodic health-check timer. Once it completes, ReattachOrphanedTabs
+        // will upgrade this tab (and any others) to the real cluster automatically.
+        if (clusterViewModel.Status != ConnectionState.Connected)
+            _ = RefreshClustersForClientAsync(clusterViewModel.Client.Name);
     }
 
     public async void OpenSavedMessages(string path) => await OpenSavedMessagesAsync(path, null);

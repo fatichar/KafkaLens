@@ -103,7 +103,12 @@ public partial class MainView : UserControl
         var dialog = new EditClustersDialog();
         var dataContext = DataContext as MainViewModel;
         if (dataContext == null || mainWindow == null) return;
-        dialog.DataContext = new EditClustersViewModel(dataContext.Clusters, dataContext.ClusterInfoRepository, dataContext.ClientInfoRepository, dataContext.ClientFactory);
+        dialog.DataContext = new EditClustersViewModel(
+            dataContext.Clusters,
+            dataContext.ClusterInfoRepository,
+            dataContext.ClientInfoRepository,
+            dataContext.ClientFactory,
+            dataContext.RefreshClustersForClientAsync);
         dialog.ShowDialog(mainWindow);
     }
 

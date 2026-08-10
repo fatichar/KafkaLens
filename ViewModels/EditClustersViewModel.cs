@@ -13,6 +13,7 @@ public class EditClustersViewModel : IDisposable
     private IClusterInfoRepository ClusterRepository { get; }
     private IClientInfoRepository ClientRepository { get; }
     private IClientFactory ClientFactory { get; }
+    private Func<string, Task>? RefreshClustersForClient { get; }
 
     private ObservableCollection<ClusterViewModel> AllClusters { get; }
     public ObservableCollection<ClusterViewModel> Clusters { get; }
@@ -31,13 +32,15 @@ public class EditClustersViewModel : IDisposable
         ObservableCollection<ClusterViewModel> clusters,
         IClusterInfoRepository clusterInfoRepository,
         IClientInfoRepository clientInfoRepository,
-        IClientFactory clientFactory)
+        IClientFactory clientFactory,
+        Func<string, Task>? refreshClustersForClient = null)
     {
         AllClusters = clusters;
         Clusters = new ObservableCollection<ClusterViewModel>(clusters.Where(c => c.Client.CanEditClusters));
         ClusterRepository = clusterInfoRepository;
         ClientRepository = clientInfoRepository;
         ClientFactory = clientFactory;
+        RefreshClustersForClient = refreshClustersForClient;
 
         AllClusters.CollectionChanged += AllClusters_CollectionChanged;
 
@@ -131,11 +134,28 @@ public class EditClustersViewModel : IDisposable
 
     public async Task UpdateClusterAsync(ClusterViewModel cluster, string name, string address)
     {
+        var addressChanged = !string.Equals(cluster.Address, address, StringComparison.Ordinal);
         var updated = new ClusterInfo(cluster.Id, name, address);
-        ClusterRepository.Update(updated);
+
+        if (addressChanged)
+        {
+            cluster.Status = ConnectionState.Checking;
+            await LocalClient.UpdateClusterAsync(
+                cluster.Id,
+                new KafkaClusterUpdate(name, address));
+        }
+        else
+        {
+            ClusterRepository.Update(updated);
+        }
+
         cluster.Name = name;
         cluster.Address = address;
-        await cluster.CheckConnectionAsync();
+
+        if (addressChanged)
+        {
+            await cluster.RecheckConnectionAsync();
+        }
     }
 
     public void RemoveCluster(ClusterViewModel? cluster)
@@ -166,37 +186,58 @@ public class EditClustersViewModel : IDisposable
 
     public async Task UpdateClientAsync(ClientInfo updated)
     {
-        ClientRepository.Update(updated);
         var existing = Clients.FirstOrDefault(c => c.Id == updated.Id);
-        if (existing != null)
+        if (existing == null) return;
+
+        var oldName = existing.Name;
+        var addressChanged = !string.Equals(existing.Info.Address, updated.Address, StringComparison.Ordinal);
+        var protocolChanged = !string.Equals(existing.Info.Protocol, updated.Protocol, StringComparison.Ordinal);
+        var nameChanged = !string.Equals(existing.Info.Name, updated.Name, StringComparison.Ordinal);
+
+        ClientRepository.Update(updated);
+        existing.UpdateInfo(updated);
+        var oldClusters = AllClusters.Where(c => c.Client.Name == oldName).ToList();
+        var transportChanged = addressChanged || protocolChanged;
+
+        if (!addressChanged && !protocolChanged && !nameChanged)
         {
-            // Check if anything actually changed that would require cluster reload
-            var hasChanges = existing.Info.Name != updated.Name ||
-                           existing.Info.Address != updated.Address ||
-                           existing.Info.Protocol != updated.Protocol;
+            return;
+        }
 
-            var oldName = existing.Name;
+        if (transportChanged)
+        {
+            existing.Status = ConnectionState.Checking;
+            foreach (var cluster in oldClusters)
+            {
+                cluster.Status = ConnectionState.Checking;
+            }
+        }
 
-            // Update the existing ViewModel instead of replacing it
-            existing.UpdateInfo(updated);
+        await ClientFactory.LoadClientsAsync();
+        var refreshedClient = ClientFactory.GetClient(updated.Name);
+
+        foreach (var cluster in oldClusters)
+        {
+            cluster.ReplaceClient(refreshedClient, resetTopics: transportChanged);
+        }
+
+        if (transportChanged)
+        {
             await CheckClientConnectionAsync(existing);
 
-            // Only reload clusters if there are actual changes
-            if (hasChanges)
+            if (RefreshClustersForClient != null)
             {
-                // Reload the ClientFactory to pick up the new client configuration
-                await ClientFactory.LoadClientsAsync();
-
-                // Remove old clusters and reload from updated client
-                var oldClusters = AllClusters.Where(c => c.Client.Name == oldName).ToList();
-                foreach (var cluster in oldClusters)
-                {
-                    AllClusters.Remove(cluster);
-                    Clusters.Remove(cluster);
-                }
-
+                await RefreshClustersForClient(updated.Name);
+            }
+            else
+            {
                 await LoadClustersForClientAsync(updated.Name);
             }
+
+            var refreshedClusters = AllClusters
+                .Where(c => c.Client.Name == updated.Name)
+                .ToList();
+            await Task.WhenAll(refreshedClusters.Select(c => c.RecheckConnectionAsync()));
         }
     }
 

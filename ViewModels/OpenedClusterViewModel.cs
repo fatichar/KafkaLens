@@ -21,7 +21,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     private readonly ITopicSettingsService topicSettingsService;
     private readonly IMessageSaver messageSaver;
     private readonly IFormatterService formatterService;
-    private readonly ClusterViewModel cluster;
+    private ClusterViewModel cluster;
     private readonly IAppLogService appLogService;
     private readonly string tabSuffix;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
@@ -280,6 +280,33 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     internal void UpdateClusterName(string clusterName) => Name = clusterName + tabSuffix;
 
+    /// <summary>
+    /// Re-points this already-open tab at a different <see cref="ClusterViewModel"/> instance.
+    /// Used when the cluster this tab was opened against turns out to have been a placeholder
+    /// (e.g. a gRPC client that was unreachable at discovery time) and gets replaced by the real
+    /// cluster once discovery succeeds, so the tab can recover without being closed/reopened.
+    /// </summary>
+    internal void ReattachCluster(ClusterViewModel newCluster)
+    {
+        if (ReferenceEquals(cluster, newCluster)) return;
+
+        cluster.PropertyChanged -= OnClusterPropertyChanged;
+        cluster = newCluster;
+        cluster.PropertyChanged += OnClusterPropertyChanged;
+
+        OnPropertyChanged(nameof(Address));
+        OnPropertyChanged(nameof(StatusColor));
+        OnPropertyChanged(nameof(IsChecking));
+        OnPropertyChanged(nameof(ClusterId));
+        UpdateClusterName(cluster.Name);
+
+        Topics.Clear();
+        if (cluster.Status == ConnectionState.Connected)
+        {
+            _ = LoadTopicsAsync();
+        }
+    }
+
     private void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ClusterViewModel.StatusColor))
@@ -287,11 +314,17 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         else if (e.PropertyName == nameof(ClusterViewModel.Status))
         {
             OnPropertyChanged(nameof(IsChecking));
-            if (cluster.Status == ConnectionState.Connected && Topics.Count == 0 && !isSyncingTopics)
+            if (cluster.Status == ConnectionState.Connected &&
+                cluster.TopicLoadState != TopicLoadState.Loaded &&
+                !isSyncingTopics)
+            {
                 Dispatcher.UIThread.Post(() => _ = LoadTopicsAsync());
+            }
         }
         else if (e.PropertyName == nameof(ClusterViewModel.Name))
             UpdateClusterName(cluster.Name);
+        else if (e.PropertyName == nameof(ClusterViewModel.Address))
+            OnPropertyChanged(nameof(Address));
     }
 
     private static bool AreSameLogicalNode(ITreeNode? first, ITreeNode? second)

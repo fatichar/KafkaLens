@@ -89,6 +89,7 @@ public partial class MainViewModel
             var key = GetClusterKey(loaded);
             if (existingByKey.TryGetValue(key, out var existing))
             {
+                existing.ReplaceClient(loaded.Client, resetTopics: false);
                 existing.Name = loaded.Name;
                 existing.Address = loaded.Address;
                 ApplyLoadedStatus(existing, loaded);
@@ -100,13 +101,17 @@ public partial class MainViewModel
             }
         }
 
+        var removedClusters = new List<ClusterViewModel>();
         foreach (var (key, cluster) in existingByKey)
         {
             if (!loadedByKey.ContainsKey(key))
             {
                 Clusters.Remove(cluster);
+                removedClusters.Add(cluster);
             }
         }
+
+        ReattachOrphanedTabs(removedClusters, loadedClusters);
     }
 
     private void ApplyClusterSnapshotForClients(IReadOnlyList<ClusterViewModel> loadedClusters, ISet<string> clientNames)
@@ -119,6 +124,7 @@ public partial class MainViewModel
             var key = GetClusterKey(loaded);
             if (existingByKey.TryGetValue(key, out var existing))
             {
+                existing.ReplaceClient(loaded.Client, resetTopics: false);
                 existing.Name = loaded.Name;
                 existing.Address = loaded.Address;
                 ApplyLoadedStatus(existing, loaded);
@@ -130,11 +136,44 @@ public partial class MainViewModel
             }
         }
 
+        var removedClusters = new List<ClusterViewModel>();
         foreach (var (key, cluster) in existingByKey)
         {
             if (!loadedByKey.ContainsKey(key))
             {
                 Clusters.Remove(cluster);
+                removedClusters.Add(cluster);
+            }
+        }
+
+        ReattachOrphanedTabs(removedClusters, loadedClusters);
+    }
+
+    /// <summary>
+    /// When a cluster disappears from a client's discovered list (e.g. a placeholder created while
+    /// the client was unreachable gets replaced once discovery succeeds), any already-open tabs
+    /// pointing at the removed cluster would otherwise be stuck forever with a stale/invalid
+    /// identity. If the client now resolves to exactly one real cluster, re-point those tabs at it
+    /// so they recover without the user needing to close and reopen them.
+    /// </summary>
+    private void ReattachOrphanedTabs(IReadOnlyList<ClusterViewModel> removedClusters, IReadOnlyList<ClusterViewModel> loadedClusters)
+    {
+        if (removedClusters.Count == 0) return;
+
+        foreach (var clientName in removedClusters.Select(c => c.Client.Name).Distinct(StringComparer.Ordinal))
+        {
+            var replacement = loadedClusters.Where(c => c.Client.Name == clientName).ToList();
+            if (replacement.Count != 1) continue;
+
+            var newCluster = replacement[0];
+            var removedIdsForClient = removedClusters
+                .Where(c => c.Client.Name == clientName)
+                .Select(c => c.Id)
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (var opened in OpenedClusters.Where(o => removedIdsForClient.Contains(o.ClusterId)))
+            {
+                opened.ReattachCluster(newCluster);
             }
         }
     }
@@ -169,6 +208,25 @@ public partial class MainViewModel
 
         var discovered = await clusterFactory.LoadClustersForClientsAsync(clientNamesNeedingRefresh);
         ApplyClusterSnapshotForClients(discovered, clientNamesNeedingRefresh);
+    }
+
+    /// <summary>
+    /// Re-discovers the cluster list for a single client immediately, without waiting for the
+    /// periodic health-check timer. Used when the user opens a cluster whose client hasn't
+    /// successfully produced a real cluster list yet (e.g. it was unreachable at startup), so a
+    /// stale/placeholder identity doesn't get stuck until the next scheduled refresh.
+    /// </summary>
+    public async Task RefreshClustersForClientAsync(string clientName)
+    {
+        if (!isStartupLoadCompleted) return;
+
+        await RunSerializedClusterFlowAsync(async () =>
+        {
+            var discovered = await clusterFactory.LoadClustersForClientsAsync(new HashSet<string>(StringComparer.Ordinal) { clientName });
+            ApplyClusterSnapshotForClients(discovered, new HashSet<string>(StringComparer.Ordinal) { clientName });
+            EnsureOpenedClustersSubscriptionInitialized();
+            UpdateOpenedClusters();
+        });
     }
 
     private HashSet<string> GetClientsNeedingDiscovery(IReadOnlyList<IKafkaLensClient> clients)

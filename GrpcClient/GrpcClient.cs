@@ -16,8 +16,10 @@ public class GrpcClient : IKafkaLensClient
 {
     #region fields
 
-    private readonly KafkaApi.KafkaApiClient client;
     private readonly string url;
+    private readonly object channelLock = new();
+    private GrpcChannel? channel;
+    private KafkaApi.KafkaApiClient? client;
     public bool CanEditClusters => false;
 
     #endregion
@@ -28,18 +30,47 @@ public class GrpcClient : IKafkaLensClient
         Name = name;
         CanSaveMessages = true;
         this.url = url;
-        var channel = GrpcChannel.ForAddress(url);
-        client = new KafkaApi.KafkaApiClient(channel);
     }
 
     public string Name { get; }
     public bool CanSaveMessages { get; }
 
+    /// <summary>
+    /// Lazily creates the channel/client on first use or after a previous failure
+    /// invalidated it. As long as calls keep succeeding, the same channel is reused.
+    /// </summary>
+    private KafkaApi.KafkaApiClient GetClient()
+    {
+        lock (channelLock)
+        {
+            if (client == null)
+            {
+                channel = GrpcChannel.ForAddress(url);
+                client = new KafkaApi.KafkaApiClient(channel);
+            }
+            return client;
+        }
+    }
+
+    /// <summary>
+    /// Tears down the current channel so the next call builds a fresh one instead of
+    /// reusing a channel stuck in gRPC's internal reconnect backoff after an outage.
+    /// </summary>
+    private void InvalidateChannel()
+    {
+        lock (channelLock)
+        {
+            channel?.Dispose();
+            channel = null;
+            client = null;
+        }
+    }
+
     public async Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {
         try
         {
-            var response = await client.ValidateConnectionAsync(new ValidateConnectionRequest
+            var response = await GetClient().ValidateConnectionAsync(new ValidateConnectionRequest
             {
                 BootstrapServers = bootstrapServers
             });
@@ -52,6 +83,7 @@ public class GrpcClient : IKafkaLensClient
                  return true;
              }
 
+             InvalidateChannel();
              return false;
         }
     }
@@ -60,13 +92,21 @@ public class GrpcClient : IKafkaLensClient
     #region  Create
     public async Task<KafkaCluster> AddAsync(NewKafkaCluster newCluster)
     {
-        var response = await client.AddClusterAsync(new AddClusterRequest
+        try
         {
-            Name = newCluster.Name,
-            BootstrapServers = newCluster.Address
-        });
+            var response = await GetClient().AddClusterAsync(new AddClusterRequest
+            {
+                Name = newCluster.Name,
+                BootstrapServers = newCluster.Address
+            });
 
-        return ToClusterModel(response);
+            return ToClusterModel(response);
+        }
+        catch (RpcException)
+        {
+            InvalidateChannel();
+            throw;
+        }
     }
     #endregion Create
 
@@ -75,7 +115,7 @@ public class GrpcClient : IKafkaLensClient
     {
         try
         {
-            var response = await client.GetAllClustersAsync(
+            var response = await GetClient().GetAllClustersAsync(
                 new Empty(),
                 null,
                 DateTime.UtcNow.AddSeconds(5));
@@ -97,6 +137,7 @@ public class GrpcClient : IKafkaLensClient
         catch (RpcException e)
         {
             Log.Error($"Failed to connect to grpc server: {url}", e);
+            InvalidateChannel();
             return new List<KafkaCluster>()
             {
                 new KafkaCluster($"grpc-unavailable:{url}", Name, url)
@@ -119,8 +160,16 @@ public class GrpcClient : IKafkaLensClient
 
     public async Task<IList<Topic>> GetTopicsAsync(string clusterId)
     {
-        var response = await client.GetTopicsAsync(new GetTopicsRequest { ClusterId = clusterId }).ResponseAsync;
-        return response.Topics.Select(ToTopicModel).ToList();
+        try
+        {
+            var response = await GetClient().GetTopicsAsync(new GetTopicsRequest { ClusterId = clusterId }).ResponseAsync;
+            return response.Topics.Select(ToTopicModel).ToList();
+        }
+        catch (RpcException)
+        {
+            InvalidateChannel();
+            throw;
+        }
     }
 
     public MessageStream GetMessageStream(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
@@ -132,7 +181,7 @@ public class GrpcClient : IKafkaLensClient
             TopicName = topic,
             FetchOptions = ToGrpcFetchOptions(options)
         };
-        var response = client.GetTopicMessages(request, cancellationToken: cancellationToken);
+        var response = GetClient().GetTopicMessages(request, cancellationToken: cancellationToken);
 
         return ToStream(response, cancellationToken, topic, null);
     }
@@ -152,11 +201,11 @@ public class GrpcClient : IKafkaLensClient
             Partition = (uint)partition,
             FetchOptions = ToGrpcFetchOptions(options)
         };
-        var response = client.GetPartitionMessages(request, cancellationToken: cancellationToken);
+        var response = GetClient().GetPartitionMessages(request, cancellationToken: cancellationToken);
         return ToStream(response, cancellationToken, topic, partition);
     }
 
-    private static MessageStream ToStream(global::Grpc.Core.AsyncServerStreamingCall<Grpc.Message> response, CancellationToken cancellationToken, string topic, int? partition)
+    private MessageStream ToStream(global::Grpc.Core.AsyncServerStreamingCall<Grpc.Message> response, CancellationToken cancellationToken, string topic, int? partition)
     {
         var stream = new MessageStream();
         Task.Run(async () =>
@@ -168,6 +217,11 @@ public class GrpcClient : IKafkaLensClient
                     var message = response.ResponseStream.Current;
                     stream.Messages.Add(ToMessageModel(message));
                 }
+            }
+            catch (RpcException e)
+            {
+                Log.Error(e, "Error reading stream");
+                InvalidateChannel();
             }
             catch (Exception e)
             {
@@ -205,7 +259,15 @@ public class GrpcClient : IKafkaLensClient
     #region Delete
     public async Task RemoveClusterByIdAsync(string clusterId)
     {
-        var response = await client.RemoveClusterAsync(new RemoveClusterRequest { ClusterId = clusterId }).ResponseAsync;
+        try
+        {
+            await GetClient().RemoveClusterAsync(new RemoveClusterRequest { ClusterId = clusterId }).ResponseAsync;
+        }
+        catch (RpcException)
+        {
+            InvalidateChannel();
+            throw;
+        }
     }
     #endregion Delete
 

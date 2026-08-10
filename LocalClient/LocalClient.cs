@@ -185,7 +185,27 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
         existing.Name = update.Name;
         existing.Address = update.Address;
         infoRepository.Update(existing);
+
+        // The cached consumer (if any) was created against the old address; drop it so the
+        // next access reconnects using the updated address instead of reusing a stale one.
+        if (consumers.TryRemove(clusterId, out var oldConsumer))
+        {
+            DisposeConsumer(oldConsumer);
+        }
+
         return await GetClusterByIdAsync(clusterId);
+    }
+
+    private static void DisposeConsumer(IKafkaConsumer consumer)
+    {
+        try
+        {
+            consumer.Dispose();
+        }
+        catch (Exception e)
+        {
+            Log.Warning(e, "Failed to dispose stale consumer after cluster update");
+        }
     }
     #endregion update
 
