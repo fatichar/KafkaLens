@@ -1,17 +1,13 @@
 {
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": ".NET Core Launch (console)",
-            "type": "coreclr",
+            "name": "Launch KafkaLens",
+            "type": "node-terminal",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/AvaloniaApp/AvaloniaApp.Desktop/bin/Debug/net10.0/win-x64/KafkaLensApp.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}/AvaloniaApp/AvaloniaApp.Desktop/bin/Debug/net10.0/win-x64",
-            "stopAtEntry": false,
-            "console": "internalConsole"
+            "command": "dotnet run --project AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj --no-build",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

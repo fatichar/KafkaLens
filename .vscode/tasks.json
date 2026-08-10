@@ -7,14 +7,19 @@
             "label": "build",
             "command": "dotnet",
             "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "args": [
                 "build",
-                // Ask dotnet build to generate full paths for file names.
+                "KafkaLens.slnx",
                 "/property:GenerateFullPaths=true",
-                // Do not generate summary otherwise it leads to duplicate errors in Problems panel
                 "/consoleloggerparameters:NoSummary"
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "reveal": "silent"
             },
