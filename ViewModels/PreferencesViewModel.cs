@@ -16,6 +16,20 @@ public partial class PreferencesViewModel : ViewModelBase
 {
     private const string HIDDEN_KEY_FORMATTERS_KEY = "HiddenKeyFormatters";
     private const string HIDDEN_VALUE_FORMATTERS_KEY = "HiddenValueFormatters";
+    public const string CONNECTION_CHECK_INTERVAL_SECONDS_KEY = "ConnectionCheckIntervalSeconds";
+    private const int DEFAULT_CONNECTION_CHECK_INTERVAL_SECONDS = 300;
+
+    private static readonly IReadOnlyDictionary<int, string> ConnectionCheckFrequencyOptions =
+        new Dictionary<int, string>
+        {
+            [0] = "Never",
+            [30] = "Every 30 seconds",
+            [60] = "Every minute",
+            [300] = "Every 5 minutes",
+            [600] = "Every 10 minutes",
+            [900] = "Every 15 minutes",
+            [1800] = "Every 30 minutes"
+        };
 
     private readonly ISettingsService settingsService;
     private readonly IThemeService? themeService;
@@ -59,6 +73,11 @@ public partial class PreferencesViewModel : ViewModelBase
     [ObservableProperty]
     private int selectedTabIndex;
 
+    public IReadOnlyList<string> ConnectionCheckFrequencies { get; } = ConnectionCheckFrequencyOptions.Values.ToList();
+
+    [ObservableProperty]
+    private string selectedConnectionCheckFrequency;
+
     [ObservableProperty]
     private string savedMessagesDirectoryError = "";
 
@@ -95,6 +114,8 @@ public partial class PreferencesViewModel : ViewModelBase
         fetchCountsString = string.Join(", ", browserConfig.FetchCounts);
         LoadAvailableFetchCounts();
         SelectedDefaultFetchCount = browserConfig.DefaultFetchCount;
+        selectedConnectionCheckFrequency = GetConnectionCheckFrequencyDisplayName(
+            settingsService.GetValue(CONNECTION_CHECK_INTERVAL_SECONDS_KEY));
 
         LoadFormatterSettings();
 
@@ -126,6 +147,24 @@ public partial class PreferencesViewModel : ViewModelBase
         }
 
         return "System";
+    }
+
+    private static string GetConnectionCheckFrequencyDisplayName(string? rawSeconds)
+    {
+        if (!int.TryParse(rawSeconds, out var seconds) || !ConnectionCheckFrequencyOptions.ContainsKey(seconds))
+        {
+            seconds = DEFAULT_CONNECTION_CHECK_INTERVAL_SECONDS;
+        }
+
+        return ConnectionCheckFrequencyOptions[seconds];
+    }
+
+    private static int GetConnectionCheckFrequencySeconds(string displayName)
+    {
+        var option = ConnectionCheckFrequencyOptions.FirstOrDefault(pair => pair.Value == displayName);
+        return option.Equals(default(KeyValuePair<int, string>))
+            ? DEFAULT_CONNECTION_CHECK_INTERVAL_SECONDS
+            : option.Key;
     }
 
     private void LoadThemes(IThemeService? themeService)
@@ -367,6 +406,9 @@ public partial class PreferencesViewModel : ViewModelBase
 
         settingsService.SaveKafkaConfig(KafkaConfig);
         settingsService.SaveBrowserConfig(BrowserConfig);
+        settingsService.SetValue(
+            CONNECTION_CHECK_INTERVAL_SECONDS_KEY,
+            GetConnectionCheckFrequencySeconds(SelectedConnectionCheckFrequency).ToString(System.Globalization.CultureInfo.InvariantCulture));
         SaveFormatterSettings();
 
         WeakReferenceMessenger.Default.Send(new ConfigurationChangedMessage());

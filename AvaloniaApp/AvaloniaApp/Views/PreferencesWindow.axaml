@@ -65,7 +65,9 @@
       </TabItem>
 
       <TabItem Header="Browser">
-        <StackPanel Spacing="10" Margin="10">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="10" Margin="10">
           <TextBlock Text="Display" FontWeight="Bold"/>
 
           <TextBlock Text="Font Size"/>
@@ -90,7 +92,18 @@
 
           <TextBlock Text="Behavior" FontWeight="Bold" Margin="0,10,0,0"/>
           <CheckBox IsChecked="{Binding BrowserConfig.RestoreTabsOnStartup}" Content="Restore open tabs on startup"/>
-        </StackPanel>
+
+          <TextBlock Text="Connection Checks" FontWeight="Bold" Margin="0,10,0,0"/>
+          <TextBlock Text="Automatic connection check frequency"/>
+          <ComboBox ItemsSource="{Binding ConnectionCheckFrequencies}"
+                    SelectedItem="{Binding SelectedConnectionCheckFrequency}"
+                    Width="220"/>
+          <TextBlock Text="Choose Never to disable automatic checks. You can still check a cluster manually."
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+          </StackPanel>
+        </ScrollViewer>
       </TabItem>
 
       <TabItem Header="Message Format">

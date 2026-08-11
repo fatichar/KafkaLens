@@ -94,6 +94,7 @@ public partial class MainViewModel : ViewModelBase
 
     private DispatcherTimer? timer;
     private Task? _startupTask;
+    private readonly int defaultConnectionCheckIntervalSeconds;
 
     partial void OnAutoCheckForUpdatesChanged(bool value)
     {
@@ -155,6 +156,13 @@ public partial class MainViewModel : ViewModelBase
         _repoManager     = repoManager;
         _themeService    = themeService;
         AppLogService = appLogService ?? new AppLogService();
+        defaultConnectionCheckIntervalSeconds = appConfig.ClusterRefreshIntervalSeconds > 0
+            ? appConfig.ClusterRefreshIntervalSeconds
+            : 300;
+
+        WeakReferenceMessenger.Default.Register<ConfigurationChangedMessage>(
+            this,
+            (_, _) => ApplyConnectionCheckFrequency());
 
         Log.Information("Creating MainViewModel");
         AppLogService.LogInfo("KafkaLens started", "Startup");
@@ -198,14 +206,36 @@ public partial class MainViewModel : ViewModelBase
 
     private void SetupPeriodicRefresh(AppConfig appConfig)
     {
-        timer = new DispatcherTimer
+        ApplyConnectionCheckFrequency();
+    }
+
+    private void ApplyConnectionCheckFrequency()
+    {
+        var intervalSeconds = GetConnectionCheckIntervalSeconds();
+        timer?.Stop();
+
+        if (intervalSeconds <= 0)
         {
-            Interval = TimeSpan.FromSeconds(appConfig.ClusterRefreshIntervalSeconds > 0
-                ? appConfig.ClusterRefreshIntervalSeconds
-                : 300)
-        };
-        timer.Tick += (_, _) => _ = RefreshClustersForHealthCheckAsync();
+            timer = null;
+            return;
+        }
+
+        if (timer == null)
+        {
+            timer = new DispatcherTimer();
+            timer.Tick += (_, _) => _ = RefreshClustersForHealthCheckAsync();
+        }
+
+        timer.Interval = TimeSpan.FromSeconds(intervalSeconds);
         timer.Start();
+    }
+
+    private int GetConnectionCheckIntervalSeconds()
+    {
+        var raw = settingsService.GetValue(PreferencesViewModel.CONNECTION_CHECK_INTERVAL_SECONDS_KEY);
+        return int.TryParse(raw, out var seconds) && seconds >= 0
+            ? seconds
+            : defaultConnectionCheckIntervalSeconds;
     }
 
     private void CopyAppLog()

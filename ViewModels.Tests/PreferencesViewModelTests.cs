@@ -26,6 +26,41 @@ public class PreferencesViewModelTests
     }
 
     [Fact]
+    public void Constructor_ShouldLoadSavedConnectionCheckFrequency()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        settingsService.GetKafkaConfig().Returns(new KafkaConfig());
+        settingsService.GetBrowserConfig().Returns(CreateBrowserConfig(10, 10, 25, 50));
+        settingsService.GetValue("Theme").Returns("System");
+        settingsService.GetValue(PreferencesViewModel.CONNECTION_CHECK_INTERVAL_SECONDS_KEY).Returns("600");
+
+        var vm = new PreferencesViewModel(settingsService);
+
+        Assert.Equal("Every 10 minutes", vm.SelectedConnectionCheckFrequency);
+    }
+
+    [Fact]
+    public void Save_ShouldPersistDisabledConnectionChecks()
+    {
+        var settingsService = Substitute.For<ISettingsService>();
+        var browserConfig = CreateBrowserConfig(10, 10, 25, 50);
+        settingsService.GetKafkaConfig().Returns(new KafkaConfig());
+        settingsService.GetBrowserConfig().Returns(browserConfig);
+        settingsService.GetValue("Theme").Returns("System");
+
+        var vm = new PreferencesViewModel(settingsService)
+        {
+            SelectedConnectionCheckFrequency = "Never"
+        };
+
+        vm.SaveCommand.Execute(null);
+
+        settingsService.Received(1).SetValue(
+            PreferencesViewModel.CONNECTION_CHECK_INTERVAL_SECONDS_KEY,
+            "0");
+    }
+
+    [Fact]
     public void Save_WhenValidationErrorsExist_ShouldNotSave()
     {
         // Arrange

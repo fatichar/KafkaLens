@@ -64,6 +64,7 @@ public class SettingsService : ISettingsService
         defaultsAddedDuringLoad = false;
         MergeDefaults("Theme", JValue.CreateString("System"));
         MergeDefaults("AutoCheckForUpdates", JValue.CreateString("true"));
+        MergeDefaults(PreferencesViewModel.CONNECTION_CHECK_INTERVAL_SECONDS_KEY, JValue.CreateString("300"));
         MergeDefaults("HiddenKeyFormatters", JValue.CreateString("[]"));
         MergeDefaults("HiddenValueFormatters", JValue.CreateString("[]"));
         MergeDefaults(nameof(KafkaConfig), JObject.FromObject(new KafkaConfig()));
