@@ -55,6 +55,8 @@
                               SelectionChanged="MessagesGrid_OnSelectionChanged"
                               ContextMenu="{StaticResource MessageGridContextMenu}">
                         <DataGrid.Columns>
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Topic"
+                                                Binding="{Binding Topic}" SortMemberPath="Topic" />
                             <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition"
                                                 Binding="{Binding Partition }" SortMemberPath="Partition" />
                             <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}" SortMemberPath="Offset" />

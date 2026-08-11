@@ -1,12 +1,23 @@
-﻿<UserControl x:Class="AvaloniaApp.Views.TopicsPanel"
+<UserControl x:Class="AvaloniaApp.Views.TopicsPanel"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              xmlns:av="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
              x:DataType="vm:OpenedClusterViewModel">
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,Auto,*">
         <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Filter topics..." Margin="5"/>
-        <TreeView Grid.Row="1" Name="TopicsTree" ItemsSource="{Binding Children}"
+        <Border Grid.Row="1" IsVisible="{Binding HasCheckedTopics}" Margin="5,0,5,5"
+                Padding="6,3" CornerRadius="3"
+                Background="{DynamicResource ThemeToolbarBackgroundBrush}"
+                BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderBrush}">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding CheckedTopicsSummary}" FontSize="11" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Content="Clear" FontSize="11" Padding="6,1"
+                        Command="{Binding ClearCheckedTopicsCommand}"
+                        ToolTip.Tip="Uncheck all topics and clear the viewer"/>
+            </Grid>
+        </Border>
+        <TreeView Grid.Row="2" Name="TopicsTree" ItemsSource="{Binding Children}"
                   SelectedItem="{Binding SelectedNode}">
             <TreeView.Styles>
                 <Style Selector="av|TreeViewItem" x:DataType="vm:ITreeNode">
@@ -16,7 +27,14 @@
             </TreeView.Styles>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate x:DataType="vm:ITreeNode" ItemsSource="{Binding Children}">
-                    <TextBlock Text="{Binding Name}" Margin="0" FontSize="12"/>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                  IsVisible="{Binding IsCheckable}"
+                                  MinWidth="0" MinHeight="0" Padding="0"
+                                  VerticalAlignment="Center"
+                                  ToolTip.Tip="Include this topic's messages in the viewer"/>
+                        <TextBlock Text="{Binding Name}" Margin="0" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>
         </TreeView>

@@ -34,6 +34,7 @@ public partial class OpenedClusterViewModel
             SelectedNodeType = selectedNodeType,
             SelectedTopicName = selectedTopicName,
             SelectedPartitionId = selectedPartitionId,
+            CheckedTopicNames = Topics.Where(t => t.IsChecked).Select(t => t.Name).ToList(),
             FetchPosition = FetchPosition,
             FetchCount = FetchCount,
             FetchBackward = FetchBackward,
@@ -68,6 +69,10 @@ public partial class OpenedClusterViewModel
         if (state == null) return;
 
         pendingRestoreState = null;
+
+        // Restored before the selection so the SelectedNode setter sees multi-topic mode and
+        // leaves both the fetch positions and the viewer alone.
+        RestoreCheckedTopics(state.CheckedTopicNames);
 
         ITreeNode? targetNode = null;
         if (!string.IsNullOrWhiteSpace(state.SelectedTopicName))
@@ -116,12 +121,37 @@ public partial class OpenedClusterViewModel
                 UpdateStartTimeText();
         }
 
+        if (HasCheckedTopics) UseTopicFetchPositions();
+
         if (!string.IsNullOrWhiteSpace(state.FetchPosition) && FetchPositions.Contains(state.FetchPosition))
             FetchPosition = state.FetchPosition;
 
         if (IsFetchBackwardEnabled) FetchBackward = state.FetchBackward;
 
-        if (IsCurrent && targetNode is { Type: ITreeNode.NodeType.Topic or ITreeNode.NodeType.Partition })
+        if (IsCurrent &&
+            (HasCheckedTopics || targetNode is { Type: ITreeNode.NodeType.Topic or ITreeNode.NodeType.Partition }))
             FetchMessages();
+    }
+
+    private void RestoreCheckedTopics(List<string>? checkedTopicNames)
+    {
+        if (checkedTopicNames == null || checkedTopicNames.Count == 0) return;
+
+        var names = checkedTopicNames.ToHashSet(StringComparer.Ordinal);
+
+        // Suppressed so restoring N topics does not kick off N separate fetches; the single
+        // FetchMessages() at the end of the restore covers them all.
+        suppressCheckedTopicFetch = true;
+        try
+        {
+            foreach (var topic in Topics.Where(t => names.Contains(t.Name)))
+            {
+                topic.IsChecked = true;
+            }
+        }
+        finally
+        {
+            suppressCheckedTopicFetch = false;
+        }
     }
 }

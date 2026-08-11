@@ -8,82 +8,239 @@ namespace KafkaLens.ViewModels;
 
 public partial class OpenedClusterViewModel
 {
-    private MessageStream? messages;
+    /// <summary>
+    /// One in-flight fetch. A tab runs one of these per checked topic, so each stream needs
+    /// its own formatter source and cancellation independent of the tree selection.
+    /// </summary>
+    private sealed class ActiveFetch
+    {
+        public required IMessageSource Source { get; init; }
+        public required string TopicName { get; init; }
+        public required int? PartitionId { get; init; }
+        public required MessageStream Stream { get; init; }
+        public required CancellationTokenSource Cts { get; init; }
+        public required int RequestedCount { get; init; }
+        public NotifyCollectionChangedEventHandler? MessagesChanged { get; set; }
+        public MessageStream.FinishedEventHandler? Finished { get; set; }
+
+        public string Description => PartitionId.HasValue
+            ? $"topic {TopicName}, partition {PartitionId.Value}"
+            : $"topic {TopicName}";
+
+        public bool Targets(string topicName, int? partitionId) =>
+            PartitionId == partitionId &&
+            string.Equals(TopicName, topicName, StringComparison.Ordinal);
+    }
+
     private readonly List<IMessageLoadListener> messageLoadListeners = new();
     private readonly List<MessageViewModel> pendingMessages = new();
-    private CancellationTokenSource? fetchCts;
-    private string? activeFetchDescription;
-    private int activeFetchRequestedCount;
 
-    private void OnStreamFinished()
-    {
-        Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            IsLoading = false;
-            appLogService.LogInfo(
-                $"Fetched {messages?.Messages.Count ?? 0} of {activeFetchRequestedCount} messages from {activeFetchDescription}",
-                "Fetch");
-            messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
-        });
-    }
+    /// <summary>Mutated only on the UI thread.</summary>
+    private readonly List<ActiveFetch> activeFetches = new();
 
     private void StopLoading()
     {
-        if (IsLoading && activeFetchDescription != null)
-            appLogService.LogInfo($"Cancelled fetch from {activeFetchDescription}", "Fetch");
-        fetchCts?.Cancel();
+        if (IsLoading && activeFetches.Count > 0)
+        {
+            appLogService.LogInfo(
+                $"Cancelled fetch from {DescribeTargets(activeFetches.Select(f => f.Description))}", "Fetch");
+        }
+
+        CancelAllFetches();
         IsLoading = false;
     }
 
-    private void FetchMessages()
+    /// <summary>
+    /// The topics/partitions the next fetch should read. Checked topics take priority; with
+    /// none checked this falls back to the single tree-selected node.
+    /// </summary>
+    private List<IMessageSource> GetFetchTargets()
     {
-        if (selectedNode == null) return;
-
-        fetchCts?.Cancel();
-        fetchCts = new CancellationTokenSource();
-
-        if (messages != null)
+        var checkedTopics = Topics.Where(t => t.IsChecked).ToList();
+        if (checkedTopics.Count > 0)
         {
-            messages.Messages.CollectionChanged -= OnMessagesChanged;
-            messages.Finished -= OnStreamFinished;
+            return checkedTopics.Cast<IMessageSource>().ToList();
         }
 
-        CurrentMessages.Clear();
-        IsLoading = true;
+        return selectedNode is IMessageSource source
+            ? new List<IMessageSource> { source }
+            : new List<IMessageSource>();
+    }
 
-        var fetchOptions = CreateFetchOptions();
-        activeFetchDescription = GetFetchDescription(selectedNode);
-        activeFetchRequestedCount = fetchOptions.Limit;
+    /// <summary>Clears the viewer and refetches every current target.</summary>
+    private void FetchMessages()
+    {
+        var targets = GetFetchTargets();
+        if (targets.Count == 0) return;
+
+        CancelAllFetches();
+        CurrentMessages.Clear();
+
         appLogService.LogInfo(
-            $"Fetching {fetchOptions.Limit} messages from {activeFetchDescription}",
+            $"Fetching {FetchCount} messages from {DescribeTargets(targets.Select(t => GetFetchDescription(t)))}",
             "Fetch");
         messageLoadListeners.ForEach(l => l.MessageLoadingStarted());
 
+        IsLoading = true;
+        foreach (var target in targets)
+        {
+            StartFetch(target);
+        }
+
+        UpdateLoadingState();
+    }
+
+    /// <summary>
+    /// Starts a fetch for a single source and appends to the viewer without clearing it, so
+    /// checking another topic adds to the existing rows instead of refetching everything.
+    /// </summary>
+    private void StartFetch(IMessageSource source)
+    {
+        var topicName = GetTopicName(source);
+        if (topicName == null) return;
+
+        var partitionId = source is PartitionViewModel partition ? partition.Id : (int?)null;
+        CancelFetch(topicName, partitionId);
+
+        // A fresh FetchOptions per target: Limit and Direction are mutable, so streams must
+        // not share one instance.
+        var fetchOptions = CreateFetchOptions();
+        var cts = new CancellationTokenSource();
+        MessageStream? stream;
+
         try
         {
-            messages = selectedNode switch
-            {
-                TopicViewModel topic => KafkaLensClient.GetMessageStream(
-                    cluster.Id, topic.Name, fetchOptions, fetchCts.Token),
-                PartitionViewModel partition => KafkaLensClient.GetMessageStream(
-                    cluster.Id, partition.TopicName, partition.Id, fetchOptions, fetchCts.Token),
-                _ => null
-            };
+            stream = partitionId.HasValue
+                ? KafkaLensClient.GetMessageStream(cluster.Id, topicName, partitionId.Value, fetchOptions, cts.Token)
+                : KafkaLensClient.GetMessageStream(cluster.Id, topicName, fetchOptions, cts.Token);
         }
         catch (Exception e)
         {
-            IsLoading = false;
             Log.Error(e, "Failed to fetch messages for {ClusterName}", Name);
-            appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {e.Message}", "Fetch");
+            appLogService.LogError($"Could not fetch messages from topic {topicName}: {e.Message}", "Fetch");
+            UpdateLoadingState();
             return;
         }
 
-        if (messages != null)
+        if (stream == null)
         {
-            messages.Messages.CollectionChanged += OnMessagesChanged;
-            messages.Finished += OnStreamFinished;
+            UpdateLoadingState();
+            return;
+        }
+
+        var fetch = new ActiveFetch
+        {
+            Source = source,
+            TopicName = topicName,
+            PartitionId = partitionId,
+            Stream = stream,
+            Cts = cts,
+            RequestedCount = fetchOptions.Limit
+        };
+        fetch.MessagesChanged = (_, e) => OnMessagesChanged(fetch, e);
+        fetch.Finished = () => OnStreamFinished(fetch);
+
+        activeFetches.Add(fetch);
+        IsLoading = true;
+
+        stream.Messages.CollectionChanged += fetch.MessagesChanged;
+        stream.Finished += fetch.Finished;
+
+        // A short stream can finish before the handler is attached, in which case Finished
+        // never fires. OnStreamFinished is idempotent, so completing here is safe.
+        if (!stream.HasMore) OnStreamFinished(fetch);
+    }
+
+    private void CancelFetch(string topicName, int? partitionId = null)
+    {
+        var existing = activeFetches.Where(f => f.Targets(topicName, partitionId)).ToList();
+        foreach (var fetch in existing)
+        {
+            EndFetch(fetch);
         }
     }
+
+    /// <summary>Cancels every in-flight fetch and drops messages that have not been shown yet.</summary>
+    private void CancelAllFetches()
+    {
+        foreach (var fetch in activeFetches.ToList())
+        {
+            EndFetch(fetch);
+        }
+
+        lock (pendingMessages)
+        {
+            pendingMessages.Clear();
+        }
+    }
+
+    private void EndFetch(ActiveFetch fetch)
+    {
+        if (fetch.MessagesChanged != null)
+            fetch.Stream.Messages.CollectionChanged -= fetch.MessagesChanged;
+        if (fetch.Finished != null)
+            fetch.Stream.Finished -= fetch.Finished;
+
+        activeFetches.Remove(fetch);
+
+        lock (pendingMessages)
+        {
+            pendingMessages.RemoveAll(m => string.Equals(m.Topic, fetch.TopicName, StringComparison.Ordinal));
+        }
+
+        // Not disposed: the background stream task still holds the token, and disposing it
+        // from under that task surfaces ObjectDisposedException inside the fetch pipeline.
+        fetch.Cts.Cancel();
+    }
+
+    private void OnStreamFinished(ActiveFetch fetch)
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            UpdateMessages();
+
+            if (fetch.MessagesChanged != null)
+                fetch.Stream.Messages.CollectionChanged -= fetch.MessagesChanged;
+            if (fetch.Finished != null)
+                fetch.Stream.Finished -= fetch.Finished;
+
+            if (activeFetches.Remove(fetch))
+            {
+                appLogService.LogInfo(
+                    $"Fetched {fetch.Stream.Messages.Count} of {fetch.RequestedCount} messages from {fetch.Description}",
+                    "Fetch");
+            }
+
+            UpdateLoadingState();
+        });
+    }
+
+    /// <summary>Loading stays true until every stream in the tab has finished.</summary>
+    private void UpdateLoadingState()
+    {
+        if (activeFetches.Count > 0) return;
+
+        IsLoading = false;
+        messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
+    }
+
+    private static string? GetTopicName(IMessageSource source) => source switch
+    {
+        TopicViewModel topic => topic.Name,
+        PartitionViewModel partition => partition.TopicName,
+        _ => null
+    };
+
+    private string GetCurrentTopicName() =>
+        (selectedNode is IMessageSource source ? GetTopicName(source) : null)
+        ?? throw new InvalidOperationException("No topic or partition is selected");
+
+    /// <summary>
+    /// Loaded messages belonging to one topic. The viewer can hold several topics at once, so
+    /// per-topic operations such as formatter changes must not touch the other topics' rows.
+    /// </summary>
+    private IEnumerable<MessageViewModel> LoadedMessagesForTopic(string topicName) =>
+        CurrentMessages.Messages.Where(m => string.Equals(m.Topic, topicName, StringComparison.Ordinal));
 
     private static string GetFetchDescription(ITreeNode node) => node switch
     {
@@ -92,13 +249,23 @@ public partial class OpenedClusterViewModel
         _ => node.Name
     };
 
-    private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private static string DescribeTargets(IEnumerable<string> descriptions)
     {
-        var node = (IMessageSource?)SelectedNode;
-        if (node == null) return;
+        var list = descriptions.ToList();
+        return list.Count switch
+        {
+            0 => "no topics",
+            1 => list[0],
+            <= 3 => string.Join(", ", list),
+            _ => $"{list.Count} topics"
+        };
+    }
 
+    private void OnMessagesChanged(ActiveFetch fetch, NotifyCollectionChangedEventArgs e)
+    {
+        var node = fetch.Source;
+        var topicName = fetch.TopicName;
         bool settingsChanged = false;
-        var topicName = GetCurrentTopicName();
 
         if (formatterService.IsUnknownFormatter(node.FormatterName))
         {
@@ -151,13 +318,6 @@ public partial class OpenedClusterViewModel
         }
     }
 
-    private string GetCurrentTopicName() => selectedNode switch
-    {
-        TopicViewModel topic => topic.Name,
-        PartitionViewModel partition => partition.TopicName,
-        _ => throw new InvalidOperationException()
-    };
-
     public void UpdateMessages()
     {
         lock (pendingMessages)
@@ -168,9 +328,6 @@ public partial class OpenedClusterViewModel
                 pendingMessages.Clear();
             }
         }
-
-        if (!messages?.HasMore ?? false)
-            IsLoading = false;
     }
 
     internal FetchOptions CreateFetchOptions()

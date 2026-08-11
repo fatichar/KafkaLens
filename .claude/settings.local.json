@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(dotnet test:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Read(//usr/local/share/dotnet/sdk/**)",
+      "Read(//Users/pbhusari/.dotnet/**)",
+      "Read(//opt/homebrew/Cellar/**)",
+      "Bash(/opt/homebrew/bin/dotnet --list-sdks)"
     ]
   }
 }

@@ -93,7 +93,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     } = ITreeNode.NodeType.None;
 
     public bool IsFetchOptionsEnabled => SelectedNodeType == ITreeNode.NodeType.Topic ||
-                                         SelectedNodeType == ITreeNode.NodeType.Partition;
+                                         SelectedNodeType == ITreeNode.NodeType.Partition ||
+                                         HasCheckedTopics;
     public bool IsFetchBackwardEnabled => FetchPosition != "Start" && FetchPosition != "End";
     public int[] FetchCounts => settingsService.GetBrowserConfig().FetchCounts.ToArray();
 
@@ -117,6 +118,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public RelayCommand ToggleFetchCommand { get; }
     public RelayCommand RefreshCommand { get; }
+    public RelayCommand ClearCheckedTopicsCommand { get; }
     public RelayCommand GuessValueFormatterCommand { get; }
     public RelayCommand GuessKeyFormatterCommand { get; }
     public RelayCommand OpenFormatterPreferencesCommand { get; }
@@ -187,6 +189,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             if (IsLoading) StopLoading();
             FetchMessages();
         });
+        ClearCheckedTopicsCommand = new RelayCommand(ClearCheckedTopics);
         GuessValueFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: false));
         GuessKeyFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: true));
         OpenFormatterPreferencesCommand = new RelayCommand(() => MainViewModel.ShowFormatterPreferences());
@@ -366,7 +369,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
                 SelectedNodeType = selectedNode?.Type ?? ITreeNode.NodeType.None;
                 var logicalNodeChanged = !AreSameLogicalNode(previousNode, selectedNode);
 
-                if (logicalNodeChanged)
+                if (logicalNodeChanged && !HasCheckedTopics)
                 {
                     var newFetchPositions = SelectedNodeType == ITreeNode.NodeType.Partition
                         ? FetchPositionsForPartition
@@ -381,7 +384,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
                 if (selectedNode is { Type: ITreeNode.NodeType.Partition } or { Type: ITreeNode.NodeType.Topic })
                 {
-                    if (IsCurrent && logicalNodeChanged && !suppressFetchOnSelectionChange)
+                    // In multi-topic mode the checkboxes own the viewer, so moving the tree
+                    // selection only retargets the config panel.
+                    if (IsCurrent && logicalNodeChanged && !suppressFetchOnSelectionChange && !HasCheckedTopics)
                         FetchMessages();
                 }
             }

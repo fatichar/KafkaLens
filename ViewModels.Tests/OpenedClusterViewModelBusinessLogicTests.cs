@@ -775,7 +775,7 @@ public class OpenedClusterViewModelBusinessLogicTests
         // Add a message to CurrentMessages
         var msg = new Message(1640995200000, new Dictionary<string, byte[]>(),
             Encoding.UTF8.GetBytes("key"), Encoding.UTF8.GetBytes("value"));
-        var msgVm = new MessageViewModel(msg, "Text", "Text");
+        var msgVm = new MessageViewModel(msg, "Text", "Text") { Topic = "test-topic" };
         vm.CurrentMessages.Add(msgVm);
 
         // Set formatter to a valid non-Auto name
@@ -805,7 +805,7 @@ public class OpenedClusterViewModelBusinessLogicTests
         vm.SelectedNode = vm.Topics[0];
         var msg = new Message(1640995200000, new Dictionary<string, byte[]>(),
             new byte[] { 0, 0, 0, 1 }, Encoding.UTF8.GetBytes("{\"id\":1}"));
-        vm.CurrentMessages.Add(new MessageViewModel(msg, "Text", "Text"));
+        vm.CurrentMessages.Add(new MessageViewModel(msg, "Text", "Text") { Topic = "test-topic" });
 
         vm.Topics[0].FormatterName = "Unknown";
         vm.Topics[0].KeyFormatterName = "Unknown";
@@ -868,6 +868,161 @@ public class OpenedClusterViewModelBusinessLogicTests
         // Assert
         Assert.Single(vm.CurrentMessages.Messages);
         Assert.Equal("hello world", vm.CurrentMessages.Messages[0].DecodedMessage);
+    }
+
+    #endregion
+
+    #region Checked topics (multi-topic view)
+
+    private async Task<OpenedClusterViewModel> CreateViewModelWithTopicsAsync(
+        params string[] topicNames)
+    {
+        var vm = CreateViewModel();
+        var topics = topicNames
+            .Select(name => new Topic(name, new List<Partition> { new(0) }))
+            .ToList();
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+
+        foreach (var topic in vm.Topics)
+        {
+            // Avoids the formatter-guessing path so the tests focus on fetch orchestration.
+            topic.FormatterName = "Text";
+            topic.KeyFormatterName = "Text";
+            mockClient.GetMessageStream("c1", topic.Name, Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+                .Returns(_ => new MessageStream());
+        }
+
+        return vm;
+    }
+
+    [AvaloniaFact]
+    public async Task CheckingTopic_ShouldFetchThatTopic()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a", "topic-b");
+
+        vm.Topics[0].IsChecked = true;
+
+        Assert.True(vm.HasCheckedTopics);
+        Assert.Equal(1, vm.CheckedTopicCount);
+        mockClient.Received(1).GetMessageStream("c1", "topic-a", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+        mockClient.DidNotReceive().GetMessageStream("c1", "topic-b", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaFact]
+    public async Task CheckingSecondTopic_ShouldFetchItWithoutRefetchingTheFirst()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a", "topic-b");
+
+        vm.Topics[0].IsChecked = true;
+        vm.Topics[1].IsChecked = true;
+
+        Assert.Equal(2, vm.CheckedTopicCount);
+        mockClient.Received(1).GetMessageStream("c1", "topic-a", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+        mockClient.Received(1).GetMessageStream("c1", "topic-b", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaFact]
+    public async Task CheckedTopics_ShouldEnableFetchOptionsWithoutTreeSelection()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a");
+
+        Assert.False(vm.IsFetchOptionsEnabled);
+
+        vm.Topics[0].IsChecked = true;
+
+        Assert.True(vm.IsFetchOptionsEnabled);
+    }
+
+    [AvaloniaFact]
+    public async Task UncheckingTopic_ShouldRemoveOnlyThatTopicsMessages()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a", "topic-b");
+        vm.Topics[0].IsChecked = true;
+        vm.Topics[1].IsChecked = true;
+
+        var msgA = new Message(1640995200000, new Dictionary<string, byte[]>(), null, []);
+        var msgB = new Message(1640995200001, new Dictionary<string, byte[]>(), null, []);
+        vm.CurrentMessages.Add(new MessageViewModel(msgA, "Text", "Text") { Topic = "topic-a" });
+        vm.CurrentMessages.Add(new MessageViewModel(msgB, "Text", "Text") { Topic = "topic-b" });
+
+        vm.Topics[0].IsChecked = false;
+
+        Assert.Equal(1, vm.CheckedTopicCount);
+        Assert.Single(vm.CurrentMessages.Messages);
+        Assert.Equal("topic-b", vm.CurrentMessages.Messages[0].Topic);
+    }
+
+    [AvaloniaFact]
+    public async Task ClearCheckedTopics_ShouldUncheckAllAndClearViewer()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a", "topic-b");
+        vm.Topics[0].IsChecked = true;
+        vm.Topics[1].IsChecked = true;
+
+        var msg = new Message(1640995200000, new Dictionary<string, byte[]>(), null, []);
+        vm.CurrentMessages.Add(new MessageViewModel(msg, "Text", "Text") { Topic = "topic-a" });
+
+        vm.ClearCheckedTopicsCommand.Execute(null);
+
+        Assert.False(vm.HasCheckedTopics);
+        Assert.Empty(vm.CurrentMessages.Messages);
+    }
+
+    [AvaloniaFact]
+    public async Task SelectedNode_WhenTopicsChecked_ShouldNotRefetch()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a", "topic-b");
+        vm.Topics[0].IsChecked = true;
+        mockClient.ClearReceivedCalls();
+
+        // Moving the tree selection in multi-topic mode retargets the config panel only.
+        vm.SelectedNode = vm.Topics[1];
+
+        mockClient.DidNotReceive().GetMessageStream(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaFact]
+    public async Task Refresh_WithCheckedTopics_ShouldRefetchEveryCheckedTopic()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a", "topic-b");
+        vm.Topics[0].IsChecked = true;
+        vm.Topics[1].IsChecked = true;
+        mockClient.ClearReceivedCalls();
+
+        vm.RefreshCommand.Execute(null);
+
+        mockClient.Received(1).GetMessageStream("c1", "topic-a", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+        mockClient.Received(1).GetMessageStream("c1", "topic-b", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaFact]
+    public async Task FetchMessages_WithMultipleCheckedTopics_ShouldRequestFullCountPerTopic()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a", "topic-b");
+        vm.FetchCount = 250;
+
+        vm.Topics[0].IsChecked = true;
+        vm.Topics[1].IsChecked = true;
+
+        mockClient.Received(1).GetMessageStream("c1", "topic-a",
+            Arg.Is<FetchOptions>(o => o.Limit == 250), Arg.Any<CancellationToken>());
+        mockClient.Received(1).GetMessageStream("c1", "topic-b",
+            Arg.Is<FetchOptions>(o => o.Limit == 250), Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaFact]
+    public async Task CapturedTabState_ShouldRoundTripCheckedTopics()
+    {
+        var vm = await CreateViewModelWithTopicsAsync("topic-a", "topic-b", "topic-c");
+        vm.Topics[0].IsChecked = true;
+        vm.Topics[2].IsChecked = true;
+
+        var state = vm.CaptureOpenedTabState();
+
+        Assert.Equal(new[] { "topic-a", "topic-c" }, state.CheckedTopicNames);
     }
 
     #endregion

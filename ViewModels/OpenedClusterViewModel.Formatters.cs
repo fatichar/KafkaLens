@@ -9,9 +9,10 @@ public partial class OpenedClusterViewModel
     {
         if (SelectedNode is not IMessageSource node) return Task.CompletedTask;
 
-        TryGuessUnknownFormattersFromLoadedMessages(node);
-
         var topicName = GetCurrentTopicName();
+
+        TryGuessUnknownFormattersFromLoadedMessages(node, topicName);
+
         var settings = new TopicSettings
         {
             KeyFormatter = formatterService.ToKnownFormatterOrNull(node.KeyFormatterName),
@@ -19,7 +20,7 @@ public partial class OpenedClusterViewModel
         };
         topicSettingsService.SetSettings(cluster.Id, topicName, settings, ApplyToAllClusters);
 
-        foreach (var msg in CurrentMessages.Messages)
+        foreach (var msg in LoadedMessagesForTopic(topicName))
         {
             if (formatterService.CanApplyFormatterToLoadedMessages(settings.ValueFormatter, ValueFormatterNames))
                 msg.FormatterName = settings.ValueFormatter!;
@@ -30,12 +31,10 @@ public partial class OpenedClusterViewModel
         return Task.CompletedTask;
     }
 
-    private void TryGuessUnknownFormattersFromLoadedMessages(IMessageSource node)
+    private void TryGuessUnknownFormattersFromLoadedMessages(IMessageSource node, string topicName)
     {
-        if (CurrentMessages.Messages.Count == 0) return;
-
-        var firstMessage = CurrentMessages.Messages[0].Message;
-        var topicName = GetCurrentTopicName();
+        var firstMessage = LoadedMessagesForTopic(topicName).FirstOrDefault()?.Message;
+        if (firstMessage == null) return;
 
         if (formatterService.IsUnknownFormatter(node.FormatterName))
         {
@@ -57,9 +56,15 @@ public partial class OpenedClusterViewModel
 
     private void GuessFormatterForSelectedNode(bool isKeyFormatter)
     {
-        if (SelectedNode is not IMessageSource node || CurrentMessages.Messages.Count == 0) return;
+        if (SelectedNode is not IMessageSource node) return;
 
-        var firstMessage = CurrentMessages.Messages[0].Message;
+        var topicName = GetTopicName(node);
+        if (topicName == null) return;
+
+        var topicMessages = LoadedMessagesForTopic(topicName).ToList();
+        if (topicMessages.Count == 0) return;
+
+        var firstMessage = topicMessages[0].Message;
 
         if (isKeyFormatter)
         {
@@ -67,7 +72,7 @@ public partial class OpenedClusterViewModel
             if (string.IsNullOrWhiteSpace(keyFormatter)) return;
 
             node.KeyFormatterName = keyFormatter;
-            foreach (var msg in CurrentMessages.Messages)
+            foreach (var msg in topicMessages)
                 msg.KeyFormatterName = keyFormatter;
             return;
         }
@@ -75,7 +80,7 @@ public partial class OpenedClusterViewModel
         var valueFormatter = formatterService.GuessValueFormatter(firstMessage, ValueFormatterNames)?.Name
             ?? formatterService.GetDefaultFormatterName();
         node.FormatterName = valueFormatter;
-        foreach (var msg in CurrentMessages.Messages)
+        foreach (var msg in topicMessages)
             msg.FormatterName = valueFormatter;
     }
 }
