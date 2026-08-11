@@ -28,6 +28,7 @@
                               CanUserSortColumns="True"
                               SelectionMode="Single"
                               IsReadOnly="True"
+                              DoubleTapped="EditCluster_Click"
                               BorderBrush="{DynamicResource ThemeBorderBrush}"
                               BorderThickness="1">
                         <DataGrid.Columns>
@@ -64,6 +65,7 @@
                               CanUserSortColumns="True"
                               SelectionMode="Single"
                               IsReadOnly="True"
+                              DoubleTapped="EditClient_Click"
                               BorderBrush="{DynamicResource ThemeBorderBrush}"
                               BorderThickness="1">
                         <DataGrid.Columns>
