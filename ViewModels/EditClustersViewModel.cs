@@ -13,7 +13,7 @@ public class EditClustersViewModel : IDisposable
     private IClusterInfoRepository ClusterRepository { get; }
     private IClientInfoRepository ClientRepository { get; }
     private IClientFactory ClientFactory { get; }
-    private Func<string, Task>? RefreshClustersForClient { get; }
+    private Func<string, Task> RefreshClustersForClient { get; }
 
     private ObservableCollection<ClusterViewModel> AllClusters { get; }
     public ObservableCollection<ClusterViewModel> Clusters { get; }
@@ -33,7 +33,7 @@ public class EditClustersViewModel : IDisposable
         IClusterInfoRepository clusterInfoRepository,
         IClientInfoRepository clientInfoRepository,
         IClientFactory clientFactory,
-        Func<string, Task>? refreshClustersForClient = null)
+        Func<string, Task> refreshClustersForClient)
     {
         AllClusters = clusters;
         Clusters = new ObservableCollection<ClusterViewModel>(clusters.Where(c => c.Client.CanEditClusters));
@@ -208,9 +208,7 @@ public class EditClustersViewModel : IDisposable
 
     private static bool IsClientConnectionSuccessful(IReadOnlyList<KafkaCluster> clusters)
     {
-        return !clusters.Any(c => c.Status == ConnectionState.Failed) &&
-               !clusters.Any(c => c.Id.StartsWith("grpc-unavailable:", StringComparison.Ordinal) ||
-                                  c.Id.StartsWith("client-unavailable:", StringComparison.Ordinal));
+        return !clusters.Any(c => c.Status == ConnectionState.Failed || c.IsUnavailablePlaceholder);
     }
 
     private static string GetClientConnectionError(IReadOnlyList<KafkaCluster> clusters)
@@ -226,8 +224,7 @@ public class EditClustersViewModel : IDisposable
     {
         var clusters = AllClusters.Where(c => c.Client.Name == clientName).ToList();
         var resultById = results
-            .Where(c => !c.Id.StartsWith("grpc-unavailable:", StringComparison.Ordinal) &&
-                        !c.Id.StartsWith("client-unavailable:", StringComparison.Ordinal))
+            .Where(c => !c.IsUnavailablePlaceholder)
             .ToDictionary(c => c.Id, StringComparer.Ordinal);
 
         foreach (var cluster in clusters)
@@ -349,15 +346,7 @@ public class EditClustersViewModel : IDisposable
         if (transportChanged)
         {
             await CheckClientConnectionAsync(existing);
-
-            if (RefreshClustersForClient != null)
-            {
-                await RefreshClustersForClient(updated.Name);
-            }
-            else
-            {
-                await LoadClustersForClientAsync(updated.Name);
-            }
+            await RefreshClustersForClient(updated.Name);
 
             var refreshedClusters = AllClusters
                 .Where(c => c.Client.Name == updated.Name)

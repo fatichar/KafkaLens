@@ -147,7 +147,8 @@ public class GrpcClient : IKafkaLensClient, IDisposable
             {
                 new KafkaCluster($"grpc-unavailable:{url}", Name, url)
                 {
-                    Status = ConnectionState.Failed
+                    Status = ConnectionState.Failed,
+                    IsUnavailablePlaceholder = true
                 }
             };
         }

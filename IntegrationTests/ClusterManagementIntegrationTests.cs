@@ -57,5 +57,6 @@ public class ClusterManagementIntegrationTests : IntegrationTestBase
             MainViewModel.Clusters,
             MainViewModel.ClusterInfoRepository,
             MainViewModel.ClientInfoRepository,
-            MainViewModel.ClientFactory);
+            MainViewModel.ClientFactory,
+            MainViewModel.RefreshClustersForClientAsync);
 }

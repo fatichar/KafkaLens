@@ -36,7 +36,7 @@ public class EditClustersPerformanceTests
         clientRepo.GetAll().Returns(new ReadOnlyDictionary<string, ClientInfo>(clientInfos));
 
         // Act
-        var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory);
+        var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory, _ => Task.CompletedTask);
 
         // Since CheckClientConnectionsAsync is async void and called in constructor,
         // we need to wait for all clients to finish checking.
@@ -49,6 +49,46 @@ public class EditClustersPerformanceTests
 
         // Assert
         viewModel.Clients.Should().AllSatisfy(c => c.Status.Should().Be(ConnectionState.Connected));
+    }
+
+    [Fact]
+    public async Task TestClientConnectionAsync_ShouldPreserveRealFailedClusterDetails()
+    {
+        // Arrange
+        var clusters = new ObservableCollection<ClusterViewModel>();
+        var clusterRepo = Substitute.For<IClusterInfoRepository>();
+        var clientRepo = Substitute.For<IClientInfoRepository>();
+        var clientFactory = Substitute.For<IClientFactory>();
+        var remoteClient = Substitute.For<IKafkaLensClient>();
+        remoteClient.Name.Returns("Remote");
+        remoteClient.CanEditClusters.Returns(false);
+        var cluster = new ClusterViewModel(
+            new KafkaCluster("cluster-1", "Cluster", "broker:9092")
+            {
+                Status = ConnectionState.Connected
+            },
+            remoteClient);
+        clusters.Add(cluster);
+        clientFactory.TestConnectionAsync(Arg.Any<ClientInfo>()).Returns(
+            Task.FromResult<IEnumerable<KafkaCluster>>(new[]
+            {
+                new KafkaCluster("cluster-1", "Cluster", "broker:9092")
+                {
+                    Status = ConnectionState.Failed,
+                    LastError = "Broker unavailable"
+                }
+            }));
+        clientRepo.GetAll().Returns(new ReadOnlyDictionary<string, ClientInfo>(new Dictionary<string, ClientInfo>()));
+        var clientInfo = new ClientInfoViewModel(new ClientInfo("client-1", "Remote", "http://localhost:8080", "grpc"));
+        using var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory, _ => Task.CompletedTask);
+
+        // Act
+        var result = await viewModel.TestClientConnectionAsync(clientInfo, "http://localhost:8080");
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(ConnectionState.Failed, cluster.Status);
+        Assert.Equal("Broker unavailable", cluster.LastError);
     }
 
     [Fact]
@@ -75,7 +115,7 @@ public class EditClustersPerformanceTests
             },
             localClient);
         clusters.Add(cluster);
-        using var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory);
+        using var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory, _ => Task.CompletedTask);
 
         // Act
         var result = await viewModel.TestConnectionAsync(cluster, "localhost:9092");
@@ -110,7 +150,7 @@ public class EditClustersPerformanceTests
             },
             localClient);
         clusters.Add(cluster);
-        using var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory);
+        using var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory, _ => Task.CompletedTask);
 
         // Act
         var result = await viewModel.TestConnectionAsync(cluster, "new-host:9092");

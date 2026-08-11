@@ -82,7 +82,8 @@ public class ClientFactory : IClientFactory
                 new KafkaCluster($"client-unavailable:{clientInfo.Address}", clientInfo.Name, clientInfo.Address)
                 {
                     Status = ConnectionState.Failed,
-                    LastError = e.Message
+                    LastError = e.Message,
+                    IsUnavailablePlaceholder = true
                 }
             };
         }
