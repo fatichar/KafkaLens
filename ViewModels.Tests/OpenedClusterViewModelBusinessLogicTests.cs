@@ -404,6 +404,79 @@ public class OpenedClusterViewModelBusinessLogicTests
     }
 
     [AvaloniaFact]
+    public async Task FetchMessages_WhenStreamFails_ShouldMarkClusterDisconnected()
+    {
+        // Arrange
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092")
+        {
+            Status = ConnectionState.Connected
+        };
+        var clusterVm = new ClusterViewModel(cluster, mockClient);
+        var vm = new OpenedClusterViewModel(
+            settingsService,
+            topicSettingsService,
+            messageSaver,
+            formatterService,
+            clusterVm,
+            "TestCluster");
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+        var messageStream = new MessageStream();
+        mockClient.GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(messageStream);
+
+        // Act
+        vm.SelectedNode = vm.Topics[0];
+        messageStream.SetError(new InvalidOperationException("Broker unavailable"));
+        messageStream.HasMore = false;
+        await Task.Delay(50);
+
+        // Assert
+        Assert.Equal(ConnectionState.Failed, clusterVm.Status);
+        Assert.Equal("Broker unavailable", clusterVm.LastError);
+    }
+
+    [AvaloniaFact]
+    public async Task FetchMessages_WhenStreamSucceeds_ShouldMarkClusterConnected()
+    {
+        // Arrange
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092")
+        {
+            Status = ConnectionState.Failed
+        };
+        var clusterVm = new ClusterViewModel(cluster, mockClient);
+        var vm = new OpenedClusterViewModel(
+            settingsService,
+            topicSettingsService,
+            messageSaver,
+            formatterService,
+            clusterVm,
+            "TestCluster");
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        clusterVm.Status = ConnectionState.Failed;
+        vm.IsCurrent = true;
+        var messageStream = new MessageStream();
+        mockClient.GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(messageStream);
+
+        // Act
+        vm.SelectedNode = vm.Topics[0];
+        messageStream.Messages.Add(new Message(1640995200000, new Dictionary<string, byte[]>(), null, []));
+        messageStream.HasMore = false;
+        await Task.Delay(50);
+
+        // Assert
+        Assert.Equal(ConnectionState.Connected, clusterVm.Status);
+        Assert.Null(clusterVm.LastError);
+    }
+
+    [AvaloniaFact]
     public async Task FetchMessages_WhenStopped_ShouldLogCancellation()
     {
         // Arrange
@@ -983,6 +1056,40 @@ public class OpenedClusterViewModelBusinessLogicTests
         Assert.Equal("99", state.StartOffset);
         Assert.Equal(new DateTime(2026, 2, 10), state.StartDate?.Date);
         Assert.Equal("08:09:10", state.StartTimeText);
+    }
+
+    #endregion
+
+    #region Manual connection
+
+    [AvaloniaFact]
+    public async Task ConnectCommand_WhenClusterIsDisconnected_ShouldCheckAndLoadTopics()
+    {
+        // Arrange
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092")
+        {
+            Status = ConnectionState.Failed
+        };
+        var clusterVm = new ClusterViewModel(cluster, mockClient);
+        var vm = new OpenedClusterViewModel(
+            settingsService,
+            topicSettingsService,
+            messageSaver,
+            formatterService,
+            clusterVm,
+            "TestCluster");
+        var topics = new List<Topic> { new("reconnected-topic", new List<Partition>()) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+
+        // Act
+        await vm.ConnectCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Equal(ConnectionState.Connected, clusterVm.Status);
+        Assert.Single(vm.Topics);
+        Assert.Equal("reconnected-topic", vm.Topics[0].Name);
+        await mockClient.Received(1).GetTopicsAsync("c1");
     }
 
     #endregion

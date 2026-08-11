@@ -50,4 +50,73 @@ public class EditClustersPerformanceTests
         // Assert
         viewModel.Clients.Should().AllSatisfy(c => c.Status.Should().Be(ConnectionState.Connected));
     }
+
+    [Fact]
+    public async Task TestConnectionAsync_ForCurrentAddress_ShouldUpdateClusterStatus()
+    {
+        // Arrange
+        var clusters = new ObservableCollection<ClusterViewModel>();
+        var clusterRepo = Substitute.For<IClusterInfoRepository>();
+        var clientRepo = Substitute.For<IClientInfoRepository>();
+        var clientFactory = Substitute.For<IClientFactory>();
+        var localClient = Substitute.For<IKafkaLensClient, IConnectionTestClient>();
+        localClient.Name.Returns("Local");
+        localClient.CanEditClusters.Returns(true);
+        ((IConnectionTestClient)localClient)
+            .ValidateConnectionWithDetailsAsync("localhost:9092")
+            .Returns(Task.FromResult(ConnectionValidationResult.Failed("VPN is disconnected")));
+        clientFactory.GetClient("Local").Returns(localClient);
+        clientRepo.GetAll().Returns(new ReadOnlyDictionary<string, ClientInfo>(new Dictionary<string, ClientInfo>()));
+
+        var cluster = new ClusterViewModel(
+            new KafkaCluster("cluster-1", "Test", "localhost:9092")
+            {
+                Status = ConnectionState.Connected
+            },
+            localClient);
+        clusters.Add(cluster);
+        using var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory);
+
+        // Act
+        var result = await viewModel.TestConnectionAsync(cluster, "localhost:9092");
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(ConnectionState.Failed, cluster.Status);
+        Assert.Equal("VPN is disconnected", cluster.LastError);
+    }
+
+    [Fact]
+    public async Task TestConnectionAsync_ForUnsavedAddress_ShouldNotUpdateCurrentClusterStatus()
+    {
+        // Arrange
+        var clusters = new ObservableCollection<ClusterViewModel>();
+        var clusterRepo = Substitute.For<IClusterInfoRepository>();
+        var clientRepo = Substitute.For<IClientInfoRepository>();
+        var clientFactory = Substitute.For<IClientFactory>();
+        var localClient = Substitute.For<IKafkaLensClient, IConnectionTestClient>();
+        localClient.Name.Returns("Local");
+        localClient.CanEditClusters.Returns(true);
+        ((IConnectionTestClient)localClient)
+            .ValidateConnectionWithDetailsAsync("new-host:9092")
+            .Returns(Task.FromResult(ConnectionValidationResult.Failed("Invalid address")));
+        clientFactory.GetClient("Local").Returns(localClient);
+        clientRepo.GetAll().Returns(new ReadOnlyDictionary<string, ClientInfo>(new Dictionary<string, ClientInfo>()));
+
+        var cluster = new ClusterViewModel(
+            new KafkaCluster("cluster-1", "Test", "localhost:9092")
+            {
+                Status = ConnectionState.Connected
+            },
+            localClient);
+        clusters.Add(cluster);
+        using var viewModel = new EditClustersViewModel(clusters, clusterRepo, clientRepo, clientFactory);
+
+        // Act
+        var result = await viewModel.TestConnectionAsync(cluster, "new-host:9092");
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(ConnectionState.Connected, cluster.Status);
+    }
 }

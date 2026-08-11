@@ -4,21 +4,66 @@
              xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
              xmlns:av="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
              x:DataType="vm:OpenedClusterViewModel">
-    <Grid RowDefinitions="Auto,*">
-        <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Filter topics..." Margin="5"/>
-        <TreeView Grid.Row="1" Name="TopicsTree" ItemsSource="{Binding Children}"
-                  SelectedItem="{Binding SelectedNode}">
-            <TreeView.Styles>
-                <Style Selector="av|TreeViewItem" x:DataType="vm:ITreeNode">
-                    <Setter Property="IsSelected" Value="{Binding IsSelected}"/>
-                    <Setter Property="IsExpanded" Value="{Binding IsExpanded}"/>
-                </Style>
-            </TreeView.Styles>
-            <TreeView.ItemTemplate>
-                <TreeDataTemplate x:DataType="vm:ITreeNode" ItemsSource="{Binding Children}">
-                    <TextBlock Text="{Binding Name}" Margin="0" FontSize="12"/>
-                </TreeDataTemplate>
-            </TreeView.ItemTemplate>
-        </TreeView>
+    <Grid RowDefinitions="Auto,Auto,*">
+        <Border Grid.Row="0"
+                Margin="5,5,5,0"
+                Padding="8,5"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="1"
+                IsVisible="{Binding ShowConnectionBanner}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Ellipse Width="10"
+                         Height="10"
+                         Classes="status"
+                         Tag="{Binding StatusColor}"
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding !IsChecking}"/>
+                <ProgressBar Classes="circular"
+                             MinWidth="0"
+                             Width="12"
+                             Height="12"
+                             IsIndeterminate="True"
+                             IsVisible="{Binding IsChecking}"
+                             VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ConnectionMessage}"
+                           VerticalAlignment="Center"/>
+                <Button Content="{Binding ConnectionActionText}"
+                        Command="{Binding ConnectCommand}"
+                        IsVisible="{Binding !IsChecking}"
+                        Padding="10,3"/>
+            </StackPanel>
+        </Border>
+        <TextBox Grid.Row="1"
+                 Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                 PlaceholderText="Filter topics..."
+                 Margin="5"/>
+        <Grid Grid.Row="2">
+            <TreeView Name="TopicsTree"
+                      ItemsSource="{Binding Children}"
+                      SelectedItem="{Binding SelectedNode}"
+                      IsVisible="{Binding !ShowEmptyConnectionState}">
+                <TreeView.Styles>
+                    <Style Selector="av|TreeViewItem" x:DataType="vm:ITreeNode">
+                        <Setter Property="IsSelected" Value="{Binding IsSelected}"/>
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded}"/>
+                    </Style>
+                </TreeView.Styles>
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate x:DataType="vm:ITreeNode" ItemsSource="{Binding Children}">
+                        <TextBlock Text="{Binding Name}" Margin="0" FontSize="12"/>
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        IsVisible="{Binding ShowEmptyConnectionState}">
+                <TextBlock Text="{Binding ConnectionMessage}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="No topics available until the cluster connects."
+                           HorizontalAlignment="Center"
+                           IsVisible="{Binding !IsChecking}"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

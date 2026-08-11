@@ -14,6 +14,17 @@ public partial class OpenedClusterViewModel
 
     partial void OnFilterTextChanged(string value) => FilterTopics();
 
+    private async Task ConnectAsync()
+    {
+        if (cluster.IsChecking) return;
+
+        await cluster.RecheckConnectionAsync();
+        if (cluster.Status == ConnectionState.Connected)
+        {
+            await LoadTopicsAsync();
+        }
+    }
+
     internal async Task LoadTopicsAsync()
     {
         if (isSyncingTopics) return;

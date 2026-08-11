@@ -17,4 +17,15 @@ public class MessageStreamTests
 
         Assert.Equal(1, finishedCount);
     }
+
+    [Fact]
+    public void SetCanceled_ShouldMarkStreamCanceledWithoutError()
+    {
+        var stream = new MessageStream();
+
+        stream.SetCanceled();
+
+        Assert.True(stream.WasCanceled);
+        Assert.Null(stream.Error);
+    }
 }

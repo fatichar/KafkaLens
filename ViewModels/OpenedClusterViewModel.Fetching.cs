@@ -20,9 +20,20 @@ public partial class OpenedClusterViewModel
         Dispatcher.UIThread.InvokeAsync(() =>
         {
             IsLoading = false;
-            appLogService.LogInfo(
-                $"Fetched {messages?.Messages.Count ?? 0} of {activeFetchRequestedCount} messages from {activeFetchDescription}",
-                "Fetch");
+            if (messages?.Error is { } error)
+            {
+                cluster.LastError = error.Message;
+                cluster.Status = ConnectionState.Failed;
+                appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {error.Message}", "Fetch");
+            }
+            else if (messages?.WasCanceled != true)
+            {
+                cluster.LastError = null;
+                cluster.Status = ConnectionState.Connected;
+                appLogService.LogInfo(
+                    $"Fetched {messages?.Messages.Count ?? 0} of {activeFetchRequestedCount} messages from {activeFetchDescription}",
+                    "Fetch");
+            }
             messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
         });
     }
@@ -73,6 +84,11 @@ public partial class OpenedClusterViewModel
         catch (Exception e)
         {
             IsLoading = false;
+            if (e is not OperationCanceledException)
+            {
+                cluster.LastError = e.Message;
+                cluster.Status = ConnectionState.Failed;
+            }
             Log.Error(e, "Failed to fetch messages for {ClusterName}", Name);
             appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {e.Message}", "Fetch");
             return;

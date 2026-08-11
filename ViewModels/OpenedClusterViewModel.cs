@@ -106,6 +106,20 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     public string StatusColor => cluster.StatusColor;
     public bool IsChecking => cluster.IsChecking;
     public string ClusterId => cluster.Id;
+    public bool ShowConnectionBanner => cluster.Status != ConnectionState.Connected;
+    public bool ShowEmptyConnectionState => ShowConnectionBanner && Topics.Count == 0;
+    public string ConnectionMessage => cluster.Status switch
+    {
+        ConnectionState.Checking => "Connecting...",
+        ConnectionState.Failed => "Disconnected",
+        _ => "Not connected"
+    };
+    public string ConnectionActionText => cluster.Status switch
+    {
+        ConnectionState.Failed => "Retry connection",
+        ConnectionState.Connected => "Check connection",
+        _ => "Connect"
+    };
 
     public IList<MessageViewModel> SelectedMessages { get; set; } = new List<MessageViewModel>();
     public bool IsCurrent { get; set; }
@@ -117,6 +131,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
 
     public RelayCommand ToggleFetchCommand { get; }
     public RelayCommand RefreshCommand { get; }
+    public AsyncRelayCommand ConnectCommand { get; }
     public RelayCommand GuessValueFormatterCommand { get; }
     public RelayCommand GuessKeyFormatterCommand { get; }
     public RelayCommand OpenFormatterPreferencesCommand { get; }
@@ -167,6 +182,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             ? name[cluster.Name.Length..]
             : string.Empty;
         this.cluster.PropertyChanged += OnClusterPropertyChanged;
+        Topics.CollectionChanged += OnTopicsCollectionChanged;
         Name = name;
 
         var browserConfig = settingsService.GetBrowserConfig();
@@ -187,6 +203,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             if (IsLoading) StopLoading();
             FetchMessages();
         });
+        ConnectCommand = new AsyncRelayCommand(ConnectAsync);
         GuessValueFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: false));
         GuessKeyFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: true));
         OpenFormatterPreferencesCommand = new RelayCommand(() => MainViewModel.ShowFormatterPreferences());
@@ -298,6 +315,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         OnPropertyChanged(nameof(StatusColor));
         OnPropertyChanged(nameof(IsChecking));
         OnPropertyChanged(nameof(ClusterId));
+        OnPropertyChanged(nameof(ShowConnectionBanner));
+        OnPropertyChanged(nameof(ShowEmptyConnectionState));
+        OnPropertyChanged(nameof(ConnectionMessage));
+        OnPropertyChanged(nameof(ConnectionActionText));
         UpdateClusterName(cluster.Name);
 
         Topics.Clear();
@@ -307,6 +328,11 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         }
     }
 
+    private void OnTopicsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(ShowEmptyConnectionState));
+    }
+
     private void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ClusterViewModel.StatusColor))
@@ -314,6 +340,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         else if (e.PropertyName == nameof(ClusterViewModel.Status))
         {
             OnPropertyChanged(nameof(IsChecking));
+            OnPropertyChanged(nameof(ShowConnectionBanner));
+            OnPropertyChanged(nameof(ShowEmptyConnectionState));
+            OnPropertyChanged(nameof(ConnectionMessage));
+            OnPropertyChanged(nameof(ConnectionActionText));
             if (cluster.Status == ConnectionState.Connected &&
                 cluster.TopicLoadState != TopicLoadState.Loaded &&
                 !isSyncingTopics)

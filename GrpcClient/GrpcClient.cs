@@ -12,7 +12,7 @@ using Topic = KafkaLens.Shared.Models.Topic;
 
 namespace KafkaLens.Clients;
 
-public class GrpcClient : IKafkaLensClient
+public class GrpcClient : IKafkaLensClient, IDisposable
 {
     #region fields
 
@@ -64,6 +64,11 @@ public class GrpcClient : IKafkaLensClient
             channel = null;
             client = null;
         }
+    }
+
+    public void Dispose()
+    {
+        InvalidateChannel();
     }
 
     public async Task<bool> ValidateConnectionAsync(string bootstrapServers)
@@ -221,11 +226,23 @@ public class GrpcClient : IKafkaLensClient
             catch (RpcException e)
             {
                 Log.Error(e, "Error reading stream");
-                InvalidateChannel();
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    stream.SetCanceled();
+                }
+                else
+                {
+                    stream.SetError(e);
+                    InvalidateChannel();
+                }
             }
             catch (Exception e)
             {
                 Log.Error(e, "Error reading stream");
+                if (e is OperationCanceledException)
+                    stream.SetCanceled();
+                else
+                    stream.SetError(e);
             }
             stream.HasMore = false;
 

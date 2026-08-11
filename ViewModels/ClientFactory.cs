@@ -2,6 +2,7 @@ using KafkaLens.Clients;
 using KafkaLens.Clients.Entities;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
+using KafkaLens.Shared.Models;
 using KafkaLens.ViewModels.Services;
 using Serilog;
 
@@ -63,6 +64,35 @@ public class ClientFactory : IClientFactory
         }
 
         return Task.CompletedTask;
+    }
+
+    public async Task<IEnumerable<KafkaCluster>> TestConnectionAsync(ClientInfo clientInfo)
+    {
+        IKafkaLensClient? client = null;
+        try
+        {
+            client = CreateClient(clientInfo);
+            return await client.GetAllClustersAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Failed to test client connection for {ClientName}", clientInfo.Name);
+            return new[]
+            {
+                new KafkaCluster($"client-unavailable:{clientInfo.Address}", clientInfo.Name, clientInfo.Address)
+                {
+                    Status = ConnectionState.Failed,
+                    LastError = e.Message
+                }
+            };
+        }
+        finally
+        {
+            if (client is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
     }
 
     public List<IKafkaLensClient> GetAllClients()

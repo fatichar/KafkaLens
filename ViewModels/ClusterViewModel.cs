@@ -73,12 +73,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         TopicLoadState = TopicLoadState.NotLoaded;
         Topics.Clear();
         Status = ConnectionState.Checking;
-        await CheckConnectionAsync();
-
-        if (Status == ConnectionState.Connected && TopicLoadState != TopicLoadState.Loaded)
-        {
-            await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: true);
-        }
+        await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: true);
     }
 
     private async Task CheckConnectionAsync(bool logTopicLoad, int maxRetries)

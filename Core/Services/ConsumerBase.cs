@@ -102,6 +102,10 @@ public abstract class ConsumerBase : IKafkaConsumer
             catch (Exception e)
             {
                 Log.Error(e, "Error fetching messages for topic {Topic}", topic);
+                if (e is OperationCanceledException)
+                    messages.SetCanceled();
+                else
+                    messages.SetError(e);
             }
             finally
             {
@@ -128,6 +132,10 @@ public abstract class ConsumerBase : IKafkaConsumer
             catch (Exception e)
             {
                 Log.Error(e, "Error fetching messages for topic {Topic} partition {Partition}", topic, partition);
+                if (e is OperationCanceledException)
+                    messages.SetCanceled();
+                else
+                    messages.SetError(e);
             }
             finally
             {

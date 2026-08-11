@@ -56,7 +56,8 @@ public partial class EditClustersDialog : DialogBase
 
             if (Context == null) return;
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
-            var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(Context.TestConnectionAsync);
+            var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(
+                address => Context.TestConnectionAsync(selected, address));
             var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address);
             var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
@@ -101,7 +102,9 @@ public partial class EditClustersDialog : DialogBase
         {
             if (Context == null) return;
             var existingNames = Context.Clients.Select(c => c.Name).ToList();
-            var dialog = new AddEditClientDialog(existingNames);
+            var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(
+                address => Context.TestClientConnectionAsync(address));
+            var dialog = new AddEditClientDialog(existingNames, validator);
             var result = await dialog.ShowDialog<ClientInfo?>(this);
 
             if (result != null)
@@ -124,7 +127,9 @@ public partial class EditClustersDialog : DialogBase
 
             if (Context == null) return;
             var existingNames = Context.Clients.Select(c => c.Name).ToList();
-            var dialog = new AddEditClientDialog(selected.Info, existingNames);
+            var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(
+                address => Context.TestClientConnectionAsync(selected, address));
+            var dialog = new AddEditClientDialog(selected.Info, existingNames, validator);
             var result = await dialog.ShowDialog<ClientInfo?>(this);
 
             if (result != null)
