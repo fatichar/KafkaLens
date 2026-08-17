@@ -17,6 +17,14 @@ public partial class ClientInfoViewModel(ClientInfo info) : ConnectionViewModelB
     
     [ObservableProperty]
     private string protocol = info.Protocol;
+
+    [ObservableProperty]
+    private bool isEnabled = info.IsEnabled;
+
+    partial void OnIsEnabledChanged(bool value)
+    {
+        Info.IsEnabled = value;
+    }
     
     public void UpdateInfo(ClientInfo info)
     {
@@ -24,5 +32,6 @@ public partial class ClientInfoViewModel(ClientInfo info) : ConnectionViewModelB
         Name = info.Name;
         Address = info.Address;
         Protocol = info.Protocol;
+        IsEnabled = info.IsEnabled;
     }
 }

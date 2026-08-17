@@ -97,7 +97,10 @@ public partial class MainViewModel
             else
             {
                 Clusters.Add(loaded);
-                _ = loaded.CheckConnectionAsync();
+                if (loaded.IsEnabled)
+                {
+                    _ = loaded.CheckConnectionAsync();
+                }
             }
         }
 
@@ -132,7 +135,10 @@ public partial class MainViewModel
             else
             {
                 Clusters.Add(loaded);
-                _ = loaded.CheckConnectionAsync();
+                if (loaded.IsEnabled)
+                {
+                    _ = loaded.CheckConnectionAsync();
+                }
             }
         }
 
@@ -181,7 +187,7 @@ public partial class MainViewModel
     private async Task RefreshClustersAsync()
     {
         // Periodic health check: single attempt per cluster, no retries.
-        await Task.WhenAll(Clusters.Select(c => CheckConnectionSafeAsync(c, allowRetries: false)));
+        await Task.WhenAll(Clusters.Where(c => c.IsEnabled).Select(c => CheckConnectionSafeAsync(c, allowRetries: false)));
     }
 
     private async Task CheckConnectionSafeAsync(ClusterViewModel cluster, bool allowRetries = true)
@@ -261,12 +267,26 @@ public partial class MainViewModel
     private void OnClustersChanged(object? sender, NotifyCollectionChangedEventArgs args)
     {
         if (args?.OldItems != null)
+        {
             foreach (ClusterViewModel item in args.OldItems)
-                openClusterMenuItems.Remove(openClusterMenuItems.First(x => x.Header == item.Name));
+            {
+                item.PropertyChanged -= OnClusterPropertyChanged;
+                RemoveClusterFromMenu(item);
+                CloseTabsForCluster(item.Id);
+            }
+        }
 
         if (args?.NewItems != null)
+        {
             foreach (ClusterViewModel item in args.NewItems)
-                AddClusterToMenu(item);
+            {
+                item.PropertyChanged += OnClusterPropertyChanged;
+                if (item.IsEnabled)
+                {
+                    AddClusterToMenu(item);
+                }
+            }
+        }
     }
 
     private static string GetClusterKey(ClusterViewModel cluster) => $"{cluster.Client.Name}:{cluster.Id}";

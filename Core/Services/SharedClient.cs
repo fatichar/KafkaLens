@@ -268,7 +268,10 @@ public class SharedClient(
     #region Mappers
     private KafkaCluster ToModel(Shared.Entities.ClusterInfo clusterInfo)
     {
-        return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address);
+        return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address)
+        {
+            IsEnabled = clusterInfo.IsEnabled
+        };
     }
     #endregion Mappers
 }

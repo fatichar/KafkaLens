@@ -37,6 +37,14 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     [ObservableProperty]
     private TopicLoadState topicLoadState = TopicLoadState.NotLoaded;
 
+    [ObservableProperty]
+    private bool isEnabled;
+
+    partial void OnIsEnabledChanged(bool value)
+    {
+        cluster.IsEnabled = value;
+    }
+
     public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient client, IAppLogService? appLogService = null)
     {
         Client = client;
@@ -44,6 +52,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         this.appLogService = appLogService;
         name = cluster.Name;
         address = cluster.Address;
+        isEnabled = cluster.IsEnabled;
         Status = this.cluster.Status;
         LastError = this.cluster.LastError;
 
@@ -52,6 +61,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
 
     public async Task CheckConnectionAsync(bool allowRetries = true)
     {
+        if (!IsEnabled) return;
         await CheckConnectionAsync(logTopicLoad: true,
             maxRetries: allowRetries ? TOPIC_LOAD_RETRY_COUNT : 0);
     }
@@ -135,6 +145,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
 
     internal async Task EnsureTopicsLoadedAsync(bool forceRefresh = false, bool logTopicLoad = false, int maxRetries = TOPIC_LOAD_RETRY_COUNT)
     {
+        if (!IsEnabled) return;
         Task loadTask;
         lock (topicsLoadLock)
         {

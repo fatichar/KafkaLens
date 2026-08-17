@@ -27,10 +27,17 @@
                               CanUserResizeColumns="True"
                               CanUserSortColumns="True"
                               SelectionMode="Single"
-                              IsReadOnly="True"
+                              IsReadOnly="False"
                               BorderBrush="{DynamicResource ThemeBorderBrush}"
                               BorderThickness="1">
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Enabled" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:ClusterViewModel">
+                                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Header="Status" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="vm:ClusterViewModel">
@@ -41,8 +48,8 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn x:DataType="vm:ClusterViewModel" Header="Name" Binding="{Binding Name}" Width="*"/>
-                            <DataGridTextColumn x:DataType="vm:ClusterViewModel" Header="Address" Binding="{Binding Address}" Width="2*"/>
+                            <DataGridTextColumn x:DataType="vm:ClusterViewModel" Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                            <DataGridTextColumn x:DataType="vm:ClusterViewModel" Header="Address" Binding="{Binding Address}" IsReadOnly="True" Width="2*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -63,10 +70,17 @@
                               CanUserResizeColumns="True"
                               CanUserSortColumns="True"
                               SelectionMode="Single"
-                              IsReadOnly="True"
+                              IsReadOnly="False"
                               BorderBrush="{DynamicResource ThemeBorderBrush}"
                               BorderThickness="1">
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Enabled" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:ClientInfoViewModel">
+                                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Header="Status" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate x:DataType="vm:ClientInfoViewModel">
@@ -77,9 +91,9 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn x:DataType="vm:ClientInfoViewModel" Header="Name" Binding="{Binding Name}" Width="*"/>
-                            <DataGridTextColumn x:DataType="vm:ClientInfoViewModel" Header="Address" Binding="{Binding Address}" Width="2*"/>
-                            <DataGridTextColumn x:DataType="vm:ClientInfoViewModel" Header="Protocol" Binding="{Binding Protocol}" Width="*"/>
+                            <DataGridTextColumn x:DataType="vm:ClientInfoViewModel" Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                            <DataGridTextColumn x:DataType="vm:ClientInfoViewModel" Header="Address" Binding="{Binding Address}" IsReadOnly="True" Width="2*"/>
+                            <DataGridTextColumn x:DataType="vm:ClientInfoViewModel" Header="Protocol" Binding="{Binding Protocol}" IsReadOnly="True" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 

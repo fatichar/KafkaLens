@@ -24,8 +24,45 @@ public partial class MainViewModel
         OpenCluster(cluster);
     }
 
+    public bool HasOpenTabsForCluster(string clusterId)
+    {
+        return OpenedClusters.Any(o => o.ClusterId == clusterId);
+    }
+
+    public bool HasOpenTabsForClient(string clientName)
+    {
+        var clusterIds = Clusters.Where(c => c.Client.Name == clientName).Select(c => c.Id).ToHashSet();
+        return OpenedClusters.Any(o => clusterIds.Contains(o.ClusterId));
+    }
+
+    public void CloseTabsForCluster(string clusterId)
+    {
+        var openedList = OpenedClusters.Where(o => o.ClusterId == clusterId).ToList();
+        foreach (var opened in openedList)
+        {
+            CloseTab(opened);
+        }
+    }
+
+    public void CloseTabsForClient(string clientName)
+    {
+        var clusterIds = Clusters.Where(c => c.Client.Name == clientName).Select(c => c.Id).ToHashSet();
+        var openedList = OpenedClusters.Where(o => clusterIds.Contains(o.ClusterId)).ToList();
+        foreach (var opened in openedList)
+        {
+            CloseTab(opened);
+        }
+    }
+
     private void OpenCluster(ClusterViewModel clusterViewModel, OpenedTabState? tabState)
     {
+        if (!clusterViewModel.IsEnabled)
+        {
+            Log.Warning("Cannot open cluster {ClusterName} because it is disabled.", clusterViewModel.Name);
+            AppLogService.LogWarning($"Cannot open cluster {clusterViewModel.Name}: cluster is disabled.", "Cluster");
+            return;
+        }
+
         Log.Information("Opening cluster: {ClusterName}", clusterViewModel.Name);
         AppLogService.LogInfo($"Opening cluster {clusterViewModel.Name}", "Cluster");
         var newName = clusterViewModel.Name;

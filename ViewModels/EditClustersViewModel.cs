@@ -19,6 +19,15 @@ public class EditClustersViewModel : IDisposable
     public ObservableCollection<ClusterViewModel> Clusters { get; }
     public ObservableCollection<ClientInfoViewModel> Clients { get; }
 
+    public Func<ClusterViewModel, Task<bool>>? ConfirmDisableCluster { get; set; }
+    public Func<ClientInfoViewModel, Task<bool>>? ConfirmDisableClient { get; set; }
+    public Action<string>? CloseTabsForCluster { get; set; }
+    public Action<string>? CloseTabsForClient { get; set; }
+    public Func<string, bool>? HasOpenTabsForCluster { get; set; }
+    public Func<string, bool>? HasOpenTabsForClient { get; set; }
+
+    private bool isHandlingToggle;
+
     private IKafkaLensClient LocalClient
     {
         get
@@ -44,9 +53,140 @@ public class EditClustersViewModel : IDisposable
 
         AllClusters.CollectionChanged += AllClusters_CollectionChanged;
 
+        foreach (var cluster in Clusters)
+        {
+            cluster.PropertyChanged += OnClusterPropertyChanged;
+        }
+        Clusters.CollectionChanged += DirectClusters_CollectionChanged;
+
         Clients = new ObservableCollection<ClientInfoViewModel>(ClientRepository.GetAll().Values.Select(c => new ClientInfoViewModel(c)));
+        foreach (var client in Clients)
+        {
+            client.PropertyChanged += OnClientPropertyChanged;
+        }
+        Clients.CollectionChanged += Clients_CollectionChanged;
 
         CheckClientConnectionsAsync();
+    }
+
+    private void DirectClusters_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null)
+        {
+            foreach (ClusterViewModel item in e.NewItems)
+            {
+                item.PropertyChanged += OnClusterPropertyChanged;
+            }
+        }
+        if (e.OldItems != null)
+        {
+            foreach (ClusterViewModel item in e.OldItems)
+            {
+                item.PropertyChanged -= OnClusterPropertyChanged;
+            }
+        }
+    }
+
+    private void Clients_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null)
+        {
+            foreach (ClientInfoViewModel item in e.NewItems)
+            {
+                item.PropertyChanged += OnClientPropertyChanged;
+            }
+        }
+        if (e.OldItems != null)
+        {
+            foreach (ClientInfoViewModel item in e.OldItems)
+            {
+                item.PropertyChanged -= OnClientPropertyChanged;
+            }
+        }
+    }
+
+    private async void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ClusterViewModel.IsEnabled) || isHandlingToggle)
+            return;
+
+        var cluster = (ClusterViewModel)sender!;
+        isHandlingToggle = true;
+        try
+        {
+            if (!cluster.IsEnabled)
+            {
+                var hasOpenTabs = HasOpenTabsForCluster?.Invoke(cluster.Id) ?? false;
+                if (hasOpenTabs && ConfirmDisableCluster != null)
+                {
+                    var approved = await ConfirmDisableCluster(cluster);
+                    if (!approved)
+                    {
+                        cluster.IsEnabled = true;
+                        return;
+                    }
+                }
+
+                CloseTabsForCluster?.Invoke(cluster.Id);
+            }
+
+            try
+            {
+                var clusterInfo = ClusterRepository.GetById(cluster.Id);
+                clusterInfo.IsEnabled = cluster.IsEnabled;
+                ClusterRepository.Update(clusterInfo);
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Failed to persist IsEnabled for cluster {ClusterId}", cluster.Id);
+            }
+        }
+        finally
+        {
+            isHandlingToggle = false;
+        }
+    }
+
+    private async void OnClientPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ClientInfoViewModel.IsEnabled) || isHandlingToggle)
+            return;
+
+        var client = (ClientInfoViewModel)sender!;
+        isHandlingToggle = true;
+        try
+        {
+            if (!client.IsEnabled)
+            {
+                var hasOpenTabs = HasOpenTabsForClient?.Invoke(client.Name) ?? false;
+                if (hasOpenTabs && ConfirmDisableClient != null)
+                {
+                    var approved = await ConfirmDisableClient(client);
+                    if (!approved)
+                    {
+                        client.IsEnabled = true;
+                        return;
+                    }
+                }
+
+                CloseTabsForClient?.Invoke(client.Name);
+            }
+
+            try
+            {
+                var clientInfo = ClientRepository.GetById(client.Id);
+                clientInfo.IsEnabled = client.IsEnabled;
+                ClientRepository.Update(clientInfo);
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Failed to persist IsEnabled for client {ClientId}", client.Id);
+            }
+        }
+        finally
+        {
+            isHandlingToggle = false;
+        }
     }
 
     private void AllClusters_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -73,6 +213,17 @@ public class EditClustersViewModel : IDisposable
     public void Dispose()
     {
         AllClusters.CollectionChanged -= AllClusters_CollectionChanged;
+        Clusters.CollectionChanged -= DirectClusters_CollectionChanged;
+        Clients.CollectionChanged -= Clients_CollectionChanged;
+
+        foreach (var cluster in Clusters)
+        {
+            cluster.PropertyChanged -= OnClusterPropertyChanged;
+        }
+        foreach (var client in Clients)
+        {
+            client.PropertyChanged -= OnClientPropertyChanged;
+        }
     }
 
     private async void CheckClientConnectionsAsync()
