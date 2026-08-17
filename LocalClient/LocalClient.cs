@@ -253,7 +253,10 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     #region Mappers
     private Shared.Models.KafkaCluster ToModel(ClusterInfo clusterInfo)
     {
-        return new Shared.Models.KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address);
+        return new Shared.Models.KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address)
+        {
+            IsEnabled = clusterInfo.IsEnabled
+        };
     }
     #endregion Mappers
 }

@@ -23,6 +23,9 @@ public class ClusterInfo(string id, string name, string address, string? protoco
     [JsonPropertyName("protocol")]
     public string? Protocol { get; set; } = protocol;
 
+    [JsonPropertyName("isEnabled")]
+    public bool IsEnabled { get; set; } = true;
+
     public static ClusterInfo Create(string name, string address)
     {
         return new ClusterInfo(Guid.NewGuid().ToString(), name, address);

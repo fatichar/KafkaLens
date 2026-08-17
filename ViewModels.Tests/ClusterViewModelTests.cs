@@ -14,7 +14,7 @@ public class ClusterViewModelTests
     {
         fixture = new Fixture();
         mockClient = Substitute.For<IKafkaLensClient>();
-        cluster = fixture.Create<KafkaCluster>();
+        cluster = fixture.Build<KafkaCluster>().With(c => c.IsEnabled, true).Create();
     }
 
     [Fact]
@@ -247,5 +247,48 @@ public class ClusterViewModelTests
         Assert.Contains("Broker unavailable", entry.Message);
         Assert.DoesNotContain(" at ", entry.Message);
         Assert.DoesNotContain(nameof(Exception), entry.Message);
+    }
+
+    [Fact]
+    public async Task CheckConnectionAsync_WhenDisabled_ShouldNotValidateConnection()
+    {
+        // Arrange
+        var disabledCluster = fixture.Build<KafkaCluster>().With(c => c.IsEnabled, false).Create();
+        var viewModel = new ClusterViewModel(disabledCluster, mockClient);
+
+        // Act
+        await viewModel.CheckConnectionAsync();
+
+        // Assert
+        await mockClient.DidNotReceive().ValidateConnectionAsync(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task EnsureTopicsLoadedAsync_WhenDisabled_ShouldNotLoadTopics()
+    {
+        // Arrange
+        var disabledCluster = fixture.Build<KafkaCluster>().With(c => c.IsEnabled, false).Create();
+        var viewModel = new ClusterViewModel(disabledCluster, mockClient);
+
+        // Act
+        await viewModel.EnsureTopicsLoadedAsync();
+
+        // Assert
+        await mockClient.DidNotReceive().GetTopicsAsync(Arg.Any<string>());
+    }
+
+    [Fact]
+    public void SettingIsEnabled_ShouldPropagateToClusterModel()
+    {
+        // Arrange
+        var viewModel = new ClusterViewModel(cluster, mockClient);
+        Assert.True(viewModel.IsEnabled);
+        Assert.True(cluster.IsEnabled);
+
+        // Act
+        viewModel.IsEnabled = false;
+
+        // Assert
+        Assert.False(cluster.IsEnabled);
     }
 }

@@ -71,7 +71,33 @@ public partial class MainViewModel
 
     private void AddClusterToMenu(ClusterViewModel cluster)
     {
+        if (!cluster.IsEnabled || openClusterMenuItems.Any(m => (m.CommandParameter as string) == cluster.Id))
+            return;
         openClusterMenuItems.Add(CreateOpenMenuItem(cluster));
+    }
+
+    private void RemoveClusterFromMenu(ClusterViewModel cluster)
+    {
+        var menuItem = openClusterMenuItems.FirstOrDefault(m => (m.CommandParameter as string) == cluster.Id || m.Header == cluster.Name);
+        if (menuItem != null)
+        {
+            openClusterMenuItems.Remove(menuItem);
+        }
+    }
+
+    private void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender is ClusterViewModel cluster && e.PropertyName == nameof(ClusterViewModel.IsEnabled))
+        {
+            if (cluster.IsEnabled)
+            {
+                AddClusterToMenu(cluster);
+            }
+            else
+            {
+                RemoveClusterFromMenu(cluster);
+            }
+        }
     }
 
     private MenuItemViewModel CreateOpenMenuItem(ClusterViewModel c)

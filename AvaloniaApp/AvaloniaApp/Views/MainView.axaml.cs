@@ -103,12 +103,35 @@ public partial class MainView : UserControl
         var dialog = new EditClustersDialog();
         var dataContext = DataContext as MainViewModel;
         if (dataContext == null || mainWindow == null) return;
-        dialog.DataContext = new EditClustersViewModel(
+        var vm = new EditClustersViewModel(
             dataContext.Clusters,
             dataContext.ClusterInfoRepository,
             dataContext.ClientInfoRepository,
             dataContext.ClientFactory,
-            dataContext.RefreshClustersForClientAsync);
+            dataContext.RefreshClustersForClientAsync)
+        {
+            HasOpenTabsForCluster = dataContext.HasOpenTabsForCluster,
+            HasOpenTabsForClient = dataContext.HasOpenTabsForClient,
+            CloseTabsForCluster = dataContext.CloseTabsForCluster,
+            CloseTabsForClient = dataContext.CloseTabsForClient,
+            ConfirmDisableCluster = async (cluster) =>
+            {
+                var box = new SimpleMessageBox(
+                    "Disable Cluster",
+                    $"Disabling '{cluster.Name}' will close its open tab(s). Are you sure you want to proceed?",
+                    isConfirmation: true);
+                return await box.ShowConfirmationAsync(dialog);
+            },
+            ConfirmDisableClient = async (client) =>
+            {
+                var box = new SimpleMessageBox(
+                    "Disable Client",
+                    $"Disabling client '{client.Name}' will close open tab(s) for its cluster(s). Are you sure you want to proceed?",
+                    isConfirmation: true);
+                return await box.ShowConfirmationAsync(dialog);
+            }
+        };
+        dialog.DataContext = vm;
         dialog.ShowDialog(mainWindow);
     }
 
