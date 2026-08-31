@@ -245,26 +245,27 @@ public class EditClustersViewModel : IDisposable
     }
 
     // Clusters
-    public async Task AddClusterAsync(string name, string address)
+    public async Task AddClusterAsync(string name, string address, string? schemaRegistryUrl = null)
     {
-        var clusterInfo = ClusterRepository.Add(name, address);
+        var clusterInfo = ClusterRepository.Add(name, address, schemaRegistryUrl);
         var cluster = await LocalClient.GetClusterByIdAsync(clusterInfo.Id);
         var vm = new ClusterViewModel(cluster, LocalClient);
         AllClusters.Add(vm);
         await vm.CheckConnectionAsync();
     }
 
-    public async Task UpdateClusterAsync(ClusterViewModel cluster, string name, string address)
+    public async Task UpdateClusterAsync(ClusterViewModel cluster, string name, string address, string? schemaRegistryUrl = null)
     {
         var addressChanged = !string.Equals(cluster.Address, address, StringComparison.Ordinal);
-        var updated = new ClusterInfo(cluster.Id, name, address);
+        var schemaRegistryChanged = !string.Equals(cluster.SchemaRegistryUrl, schemaRegistryUrl, StringComparison.Ordinal);
+        var updated = new ClusterInfo(cluster.Id, name, address, schemaRegistryUrl: schemaRegistryUrl);
 
-        if (addressChanged)
+        if (addressChanged || schemaRegistryChanged)
         {
             cluster.Status = ConnectionState.Checking;
             await LocalClient.UpdateClusterAsync(
                 cluster.Id,
-                new KafkaClusterUpdate(name, address));
+                new KafkaClusterUpdate(name, address, schemaRegistryUrl));
         }
         else
         {
@@ -273,6 +274,7 @@ public class EditClustersViewModel : IDisposable
 
         cluster.Name = name;
         cluster.Address = address;
+        cluster.SchemaRegistryUrl = schemaRegistryUrl;
 
         if (addressChanged)
         {

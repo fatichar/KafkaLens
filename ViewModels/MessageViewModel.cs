@@ -44,11 +44,20 @@ public sealed partial class MessageViewModel : ViewModelBase
 
             SetProperty(ref field, value);
             formatter = FormatterFactory.Instance.GetFormatter(value);
-            var decoded = formatter.Format(message.Value ?? Array.Empty<byte>(), false) ?? message.ValueText;
-            var limit = Math.Min(MAX_SUMMARY_LEN, decoded.Length);
-            Summary = decoded[..limit].ReplaceLineEndings(" ")
-                      + (limit < decoded.Length ? "..." : "");
-            DecodedMessage = decoded;
+            try
+            {
+                var decoded = formatter.Format(message.Value ?? Array.Empty<byte>(), false) ?? message.ValueText;
+                var limit = Math.Min(MAX_SUMMARY_LEN, decoded.Length);
+                Summary = decoded[..limit].ReplaceLineEndings(" ")
+                          + (limit < decoded.Length ? "..." : "");
+                DecodedMessage = decoded;
+            }
+            catch (Exception ex)
+            {
+                var errorText = $"[Error: {ex.Message}]";
+                Summary = errorText;
+                DecodedMessage = errorText + "\n" + message.ValueText;
+            }
 
             UpdateText();
         }
@@ -63,7 +72,14 @@ public sealed partial class MessageViewModel : ViewModelBase
 
             SetProperty(ref field, value);
             keyFormatter = FormatterFactory.Instance.GetFormatter(value);
-            Key = keyFormatter.Format(message.Key ?? Array.Empty<byte>(), false) ?? message.KeyText;
+            try
+            {
+                Key = keyFormatter.Format(message.Key ?? Array.Empty<byte>(), false) ?? message.KeyText;
+            }
+            catch (Exception ex)
+            {
+                Key = $"[Error: {ex.Message}] {message.KeyText}";
+            }
         }
     }
 
@@ -108,7 +124,14 @@ public sealed partial class MessageViewModel : ViewModelBase
 
     private void UpdateText()
     {
-        DisplayText = formatter.Format(message.Value ?? [], filterText, useObjectFilter) ?? DecodedMessage;
+        try
+        {
+            DisplayText = formatter.Format(message.Value ?? [], filterText, useObjectFilter) ?? DecodedMessage;
+        }
+        catch (Exception ex)
+        {
+            DisplayText = $"[Error formatting message with {FormatterName}: {ex.Message}]\n\nRaw Message:\n{message.ValueText}";
+        }
     }
 
     public void PrettyFormat()

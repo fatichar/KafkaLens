@@ -38,7 +38,7 @@ public partial class EditClustersDialog : DialogBase
 
             if (result != null)
             {
-                await Context.AddClusterAsync(result.Name, result.Address);
+                await Context.AddClusterAsync(result.Name, result.Address, result.SchemaRegistryUrl);
             }
         }
         catch (Exception ex)
@@ -58,13 +58,13 @@ public partial class EditClustersDialog : DialogBase
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
             var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(
                 address => Context.TestConnectionAsync(selected, address));
-            var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address);
+            var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address, schemaRegistryUrl: selected.SchemaRegistryUrl);
             var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
             if (result != null)
             {
-                await Context.UpdateClusterAsync(selected, result.Name, result.Address);
+                await Context.UpdateClusterAsync(selected, result.Name, result.Address, result.SchemaRegistryUrl);
             }
         }
         catch (Exception ex)

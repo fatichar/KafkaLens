@@ -35,6 +35,9 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     private string address;
 
     [ObservableProperty]
+    private string? schemaRegistryUrl;
+
+    [ObservableProperty]
     private TopicLoadState topicLoadState = TopicLoadState.NotLoaded;
 
     public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient client, IAppLogService? appLogService = null)
@@ -44,6 +47,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         this.appLogService = appLogService;
         name = cluster.Name;
         address = cluster.Address;
+        schemaRegistryUrl = cluster.SchemaRegistryUrl;
         Status = this.cluster.Status;
         LastError = this.cluster.LastError;
 
