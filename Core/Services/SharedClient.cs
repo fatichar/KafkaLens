@@ -208,6 +208,7 @@ public class SharedClient(
         var existing = ValidateClusterId(clusterId);
         existing.Name = update.Name;
         existing.Address = update.Address;
+        existing.SchemaRegistryUrl = update.SchemaRegistryUrl;
         infoRepository.Update(existing);
         return await GetClusterByIdAsync(clusterId);
     }
@@ -268,7 +269,7 @@ public class SharedClient(
     #region Mappers
     private KafkaCluster ToModel(Shared.Entities.ClusterInfo clusterInfo)
     {
-        return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address);
+        return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address, clusterInfo.SchemaRegistryUrl);
     }
     #endregion Mappers
 }

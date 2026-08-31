@@ -50,6 +50,11 @@ public partial class OpenedClusterViewModel
     {
         if (selectedNode == null) return;
 
+        if (!string.IsNullOrWhiteSpace(cluster.SchemaRegistryUrl))
+        {
+            KafkaLens.Formatting.SchemaRegistryFormatter.ActiveSchemaRegistryUrl = cluster.SchemaRegistryUrl;
+        }
+
         fetchCts?.Cancel();
         fetchCts = new CancellationTokenSource();
 

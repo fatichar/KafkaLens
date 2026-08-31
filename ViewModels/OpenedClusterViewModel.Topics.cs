@@ -39,11 +39,19 @@ public partial class OpenedClusterViewModel
             }
 
             Topics.Clear();
+            var hasSchemaRegistry = !string.IsNullOrWhiteSpace(cluster.SchemaRegistryUrl);
+            if (hasSchemaRegistry)
+            {
+                KafkaLens.Formatting.SchemaRegistryFormatter.ActiveSchemaRegistryUrl = cluster.SchemaRegistryUrl;
+                KafkaLens.Formatting.SchemaRegistryFormatter.GetClient(cluster.SchemaRegistryUrl!);
+            }
+
             foreach (var topic in cluster.Topics)
             {
                 var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
-                var valueFormatter = formatterService.NormalizeFormatterName(settings.ValueFormatter, ValueFormatterNames);
-                var keyFormatter = formatterService.NormalizeFormatterName(settings.KeyFormatter, KeyFormatterNames);
+                var defaultFormatter = hasSchemaRegistry ? "Schema Registry" : null;
+                var valueFormatter = formatterService.NormalizeFormatterName(settings.ValueFormatter ?? defaultFormatter, ValueFormatterNames);
+                var keyFormatter = formatterService.NormalizeFormatterName(settings.KeyFormatter ?? defaultFormatter, KeyFormatterNames);
                 Topics.Add(new TopicViewModel(topic, valueFormatter, keyFormatter));
             }
 

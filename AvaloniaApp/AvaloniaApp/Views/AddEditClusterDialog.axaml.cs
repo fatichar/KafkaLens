@@ -37,6 +37,7 @@ public partial class AddEditClusterDialog : DialogBase
         originalId = existing.Id;
         NameBox.Text = existing.Name;
         AddressBox.Text = existing.Address;
+        SchemaRegistryBox.Text = existing.SchemaRegistryUrl;
         Title = "Edit Cluster";
     }
 
@@ -92,6 +93,45 @@ public partial class AddEditClusterDialog : DialogBase
         }
     }
 
+    private async void TestSchemaRegistryButton_Click(object? sender, RoutedEventArgs e)
+    {
+        var url = SchemaRegistryBox.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            ErrorTextBlock.Text = "Please enter a Schema Registry URL.";
+            return;
+        }
+
+        TestSchemaRegistryButton.IsEnabled = false;
+        StatusTextBlock.Text = "Testing Schema Registry connection...";
+        StatusTextBlock.Foreground = Brushes.Blue;
+        ErrorTextBlock.Text = "";
+        DetailsExpander.IsVisible = false;
+        DetailsExpander.IsExpanded = false;
+        DetailsTextBox.Text = "";
+
+        try
+        {
+            using var client = new Confluent.SchemaRegistry.CachedSchemaRegistryClient(
+                new Confluent.SchemaRegistry.SchemaRegistryConfig { Url = url });
+            var subjects = await client.GetAllSubjectsAsync();
+            StatusTextBlock.Text = $"Schema Registry connected successfully ({subjects.Count} subject(s) found).";
+            StatusTextBlock.Foreground = Brushes.Green;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Unexpected error while testing Schema Registry connection to {Address}", url);
+            StatusTextBlock.Text = "";
+            ErrorTextBlock.Text = $"Schema Registry error: {ex.Message}";
+            DetailsTextBox.Text = ex.ToString();
+            DetailsExpander.IsVisible = true;
+        }
+        finally
+        {
+            TestSchemaRegistryButton.IsEnabled = true;
+        }
+    }
+
     private void OkButton_Click(object? sender, RoutedEventArgs e)
     {
         StatusTextBlock.Text = "";
@@ -114,7 +154,8 @@ public partial class AddEditClusterDialog : DialogBase
             return;
         }
 
-        Result = new ClusterInfo(originalId ?? Guid.NewGuid().ToString(), newName, AddressBox.Text.Trim());
+        var schemaRegistryUrl = string.IsNullOrWhiteSpace(SchemaRegistryBox.Text) ? null : SchemaRegistryBox.Text.Trim();
+        Result = new ClusterInfo(originalId ?? Guid.NewGuid().ToString(), newName, AddressBox.Text.Trim(), schemaRegistryUrl: schemaRegistryUrl);
         Close(Result);
     }
 
