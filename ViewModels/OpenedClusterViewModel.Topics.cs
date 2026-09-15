@@ -18,11 +18,12 @@ public partial class OpenedClusterViewModel
     {
         if (cluster.IsChecking) return;
 
+        if (disposed || !cluster.IsAvailable) return;
         await cluster.RecheckConnectionAsync();
-        if (cluster.Status == ConnectionState.Connected)
-        {
-            await LoadTopicsAsync();
-        }
+        if (cluster.HasMessageFailures && selectedNode is TopicViewModel or PartitionViewModel)
+            FetchMessages();
+        else
+            SyncTopics();
     }
 
     internal async Task LoadTopicsAsync()
@@ -38,17 +39,7 @@ public partial class OpenedClusterViewModel
                 return;
             }
 
-            Topics.Clear();
-            foreach (var topic in cluster.Topics)
-            {
-                var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
-                var valueFormatter = formatterService.NormalizeFormatterName(settings.ValueFormatter, ValueFormatterNames);
-                var keyFormatter = formatterService.NormalizeFormatterName(settings.KeyFormatter, KeyFormatterNames);
-                Topics.Add(new TopicViewModel(topic, valueFormatter, keyFormatter));
-            }
-
-            FilterTopics();
-            RestorePendingSessionState();
+            SyncTopics();
             appLogService.LogInfo($"Loaded {Topics.Count} topics for {Name}", "Topics");
         }
         catch (Exception e)
@@ -59,6 +50,21 @@ public partial class OpenedClusterViewModel
         {
             isSyncingTopics = false;
         }
+    }
+
+    private void SyncTopics()
+    {
+        if (disposed || cluster.TopicLoadState != TopicLoadState.Loaded) return;
+        Topics.Clear();
+        foreach (var topic in cluster.Topics)
+        {
+            var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
+            var valueFormatter = formatterService.NormalizeFormatterName(settings.ValueFormatter, ValueFormatterNames);
+            var keyFormatter = formatterService.NormalizeFormatterName(settings.KeyFormatter, KeyFormatterNames);
+            Topics.Add(new TopicViewModel(topic, valueFormatter, keyFormatter));
+        }
+        FilterTopics();
+        RestorePendingSessionState();
     }
 
     internal void FilterTopics()

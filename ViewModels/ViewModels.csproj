@@ -26,5 +26,6 @@
 
 	<ItemGroup>
 	  <InternalsVisibleTo Include="KafkaLens.ViewModels.Tests" />
+	  <InternalsVisibleTo Include="IntegrationTests" />
 	</ItemGroup>
 </Project>

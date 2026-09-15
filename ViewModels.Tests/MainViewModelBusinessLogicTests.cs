@@ -39,6 +39,7 @@ public class MainViewModelBusinessLogicTests
     public MainViewModelBusinessLogicTests()
     {
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        settingsService.GetValue(PreferencesViewModel.CONNECTION_CHECK_INTERVAL_SECONDS_KEY).Returns("0");
         settingsService.GetPluginSettings().Returns(new PluginSettings());
         clusterFactory.LoadClustersAsync().Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
         clusterFactory.LoadClustersForClientAsync(Arg.Any<IKafkaLensClient>()).Returns(Task.FromResult<IReadOnlyList<ClusterViewModel>>(new List<ClusterViewModel>()));
@@ -98,6 +99,151 @@ public class MainViewModelBusinessLogicTests
     private ClusterViewModel CreateClusterVm(string id = "c1", string name = "Cluster1", string address = "localhost:9092")
     {
         return CreateClusterVmWithModel(id, name, address).vm;
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    public async Task UnavailableCluster_IsNotRestoredOpenedListedOrChecked(bool enabled, bool ownerEnabled)
+    {
+        mockClient.Name.Returns("Remote");
+        var cluster = CreateClusterVm();
+        cluster.IsEnabled = enabled;
+        clientInfoRepository.GetAll().Returns(new ReadOnlyDictionary<string, KafkaLens.Clients.Entities.ClientInfo>(
+            new Dictionary<string, KafkaLens.Clients.Entities.ClientInfo>
+            {
+                ["remote"] = new("remote", "Remote", "http://remote", "grpc") { IsEnabled = ownerEnabled }
+            }));
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig
+        {
+            RestoreTabsOnStartup = true,
+            OpenedTabs = new List<OpenedTabState> { new() { ClusterId = cluster.Id } }
+        });
+        var vm = CreateViewModel(new ObservableCollection<ClusterViewModel> { cluster });
+        await vm.LoadClusters();
+        if (!vm.Clusters.Contains(cluster)) vm.Clusters.Add(cluster);
+        vm.OpenCluster(cluster);
+        await vm.RefreshClustersForHealthCheckAsync();
+        Assert.Empty(vm.OpenedClusters);
+        Assert.Empty(vm.MenuItems![0].Items![1].Items!);
+        Assert.False(cluster.IsAvailable);
+        Assert.Equal("Disabled", cluster.ConnectionStatus);
+        Assert.Equal("Gray", cluster.StatusColor);
+        await mockClient.DidNotReceive().ValidateConnectionAsync(Arg.Any<string>());
+        await mockClient.DidNotReceive().GetTopicsAsync(Arg.Any<string>());
+        if (!ownerEnabled) await clusterFactory.DidNotReceive().LoadClustersForClientAsync(mockClient);
+    }
+
+    [AvaloniaFact]
+    public async Task PeriodicCycle_StartsSiblingWhileFirstCheckIsPending_AndSkipsOverlappingCycle()
+    {
+        mockClient.Name.Returns("Local");
+        mockClient.CanEditClusters.Returns(true);
+        mockClient.ValidateConnectionAsync(Arg.Any<string>()).Returns(true);
+        var first = CreateClusterVm("first", "First", "first:9092");
+        var second = CreateClusterVm("second", "Second", "second:9092");
+        var vm = CreateViewModel(new ObservableCollection<ClusterViewModel> { first, second });
+        await vm.LoadClusters();
+        mockClient.ClearReceivedCalls();
+        var pending = new TaskCompletionSource<bool>();
+        mockClient.ValidateConnectionAsync(first.Address).Returns(pending.Task);
+        var secondStarted = new TaskCompletionSource();
+        mockClient.ValidateConnectionAsync(second.Address).Returns(_ =>
+        {
+            secondStarted.TrySetResult();
+            return Task.FromResult(true);
+        });
+        var cycle = vm.RefreshClustersForHealthCheckAsync();
+        await secondStarted.Task;
+        await vm.RefreshClustersForHealthCheckAsync();
+        await mockClient.Received(1).ValidateConnectionAsync(second.Address);
+        Assert.False(cycle.IsCompleted);
+        pending.SetResult(false);
+        await cycle;
+        Assert.Equal(ConnectionState.Failed, first.Status);
+        Assert.Equal(ConnectionState.Connected, second.Status);
+    }
+
+    [AvaloniaFact]
+    public async Task GenuineDeletionWithOneSibling_ClosesTabInsteadOfReattaching()
+    {
+        mockClient.ValidateConnectionAsync(Arg.Any<string>()).Returns(true);
+        var first = CreateClusterVm("first");
+        var second = CreateClusterVm("second");
+        var vm = CreateViewModel(new ObservableCollection<ClusterViewModel> { first, second });
+        await vm.LoadClusters();
+        vm.OpenCluster(first);
+        clusterFactory.LoadClustersForClientAsync(mockClient).Returns(
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new[] { second }));
+        await vm.LoadClusters();
+        Assert.Empty(vm.OpenedClusters);
+        Assert.Same(second, Assert.Single(vm.Clusters));
+    }
+
+    [AvaloniaFact]
+    public async Task ReconciledMenu_DetachesDiscardedItems_AndResetDetachesAllItems()
+    {
+        mockClient.ValidateConnectionAsync(Arg.Any<string>()).Returns(true);
+        var cluster = CreateClusterVm();
+        var vm = CreateViewModel(new ObservableCollection<ClusterViewModel> { cluster });
+        await vm.LoadClusters();
+        var discarded = new List<MenuItemViewModel>();
+        for (var i = 0; i < 20; i++)
+        {
+            discarded.Add(Assert.Single(vm.MenuItems![0].Items![1].Items!));
+            vm.RefreshAvailability();
+        }
+        cluster.Name = "Renamed";
+        cluster.Status = ConnectionState.Failed;
+        var current = Assert.Single(vm.MenuItems![0].Items![1].Items!);
+        Assert.Equal("Renamed", current.Header);
+        Assert.Equal(ConnectionState.Failed, ((StatusIconViewModel)current.Icon!).Status);
+        Assert.All(discarded, item => Assert.NotEqual("Renamed", item.Header));
+        vm.Clusters.Clear();
+        cluster.Name = "After removal";
+        Assert.Equal("Renamed", current.Header);
+        Assert.Empty(vm.MenuItems![0].Items![1].Items!);
+    }
+
+    [AvaloniaFact]
+    public async Task DisabledConfiguredLocalName_DoesNotDisableBuiltInDirectClusters()
+    {
+        mockClient.Name.Returns("Local");
+        mockClient.CanEditClusters.Returns(true);
+        mockClient.ValidateConnectionAsync(Arg.Any<string>()).Returns(true);
+        clientInfoRepository.GetAll().Returns(new ReadOnlyDictionary<string, KafkaLens.Clients.Entities.ClientInfo>(
+            new Dictionary<string, KafkaLens.Clients.Entities.ClientInfo>
+            {
+                ["unrelated"] = new("unrelated", "Local", "http://remote", "grpc") { IsEnabled = false }
+            }));
+        var cluster = CreateClusterVm();
+        var vm = CreateViewModel(new ObservableCollection<ClusterViewModel> { cluster });
+        await vm.LoadClusters();
+        mockClient.ClearReceivedCalls();
+        await vm.RefreshClustersForHealthCheckAsync();
+        Assert.True(cluster.IsAvailable);
+        await mockClient.Received(1).ValidateConnectionAsync(cluster.Address);
+        Assert.Single(vm.MenuItems![0].Items![1].Items!);
+    }
+
+    [Fact]
+    public async Task ClientFactory_ReloadReusesUnchangedInstances_AndExcludesDisabledClients()
+    {
+        mockClient.Name.Returns("Local");
+        var remote = new KafkaLens.Clients.Entities.ClientInfo("remote", "Remote", "http://remote", "grpc");
+        clientInfoRepository.GetAll().Returns(new ReadOnlyDictionary<string, KafkaLens.Clients.Entities.ClientInfo>(
+            new Dictionary<string, KafkaLens.Clients.Entities.ClientInfo> { [remote.Id] = remote }));
+        var factory = new ClientFactory(clientInfoRepository, mockClient);
+        await factory.LoadClientsAsync();
+        var instance = factory.GetClient("Remote");
+        await factory.LoadClientsAsync();
+        Assert.Same(instance, factory.GetClient("Remote"));
+        remote.IsEnabled = false;
+        await factory.LoadClientsAsync();
+        Assert.Same(mockClient, Assert.Single(factory.GetAllClients()));
+        Assert.Same(instance, factory.GetClient("Remote"));
+        ((IDisposable)instance).Dispose();
     }
 
     [AvaloniaFact]
@@ -329,6 +475,35 @@ public class MainViewModelBusinessLogicTests
 
         // Assert
         Assert.Empty(vm.Clusters);
+    }
+
+    [AvaloniaFact]
+    public async Task RefreshReplacingPlaceholder_ShouldReattachOpenTab()
+    {
+        mockClient.Name.Returns("Remote");
+        var placeholder = new ClusterViewModel(new KafkaCluster("placeholder", "Remote", "remote:9092")
+        {
+            IsUnavailablePlaceholder = true,
+            Status = ConnectionState.Failed
+        }, mockClient);
+        var realCluster = CreateClusterVm("real", "Remote");
+        clientFactory.GetAllClients().Returns(new List<IKafkaLensClient> { mockClient });
+        clusterFactory.LoadClustersForClientAsync(mockClient).Returns(
+            Task.FromResult<IReadOnlyList<ClusterViewModel>>(new[] { placeholder }));
+        var discovery = new TaskCompletionSource<IReadOnlyList<ClusterViewModel>>();
+        clusterFactory.LoadClustersForClientsAsync(Arg.Any<IReadOnlyCollection<string>>()).Returns(discovery.Task);
+        var vm = CreateViewModel();
+
+        await vm.LoadClusters();
+        vm.OpenCluster(placeholder);
+        var originalTab = Assert.Single(vm.OpenedClusters);
+        discovery.SetResult(new[] { realCluster });
+        await vm.RefreshClustersForClientAsync("Remote");
+
+        Assert.Same(originalTab, Assert.Single(vm.OpenedClusters));
+        Assert.Equal(realCluster.Id, originalTab.ClusterId);
+        realCluster.Status = ConnectionState.Failed;
+        Assert.Equal("Red", originalTab.StatusColor);
     }
 
     [AvaloniaFact]

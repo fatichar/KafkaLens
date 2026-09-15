@@ -15,6 +15,26 @@ public class FakeKafkaClient : IKafkaLensClient
     private readonly IClusterInfoRepository _infoRepository;
     private readonly Dictionary<string, List<Topic>> _topicsByCluster = new();
 
+    // Independently controllable failure modes, so tests can simulate scenarios like
+    // "connectivity check succeeds but a subsequent topic/message fetch still fails"
+    // (e.g. a stale cached validation vs. a real per-request broker error).
+    private readonly HashSet<string> _unreachableAddresses = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _topicsFailureClusterIds = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _messagesFailureClusterIds = new(StringComparer.Ordinal);
+
+    public Dictionary<string, int> ValidationCalls { get; } = new(StringComparer.Ordinal);
+    public int DiscoveryCalls { get; private set; }
+    public int TopicsCalls { get; private set; }
+    public int MessagesCalls { get; private set; }
+
+    public void ResetCalls()
+    {
+        ValidationCalls.Clear();
+        DiscoveryCalls = 0;
+        TopicsCalls = 0;
+        MessagesCalls = 0;
+    }
+
     public string Name => "Local";
     public bool CanEditClusters => true;
     public bool CanSaveMessages => true;
@@ -27,16 +47,47 @@ public class FakeKafkaClient : IKafkaLensClient
     public void Reset()
     {
         _topicsByCluster.Clear();
+        _unreachableAddresses.Clear();
+        _topicsFailureClusterIds.Clear();
+        _messagesFailureClusterIds.Clear();
+        ResetCalls();
+    }
+
+    /// <summary>Simulates VPN/broker reachability for a given address. Reachable by default.</summary>
+    public void SetReachable(string address, bool reachable)
+    {
+        if (reachable) _unreachableAddresses.Remove(address);
+        else _unreachableAddresses.Add(address);
+    }
+
+    /// <summary>Makes the cluster's topic-list fetch throw, independent of address reachability.</summary>
+    public void SetTopicsFailure(string clusterId, bool shouldFail)
+    {
+        if (shouldFail) _topicsFailureClusterIds.Add(clusterId);
+        else _topicsFailureClusterIds.Remove(clusterId);
+    }
+
+    /// <summary>
+    /// Makes only message-level fetches for a cluster throw, while its topic-list fetch keeps
+    /// succeeding. Models a broker/topic-metadata connection that looks healthy but can't
+    /// actually serve message reads for a given topic/partition.
+    /// </summary>
+    public void SetMessagesFailure(string clusterId, bool shouldFail)
+    {
+        if (shouldFail) _messagesFailureClusterIds.Add(clusterId);
+        else _messagesFailureClusterIds.Remove(clusterId);
     }
 
     public Task<bool> ValidateConnectionAsync(string bootstrapServers)
     {
-        return Task.FromResult(true);
+        ValidationCalls[bootstrapServers] = ValidationCalls.GetValueOrDefault(bootstrapServers) + 1;
+        return Task.FromResult(!_unreachableAddresses.Contains(bootstrapServers));
     }
 
     public Task<IEnumerable<KafkaCluster>> GetAllClustersAsync()
     {
-        return Task.FromResult(_infoRepository.GetAll().Values.Select(ToModel));
+        DiscoveryCalls++;
+        return Task.FromResult<IEnumerable<KafkaCluster>>(_infoRepository.GetAll().Values.Select(ToModel).ToList());
     }
 
     public Task<KafkaCluster> GetClusterByIdAsync(string id)
@@ -63,7 +114,7 @@ public class FakeKafkaClient : IKafkaLensClient
 
     public Task<KafkaCluster> AddClusterAsync(KafkaCluster cluster)
     {
-        var clusterInfo = new KafkaLens.Shared.Entities.ClusterInfo(cluster.Id, cluster.Name, cluster.Address);
+        var clusterInfo = new KafkaLens.Shared.Entities.ClusterInfo(cluster.Id, cluster.Name, cluster.Address) { IsEnabled = cluster.IsEnabled };
         _infoRepository.Add(clusterInfo);
         _topicsByCluster[cluster.Id] = GenerateFakeTopics(cluster.Id);
         return Task.FromResult(ToModel(clusterInfo));
@@ -71,7 +122,7 @@ public class FakeKafkaClient : IKafkaLensClient
 
     public Task UpdateClusterAsync(KafkaCluster cluster)
     {
-        var clusterInfo = new KafkaLens.Shared.Entities.ClusterInfo(cluster.Id, cluster.Name, cluster.Address);
+        var clusterInfo = new KafkaLens.Shared.Entities.ClusterInfo(cluster.Id, cluster.Name, cluster.Address) { IsEnabled = cluster.IsEnabled };
         _infoRepository.Update(clusterInfo);
         return Task.CompletedTask;
     }
@@ -101,11 +152,20 @@ public class FakeKafkaClient : IKafkaLensClient
 
     private KafkaCluster ToModel(KafkaLens.Shared.Entities.ClusterInfo clusterInfo)
     {
-        return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address);
+        return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address) { IsEnabled = clusterInfo.IsEnabled };
     }
+
+    private bool IsUnreachable(string clusterId) =>
+        _unreachableAddresses.Contains(_infoRepository.GetById(clusterId).Address);
 
     public Task<IList<Topic>> GetTopicsAsync(string clusterId)
     {
+        TopicsCalls++;
+        if (IsUnreachable(clusterId) || _topicsFailureClusterIds.Contains(clusterId))
+        {
+            throw new InvalidOperationException($"Simulated topic fetch failure for cluster {clusterId}");
+        }
+
         if (_topicsByCluster.TryGetValue(clusterId, out var topics))
         {
             return Task.FromResult<IList<Topic>>(topics);
@@ -122,6 +182,12 @@ public class FakeKafkaClient : IKafkaLensClient
 
     public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, FetchOptions options, CancellationToken cancellationToken = default)
     {
+        MessagesCalls++;
+        if (IsUnreachable(clusterId) || _messagesFailureClusterIds.Contains(clusterId))
+        {
+            throw new InvalidOperationException($"Simulated message fetch failure for cluster {clusterId}");
+        }
+
         var messages = GenerateFakeMessages(clusterId, topic, null, options.Limit);
         return Task.FromResult(messages);
     }
@@ -135,6 +201,12 @@ public class FakeKafkaClient : IKafkaLensClient
 
     public Task<List<Message>> GetMessagesAsync(string clusterId, string topic, int partition, FetchOptions options, CancellationToken cancellationToken = default)
     {
+        MessagesCalls++;
+        if (IsUnreachable(clusterId) || _messagesFailureClusterIds.Contains(clusterId))
+        {
+            throw new InvalidOperationException($"Simulated message fetch failure for cluster {clusterId}");
+        }
+
         var messages = GenerateFakeMessages(clusterId, topic, partition, options.Limit);
         return Task.FromResult(messages);
     }
@@ -143,6 +215,14 @@ public class FakeKafkaClient : IKafkaLensClient
     {
         if (cancellationToken.IsCancellationRequested)
         {
+            stream.HasMore = false;
+            return;
+        }
+
+        MessagesCalls++;
+        if (IsUnreachable(clusterId) || _messagesFailureClusterIds.Contains(clusterId))
+        {
+            stream.SetError(new InvalidOperationException($"Simulated message fetch failure for cluster {clusterId}"));
             stream.HasMore = false;
             return;
         }

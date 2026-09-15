@@ -15,27 +15,48 @@ public partial class OpenedClusterViewModel
     private string? activeFetchDescription;
     private int activeFetchRequestedCount;
 
-    private void OnStreamFinished()
+    private MessageStream.FinishedEventHandler? streamFinishedHandler;
+
+    private void OnStreamFinished(MessageStream finished, ClusterViewModel owner, string topic, int? partition, int version)
     {
-        Dispatcher.UIThread.InvokeAsync(() =>
+        Dispatcher.UIThread.Post(() =>
         {
+            // This stream is no longer the active one, so it owns no UI state at all.
+            if (disposed || !ReferenceEquals(finished, messages)) return;
+
+            // The fetch that owns the spinner has ended, so clear it regardless of whether the
+            // result is still current. Deciding this behind the generation guard below would
+            // strand the spinner forever whenever the cluster was invalidated mid-fetch.
             IsLoading = false;
-            if (messages?.Error is { } error)
+            messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
+
+            // Status reporting is generation-scoped: a result from a superseded connection
+            // must not overwrite the status of the current one.
+            if (!ReferenceEquals(owner, cluster) || version != cluster.ConnectionVersion ||
+                fetchCts?.IsCancellationRequested == true) return;
+            if (finished.Error is { } error)
             {
-                cluster.LastError = error.Message;
-                cluster.Status = ConnectionState.Failed;
+                owner.ReportMessageResult(topic, partition, error, version);
                 appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {error.Message}", "Fetch");
             }
-            else if (messages?.WasCanceled != true)
+            else if (!finished.WasCanceled)
             {
-                cluster.LastError = null;
-                cluster.Status = ConnectionState.Connected;
+                owner.ReportMessageResult(topic, partition, null, version);
                 appLogService.LogInfo(
-                    $"Fetched {messages?.Messages.Count ?? 0} of {activeFetchRequestedCount} messages from {activeFetchDescription}",
+                    $"Fetched {finished.Messages.Count} of {activeFetchRequestedCount} messages from {activeFetchDescription}",
                     "Fetch");
             }
-            messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
         });
+    }
+
+    private void DetachMessageStream()
+    {
+        if (messages == null) return;
+        messages.Messages.CollectionChanged -= OnMessagesChanged;
+        messages.Finished -= streamFinishedHandler;
+        streamFinishedHandler = null;
+        messages = null;
+        lock (pendingMessages) pendingMessages.Clear();
     }
 
     private void StopLoading()
@@ -48,16 +69,16 @@ public partial class OpenedClusterViewModel
 
     private void FetchMessages()
     {
-        if (selectedNode == null) return;
+        if (disposed || !cluster.IsAvailable || selectedNode is not (TopicViewModel or PartitionViewModel)) return;
 
         fetchCts?.Cancel();
+        fetchCts?.Dispose();
         fetchCts = new CancellationTokenSource();
-
-        if (messages != null)
-        {
-            messages.Messages.CollectionChanged -= OnMessagesChanged;
-            messages.Finished -= OnStreamFinished;
-        }
+        DetachMessageStream();
+        var owner = cluster;
+        var version = owner.ConnectionVersion;
+        var topicName = GetCurrentTopicName();
+        int? partitionId = (selectedNode as PartitionViewModel)?.Id;
 
         CurrentMessages.Clear();
         IsLoading = true;
@@ -86,8 +107,7 @@ public partial class OpenedClusterViewModel
             IsLoading = false;
             if (e is not OperationCanceledException)
             {
-                cluster.LastError = e.Message;
-                cluster.Status = ConnectionState.Failed;
+                owner.ReportMessageResult(topicName, partitionId, e, version);
             }
             Log.Error(e, "Failed to fetch messages for {ClusterName}", Name);
             appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {e.Message}", "Fetch");
@@ -96,8 +116,16 @@ public partial class OpenedClusterViewModel
 
         if (messages != null)
         {
-            messages.Messages.CollectionChanged += OnMessagesChanged;
-            messages.Finished += OnStreamFinished;
+            var stream = messages;
+            var completed = 0;
+            streamFinishedHandler = () =>
+            {
+                if (Interlocked.Exchange(ref completed, 1) == 0)
+                    OnStreamFinished(stream, owner, topicName, partitionId, version);
+            };
+            stream.Messages.CollectionChanged += OnMessagesChanged;
+            stream.Finished += streamFinishedHandler;
+            if (!stream.HasMore) streamFinishedHandler();
         }
     }
 
@@ -110,6 +138,15 @@ public partial class OpenedClusterViewModel
 
     private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            if (e.NewItems == null) return;
+            var items = e.NewItems.Cast<Message>().ToArray();
+            Dispatcher.UIThread.Post(() => OnMessagesChanged(sender,
+                new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, items)));
+            return;
+        }
+        if (disposed || !ReferenceEquals(sender, messages?.Messages) || fetchCts?.IsCancellationRequested == true) return;
         var node = (IMessageSource?)SelectedNode;
         if (node == null) return;
 

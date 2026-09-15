@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using KafkaLens.Core.Services;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Entities;
 using KafkaLens.Shared.Models;
@@ -22,6 +24,84 @@ public class LocalClientTests
         repository.GetAll().Returns(new ReadOnlyDictionary<string, ClusterInfo>(
             new Dictionary<string, ClusterInfo>()));
         client = new LocalClient(repository, new KafkaConfig());
+    }
+
+    [Fact]
+    public async Task DisabledCluster_DoesNotCreateOrValidateConsumer()
+    {
+        var cluster = new ClusterInfo("id1", "disabled", "broker:9092") { IsEnabled = false };
+        repository.GetAll().Returns(new ReadOnlyDictionary<string, ClusterInfo>(
+            new Dictionary<string, ClusterInfo> { [cluster.Id] = cluster }));
+        var factory = Substitute.For<ConsumerFactory>(new KafkaConfig());
+        var sut = new LocalClient(repository, new KafkaConfig(), factory);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.GetTopicsAsync(cluster.Id));
+        Assert.False((await sut.ValidateConnectionWithDetailsAsync(cluster.Address, CancellationToken.None)).Succeeded);
+        factory.DidNotReceiveWithAnyArgs().CreateNew(default!);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TemporaryValidation_DisposesConsumerOnSuccessAndFailure(bool fails)
+    {
+        var native = Substitute.For<IKafkaConsumer>();
+        native.ValidateConnectionWithDetailsAsync(Arg.Any<CancellationToken>()).Returns(_ => fails
+            ? Task.FromException<ConnectionValidationResult>(new InvalidOperationException("Probe failed"))
+            : Task.FromResult(ConnectionValidationResult.Success()));
+        var factory = Substitute.For<ConsumerFactory>(new KafkaConfig());
+        factory.CreateNew("broker:9092").Returns(native);
+        var sut = new LocalClient(repository, new KafkaConfig(), factory);
+
+        var result = await sut.ValidateConnectionWithDetailsAsync("broker:9092", CancellationToken.None);
+
+        Assert.Equal(!fails, result.Succeeded);
+        native.Received(1).Dispose();
+        native.DidNotReceive().ValidateConnectionWithDetails();
+    }
+
+    [Fact]
+    public async Task TemporaryValidation_PropagatesCancellationAndDisposesConsumer()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var native = Substitute.For<IKafkaConsumer>();
+        native.ValidateConnectionWithDetailsAsync(cancellation.Token).Returns(_ =>
+        {
+            cancellation.Cancel();
+            return Task.FromCanceled<ConnectionValidationResult>(cancellation.Token);
+        });
+        var factory = Substitute.For<ConsumerFactory>(new KafkaConfig());
+        factory.CreateNew("broker:9092").Returns(native);
+        var sut = new LocalClient(repository, new KafkaConfig(), factory);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            sut.ValidateConnectionWithDetailsAsync("broker:9092", cancellation.Token));
+
+        native.Received(1).Dispose();
+    }
+
+    [Fact]
+    public async Task ConcurrentAccess_CreatesOneConsumer_AndAddressChangeEvictsIt()
+    {
+        var cluster = new ClusterInfo("id1", "enabled", "broker:9092");
+        repository.GetAll().Returns(new ReadOnlyDictionary<string, ClusterInfo>(
+            new Dictionary<string, ClusterInfo> { [cluster.Id] = cluster }));
+        var native = Substitute.For<IKafkaConsumer>();
+        var replacement = Substitute.For<IKafkaConsumer>();
+        native.GetTopics().Returns(new List<Topic>());
+        replacement.GetTopics().Returns(new List<Topic>());
+        var factory = Substitute.For<ConsumerFactory>(new KafkaConfig());
+        factory.CreateNew("broker:9092").Returns(native);
+        factory.CreateNew("other:9092").Returns(replacement);
+        var sut = new LocalClient(repository, new KafkaConfig(), factory);
+
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => sut.GetTopicsAsync(cluster.Id))));
+        factory.Received(1).CreateNew("broker:9092");
+        await sut.UpdateClusterAsync(cluster.Id, new KafkaClusterUpdate(cluster.Name, "other:9092"));
+        await sut.GetTopicsAsync(cluster.Id);
+
+        native.Received(1).Dispose();
+        replacement.Received(1).GetTopics();
     }
 
     #region Properties

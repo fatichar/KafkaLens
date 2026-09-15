@@ -26,6 +26,100 @@ public class SharedClientTests
         sut = new SharedClient(infoRepository, consumerFactory);
     }
 
+    [Fact]
+    public async Task DisabledCluster_DoesNotCreateOrValidateConsumer()
+    {
+        var cluster = new Shared.Entities.ClusterInfo("id1", "disabled", "localhost:9092") { IsEnabled = false };
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+            new Dictionary<string, Shared.Entities.ClusterInfo> { [cluster.Id] = cluster }));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.GetTopicsAsync(cluster.Id));
+        Assert.False(await sut.ValidateConnectionAsync(cluster.Address));
+        _ = (await sut.GetAllClustersAsync()).ToList();
+
+        consumerFactory.DidNotReceiveWithAnyArgs().CreateNew(default!);
+    }
+
+    [Fact]
+    public async Task Discovery_IsMaterializedBeforeReturning()
+    {
+        var cluster = new Shared.Entities.ClusterInfo("id1", "enabled", "localhost:9092");
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+            new Dictionary<string, Shared.Entities.ClusterInfo> { [cluster.Id] = cluster }));
+        var native = Substitute.For<IKafkaConsumer>();
+        native.GetTopics().Returns(new List<Topic>());
+        native.ValidateConnectionWithDetailsAsync(Arg.Any<CancellationToken>()).Returns(ConnectionValidationResult.Success());
+        consumerFactory.CreateNew(cluster.Address).Returns(native);
+        await sut.GetTopicsAsync(cluster.Id);
+
+        var result = await sut.GetAllClustersAsync();
+        await native.Received(1).ValidateConnectionWithDetailsAsync(Arg.Any<CancellationToken>());
+        native.DidNotReceive().ValidateConnection();
+        var calls = native.ReceivedCalls().Count();
+        _ = result.ToList();
+        _ = result.ToList();
+
+        Assert.Equal(calls, native.ReceivedCalls().Count());
+    }
+
+    [Fact]
+    public async Task Discovery_DoesNotValidateCachedDisabledConsumer()
+    {
+        var cluster = new Shared.Entities.ClusterInfo("id1", "enabled", "localhost:9092");
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+            new Dictionary<string, Shared.Entities.ClusterInfo> { [cluster.Id] = cluster }));
+        var native = Substitute.For<IKafkaConsumer>();
+        native.GetTopics().Returns(new List<Topic>());
+        consumerFactory.CreateNew(cluster.Address).Returns(native);
+        await sut.GetTopicsAsync(cluster.Id);
+        cluster.IsEnabled = false;
+
+        var result = (await sut.GetAllClustersAsync()).Single();
+        Assert.False(await sut.ValidateConnectionAsync(cluster.Address));
+
+        Assert.False(result.IsEnabled);
+        await native.DidNotReceive().ValidateConnectionWithDetailsAsync(Arg.Any<CancellationToken>());
+        native.DidNotReceive().ValidateConnection();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TemporaryValidation_DisposesConsumer(bool fails)
+    {
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+            new Dictionary<string, Shared.Entities.ClusterInfo>()));
+        var native = Substitute.For<IKafkaConsumer>();
+        native.ValidateConnectionWithDetailsAsync(Arg.Any<CancellationToken>()).Returns(_ => fails
+            ? Task.FromException<ConnectionValidationResult>(new InvalidOperationException("Probe failure"))
+            : Task.FromResult(ConnectionValidationResult.Success()));
+        consumerFactory.CreateNew("localhost:9092").Returns(native);
+
+        Assert.Equal(!fails, await sut.ValidateConnectionAsync("localhost:9092"));
+        native.Received(1).Dispose();
+    }
+
+    [Fact]
+    public async Task AddressChange_EvictsOldConsumer()
+    {
+        var cluster = new Shared.Entities.ClusterInfo("id1", "enabled", "localhost:9092");
+        infoRepository.GetAll().Returns(new ReadOnlyDictionary<string, Shared.Entities.ClusterInfo>(
+            new Dictionary<string, Shared.Entities.ClusterInfo> { [cluster.Id] = cluster }));
+        var oldConsumer = Substitute.For<IKafkaConsumer>();
+        var newConsumer = Substitute.For<IKafkaConsumer>();
+        oldConsumer.GetTopics().Returns(new List<Topic>());
+        newConsumer.GetTopics().Returns(new List<Topic>());
+        consumerFactory.CreateNew(cluster.Address).Returns(oldConsumer);
+        consumerFactory.CreateNew("localhost:9093").Returns(newConsumer);
+        await sut.GetTopicsAsync(cluster.Id);
+
+        await sut.UpdateClusterAsync(cluster.Id, new KafkaClusterUpdate(cluster.Name, "localhost:9093"));
+        await sut.GetTopicsAsync(cluster.Id);
+
+        oldConsumer.Received(1).Dispose();
+        newConsumer.Received(1).GetTopics();
+    }
+
     #region Properties
 
     [Fact]

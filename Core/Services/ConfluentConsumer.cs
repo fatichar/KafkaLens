@@ -20,70 +20,112 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
     private readonly KafkaConfig kafkaConfig;
 
     private readonly ConsumerPool consumerPool;
+    private readonly Func<IConsumer<byte[], byte[]>> consumerFactory;
+    private readonly object adminLifetimeGate = new();
+    private int activeAdminOperations;
+    private int disposed;
     private ConsumerConfig Config { get; set; }
 
     private IAdminClient AdminClient { get; }
 
-    private class ConsumerPool : IDisposable
+    internal sealed class ConsumerPool : IDisposable
     {
         private readonly Func<IConsumer<byte[], byte[]>> factory;
         private readonly ConcurrentBag<IConsumer<byte[], byte[]>> pool = new();
         private readonly SemaphoreSlim semaphore;
+        private readonly object gate = new();
+        private bool disposed;
 
-        public ConsumerPool(int maxLimit, Func<IConsumer<byte[], byte[]>> factory)
+        public ConsumerPool(int maxLimit, Func<IConsumer<byte[], byte[]>> factory, bool warmUp = true)
         {
             this.factory = factory;
             semaphore = new SemaphoreSlim(maxLimit, maxLimit);
 
             // Warm-up: Pre-create one consumer so the very first fetch doesn't pay the initialization penalty.
             // This happens in the background.
-            Task.Run(() =>
-            {
-                try
+            if (warmUp)
+                _ = Task.Run(async () =>
                 {
-                    var consumer = factory();
-                    pool.Add(consumer);
-                }
-                catch (Exception e)
-                {
-                    Log.Error(e, "Failed to warm up consumer pool");
-                }
-            });
+                    try
+                    {
+                        using var lease = await LeaseAsync(CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error(e, "Failed to warm up consumer pool");
+                    }
+                });
         }
 
         public async Task<ConsumerLease> LeaseAsync(CancellationToken ct)
         {
-            await semaphore.WaitAsync(ct);
-            if (!pool.TryTake(out var consumer))
+            await semaphore.WaitAsync(ct).ConfigureAwait(false);
+            IConsumer<byte[], byte[]>? consumer = null;
+            try
             {
-                consumer = factory();
+                lock (gate)
+                {
+                    ObjectDisposedException.ThrowIf(disposed, this);
+                    pool.TryTake(out consumer);
+                }
+                consumer ??= await Task.Run(factory, ct).ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+                lock (gate)
+                {
+                    ObjectDisposedException.ThrowIf(disposed, this);
+                    return new ConsumerLease(consumer, this);
+                }
             }
-
-            return new ConsumerLease(consumer, this);
+            catch
+            {
+                if (consumer != null)
+                    Return(consumer);
+                else
+                    semaphore.Release();
+                throw;
+            }
         }
 
         public void Return(IConsumer<byte[], byte[]> consumer)
         {
-            pool.Add(consumer);
-            semaphore.Release();
+            try
+            {
+                lock (gate)
+                {
+                    if (!disposed)
+                    {
+                        pool.Add(consumer);
+                        return;
+                    }
+                }
+                consumer.Dispose();
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         }
 
         public void Dispose()
         {
-            foreach (var c in pool)
+            List<IConsumer<byte[], byte[]>> idle = new();
+            lock (gate)
             {
-                c.Dispose();
+                if (disposed)
+                    return;
+                disposed = true;
+                while (pool.TryTake(out var consumer))
+                    idle.Add(consumer);
             }
-
-            pool.Clear();
-            semaphore.Dispose();
+            foreach (var consumer in idle)
+                consumer.Dispose();
         }
     }
 
-    private class ConsumerLease : IAsyncDisposable, IDisposable
+    internal sealed class ConsumerLease : IAsyncDisposable, IDisposable
     {
         public IConsumer<byte[], byte[]> Consumer { get; }
-        private readonly ConsumerPool pool;
+        private ConsumerPool? pool;
 
         public ConsumerLease(IConsumer<byte[], byte[]> consumer, ConsumerPool pool)
         {
@@ -93,19 +135,20 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
         public ValueTask DisposeAsync()
         {
-            pool.Return(Consumer);
+            Dispose();
             return ValueTask.CompletedTask;
         }
 
         public void Dispose()
         {
-            pool.Return(Consumer);
+            Interlocked.Exchange(ref pool, null)?.Return(Consumer);
         }
     }
 
     #region Create
 
-    internal ConfluentConsumer(string url, KafkaConfig kafkaConfig)
+    internal ConfluentConsumer(string url, KafkaConfig kafkaConfig,
+        IAdminClient? adminClient = null, Func<IConsumer<byte[], byte[]>>? consumerFactory = null)
     {
         this.kafkaConfig = kafkaConfig;
         queryWatermarkTimeout = TimeSpan.FromMilliseconds(kafkaConfig.QueryWatermarkTimeoutMs);
@@ -114,8 +157,9 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
         Config = CreateConsumerConfig(url);
         Config.Set("log_level", "0");
-        AdminClient = CreateAdminClient(Config.BootstrapServers);
-        consumerPool = new ConsumerPool(10, CreateConsumer); // Max limit of 10 concurrent consumers
+        AdminClient = adminClient ?? CreateAdminClient(Config.BootstrapServers);
+        this.consumerFactory = consumerFactory ?? CreateConsumer;
+        consumerPool = new ConsumerPool(10, this.consumerFactory, consumerFactory == null); // Max limit of 10 concurrent consumers
     }
 
     protected virtual IConsumer<byte[], byte[]> CreateConsumer()
@@ -172,23 +216,185 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
     public override ConnectionValidationResult ValidateConnectionWithDetails()
     {
+        Metadata metadata;
         try
         {
-            var metadata = AdminClient.GetMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
-            return metadata.OriginatingBrokerId != -1
-                ? ConnectionValidationResult.Success()
-                : ConnectionValidationResult.Failed();
+            metadata = GetMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
         }
         catch (Exception e)
         {
             Log.Error(e, "Connection validation failed");
             return ConnectionValidationResult.Failed(e.Message, e.ToString());
         }
+
+        // AdminClient metadata can report success from a stale/cached broker connection even
+        // after the underlying network path has silently dropped (e.g. a VPN disconnect that
+        // doesn't immediately close the TCP socket). Confirm with a real consumer-side
+        // watermark query, which uses a separate connection and forces a live round trip.
+        return ProbeWithConsumer(metadata);
+    }
+
+    private ConnectionValidationResult ProbeWithConsumer(Metadata metadata)
+    {
+        TopicPartition? topic;
+        try
+        {
+            topic = SelectValidationPartition(metadata);
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Connection validation failed while listing topics");
+            return ConnectionValidationResult.Failed(e.Message, e.ToString());
+        }
+
+        if (topic == null)
+        {
+            // No topic to probe against; the broker metadata check above is the best signal we have.
+            return ConnectionValidationResult.Success();
+        }
+
+        try
+        {
+            using var consumer = consumerFactory();
+            ProbeWithConsumer(consumer, topic, CancellationToken.None);
+            return ConnectionValidationResult.Success();
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Connection validation failed while probing topic {Topic}", topic.Topic);
+            return ConnectionValidationResult.Failed(e.Message, e.ToString());
+        }
+    }
+
+    public override Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(CancellationToken cancellationToken = default)
+        => Task.Run(async () =>
+        {
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var metadata = GetMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
+                cancellationToken.ThrowIfCancellationRequested();
+                var topic = SelectValidationPartition(metadata);
+                if (topic == null)
+                    return ConnectionValidationResult.Success();
+
+                using var leaseCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                leaseCts.CancelAfter(queryWatermarkTimeout);
+                ConsumerLease lease;
+                try
+                {
+                    lease = await consumerPool.LeaseAsync(leaseCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    return ConnectionValidationResult.Failed("Timed out waiting for an available consumer to validate connectivity.");
+                }
+                using (lease)
+                {
+                    ProbeWithConsumer(lease.Consumer, topic, cancellationToken);
+                    return ConnectionValidationResult.Success();
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Log.Error(e, "Connection validation failed");
+                return ConnectionValidationResult.Failed(e.Message, e.ToString());
+            }
+        }, cancellationToken);
+
+    private static TopicPartition? SelectValidationPartition(Metadata metadata)
+    {
+        if (metadata.OriginatingBrokerId == -1)
+            throw new InvalidOperationException("No originating broker available to validate connectivity.");
+        var topicError = metadata.Topics.FirstOrDefault(t => t.Error.IsError);
+        if (topicError != null)
+            throw new KafkaException(topicError.Error);
+        var topic = metadata.Topics.FirstOrDefault(t => t.Partitions.Any(p => !p.Error.IsError));
+        if (topic != null)
+            return new TopicPartition(topic.Topic, topic.Partitions.First(p => !p.Error.IsError).PartitionId);
+        if (metadata.Topics.Count == 0)
+            return null;
+        throw new InvalidOperationException("No available partition to validate connectivity.");
+    }
+
+    private void ProbeWithConsumer(IConsumer<byte[], byte[]> consumer, TopicPartition topic, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        consumer.QueryWatermarkOffsets(topic, queryWatermarkTimeout);
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private Metadata GetMetadata(TimeSpan timeout)
+    {
+        BeginAdminOperation();
+        try
+        {
+            return AdminClient.GetMetadata(timeout);
+        }
+        finally
+        {
+            EndAdminOperation();
+        }
+    }
+
+    private void BeginAdminOperation()
+    {
+        lock (adminLifetimeGate)
+        {
+            ObjectDisposedException.ThrowIf(disposed != 0, this);
+            activeAdminOperations++;
+        }
+    }
+
+    private void EndAdminOperation()
+    {
+        bool disposeAdmin;
+        lock (adminLifetimeGate)
+        {
+            activeAdminOperations--;
+            disposeAdmin = disposed != 0 && activeAdminOperations == 0;
+        }
+        if (disposeAdmin)
+            DisposeAdminClient();
+    }
+
+    private async Task<ListOffsetsResult> ListOffsetsWithLifetimeAsync(IEnumerable<TopicPartitionOffsetSpec> specs)
+    {
+        BeginAdminOperation();
+        try
+        {
+            return await ListOffsetsAsync(specs, new ListOffsetsOptions { RequestTimeout = queryWatermarkTimeout })
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            EndAdminOperation();
+        }
+    }
+
+    private static async Task ObserveOffsetRequestsAsync(Task requests)
+    {
+        try
+        {
+            await requests.ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            Log.Debug(e, "Kafka offset requests completed with an error");
+        }
     }
 
     protected override List<Topic> FetchTopics()
     {
-        var metadata = AdminClient.GetMetadata(queryTopicsTimeout);
+        var metadata = GetMetadata(queryTopicsTimeout);
+        var topicError = metadata.Topics.FirstOrDefault(t => t.Error.IsError);
+        if (topicError != null)
+            throw new KafkaException(topicError.Error);
 
         var topics = metadata.Topics
             .ConvertAll(topic => new Topic(topic.Topic, topic.Partitions.Count));
@@ -229,7 +435,7 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
         FetchOptions options,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var topicInfo = ValidateTopic(topic);
+        var topicInfo = await Task.Run(() => ValidateTopic(topic), cancellationToken).ConfigureAwait(false);
         var tps = topicInfo.Partitions.Select(partition => new TopicPartition(topic, partition.Id)).ToList();
 
         await foreach (var message in StreamMessagesAsync(tps, options, cancellationToken)
@@ -245,7 +451,7 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
         FetchOptions options,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var tp = ValidateTopicPartition(topic, partition);
+        var tp = await Task.Run(() => ValidateTopicPartition(topic, partition), cancellationToken).ConfigureAwait(false);
 
         await foreach (var message in StreamMessagesAsync(new List<TopicPartition> { tp }, options, cancellationToken)
                            .WithCancellation(cancellationToken))
@@ -357,8 +563,14 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             await Task.Run(() =>
             {
                 consumer.Assign(tpoLimit.Tpo);
-                FetchMessages(consumer, messages, tpoLimit.Limit, ct);
-                consumer.Unassign();
+                try
+                {
+                    FetchMessages(consumer, messages, tpoLimit.Limit, ct);
+                }
+                finally
+                {
+                    consumer.Unassign();
+                }
             }, ct);
         });
     }
@@ -379,12 +591,12 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             await using var lease = await consumerPool.LeaseAsync(ct);
             var consumer = lease.Consumer;
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 consumer.Assign(tpoLimit.Tpo);
                 try
                 {
-                    FetchMessages(consumer, writer, tpoLimit.Limit, ct);
+                    await FetchMessagesAsync(consumer, writer, tpoLimit.Limit, ct).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -433,7 +645,8 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
                 List<TopicPartitionOffset> tpos;
                 await using (var lease = await consumerPool.LeaseAsync(cancellationToken))
                 {
-                    tpos = lease.Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout);
+                    tpos = await Task.Run(() => lease.Consumer.OffsetsForTimes(tptList, queryWatermarkTimeout),
+                        cancellationToken).ConfigureAwait(false);
                 }
 
                 for (var i = 0; i < tpos.Count; i++)
@@ -536,7 +749,8 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
                     {
                         Log.Information("Stopping fetch after {Count} consecutive empty polls (connection timeout)",
                             consecutiveEmptyPolls);
-                        break;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        throw new TimeoutException("Timed out waiting for a response from the Kafka consumer.");
                     }
 
                     continue;
@@ -562,21 +776,26 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             }
             catch (ConsumeException e)
             {
+                FlushBatch(messages, batch);
                 Log.Error(e, "Error while consuming message");
-                break;
+                cancellationToken.ThrowIfCancellationRequested();
+                throw;
             }
             catch (Exception e)
             {
+                FlushBatch(messages, batch);
                 Log.Error(e, "Error while consuming message");
-                break;
+                cancellationToken.ThrowIfCancellationRequested();
+                throw;
             }
         }
 
         FlushBatch(messages, batch);
+        cancellationToken.ThrowIfCancellationRequested();
         return requiredCount;
     }
 
-    private int FetchMessages(
+    private async Task<int> FetchMessagesAsync(
         IConsumer<byte[], byte[]> consumer,
         ChannelWriter<Message> writer,
         int requiredCount,
@@ -604,7 +823,8 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
                     {
                         Log.Information("Stopping fetch after {Count} consecutive empty polls (connection timeout)",
                             consecutiveEmptyPolls);
-                        break;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        throw new TimeoutException("Timed out waiting for a response from the Kafka consumer.");
                     }
 
                     continue;
@@ -619,25 +839,28 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
                 }
 
                 var message = MessageConverter.CreateMessage(result);
-                writer.WriteAsync(message, cancellationToken).AsTask().GetAwaiter().GetResult();
+                await writer.WriteAsync(message, cancellationToken).ConfigureAwait(false);
                 --requiredCount;
             }
             catch (ConsumeException e)
             {
                 Log.Error(e, "Error while consuming message");
-                break;
+                cancellationToken.ThrowIfCancellationRequested();
+                throw;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                break;
+                throw;
             }
             catch (Exception e)
             {
                 Log.Error(e, "Error while consuming message");
-                break;
+                cancellationToken.ThrowIfCancellationRequested();
+                throw;
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return requiredCount;
     }
 
@@ -670,10 +893,13 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
         try
         {
-            var earliestTask = ListOffsetsAsync(earliestSpecs, new ListOffsetsOptions());
-            var latestTask = ListOffsetsAsync(latestSpecs, new ListOffsetsOptions());
+            cancellationToken.ThrowIfCancellationRequested();
+            var earliestTask = ListOffsetsWithLifetimeAsync(earliestSpecs);
+            var latestTask = ListOffsetsWithLifetimeAsync(latestSpecs);
+            var requests = Task.WhenAll(earliestTask, latestTask);
+            _ = ObserveOffsetRequestsAsync(requests);
 
-            await Task.WhenAll(earliestTask, latestTask).WaitAsync(queryWatermarkTimeout, cancellationToken);
+            await requests.WaitAsync(queryWatermarkTimeout, cancellationToken).ConfigureAwait(false);
 
             var earliestResults = await earliestTask;
             var latestResults = await latestTask;
@@ -799,9 +1025,39 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
     public override void Dispose()
     {
-        consumerPool.Dispose();
-        AdminClient.Dispose();
-        base.Dispose();
+        bool disposeAdmin;
+        lock (adminLifetimeGate)
+        {
+            if (disposed != 0)
+                return;
+            disposed = 1;
+            disposeAdmin = activeAdminOperations == 0;
+        }
+        try
+        {
+            consumerPool.Dispose();
+        }
+        finally
+        {
+            if (disposeAdmin)
+                DisposeAdminClient();
+            base.Dispose();
+        }
+    }
+
+    private void DisposeAdminClient()
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                AdminClient.Dispose();
+            }
+            catch (Exception e)
+            {
+                Log.Warning(e, "Failed to dispose Kafka admin client");
+            }
+        });
     }
 
     #endregion IDisposable implemenatation

@@ -12,6 +12,8 @@ public partial class MainViewModel
     private bool isStartupLoadCompleted;
     private bool isOpenedClustersSubscriptionInitialized;
     private readonly SemaphoreSlim clusterRefreshLock = new(1, 1);
+    private readonly HashSet<ClusterViewModel> subscribedClusters = new();
+    private bool isReconcilingClusters;
 
     private async Task LoadClustersOnStartupAsync()
     {
@@ -20,56 +22,65 @@ public partial class MainViewModel
         try
         {
             await ClientFactory.LoadClientsAsync();
-            var clients = ClientFactory.GetAllClients();
+            RefreshClientEnabledIndex();
+            var clients = ClientFactory.GetAllClients().Where(c =>
+                (c.Name == "Local" && c.CanEditClusters) || IsClientEnabled(c.Name)).ToList();
             AppLogService.LogInfo($"Loaded {clients.Count} clients", "Startup");
-
             var loadTasks = clients.Select(async client =>
             {
                 var loaded = await clusterFactory.LoadClustersForClientAsync(client);
-                await Dispatcher.UIThread.InvokeAsync(() =>
+                var checks = await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    ApplyClusterSnapshotForClients(loaded, new HashSet<string> { client.Name });
+                    var pending = ApplyClusterSnapshotForClients(loaded, new HashSet<string> { client.Name });
                     EnsureOpenedClustersSubscriptionInitialized();
                     UpdateOpenedClusters();
+                    return pending;
                 });
+                await Task.WhenAll(checks.Select(c => CheckConnectionSafeAsync(c, periodic: false)));
             }).ToList();
-
-            isStartupLoadCompleted = true;
-
             await Task.WhenAll(loadTasks);
+            isStartupLoadCompleted = true;
             AppLogService.LogInfo($"Loaded {Clusters.Count} clusters", "Startup");
         }
         finally
         {
             IsLoadingClusters = false;
         }
-
         await TryRestoreTabsAsync();
     }
 
-    private async Task RefreshClustersForHealthCheckAsync()
+    /// <summary>Internal for deterministic test invocation; production code only reaches this via the periodic timer.</summary>
+    internal async Task RefreshClustersForHealthCheckAsync(CancellationToken cancellationToken = default)
     {
         if (!isStartupLoadCompleted) return;
-
-        await RunSerializedClusterFlowAsync(async () =>
+        if (!await clusterRefreshLock.WaitAsync(0, cancellationToken))
         {
-            await RefreshClustersAsync();
-            await DiscoverClientsNeedingRefreshAsync();
-            EnsureOpenedClustersSubscriptionInitialized();
-            UpdateOpenedClusters();
-        });
-    }
-
-    private async Task RunSerializedClusterFlowAsync(Func<Task> action)
-    {
-        await clusterRefreshLock.WaitAsync();
+            // Another cluster flow (e.g. a slow client refresh) holds the lock. Skipping keeps
+            // health checks from queueing up, but log it so a stuck flow is diagnosable rather
+            // than silently freezing every subsequent status update.
+            Log.Debug("Skipping periodic health check: another cluster refresh is in progress");
+            return;
+        }
         try
         {
-            await action();
+            await Dispatcher.UIThread.InvokeAsync(RefreshAvailability);
+            await RefreshClustersAsync(cancellationToken);
+            await DiscoverClientsNeedingRefreshAsync(cancellationToken);
         }
         finally
         {
             clusterRefreshLock.Release();
+        }
+    }
+
+    private async Task ObserveClusterFlowAsync(Task operation)
+    {
+        try { await operation; }
+        catch (OperationCanceledException) { }
+        catch (Exception e)
+        {
+            Log.Error(e, "Cluster refresh failed");
+            AppLogService.LogError($"Cluster refresh failed: {e.Message}", "Connection");
         }
     }
 
@@ -80,73 +91,61 @@ public partial class MainViewModel
         isOpenedClustersSubscriptionInitialized = true;
     }
 
-    private void ApplyClusterSnapshot(IReadOnlyList<ClusterViewModel> loadedClusters)
+    private List<ClusterViewModel> ApplyClusterSnapshotForClients(IReadOnlyList<ClusterViewModel> loadedClusters, ISet<string> clientNames)
     {
-        var existingByKey = Clusters.ToDictionary(GetClusterKey);
+        var existingByKey = Clusters.Where(c => clientNames.Contains(c.Client.Name)).ToDictionary(GetClusterKey);
         var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
-        foreach (var loaded in loadedClusters)
-        {
-            var key = GetClusterKey(loaded);
-            if (existingByKey.TryGetValue(key, out var existing))
-            {
-                existing.ReplaceClient(loaded.Client, resetTopics: false);
-                existing.Name = loaded.Name;
-                existing.Address = loaded.Address;
-                ApplyLoadedStatus(existing, loaded);
-            }
-            else
-            {
-                Clusters.Add(loaded);
-                _ = loaded.CheckConnectionAsync();
-            }
-        }
-
+        var checks = new List<ClusterViewModel>();
+        var canonical = new List<ClusterViewModel>();
         var removedClusters = new List<ClusterViewModel>();
-        foreach (var (key, cluster) in existingByKey)
+        isReconcilingClusters = true;
+        try
         {
-            if (!loadedByKey.ContainsKey(key))
+            foreach (var loaded in loadedClusters)
             {
+                var key = GetClusterKey(loaded);
+                if (existingByKey.TryGetValue(key, out var existing))
+                {
+                    var wasAvailable = existing.IsAvailable;
+                    var addressChanged = existing.Address != loaded.Address || existing.IsUnavailablePlaceholder != loaded.IsUnavailablePlaceholder;
+                    existing.UpdatePlaceholder(loaded.IsUnavailablePlaceholder);
+                    existing.ReplaceClient(loaded.Client, resetTopics: addressChanged);
+                    existing.Name = loaded.Name;
+                    existing.Address = loaded.Address;
+                    existing.IsEnabled = loaded.IsEnabled;
+                    ApplyClientAvailability(existing);
+                    ApplyLoadedStatus(existing, loaded);
+                    if (!existing.IsAvailable) CloseTabsForCluster(existing.Id);
+                    if (existing.IsAvailable && !existing.IsUnavailablePlaceholder && (addressChanged || !wasAvailable))
+                        checks.Add(existing);
+                    canonical.Add(existing);
+                }
+                else
+                {
+                    ApplyClientAvailability(loaded);
+                    Clusters.Add(loaded);
+                    canonical.Add(loaded);
+                    if (loaded.IsAvailable && !loaded.IsUnavailablePlaceholder && loaded.Status != ConnectionState.Connected)
+                        checks.Add(loaded);
+                }
+            }
+            foreach (var (key, cluster) in existingByKey)
+            {
+                if (loadedByKey.ContainsKey(key)) continue;
                 Clusters.Remove(cluster);
                 removedClusters.Add(cluster);
             }
+            var reattached = ReattachOrphanedTabs(removedClusters, canonical);
+            foreach (var removed in removedClusters)
+                if (!reattached.Contains(removed.Id)) CloseTabsForCluster(removed.Id);
         }
-
-        ReattachOrphanedTabs(removedClusters, loadedClusters);
-    }
-
-    private void ApplyClusterSnapshotForClients(IReadOnlyList<ClusterViewModel> loadedClusters, ISet<string> clientNames)
-    {
-        var existingForClients = Clusters.Where(c => clientNames.Contains(c.Client.Name)).ToList();
-        var existingByKey = existingForClients.ToDictionary(GetClusterKey);
-        var loadedByKey = loadedClusters.ToDictionary(GetClusterKey);
-        foreach (var loaded in loadedClusters)
+        finally
         {
-            var key = GetClusterKey(loaded);
-            if (existingByKey.TryGetValue(key, out var existing))
-            {
-                existing.ReplaceClient(loaded.Client, resetTopics: false);
-                existing.Name = loaded.Name;
-                existing.Address = loaded.Address;
-                ApplyLoadedStatus(existing, loaded);
-            }
-            else
-            {
-                Clusters.Add(loaded);
-                _ = loaded.CheckConnectionAsync();
-            }
+            isReconcilingClusters = false;
         }
-
-        var removedClusters = new List<ClusterViewModel>();
-        foreach (var (key, cluster) in existingByKey)
-        {
-            if (!loadedByKey.ContainsKey(key))
-            {
-                Clusters.Remove(cluster);
-                removedClusters.Add(cluster);
-            }
-        }
-
-        ReattachOrphanedTabs(removedClusters, loadedClusters);
+        RebuildOpenedClustersMap();
+        ReconcileOpenClusterMenu();
+        return checks;
     }
 
     /// <summary>
@@ -156,58 +155,57 @@ public partial class MainViewModel
     /// identity. If the client now resolves to exactly one real cluster, re-point those tabs at it
     /// so they recover without the user needing to close and reopen them.
     /// </summary>
-    private void ReattachOrphanedTabs(IReadOnlyList<ClusterViewModel> removedClusters, IReadOnlyList<ClusterViewModel> loadedClusters)
+    private HashSet<string> ReattachOrphanedTabs(IReadOnlyList<ClusterViewModel> removedClusters, IReadOnlyList<ClusterViewModel> loadedClusters)
     {
-        if (removedClusters.Count == 0) return;
-
-        foreach (var clientName in removedClusters.Select(c => c.Client.Name).Distinct(StringComparer.Ordinal))
+        var reattached = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var removed in removedClusters.Where(c => c.IsUnavailablePlaceholder))
         {
-            var replacement = loadedClusters.Where(c => c.Client.Name == clientName).ToList();
-            if (replacement.Count != 1) continue;
-
-            var newCluster = replacement[0];
-            var removedIdsForClient = removedClusters
-                .Where(c => c.Client.Name == clientName)
-                .Select(c => c.Id)
-                .ToHashSet(StringComparer.Ordinal);
-
-            foreach (var opened in OpenedClusters.Where(o => removedIdsForClient.Contains(o.ClusterId)))
-            {
-                opened.ReattachCluster(newCluster);
-            }
+            var replacements = loadedClusters.Where(c => c.Client.Name == removed.Client.Name &&
+                !c.IsUnavailablePlaceholder && c.IsAvailable).ToList();
+            if (replacements.Count != 1) continue;
+            foreach (var opened in OpenedClusters.Where(o => o.ClusterId == removed.Id).ToArray())
+                opened.ReattachCluster(replacements[0]);
+            reattached.Add(removed.Id);
         }
+        return reattached;
     }
 
-    private async Task RefreshClustersAsync()
+    private async Task RefreshClustersAsync(CancellationToken cancellationToken)
     {
         // Periodic health check: single attempt per cluster, no retries.
-        await Task.WhenAll(Clusters.Select(c => CheckConnectionSafeAsync(c, allowRetries: false)));
+        var selected = await Dispatcher.UIThread.InvokeAsync(() => Clusters.Where(c => IsClusterAvailable(c) && !c.IsUnavailablePlaceholder).ToArray());
+        await Task.WhenAll(selected.Select(c => CheckConnectionSafeAsync(c, allowRetries: false, periodic: true, cancellationToken)));
     }
 
-    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster, bool allowRetries = true)
+    private async Task CheckConnectionSafeAsync(ClusterViewModel cluster, bool allowRetries = true,
+        bool periodic = false, CancellationToken cancellationToken = default)
     {
+        if (!cluster.IsAvailable || cluster.IsUnavailablePlaceholder) return;
+        if (periodic)
+        {
+            AppLogService.LogInfo($"Periodic connection check started for cluster {cluster.Name} ({cluster.Id})", "Connection");
+            Log.Information("Periodic connection check started for cluster {ClusterName} ({ClusterId})", cluster.Name, cluster.Id);
+        }
         try
         {
-            await cluster.CheckConnectionAsync(allowRetries);
+            await cluster.CheckConnectionAsync(allowRetries, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed connection check for cluster {ClusterName}", cluster.Name);
-            cluster.Status = ConnectionState.Failed;
+            await Dispatcher.UIThread.InvokeAsync(() => cluster.ApplyDiagnosticStatus(ConnectionState.Failed, ex.Message));
         }
     }
 
-    private async Task DiscoverClientsNeedingRefreshAsync()
+    private async Task DiscoverClientsNeedingRefreshAsync(CancellationToken cancellationToken)
     {
-        await ClientFactory.LoadClientsAsync();
-        var clients = ClientFactory.GetAllClients();
-        if (clients.Count == 0) return;
-
-        var clientNamesNeedingRefresh = GetClientsNeedingDiscovery(clients);
-        if (clientNamesNeedingRefresh.Count == 0) return;
-
-        var discovered = await clusterFactory.LoadClustersForClientsAsync(clientNamesNeedingRefresh);
-        ApplyClusterSnapshotForClients(discovered, clientNamesNeedingRefresh);
+        var clientNames = await Dispatcher.UIThread.InvokeAsync(() => GetClientsNeedingDiscovery(ClientFactory.GetAllClients()));
+        if (clientNames.Count == 0) return;
+        cancellationToken.ThrowIfCancellationRequested();
+        var discovered = await clusterFactory.LoadClustersForClientsAsync(clientNames);
+        var checks = await Dispatcher.UIThread.InvokeAsync(() => ApplyClusterSnapshotForClients(discovered, clientNames));
+        await Task.WhenAll(checks.Select(c => CheckConnectionSafeAsync(c, allowRetries: false, cancellationToken: cancellationToken)));
     }
 
     /// <summary>
@@ -219,33 +217,36 @@ public partial class MainViewModel
     public async Task RefreshClustersForClientAsync(string clientName)
     {
         if (!isStartupLoadCompleted) return;
-
-        await RunSerializedClusterFlowAsync(async () =>
+        RefreshAvailability();
+        if (!IsClientEnabled(clientName) && clientName != "Local") return;
+        await clusterRefreshLock.WaitAsync();
+        try
         {
-            var discovered = await clusterFactory.LoadClustersForClientsAsync(new HashSet<string>(StringComparer.Ordinal) { clientName });
-            ApplyClusterSnapshotForClients(discovered, new HashSet<string>(StringComparer.Ordinal) { clientName });
-            EnsureOpenedClustersSubscriptionInitialized();
-            UpdateOpenedClusters();
-        });
+            var names = new HashSet<string>(StringComparer.Ordinal) { clientName };
+            var discovered = await clusterFactory.LoadClustersForClientsAsync(names);
+            var checks = await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var pending = ApplyClusterSnapshotForClients(discovered, names);
+                pending.AddRange(Clusters.Where(c => c.Client.Name == clientName && c.IsAvailable &&
+                    !c.IsUnavailablePlaceholder && c.Status != ConnectionState.Connected));
+                return pending.Distinct().ToArray();
+            });
+            await Task.WhenAll(checks.Select(c => CheckConnectionSafeAsync(c, allowRetries: false)));
+            foreach (var opened in OpenedClusters.Where(o => checks.Any(c => c.Id == o.ClusterId)).ToArray())
+                await opened.LoadTopicsAsync();
+        }
+        finally
+        {
+            clusterRefreshLock.Release();
+        }
     }
 
     private HashSet<string> GetClientsNeedingDiscovery(IReadOnlyList<IKafkaLensClient> clients)
     {
-        var byClient = Clusters
-            .GroupBy(c => c.Client.Name)
-            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
-
-        var result = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var client in clients)
-        {
-            if (!byClient.TryGetValue(client.Name, out var clientClusters) || clientClusters.Count == 0 ||
-                clientClusters.Any(c => c.Status != ConnectionState.Connected))
-            {
-                result.Add(client.Name);
-            }
-        }
-
-        return result;
+        return clients.Where(client => client.Name != "Local" && IsClientEnabled(client.Name))
+            .Where(client => !Clusters.Any(c => c.Client.Name == client.Name) ||
+                Clusters.Any(c => c.Client.Name == client.Name && c.IsAvailable && c.IsUnavailablePlaceholder))
+            .Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
     }
 
     private void UpdateOpenedClusters()
@@ -253,27 +254,33 @@ public partial class MainViewModel
         foreach (var opened in OpenedClusters)
         {
             var cluster = Clusters.FirstOrDefault(c => c.Id == opened.ClusterId);
-            if (cluster != null)
-                opened.UpdateClusterName(cluster.Name);
+            if (cluster != null) opened.UpdateClusterName(cluster.Name);
         }
     }
 
     private void OnClustersChanged(object? sender, NotifyCollectionChangedEventArgs args)
     {
-        if (args?.OldItems != null)
-            foreach (ClusterViewModel item in args.OldItems)
-                openClusterMenuItems.Remove(openClusterMenuItems.First(x => x.Header == item.Name));
-
-        if (args?.NewItems != null)
-            foreach (ClusterViewModel item in args.NewItems)
-                AddClusterToMenu(item);
+        foreach (var removed in subscribedClusters.Where(c => !Clusters.Contains(c)).ToArray())
+        {
+            removed.PropertyChanged -= OnClusterPropertyChanged;
+            removed.Detach();
+            RemoveClusterFromMenu(removed);
+            subscribedClusters.Remove(removed);
+            if (!isReconcilingClusters) CloseTabsForCluster(removed.Id);
+        }
+        foreach (var added in Clusters.Where(c => !subscribedClusters.Contains(c)))
+        {
+            subscribedClusters.Add(added);
+            ApplyClientAvailability(added);
+            added.PropertyChanged += OnClusterPropertyChanged;
+            if (IsClusterAvailable(added)) AddClusterToMenu(added);
+        }
     }
 
     private static string GetClusterKey(ClusterViewModel cluster) => $"{cluster.Client.Name}:{cluster.Id}";
 
-    private static void ApplyLoadedStatus(ClusterViewModel existing, ClusterViewModel loaded)
+    private void ApplyLoadedStatus(ClusterViewModel existing, ClusterViewModel loaded)
     {
-        if (loaded.Status != ConnectionState.Unknown || existing.Status == ConnectionState.Unknown)
-            existing.Status = loaded.Status;
+        existing.ApplyDiagnosticStatus(loaded.Status, loaded.LastError);
     }
 }

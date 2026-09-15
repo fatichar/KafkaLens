@@ -36,6 +36,8 @@ public class TestApp : App
         services.AddSingleton<IClientInfoRepository>(clientRepo);
 
         var settingsService = Substitute.For<ISettingsService>();
+        settingsService.GetValue(PreferencesViewModel.CONNECTION_CHECK_INTERVAL_SECONDS_KEY).Returns("0");
+        settingsService.GetValue("AutoCheckForUpdates").Returns("false");
         services.AddSingleton(settingsService);
 
         var kafkaConfig = new KafkaConfig();

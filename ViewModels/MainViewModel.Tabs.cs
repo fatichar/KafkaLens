@@ -24,8 +24,51 @@ public partial class MainViewModel
         OpenCluster(cluster);
     }
 
+    public bool HasOpenTabsForCluster(string clusterId)
+    {
+        return OpenedClusters.Any(o => o.ClusterId == clusterId);
+    }
+
+    public bool HasOpenTabsForClient(string clientName)
+    {
+        var clusterIds = Clusters.Where(c => c.Client.Name == clientName).Select(c => c.Id).ToHashSet();
+        return OpenedClusters.Any(o => clusterIds.Contains(o.ClusterId));
+    }
+
+    public void CloseTabsForCluster(string clusterId)
+    {
+        var openedList = OpenedClusters.Where(o => o.ClusterId == clusterId).ToList();
+        foreach (var opened in openedList)
+        {
+            CloseTab(opened);
+        }
+    }
+
+    public void CloseTabsForClient(string clientName)
+    {
+        var clientClusters = Clusters.Where(c => c.Client.Name == clientName).ToList();
+        foreach (var cluster in clientClusters)
+            RemoveClusterFromMenu(cluster);
+
+        var clusterIds = clientClusters.Select(c => c.Id).ToHashSet();
+        var openedList = OpenedClusters.Where(o => clusterIds.Contains(o.ClusterId)).ToList();
+        foreach (var opened in openedList)
+        {
+            CloseTab(opened);
+        }
+
+        ReconcileOpenClusterMenu();
+    }
+
     private void OpenCluster(ClusterViewModel clusterViewModel, OpenedTabState? tabState)
     {
+        if (!IsClusterAvailable(clusterViewModel))
+        {
+            Log.Warning("Cannot open cluster {ClusterName} because it or its client is disabled.", clusterViewModel.Name);
+            AppLogService.LogWarning($"Cannot open cluster {clusterViewModel.Name}: cluster or client is disabled.", "Cluster");
+            return;
+        }
+
         Log.Information("Opening cluster: {ClusterName}", clusterViewModel.Name);
         AppLogService.LogInfo($"Opening cluster {clusterViewModel.Name}", "Cluster");
         var newName = clusterViewModel.Name;
@@ -54,8 +97,8 @@ public partial class MainViewModel
         // startup and we're still showing a placeholder), kick off a fresh discovery now instead
         // of waiting for the periodic health-check timer. Once it completes, ReattachOrphanedTabs
         // will upgrade this tab (and any others) to the real cluster automatically.
-        if (clusterViewModel.Status != ConnectionState.Connected)
-            _ = RefreshClustersForClientAsync(clusterViewModel.Client.Name);
+        if (clusterViewModel.IsUnavailablePlaceholder)
+            _ = ObserveClusterFlowAsync(RefreshClustersForClientAsync(clusterViewModel.Client.Name));
     }
 
     public async void OpenSavedMessages(string path) => await OpenSavedMessagesAsync(path, null);
@@ -93,6 +136,14 @@ public partial class MainViewModel
                 openedClustersMap.Remove(openedCluster.ClusterId);
         }
         OpenedClusters.Remove(openedCluster);
+        openedCluster.Dispose();
+    }
+
+    private void RebuildOpenedClustersMap()
+    {
+        openedClustersMap.Clear();
+        foreach (var group in OpenedClusters.GroupBy(c => c.ClusterId))
+            openedClustersMap[group.Key] = group.ToList();
     }
 
     private void CloseCurrentTab()

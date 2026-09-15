@@ -10,19 +10,32 @@ using Serilog;
 
 namespace KafkaLens.Clients;
 
-public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafkaConfig) : IKafkaLensClient, IConnectionTestClient
+public class LocalClient : IKafkaLensClient, IConnectionTestClient, ICancellableConnectionClient
 {
     public string Name { get; } = "Local";
     public bool CanEditClusters => true;
     public bool CanSaveMessages => true;
 
-    private readonly ConsumerFactory consumerFactory = new(kafkaConfig);
+    private readonly IClusterInfoRepository infoRepository;
+    private readonly ConsumerFactory consumerFactory;
+
+    public LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafkaConfig)
+        : this(infoRepository, kafkaConfig, null)
+    {
+    }
+
+    internal LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafkaConfig, ConsumerFactory? factory)
+    {
+        this.infoRepository = infoRepository;
+        this.consumerFactory = factory ?? new(kafkaConfig);
+    }
 
     // key = clusterInfo id, value = kafka clusterInfo
     private ReadOnlyDictionary<string, ClusterInfo> Clusters => infoRepository.GetAll();
 
     // key = clusterInfo id, value = kafka consumer
-    private readonly ConcurrentDictionary<string, IKafkaConsumer> consumers = new();
+    private readonly ConcurrentDictionary<string, (string Address, IKafkaConsumer Consumer)> consumers = new();
+    private readonly object consumerGate = new();
 
     #region Create
     public async Task<bool> ValidateConnectionAsync(string address)
@@ -32,28 +45,46 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     }
 
     public Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(string address)
+        => ValidateConnectionWithDetailsAsync(address, CancellationToken.None);
+
+    public Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(string address, CancellationToken cancellationToken)
     {
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
+            IKafkaConsumer? consumer = null;
+            var temporary = false;
             try
             {
-                var consumer = GetOrCreateConsumerByAddress(address);
-                return consumer.ValidateConnectionWithDetails();
+                cancellationToken.ThrowIfCancellationRequested();
+                consumer = GetOrCreateConsumerByAddress(address, out temporary);
+                return await consumer.ValidateConnectionWithDetailsAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception e)
             {
                 Log.Error(e, "Connection validation failed for {Address}", address);
                 return ConnectionValidationResult.Failed(e.Message, e.ToString());
             }
-        });
+            finally
+            {
+                if (temporary && consumer != null)
+                    DisposeConsumer(consumer);
+            }
+        }, cancellationToken);
     }
 
-    private IKafkaConsumer GetOrCreateConsumerByAddress(string address)
+    private IKafkaConsumer GetOrCreateConsumerByAddress(string address, out bool temporary)
     {
-        var cluster = Clusters.Values.FirstOrDefault(c => c.Address == address);
-        if (cluster != null)
+        lock (consumerGate)
         {
-            return consumers.GetOrAdd(cluster.Id, _ => Connect(cluster));
+            var cluster = Clusters.Values.FirstOrDefault(c => c.Address == address && c.IsEnabled)
+                ?? Clusters.Values.FirstOrDefault(c => c.Address == address);
+            temporary = cluster == null;
+            if (cluster != null)
+                return GetConsumer(cluster.Id);
         }
         // Address not associated with any known cluster, create a temporary consumer
         return consumerFactory.CreateNew(address);
@@ -81,7 +112,7 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     {
         try
         {
-            return consumers.GetOrAdd(clusterInfo.Id, _ => CreateConsumer(clusterInfo.Address));
+            return CreateConsumer(clusterInfo.Address);
         }
         catch (Exception e)
         {
@@ -100,12 +131,12 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     public Task<IEnumerable<Shared.Models.KafkaCluster>> GetAllClustersAsync()
     {
         Log.Information("Get all Clusters");
-        return Task.Run(() => Clusters.Values.Select(c =>
+        return Task.Run<IEnumerable<Shared.Models.KafkaCluster>>(() => Clusters.Values.Select(c =>
         {
             var model = ToModel(c);
             model.Status = ConnectionState.Unknown; // Initial state, will be updated by background check
             return model;
-        }).AsEnumerable());
+        }).ToList());
     }
 
     public Task<Shared.Models.KafkaCluster> GetClusterByIdAsync(string clusterId)
@@ -181,16 +212,18 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     #region update
     public async Task<Shared.Models.KafkaCluster> UpdateClusterAsync(string clusterId, KafkaClusterUpdate update)
     {
-        var existing = ValidateClusterId(clusterId);
-        existing.Name = update.Name;
-        existing.Address = update.Address;
-        infoRepository.Update(existing);
+        lock (consumerGate)
+        {
+            var existing = ValidateClusterId(clusterId);
+            var addressChanged = existing.Address != update.Address;
+            existing.Name = update.Name;
+            existing.Address = update.Address;
+            infoRepository.Update(existing);
 
         // The cached consumer (if any) was created against the old address; drop it so the
         // next access reconnects using the updated address instead of reusing a stale one.
-        if (consumers.TryRemove(clusterId, out var oldConsumer))
-        {
-            DisposeConsumer(oldConsumer);
+            if (addressChanged && consumers.TryRemove(clusterId, out var oldConsumer))
+                DisposeConsumer(oldConsumer.Consumer);
         }
 
         return await GetClusterByIdAsync(clusterId);
@@ -212,7 +245,12 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
     #region Delete
     public async Task RemoveClusterByIdAsync(string clusterId)
     {
-        infoRepository.Delete(clusterId);
+        lock (consumerGate)
+        {
+            infoRepository.Delete(clusterId);
+            if (consumers.TryRemove(clusterId, out var oldConsumer))
+                DisposeConsumer(oldConsumer.Consumer);
+        }
     }
     #endregion
 
@@ -242,18 +280,33 @@ public class LocalClient(IClusterInfoRepository infoRepository, KafkaConfig kafk
 
     private IKafkaConsumer GetConsumer(string clusterId)
     {
-        if (Clusters.TryGetValue(clusterId, out var cluster))
+        lock (consumerGate)
         {
-            return consumers.GetOrAdd(clusterId, _ => Connect(cluster));
+            if (!Clusters.TryGetValue(clusterId, out var cluster))
+                throw new ArgumentException("Unknown clusterInfo", nameof(clusterId));
+            if (!cluster.IsEnabled)
+                throw new InvalidOperationException("The cluster is disabled.");
+            if (consumers.TryGetValue(clusterId, out var cached))
+            {
+                if (cached.Address == cluster.Address)
+                    return cached.Consumer;
+                consumers.TryRemove(clusterId, out _);
+                DisposeConsumer(cached.Consumer);
+            }
+            var consumer = Connect(cluster);
+            consumers[clusterId] = (cluster.Address, consumer);
+            return consumer;
         }
-        throw new ArgumentException("Unknown clusterInfo", nameof(clusterId));
     }
     #endregion Validations
 
     #region Mappers
     private Shared.Models.KafkaCluster ToModel(ClusterInfo clusterInfo)
     {
-        return new Shared.Models.KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address);
+        return new Shared.Models.KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address)
+        {
+            IsEnabled = clusterInfo.IsEnabled
+        };
     }
     #endregion Mappers
 }

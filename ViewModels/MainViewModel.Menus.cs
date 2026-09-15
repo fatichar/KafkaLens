@@ -11,6 +11,8 @@ namespace KafkaLens.ViewModels;
 public partial class MainViewModel
 {
     private readonly ObservableCollection<MenuItemViewModel> openClusterMenuItems = new();
+    private readonly Dictionary<ClusterViewModel, System.ComponentModel.PropertyChangedEventHandler> openClusterMenuHandlers = new();
+    private readonly Dictionary<string, bool> clientEnabledByName = new(StringComparer.Ordinal);
     private MenuItemViewModel openMenu = null!;
     private MenuItemViewModel closeTabMenuItem = null!;
     private MenuItemViewModel appLogMenuItem = null!;
@@ -69,9 +71,70 @@ public partial class MainViewModel
         return menu;
     }
 
+    internal void RefreshClientEnabledIndex()
+    {
+        clientEnabledByName.Clear();
+        var clients = ClientInfoRepository.GetAll();
+        if (clients == null) return;
+
+        foreach (var client in clients.Values)
+            clientEnabledByName[client.Name] = client.IsEnabled;
+    }
+
+    private bool IsClientEnabled(string clientName)
+    {
+        return !clientEnabledByName.TryGetValue(clientName, out var isEnabled) || isEnabled;
+    }
+
+    private bool IsClusterAvailable(ClusterViewModel cluster) => cluster.IsAvailable;
+
+    public void RefreshAvailability()
+    {
+        RefreshClientEnabledIndex();
+        foreach (var cluster in Clusters)
+        {
+            ApplyClientAvailability(cluster);
+            if (!cluster.IsAvailable) CloseTabsForCluster(cluster.Id);
+        }
+        ReconcileOpenClusterMenu();
+    }
+
+    private void ApplyClientAvailability(ClusterViewModel cluster)
+    {
+        cluster.IsClientEnabled = (cluster.Client.Name == "Local" && cluster.Client.CanEditClusters) ||
+            IsClientEnabled(cluster.Client.Name);
+    }
+
     private void AddClusterToMenu(ClusterViewModel cluster)
     {
+        if (!IsClusterAvailable(cluster) || openClusterMenuItems.Any(m => (m.CommandParameter as string) == cluster.Id))
+            return;
         openClusterMenuItems.Add(CreateOpenMenuItem(cluster));
+    }
+
+    private void RemoveClusterFromMenu(ClusterViewModel cluster)
+    {
+        var menuItem = openClusterMenuItems.FirstOrDefault(m => (m.CommandParameter as string) == cluster.Id || m.Header == cluster.Name);
+        if (menuItem != null)
+            openClusterMenuItems.Remove(menuItem);
+
+        if (openClusterMenuHandlers.Remove(cluster, out var handler))
+            cluster.PropertyChanged -= handler;
+    }
+
+    private void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender is ClusterViewModel cluster && e.PropertyName == nameof(ClusterViewModel.IsAvailable))
+        {
+            if (IsClusterAvailable(cluster))
+            {
+                AddClusterToMenu(cluster);
+            }
+            else
+            {
+                RemoveClusterFromMenu(cluster);
+            }
+        }
     }
 
     private MenuItemViewModel CreateOpenMenuItem(ClusterViewModel c)
@@ -86,30 +149,42 @@ public partial class MainViewModel
             Icon = statusIcon
         };
 
-        c.PropertyChanged += (_, e) =>
+        System.ComponentModel.PropertyChangedEventHandler handler = (_, e) =>
         {
             if (e.PropertyName == nameof(ClusterViewModel.Status))
                 statusIcon.Status = c.Status;
             else if (e.PropertyName == nameof(ClusterViewModel.Name))
                 menuItem.Header = c.Name;
         };
+        c.PropertyChanged += handler;
+        openClusterMenuHandlers[c] = handler;
 
         return menuItem;
     }
 
+    private void ReconcileOpenClusterMenu()
+    {
+        var loading = openClusterMenuItems.FirstOrDefault(m => m.Header == "Loading...");
+        foreach (var (cluster, handler) in openClusterMenuHandlers)
+            cluster.PropertyChanged -= handler;
+        openClusterMenuHandlers.Clear();
+        openClusterMenuItems.Clear();
+        if (loading != null && IsLoadingClusters)
+            openClusterMenuItems.Add(loading);
+        foreach (var cluster in Clusters.Where(IsClusterAvailable))
+            openClusterMenuItems.Add(CreateOpenMenuItem(cluster));
+    }
+
     private void UpdateOpenMenuItems()
     {
-        if (IsLoadingClusters && openClusterMenuItems.Count == 0)
+        if (IsLoadingClusters && Clusters.Count == 0)
         {
             if (!openClusterMenuItems.Any(m => m.Header == "Loading..."))
                 openClusterMenuItems.Add(new MenuItemViewModel { Header = "Loading...", IsEnabled = false });
+            return;
         }
-        else
-        {
-            var loadingItem = openClusterMenuItems.FirstOrDefault(m => m.Header == "Loading...");
-            if (loadingItem != null)
-                openClusterMenuItems.Remove(loadingItem);
-        }
+
+        ReconcileOpenClusterMenu();
     }
 
     private void UpdateCloseTabEnabled()

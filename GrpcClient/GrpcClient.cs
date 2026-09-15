@@ -12,7 +12,7 @@ using Topic = KafkaLens.Shared.Models.Topic;
 
 namespace KafkaLens.Clients;
 
-public class GrpcClient : IKafkaLensClient, IDisposable
+public class GrpcClient : IKafkaLensClient, IConnectionTestClient, ICancellableConnectionClient, IDisposable
 {
     #region fields
 
@@ -30,6 +30,12 @@ public class GrpcClient : IKafkaLensClient, IDisposable
         Name = name;
         CanSaveMessages = true;
         this.url = url;
+    }
+
+    internal GrpcClient(string name, string url, KafkaApi.KafkaApiClient client)
+        : this(name, url)
+    {
+        this.client = client;
     }
 
     public string Name { get; }
@@ -72,25 +78,102 @@ public class GrpcClient : IKafkaLensClient, IDisposable
     }
 
     public async Task<bool> ValidateConnectionAsync(string bootstrapServers)
+        => (await ValidateConnectionWithDetailsAsync(bootstrapServers).ConfigureAwait(false)).Succeeded;
+
+    public Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(string address)
+        => ValidateConnectionWithDetailsAsync(address, CancellationToken.None);
+
+    public async Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(string address, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var response = await GetClient().ValidateConnectionAsync(new ValidateConnectionRequest
             {
-                BootstrapServers = bootstrapServers
-            });
-            return response.IsConnected;
+                BootstrapServers = address
+            }, deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            return response.IsConnected
+                ? ConnectionValidationResult.Success()
+                : ConnectionValidationResult.Failed(response.Message);
+        }
+        catch (RpcException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+        catch (RpcException e) when (e.Status.StatusCode == StatusCode.Unimplemented)
+        {
+            return await ValidateConnectionFallbackAsync(address, cancellationToken).ConfigureAwait(false);
         }
         catch (RpcException e)
         {
-             if (e.Status.StatusCode == StatusCode.Unimplemented)
-             {
-                 return true;
-             }
-
-             InvalidateChannel();
-             return false;
+            InvalidateChannel();
+            return ConnectionValidationResult.Failed(e.Status.Detail, e.ToString());
         }
+    }
+
+    private async Task<ConnectionValidationResult> ValidateConnectionFallbackAsync(string address, CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var clustersResponse = await GetClient().GetAllClustersAsync(
+                new Empty(),
+                deadline: DateTime.UtcNow.AddSeconds(10),
+                cancellationToken: cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var matching = clustersResponse.Clusters.FirstOrDefault(c =>
+                AddressesMatch(c.BootstrapServers, address));
+
+            if (matching != null)
+            {
+                if (matching.HasIsConnected)
+                {
+                    return matching.IsConnected
+                        ? ConnectionValidationResult.Success()
+                        : ConnectionValidationResult.Failed("Cluster is reported disconnected by gRPC server.");
+                }
+
+                try
+                {
+                    await GetClient().GetTopicsAsync(
+                        new GetTopicsRequest { ClusterId = matching.Id },
+                        deadline: DateTime.UtcNow.AddSeconds(10),
+                        cancellationToken: cancellationToken);
+                    return ConnectionValidationResult.Success();
+                }
+                catch (RpcException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(cancellationToken);
+                }
+                catch (RpcException ex)
+                {
+                    return ConnectionValidationResult.Failed(ex.Status.Detail, ex.ToString());
+                }
+            }
+
+            return ConnectionValidationResult.Success();
+        }
+        catch (RpcException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+        catch (RpcException e)
+        {
+            InvalidateChannel();
+            return ConnectionValidationResult.Failed(e.Status.Detail, e.ToString());
+        }
+    }
+
+    private static bool AddressesMatch(string a, string b)
+    {
+        if (string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var setA = a.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var setB = b.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return setA.Intersect(setB, StringComparer.OrdinalIgnoreCase).Any();
     }
     #endregion Constructor
 
@@ -292,7 +375,10 @@ public class GrpcClient : IKafkaLensClient, IDisposable
     #region Convertors
     private static KafkaCluster ToClusterModel(Cluster cluster)
     {
-        var model = new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers);
+        var model = new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers)
+        {
+            IsEnabled = !cluster.HasIsEnabled || cluster.IsEnabled
+        };
         if (cluster.HasIsConnected)
         {
             model.Status = cluster.IsConnected ? ConnectionState.Connected : ConnectionState.Failed;

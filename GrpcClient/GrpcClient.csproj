@@ -26,4 +26,8 @@
       <ProjectReference Include="..\Shared\Shared.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <InternalsVisibleTo Include="KafkaLens.GrpcClient.Tests" />
+    </ItemGroup>
+
 </Project>

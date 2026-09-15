@@ -148,6 +148,7 @@ public partial class MainViewModel : ViewModelBase
         this.savedMessagesClient = savedMessagesClient;
         ClusterInfoRepository = clusterInfoRepository;
         ClientInfoRepository = clientInfoRepository;
+        RefreshClientEnabledIndex();
         ClientFactory = clientFactory;
         UpdateService = updateService;
         _pluginRegistry  = pluginRegistry;
@@ -223,7 +224,7 @@ public partial class MainViewModel : ViewModelBase
         if (timer == null)
         {
             timer = new DispatcherTimer();
-            timer.Tick += (_, _) => _ = RefreshClustersForHealthCheckAsync();
+            timer.Tick += (_, _) => _ = ObserveClusterFlowAsync(RefreshClustersForHealthCheckAsync());
         }
 
         timer.Interval = TimeSpan.FromSeconds(intervalSeconds);

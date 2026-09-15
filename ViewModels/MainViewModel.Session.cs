@@ -37,7 +37,10 @@ public partial class MainViewModel
 
             var cluster = Clusters.FirstOrDefault(c => c.Id == tab.ClusterId);
             if (cluster != null)
-                OpenCluster(cluster, tab);
+            {
+                if (IsClusterAvailable(cluster))
+                    OpenCluster(cluster, tab);
+            }
             else if (!string.IsNullOrWhiteSpace(tab.SavedMessagesPath))
                 await OpenSavedMessagesAsync(tab.SavedMessagesPath, tab);
             else
@@ -46,6 +49,7 @@ public partial class MainViewModel
 
         pendingRestoreTabs.Clear();
         pendingRestoreTabs.AddRange(remaining);
+        PersistOpenedTabsState();
     }
 
     private async Task InitializeRestoreStateAsync()
@@ -82,9 +86,14 @@ public partial class MainViewModel
 
     private void OnOpenedClustersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e?.OldItems != null)
-            foreach (OpenedClusterViewModel opened in e.OldItems)
-                UnsubscribeFromOpenedClusterState(opened);
+        // A Move raises Remove+Add around an intermediate state where the tab is absent from the
+        // collection. Unsubscribing (let alone disposing) there would tear down a live tab.
+        // Disposal is owned solely by CloseTab; this handler only manages subscriptions.
+        if (e?.Action != NotifyCollectionChangedAction.Move)
+            foreach (var removed in openedClusterStateHandlers.Keys.Where(c => !OpenedClusters.Contains(c)).ToArray())
+                UnsubscribeFromOpenedClusterState(removed);
+
+        RebuildOpenedClustersMap();
 
         if (e?.NewItems != null)
             foreach (OpenedClusterViewModel opened in e.NewItems)

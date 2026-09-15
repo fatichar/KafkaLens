@@ -38,7 +38,7 @@ public partial class EditClustersDialog : DialogBase
 
             if (result != null)
             {
-                await Context.AddClusterAsync(result.Name, result.Address);
+                await Context.StageAddClusterAsync(result.Name, result.Address);
             }
         }
         catch (Exception ex)
@@ -64,7 +64,7 @@ public partial class EditClustersDialog : DialogBase
 
             if (result != null)
             {
-                await Context.UpdateClusterAsync(selected, result.Name, result.Address);
+                await Context.StageUpdateCluster(selected, result.Name, result.Address);
             }
         }
         catch (Exception ex)
@@ -85,7 +85,7 @@ public partial class EditClustersDialog : DialogBase
             var confirmed = await confirmBox.ShowConfirmationAsync(this);
             if (confirmed == true)
             {
-                Context?.RemoveCluster(selected);
+                Context?.StageRemoveCluster(selected);
             }
         }
         catch (Exception ex)
@@ -109,7 +109,7 @@ public partial class EditClustersDialog : DialogBase
 
             if (result != null)
             {
-                await Context.AddClientAsync(result.Name, result.Address, result.Protocol);
+                await Context.StageAddClientAsync(result.Name, result.Address, result.Protocol);
             }
         }
         catch (Exception ex)
@@ -129,12 +129,14 @@ public partial class EditClustersDialog : DialogBase
             var existingNames = Context.Clients.Select(c => c.Name).ToList();
             var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(
                 address => Context.TestClientConnectionAsync(selected, address));
-            var dialog = new AddEditClientDialog(selected.Info, existingNames, validator);
+            var info = new ClientInfo(selected.Id, selected.Name, selected.Address, selected.Protocol) { IsEnabled = selected.IsEnabled };
+            var dialog = new AddEditClientDialog(info, existingNames, validator);
             var result = await dialog.ShowDialog<ClientInfo?>(this);
 
             if (result != null)
             {
-                await Context.UpdateClientAsync(result);
+                result.IsEnabled = selected.IsEnabled;
+                await Context.StageUpdateClient(result);
             }
         }
         catch (Exception ex)
@@ -155,7 +157,7 @@ public partial class EditClustersDialog : DialogBase
             var confirmed = await confirmBox.ShowConfirmationAsync(this);
             if (confirmed == true)
             {
-                Context?.RemoveClient(selected);
+                Context?.StageRemoveClient(selected);
             }
         }
         catch (Exception ex)
@@ -170,6 +172,22 @@ public partial class EditClustersDialog : DialogBase
         var box = new SimpleMessageBox("Error", message, isConfirmation: false);
         await box.ShowMessageAsync(this);
     }
+
+    private async void SaveButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (Context != null)
+                await Context.SaveAsync();
+            Close(true);
+        }
+        catch (Exception ex)
+        {
+            await ShowError(ex.Message);
+        }
+    }
+
+    private void CancelButton_OnClick(object? sender, RoutedEventArgs e) => Close(false);
 
     private void OpenSettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {

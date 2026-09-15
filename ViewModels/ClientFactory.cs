@@ -16,11 +16,15 @@ public class ClientFactory : IClientFactory
     private readonly IAppLogService? appLogService;
 
     private readonly IDictionary<string, IKafkaLensClient> clients = new Dictionary<string, IKafkaLensClient>();
+    private readonly Dictionary<string, (string Address, string Protocol)> clientTransports = new(StringComparer.Ordinal);
+    private readonly HashSet<string> disabledClients = new(StringComparer.Ordinal);
+    private readonly IKafkaLensClient? localClient;
 
     public ClientFactory(IClientInfoRepository infoRepository, IKafkaLensClient localClient, IAppLogService? appLogService = null)
     {
         this.infoRepository = infoRepository;
         this.appLogService = appLogService;
+        this.localClient = localClient;
         clients.Add(localClient.Name, localClient);
     }
 
@@ -32,34 +36,31 @@ public class ClientFactory : IClientFactory
 
     public Task LoadClientsAsync()
     {
-        var clientInfos = infoRepository.GetAll();
-        foreach (var clientInfosKey in clientInfos.Values)
+        var configured = infoRepository.GetAll().Values.Where(c => c.Name != localClient?.Name).ToArray();
+        disabledClients.Clear();
+        foreach (var info in configured.Where(c => !c.IsEnabled)) disabledClients.Add(info.Name);
+        foreach (var key in clients.Keys.Where(k => k != localClient?.Name && configured.All(c => c.Name != k)).ToArray())
         {
-            Log.Information("Found client: {ClientName} in config", clientInfosKey.Name);
-        }
-
-        var toRemove = clients.Keys
-            .Where(k => clientInfos.Values.All(ci => ci.Name != k) && k != "Local")
-            .ToList();
-
-        foreach (var key in toRemove)
-        {
+            if (clients[key] is IDisposable disposable) disposable.Dispose();
             clients.Remove(key);
+            clientTransports.Remove(key);
         }
-
-        foreach (var clientInfo in clientInfos.Values)
+        foreach (var info in configured)
         {
-            Log.Information("Loading client: {ClientName}", clientInfo.Name);
+            var transport = (info.Address, info.Protocol);
+            if (clientTransports.TryGetValue(info.Name, out var existing) && existing == transport) continue;
             try
             {
-                clients.Remove(clientInfo.Name);
-                var client = CreateClient(clientInfo);
-                clients.Add(client.Name, client);
+                var client = CreateClient(info);
+                if (clients.TryGetValue(info.Name, out var previous) && previous is IDisposable disposable)
+                    disposable.Dispose();
+                clients[info.Name] = client;
+                clientTransports[info.Name] = transport;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Log.Error("Failed to load client {}", clientInfo.Name);
-                appLogService?.LogError($"Could not load client {clientInfo.Name}", "Startup");
+                Log.Error(e, "Failed to load client {ClientName}", info.Name);
+                appLogService?.LogError($"Could not load client {info.Name}", "Startup");
             }
         }
 
@@ -98,7 +99,7 @@ public class ClientFactory : IClientFactory
 
     public List<IKafkaLensClient> GetAllClients()
     {
-        return clients.Values.ToList();
+        return clients.Values.Where(c => !disabledClients.Contains(c.Name)).ToList();
     }
 
     public IKafkaLensClient GetClient(string clientId)

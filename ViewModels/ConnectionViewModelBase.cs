@@ -20,8 +20,35 @@ public partial class ConnectionViewModelBase : ViewModelBase
     [ObservableProperty]
     private bool isChecking;
 
-    partial void OnStatusChanged(ConnectionState value)
+    private bool connectionEnabled = true;
+
+    internal void SetConnectionEnabled(bool enabled)
     {
+        connectionEnabled = enabled;
+        UpdateStatusPresentation(Status);
+    }
+
+    internal void SetDisabledStatus() => SetConnectionEnabled(false);
+
+    internal void SetCheckingPresentation()
+    {
+        if (!connectionEnabled) return;
+        IsChecking = true;
+        ConnectionStatus = "Checking...";
+    }
+
+    partial void OnStatusChanged(ConnectionState value) => UpdateStatusPresentation(value);
+
+    private void UpdateStatusPresentation(ConnectionState value)
+    {
+        if (!connectionEnabled)
+        {
+            IsChecking = false;
+            ConnectionStatus = "Disabled";
+            StatusColor = "Gray";
+            return;
+        }
+
         IsChecking = value == ConnectionState.Checking;
         switch (value)
         {

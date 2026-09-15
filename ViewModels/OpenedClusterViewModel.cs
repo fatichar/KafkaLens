@@ -11,7 +11,7 @@ using KafkaLens.ViewModels.Services;
 
 namespace KafkaLens.ViewModels;
 
-public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
+public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposable
 {
     private const int SELECTED_ITEM_DELAY_MS = 3;
     private const string HIDDEN_KEY_FORMATTERS_SETTINGS_KEY = "HiddenKeyFormatters";
@@ -23,6 +23,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     private readonly IFormatterService formatterService;
     private ClusterViewModel cluster;
     private readonly IAppLogService appLogService;
+    private bool disposed;
     private readonly string tabSuffix;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
 
@@ -307,6 +308,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
     {
         if (ReferenceEquals(cluster, newCluster)) return;
 
+        StopLoading();
+        DetachMessageStream();
+        selectedNode = null;
         cluster.PropertyChanged -= OnClusterPropertyChanged;
         cluster = newCluster;
         cluster.PropertyChanged += OnClusterPropertyChanged;
@@ -322,10 +326,20 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
         UpdateClusterName(cluster.Name);
 
         Topics.Clear();
-        if (cluster.Status == ConnectionState.Connected)
-        {
-            _ = LoadTopicsAsync();
-        }
+        SyncTopics();
+    }
+
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        StopLoading();
+        DetachMessageStream();
+        fetchCts?.Dispose();
+        cluster.PropertyChanged -= OnClusterPropertyChanged;
+        Topics.CollectionChanged -= OnTopicsCollectionChanged;
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        IsActive = false;
     }
 
     private void OnTopicsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -344,12 +358,12 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode
             OnPropertyChanged(nameof(ShowEmptyConnectionState));
             OnPropertyChanged(nameof(ConnectionMessage));
             OnPropertyChanged(nameof(ConnectionActionText));
-            if (cluster.Status == ConnectionState.Connected &&
-                cluster.TopicLoadState != TopicLoadState.Loaded &&
-                !isSyncingTopics)
-            {
-                Dispatcher.UIThread.Post(() => _ = LoadTopicsAsync());
-            }
+
+        }
+        else if (e.PropertyName == nameof(ClusterViewModel.TopicLoadState) &&
+                 cluster.TopicLoadState == TopicLoadState.Loaded && !isSyncingTopics)
+        {
+            SyncTopics();
         }
         else if (e.PropertyName == nameof(ClusterViewModel.Name))
             UpdateClusterName(cluster.Name);
