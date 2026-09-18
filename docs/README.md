@@ -59,7 +59,15 @@ Create and push a version tag (after validating branch, clean workspace, and ins
 
 ## Website Docs
 
-The project website homepage is served from static HTML in `docs/index.html`.
+The project website is static HTML served via GitHub Pages (custom domain `kafkalens.com`).
+
+- `index.html` — landing page
+- `download.html` + `download/{windows,macos,linux}/` — downloads and OS install steps
+- `guide/` — user documentation (multi-page guide with a shared `guide/nav.html` sidebar)
+- `usage.html` — redirect to `/guide/` (kept for inbound links)
+- `navbar.html` / `footer.html` — shared fragments injected by `assets/fragments.js`
+- All site-internal URLs are root-absolute (`/guide/...`, `/assets/...`) so pages work at any depth.
+
 The file `docs/README.md` is intended for repository documentation, not website rendering.
 
 ## Contributing

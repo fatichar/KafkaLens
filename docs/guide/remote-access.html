@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Access with the gRPC Backend | KafkaLens Docs</title>
+    <meta name="description" content="Deploy the KafkaLens gRPC backend inside your private network to browse VPC Kafka clusters from your desktop — without exposing brokers publicly.">
+    <link rel="canonical" href="https://kafkalens.com/guide/remote-access.html">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://kafkalens.com/guide/remote-access.html">
+    <meta property="og:title" content="Remote Access with the gRPC Backend | KafkaLens Docs">
+    <meta property="og:description" content="Deploy the KafkaLens gRPC backend inside your private network to browse VPC Kafka clusters.">
+    <meta property="og:image" content="https://kafkalens.com/assets/images/Main.png">
+    <meta property="og:site_name" content="KafkaLens">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://kafkalens.com/guide/remote-access.html">
+    <meta name="twitter:title" content="Remote Access with the gRPC Backend | KafkaLens Docs">
+    <meta name="twitter:description" content="Deploy the KafkaLens gRPC backend inside your private network to browse VPC Kafka clusters.">
+    <meta name="twitter:image" content="https://kafkalens.com/assets/images/Main.png">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Remote Access with the gRPC Backend",
+        "description": "Deploy the KafkaLens gRPC backend inside your private network to browse VPC Kafka clusters.",
+        "url": "https://kafkalens.com/guide/remote-access.html",
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "KafkaLens",
+            "url": "https://kafkalens.com/"
+        }
+    }
+    </script>
+
+    <link rel="stylesheet" href="/assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="navbar-placeholder"></div>
+    <noscript>
+        <nav aria-label="Primary navigation"><a href="/">Home</a> <a href="/download.html">Download</a> <a href="/guide/">Docs</a></nav>
+    </noscript>
+
+    <main>
+        <section class="page-header">
+            <div class="container">
+                <h1>Remote Access (gRPC Backend)</h1>
+                <p>Browse clusters inside private networks — without exposing your brokers.</p>
+            </div>
+        </section>
+
+        <div class="container">
+            <div class="guide-layout">
+                <div id="guide-nav-placeholder"></div>
+                <article class="guide-content">
+
+                    <h2>How it works</h2>
+                    <p>
+                        KafkaLens ships a small backend service (<code>GrpcApi</code>) that runs
+                        <em>inside</em> your network, next to your Kafka brokers. It exposes a
+                        <strong>read-only</strong> gRPC API. The desktop app connects to the backend;
+                        the backend is the only component that talks to Kafka.
+                    </p>
+                    <pre><code>
+┌─────────────┐   gRPC (HTTP/2)  ┌───────────────────┐   Kafka protocol  ┌────────┐
+│  KafkaLens  │ ◄──────────────► │ KafkaLens backend │ ◄───────────────► │ Kafka  │
+│  (desktop)  │                  │   (GrpcApi)       │                   │ brokers│
+└─────────────┘                  └───────────────────┘                   └────────┘
+  your machine                      inside the VPC                         private
+                    </code></pre>
+                    <ul>
+                        <li>Brokers are never exposed outside the private network.</li>
+                        <li>The API is read-only — the backend can browse and fetch messages, nothing else.</li>
+                        <li>Clusters are registered on the backend, so every connected desktop sees the same list.</li>
+                    </ul>
+                    <div class="screenshot-placeholder">
+                        <span class="screenshot-label">📷 Diagram/screenshot needed</span>
+                        <span class="screenshot-desc">Architecture diagram: desktop app → gRPC backend in VPC → private Kafka brokers.</span>
+                    </div>
+
+                    <h2>Deploying the backend</h2>
+                    <p>
+                        The backend is an ASP.NET Core service in the KafkaLens repository
+                        (<code>GrpcApi/</code>). Building it requires the
+                        <strong>.NET 10 SDK</strong>; the output is a self-contained single file that
+                        needs no runtime on the target machine.
+                    </p>
+                    <pre><code># from the GrpcApi directory
+dotnet publish GrpcApi.csproj -c Release -r linux-x64 \
+    -o grpc_api/ -p:PublishSingleFile=true -p:PublishTrimmed=true
+
+# on the server
+./GrpcApi</code></pre>
+                    <p>
+                        By default it listens on <strong>port 8080</strong> (plain HTTP/2) on all
+                        interfaces. Run it on a host that can reach your bootstrap servers — same VPC
+                        or subnet is typical.
+                    </p>
+                    <div class="callout">
+                        <p>
+                            Verify it works from a desktop machine before wiring everything up: add it
+                            as a client in the app (below) — a successful connection means routing and
+                            firewall rules are right.
+                        </p>
+                    </div>
+
+                    <h2>Configuration</h2>
+                    <p>
+                        Settings come from <code>appsettings.json</code>, environment variables, or
+                        command-line arguments (standard .NET configuration):
+                    </p>
+                    <pre><code>{
+  "DatabasePath": "cluster_info.json",
+  "Kestrel": {
+    "EndpointDefaults": { "HttpPort": 8080 }
+  },
+  "GrpcFetch": {
+    "MaxMessagesPerRequest": 25000,
+    "MaxConcurrentFetches": 12,
+    "QueueTimeoutMs": 5000,
+    "FetchTimeoutMs": 120000
+  }
+}</code></pre>
+                    <table>
+                        <tr><th>Setting</th><th>Default</th><th>Meaning</th></tr>
+                        <tr><td><code>DatabasePath</code></td><td><code>cluster_info.json</code></td><td>Path to the cluster registry file (see below).</td></tr>
+                        <tr><td><code>Kestrel:EndpointDefaults:HttpPort</code></td><td><code>8080</code></td><td>Port the gRPC endpoint listens on.</td></tr>
+                        <tr><td><code>GrpcFetch:MaxMessagesPerRequest</code></td><td><code>25000</code></td><td>Cap on messages streamed per fetch request.</td></tr>
+                        <tr><td><code>GrpcFetch:MaxConcurrentFetches</code></td><td><code>12</code></td><td>Max simultaneous fetches across all connected clients.</td></tr>
+                        <tr><td><code>GrpcFetch:QueueTimeoutMs</code></td><td><code>5000</code></td><td>How long a fetch waits for a free slot before failing.</td></tr>
+                        <tr><td><code>GrpcFetch:FetchTimeoutMs</code></td><td><code>120000</code></td><td>Maximum duration of a single fetch.</td></tr>
+                    </table>
+                    <p>
+                        Environment-variable equivalents use the standard mapping, e.g.
+                        <code>Kestrel__EndpointDefaults__HttpPort=9000</code>.
+                    </p>
+
+                    <h2>Registering clusters on the backend</h2>
+                    <p>
+                        The backend reads its cluster list from the JSON file at
+                        <code>DatabasePath</code>:
+                    </p>
+                    <pre><code>{
+  "clusters": [
+    { "id": "prod",    "name": "Production", "address": "kafka1:9092,kafka2:9092" },
+    { "id": "staging", "name": "Staging",    "address": "staging-kafka:9092" }
+  ]
+}</code></pre>
+                    <p>
+                        Each entry needs a unique <code>id</code>, a display <code>name</code>, and an
+                        <code>address</code> (bootstrap servers, comma-separated). Edit the file and
+                        restart the service to pick up changes. These clusters then appear to every
+                        desktop that connects.
+                    </p>
+
+                    <h2>Connecting the desktop app</h2>
+                    <ol>
+                        <li>Open <em>Cluster → Edit Clusters</em> (<kbd>Ctrl+E</kbd>) →
+                            <strong>KafkaLens Clients</strong> tab → <strong>Add</strong>.</li>
+                        <li>Enter a name (e.g. <code>Prod VPC</code>), the backend address as
+                            <code>host:port</code> (e.g. <code>10.0.3.15:8080</code> —
+                            <code>http://</code> is added automatically), and keep the protocol as
+                            <code>grpc</code>.</li>
+                        <li><strong>OK</strong>, then <strong>Save</strong>.</li>
+                        <li>The backend's clusters now appear under <em>Cluster → Open Cluster</em>,
+                            marked with live status dots like any direct cluster.</li>
+                    </ol>
+                    <p>
+                        From there, everything works the same as a direct cluster — topics, fetches,
+                        formatters, filters, saving.
+                    </p>
+                    <div class="screenshot-placeholder">
+                        <span class="screenshot-label">📷 Screenshot needed</span>
+                        <span class="screenshot-desc">Add/Edit Client dialog with a name, host:port address, and grpc protocol.</span>
+                    </div>
+
+                    <h2>Security notes</h2>
+                    <div class="callout warning">
+                        <p>
+                            <strong>The gRPC endpoint is plaintext HTTP/2</strong> — there is no TLS or
+                            authentication built in. Treat it accordingly:
+                        </p>
+                    </div>
+                    <ul>
+                        <li><strong>Bind it inside the VPC only.</strong> Restrict the port with
+                            security groups / firewall rules so only the intended desktops (or a
+                            bastion/VPN gateway) can reach it.</li>
+                        <li><strong>For crossing untrusted networks</strong>, put the backend behind a
+                            TLS-terminating reverse proxy (nginx, Envoy) or reach it over a
+                            VPN/SSH tunnel.</li>
+                        <li><strong>Read-only ≠ harmless.</strong> The API can't modify the cluster,
+                            but it can read every message — restrict access like you would the
+                            brokers themselves.</li>
+                    </ul>
+
+                    <h2>Operations</h2>
+                    <ul>
+                        <li><strong>Logs</strong> — the service logs to stdout; capture it with your
+                            service manager (systemd, supervisor) or a container platform.</li>
+                        <li><strong>Fetch pressure</strong> — if many users fetch at once, tune
+                            <code>GrpcFetch</code> limits; rejected fetches show up as fetch errors in
+                            the desktop app's log.</li>
+                        <li><strong>Updates</strong> — redeploy the published binary and restart.
+                            The desktop and backend are versioned together, so upgrade them in pairs.</li>
+                    </ul>
+
+                    <nav class="guide-prevnext">
+                        <a href="/guide/saving-messages.html"><span class="prev-next-label">Previous</span>← Saving Messages</a>
+                        <a href="/guide/preferences.html"><span class="prev-next-label">Next</span>Preferences &amp; Settings →</a>
+                    </nav>
+                </article>
+            </div>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/assets/fragments.js"></script>
+    <script src="/assets/style.js"></script>
+</body>
+</html>

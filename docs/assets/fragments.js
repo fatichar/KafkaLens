@@ -4,7 +4,7 @@ async function loadFragments() {
         // Load configuration
         if (typeof KAFKALENS_CONFIG === 'undefined') {
             const configScript = document.createElement('script');
-            configScript.src = 'assets/config.js';
+            configScript.src = '/assets/config.js';
             document.head.appendChild(configScript);
             await new Promise(resolve => configScript.onload = resolve);
         }
@@ -12,7 +12,7 @@ async function loadFragments() {
         // Load analytics logic
         if (typeof Analytics === 'undefined') {
             const analyticsLogicScript = document.createElement('script');
-            analyticsLogicScript.src = 'assets/analytics.js';
+            analyticsLogicScript.src = '/assets/analytics.js';
             document.head.appendChild(analyticsLogicScript);
             await new Promise(resolve => analyticsLogicScript.onload = resolve);
         }
@@ -24,23 +24,43 @@ async function loadFragments() {
         analyticsScript.setAttribute('data-website-id', KAFKALENS_CONFIG.umami.websiteId);
         document.head.appendChild(analyticsScript);
 
+        const path = window.location.pathname;
+        const inGuide = path.startsWith('/guide/');
+
         // Load navbar
-        const navbarResponse = await fetch('navbar.html');
+        const navbarResponse = await fetch('/navbar.html');
         const navbarHtml = await navbarResponse.text();
         const navbarPlaceholder = document.getElementById('navbar-placeholder');
         if (navbarPlaceholder) {
             navbarPlaceholder.innerHTML = navbarHtml;
-            
+
             // Set active class on current page
-            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-            const activeLink = document.querySelector(`.nav-link[data-page="${currentPage.replace('.html', '')}"]`);
+            const currentPage = path.split('/').pop() || 'index.html';
+            const pageKey = inGuide ? 'docs' : currentPage.replace('.html', '');
+            const activeLink = document.querySelector(`.nav-link[data-page="${pageKey}"]`);
             if (activeLink) {
                 activeLink.classList.add('active');
             }
         }
 
+        // Load guide sidebar (only on guide pages)
+        const guideNavPlaceholder = document.getElementById('guide-nav-placeholder');
+        if (guideNavPlaceholder) {
+            const guideNavResponse = await fetch('/guide/nav.html');
+            const guideNavHtml = await guideNavResponse.text();
+            guideNavPlaceholder.innerHTML = guideNavHtml;
+
+            // Mark current page in the sidebar
+            const currentGuidePage = path.split('/').pop() || 'index.html';
+            const activeGuideLink = guideNavPlaceholder.querySelector(
+                `a[href="/guide/${currentGuidePage}"]`);
+            if (activeGuideLink) {
+                activeGuideLink.classList.add('active');
+            }
+        }
+
         // Load footer
-        const footerResponse = await fetch('footer.html');
+        const footerResponse = await fetch('/footer.html');
         const footerHtml = await footerResponse.text();
         const footerPlaceholder = document.getElementById('footer-placeholder');
         if (footerPlaceholder) {
@@ -57,7 +77,7 @@ async function loadFragments() {
 function initMobileMenu() {
     const navToggle = document.querySelector('.nav-toggle');
     const navLinks = document.querySelector('.nav-links');
-    
+
     if (navToggle && navLinks) {
         navToggle.addEventListener('click', () => {
             navLinks.classList.toggle('active');

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugins | KafkaLens Docs</title>
+    <meta name="description" content="Extend KafkaLens with plugins: browse and install formatters and themes with the Plugin Manager, manage repositories, and build your own plugins.">
+    <link rel="canonical" href="https://kafkalens.com/guide/plugins.html">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://kafkalens.com/guide/plugins.html">
+    <meta property="og:title" content="Plugins | KafkaLens Docs">
+    <meta property="og:description" content="Browse and install formatters and themes with the Plugin Manager, or build your own plugins.">
+    <meta property="og:image" content="https://kafkalens.com/assets/images/Main.png">
+    <meta property="og:site_name" content="KafkaLens">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://kafkalens.com/guide/plugins.html">
+    <meta name="twitter:title" content="Plugins | KafkaLens Docs">
+    <meta name="twitter:description" content="Browse and install formatters and themes with the Plugin Manager, or build your own plugins.">
+    <meta name="twitter:image" content="https://kafkalens.com/assets/images/Main.png">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Plugins",
+        "description": "Extend KafkaLens with plugins: the Plugin Manager, repositories, and plugin development.",
+        "url": "https://kafkalens.com/guide/plugins.html",
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "KafkaLens",
+            "url": "https://kafkalens.com/"
+        }
+    }
+    </script>
+
+    <link rel="stylesheet" href="/assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="navbar-placeholder"></div>
+    <noscript>
+        <nav aria-label="Primary navigation"><a href="/">Home</a> <a href="/download.html">Download</a> <a href="/guide/">Docs</a></nav>
+    </noscript>
+
+    <main>
+        <section class="page-header">
+            <div class="container">
+                <h1>Plugins</h1>
+                <p>Extend KafkaLens with community formatters and themes — or build your own.</p>
+            </div>
+        </section>
+
+        <div class="container">
+            <div class="guide-layout">
+                <div id="guide-nav-placeholder"></div>
+                <article class="guide-content">
+
+                    <h2>What plugins can do</h2>
+                    <ul>
+                        <li><strong>Message formatters</strong> — decode payloads KafkaLens doesn't
+                            handle natively (e.g. Protobuf, Avro, proprietary binary formats). They show
+                            up in every formatter dropdown.</li>
+                        <li><strong>Themes</strong> — additional color themes, selectable from
+                            <em>View → Theme</em>.</li>
+                    </ul>
+
+                    <h2>The Plugin Manager</h2>
+                    <p>
+                        Open <em>Edit → Plugin Manager…</em>. The window has two tabs —
+                        <strong>Available</strong> and <strong>Installed</strong> — and a repository
+                        selector on top.
+                    </p>
+                    <div class="screenshot-placeholder">
+                        <span class="screenshot-label">📷 Screenshot needed</span>
+                        <span class="screenshot-desc">Plugin Manager: repository selector on top, Available tab listing plugins with Install buttons.</span>
+                    </div>
+
+                    <h3>Repositories</h3>
+                    <p>
+                        A repository is a hosted <code>plugins.json</code> index of installable plugins.
+                        Use <strong>＋</strong> to add a repository URL, <strong>－</strong> to remove the
+                        selected one, and <strong>Refresh</strong> to reload its index. Multiple
+                        repositories can be registered; pick between them with the dropdown.
+                    </p>
+
+                    <h3>Installing</h3>
+                    <ol>
+                        <li>Choose a repository — the <strong>Available</strong> tab lists its plugins
+                            with name, description, author, version, and a homepage link.</li>
+                        <li>Click <strong>Install</strong>. The button shows progress while the package
+                            downloads.</li>
+                        <li>A banner appears: <em>a restart is required for plugin changes to take
+                            effect</em>. Restart KafkaLens when convenient.</li>
+                    </ol>
+
+                    <h3>Managing installed plugins</h3>
+                    <p>
+                        The <strong>Installed</strong> tab lists everything on disk. Each row has an
+                        <strong>Enabled</strong> toggle (disabled plugins stay installed but don't load)
+                        and an <strong>Uninstall</strong> button. Changes take effect on restart.
+                    </p>
+                    <p>
+                        Plugins live in <code>plugins/</code> inside the
+                        <a href="/guide/preferences.html">settings directory</a>.
+                    </p>
+                    <div class="callout warning">
+                        <p>
+                            Plugins run inside KafkaLens with full trust — only install plugins from
+                            sources you trust.
+                        </p>
+                    </div>
+
+                    <h2>Developing a plugin</h2>
+                    <p>
+                        Plugins are .NET class libraries. Create one, reference the API packages, and
+                        ship it as a NuGet package:
+                    </p>
+                    <pre><code>dotnet new classlib -n MyKafkaLensPlugin</code></pre>
+                    <pre><code>&lt;PackageReference Include="KafkaLens.Shared" Version="1.0.*" /&gt;
+&lt;PackageReference Include="KafkaLens.Formatting" Version="1.0.*" /&gt;</code></pre>
+                    <div class="callout">
+                        <p>
+                            Match the package version to the KafkaLens major version you're targeting
+                            (e.g. <code>1.0.*</code> for the 1.x line).
+                        </p>
+                    </div>
+
+                    <h3>A message formatter</h3>
+                    <p>
+                        Implement <code>IMessageFormatter</code> and mark it with
+                        <code>[KafkaLensExtension]</code>:
+                    </p>
+                    <pre><code>using KafkaLens.Formatting;
+using KafkaLens.Shared.Plugins;
+using System.Text;
+
+[KafkaLensExtension(typeof(IMessageFormatter))]
+public class CsvFormatter : IMessageFormatter
+{
+    public string Name => "CSV";
+
+    public string? Format(byte[] data, bool prettyPrint)
+        => Encoding.UTF8.GetString(data);
+
+    public string? Format(byte[] data, string searchText, bool useObjectFilter = true)
+    {
+        var text = Format(data, true);
+        if (text == null || string.IsNullOrEmpty(searchText))
+            return text;
+        // Return only lines containing the search text
+        return string.Join(Environment.NewLine,
+            text.Split(Environment.NewLine)
+                .Where(l => l.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
+    }
+}</code></pre>
+
+                    <h3>Plugin lifecycle (optional)</h3>
+                    <p>
+                        For plugins that need initialization or cleanup, implement
+                        <code>IKafkaLensPlugin</code> — <code>Initialize(IServiceProvider)</code> runs
+                        after the app builds its service container, <code>Shutdown()</code> on exit:
+                    </p>
+                    <pre><code>public class MyPlugin : IKafkaLensPlugin
+{
+    public void Initialize(IServiceProvider services) { /* resolve services, register extensions */ }
+    public void Shutdown() { /* cleanup */ }
+}</code></pre>
+
+                    <h3>Publishing</h3>
+                    <ol>
+                        <li>Build a package: <code>dotnet pack -c Release</code></li>
+                        <li>Host the <code>.nupkg</code> somewhere reachable (static host, artifact
+                            feed, GitHub release asset).</li>
+                        <li>Publish a repository index (<code>plugins.json</code>) pointing at it:</li>
+                    </ol>
+                    <pre><code>{
+  "name": "My Plugin Repository",
+  "plugins": [
+    {
+      "id": "MyKafkaLensPlugin",
+      "name": "CSV Formatter",
+      "description": "Displays CSV payloads with column-aware formatting",
+      "author": "You",
+      "version": "1.0.0",
+      "kafkalensVersion": "1.0",
+      "downloadUrl": "https://example.com/MyKafkaLensPlugin.1.0.0.nupkg",
+      "sha256": "&lt;sha256 of the .nupkg, optional&gt;",
+      "homepage": "https://github.com/you/my-kafkalens-plugin"
+    }
+  ]
+}</code></pre>
+                    <p>
+                        Users add your repository URL in the Plugin Manager and install from there.
+                        Keep plugins on <code>net10.0</code> to match the app, handle malformed input
+                        gracefully, and test with large messages.
+                    </p>
+                    <div class="callout">
+                        <p>
+                            The authoritative developer guide also lives in the repository at
+                            <a href="https://github.com/fatichar/KafkaLens/blob/master/docs/plugin-development.md"
+                               target="_blank" rel="noopener noreferrer"><code>docs/plugin-development.md</code></a>.
+                        </p>
+                    </div>
+
+                    <nav class="guide-prevnext">
+                        <a href="/guide/preferences.html"><span class="prev-next-label">Previous</span>← Preferences &amp; Settings</a>
+                        <a href="/guide/troubleshooting.html"><span class="prev-next-label">Next</span>Troubleshooting &amp; FAQ →</a>
+                    </nav>
+                </article>
+            </div>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/assets/fragments.js"></script>
+    <script src="/assets/style.js"></script>
+</body>
+</html>

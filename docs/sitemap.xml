@@ -2,20 +2,80 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://kafkalens.com/</loc>
-        <lastmod>2026-07-14</lastmod>
+        <lastmod>2026-09-18</lastmod>
         <changefreq>weekly</changefreq>
         <priority>1.0</priority>
     </url>
     <url>
         <loc>https://kafkalens.com/download.html</loc>
-        <lastmod>2026-07-14</lastmod>
+        <lastmod>2026-09-18</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
     <url>
-        <loc>https://kafkalens.com/usage.html</loc>
-        <lastmod>2026-07-14</lastmod>
+        <loc>https://kafkalens.com/guide/</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/getting-started.html</loc>
+        <lastmod>2026-09-18</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/connecting.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/browsing-messages.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/inspecting-messages.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/filtering.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/saving-messages.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/remote-access.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/preferences.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/plugins.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://kafkalens.com/guide/troubleshooting.html</loc>
+        <lastmod>2026-09-18</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
     </url>
 </urlset>

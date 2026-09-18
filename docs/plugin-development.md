@@ -7,9 +7,11 @@ KafkaLens supports plugins for extending message formatting capabilities. This g
 Plugin developers need to reference two NuGet packages:
 
 ```xml
-<PackageReference Include="KafkaLens.Shared" Version="0.8.*" />
-<PackageReference Include="KafkaLens.Formatting" Version="0.8.*" />
+<PackageReference Include="KafkaLens.Shared" Version="1.0.*" />
+<PackageReference Include="KafkaLens.Formatting" Version="1.0.*" />
 ```
+
+Match the package version to the KafkaLens major version you're targeting.
 
 ## Plugin Types
 
@@ -97,8 +99,8 @@ public class MyPlugin : IKafkaLensPlugin
 
 2. **Add package references**:
    ```xml
-   <PackageReference Include="KafkaLens.Shared" Version="0.8.*" />
-   <PackageReference Include="KafkaLens.Formatting" Version="0.8.*" />
+   <PackageReference Include="KafkaLens.Shared" Version="1.0.*" />
+   <PackageReference Include="KafkaLens.Formatting" Version="1.0.*" />
    ```
 
 3. **Implement your formatter(s)** as shown above
@@ -127,20 +129,39 @@ To make your plugin discoverable, host a `plugins.json` file:
 
 ```json
 {
+  "name": "My Plugin Repository",
   "plugins": [
     {
       "id": "MyKafkaLensPlugin",
       "name": "My Custom Formatter",
       "description": "Custom message formatter for specific data format",
-      "version": "1.0.0",
       "author": "Your Name",
-      "homepage": "https://github.com/yourusername/your-plugin",
-      "packageUrl": "https://your-cdn.com/MyKafkaLensPlugin.1.0.0.nupkg",
-      "dependencies": ["KafkaLens.Shared>=0.8.0", "KafkaLens.Formatting>=0.8.0"]
+      "version": "1.0.0",
+      "kafkalensVersion": "1.0",
+      "downloadUrl": "https://your-cdn.com/MyKafkaLensPlugin.1.0.0.nupkg",
+      "sha256": "<sha256 of the .nupkg, optional>",
+      "homepage": "https://github.com/yourusername/your-plugin"
     }
   ]
 }
 ```
+
+## Plugin Identity
+
+Declare plugin metadata at assembly level:
+
+```csharp
+[assembly: KafkaLensPlugin(
+    Id = "MyKafkaLensPlugin",
+    Name = "CSV Formatter",
+    Version = "1.0.0",
+    Author = "Your Name",
+    Description = "Displays CSV payloads with column-aware formatting")]
+```
+
+An optional `plugin.json` file inside the plugin folder can supplement or override the
+assembly attribute with `id`, `name`, `version`, `author`, `description`, `homepage`,
+`kafkalensVersion`, and `category` fields.
 
 ## Best Practices
 
@@ -154,8 +175,8 @@ To make your plugin discoverable, host a `plugins.json` file:
 
 See the existing formatters in the KafkaLens repository:
 - `JsonFormatter` - JSON message formatting
-- `ProtobufFormatter` - Protocol Buffers formatting
 - `TextFormatter` - Plain text formatting
+- `NumericFormatters` - Int8–UInt64 number formatting
 
 ## Support
 

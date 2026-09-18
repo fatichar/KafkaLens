@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connecting to Kafka | KafkaLens Docs</title>
+    <meta name="description" content="Connect KafkaLens to Kafka clusters directly or through remote gRPC clients. Manage clusters, check connection status, and configure health checks.">
+    <link rel="canonical" href="https://kafkalens.com/guide/connecting.html">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://kafkalens.com/guide/connecting.html">
+    <meta property="og:title" content="Connecting to Kafka | KafkaLens Docs">
+    <meta property="og:description" content="Connect KafkaLens to Kafka clusters directly or through remote gRPC clients.">
+    <meta property="og:image" content="https://kafkalens.com/assets/images/Main.png">
+    <meta property="og:site_name" content="KafkaLens">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://kafkalens.com/guide/connecting.html">
+    <meta name="twitter:title" content="Connecting to Kafka | KafkaLens Docs">
+    <meta name="twitter:description" content="Connect KafkaLens to Kafka clusters directly or through remote gRPC clients.">
+    <meta name="twitter:image" content="https://kafkalens.com/assets/images/Main.png">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Connecting to Kafka",
+        "description": "Connect KafkaLens to Kafka clusters directly or through remote gRPC clients.",
+        "url": "https://kafkalens.com/guide/connecting.html",
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "KafkaLens",
+            "url": "https://kafkalens.com/"
+        }
+    }
+    </script>
+
+    <link rel="stylesheet" href="/assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="navbar-placeholder"></div>
+    <noscript>
+        <nav aria-label="Primary navigation"><a href="/">Home</a> <a href="/download.html">Download</a> <a href="/guide/">Docs</a></nav>
+    </noscript>
+
+    <main>
+        <section class="page-header">
+            <div class="container">
+                <h1>Connecting to Kafka</h1>
+                <p>Two ways to reach your data: directly, or through a remote KafkaLens client.</p>
+            </div>
+        </section>
+
+        <div class="container">
+            <div class="guide-layout">
+                <div id="guide-nav-placeholder"></div>
+                <article class="guide-content">
+
+                    <h2>Two connection types</h2>
+                    <table>
+                        <tr><th>Type</th><th>How it works</th><th>Best for</th></tr>
+                        <tr>
+                            <td><strong>Direct Cluster</strong></td>
+                            <td>KafkaLens talks to your brokers itself using its built-in Kafka client.</td>
+                            <td>Local development, and clusters reachable from your machine.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>KafkaLens Client</strong></td>
+                            <td>KafkaLens connects to a KafkaLens gRPC backend over the network; the backend talks to Kafka.</td>
+                            <td>Clusters inside private networks / VPCs that you can't reach directly.</td>
+                        </tr>
+                    </table>
+                    <p>
+                        Everything is managed in one place: <em>Cluster → Edit Clusters</em>
+                        (<kbd>Ctrl+E</kbd>), which opens the <strong>Edit Clusters &amp; Clients</strong>
+                        dialog with a tab for each type.
+                    </p>
+                    <div class="screenshot-placeholder">
+                        <span class="screenshot-label">📷 Screenshot needed</span>
+                        <span class="screenshot-desc">Edit Clusters &amp; Clients dialog showing both tabs: Direct Clusters and KafkaLens Clients.</span>
+                    </div>
+
+                    <h2>Direct clusters</h2>
+                    <p>In the <strong>Direct Clusters</strong> tab:</p>
+                    <ol>
+                        <li>Click <strong>Add</strong> (or double-click a row to <strong>Edit</strong>).</li>
+                        <li>Enter a <strong>Cluster Name</strong> — anything that helps you recognize it.</li>
+                        <li>Enter <strong>Bootstrap Servers</strong> — a single broker
+                            (<code>localhost:9092</code>) or a comma-separated list
+                            (<code>kafka1:9092,kafka2:9092,kafka3:9092</code>). Listing several brokers
+                            makes the initial connection resilient if one is down.</li>
+                        <li>Optionally click <strong>Test Connection</strong> to verify reachability
+                            before saving. Errors are shown in the dialog with an expandable
+                            <em>Show error details</em> section.</li>
+                        <li>Click <strong>OK</strong>, then <strong>Save</strong> in the main dialog.</li>
+                    </ol>
+                    <div class="callout">
+                        <p>
+                            Changes in this dialog are <strong>staged</strong>: nothing is written until
+                            you click <strong>Save</strong>. Click <strong>Cancel</strong> to discard
+                            everything.
+                        </p>
+                    </div>
+                    <div class="callout warning">
+                        <p>
+                            <strong>Security:</strong> direct connections are plaintext — there are no
+                            SASL/TLS options. Only connect directly to clusters on trusted networks.
+                            For anything else, front the cluster with the
+                            <a href="/guide/remote-access.html">KafkaLens gRPC backend</a> and connect
+                            through that.
+                        </p>
+                    </div>
+
+                    <h2>KafkaLens clients (remote backends)</h2>
+                    <p>
+                        A <strong>KafkaLens client</strong> is a connection to a KafkaLens backend
+                        service running near your brokers — typically inside a VPC. The clusters it can
+                        see are configured <em>on the server</em>, not in the desktop app.
+                    </p>
+                    <p>In the <strong>KafkaLens Clients</strong> tab:</p>
+                    <ol>
+                        <li>Click <strong>Add</strong>.</li>
+                        <li>Enter a <strong>Client Name</strong> (e.g. <code>Prod VPC</code>), the
+                            <strong>Address</strong> of the backend (e.g.
+                            <code>http://backend.internal:8080</code>), and the protocol
+                            (<code>grpc</code>).</li>
+                        <li>Click <strong>OK</strong>, then <strong>Save</strong>.</li>
+                    </ol>
+                    <p>
+                        Once connected, the clusters exposed by that backend appear under
+                        <em>Cluster → Open Cluster</em> alongside your direct ones. Deploying the
+                        backend is covered in <a href="/guide/remote-access.html">Remote Access</a>.
+                    </p>
+
+                    <h2>Enabling and disabling</h2>
+                    <p>
+                        Each cluster and client row has an <strong>Enabled</strong> checkbox.
+                        Disabled entries are hidden from <em>Cluster → Open Cluster</em> and any open
+                        tabs for them are closed — handy for parking a cluster that's temporarily down
+                        without deleting it.
+                    </p>
+
+                    <h2 id="status">Connection status</h2>
+                    <p>The dot next to each cluster or client shows its live state:</p>
+                    <table>
+                        <tr><th>Indicator</th><th>Meaning</th></tr>
+                        <tr><td>🟢 Green</td><td>Connected — the cluster responded to the last check.</td></tr>
+                        <tr><td>🔴 Red</td><td>Disconnected — the last check failed. Hover the dot to see the error.</td></tr>
+                        <tr><td>⚪ Gray</td><td>Unknown or disabled — no check has run yet, or the entry is disabled.</td></tr>
+                        <tr><td>◌ Spinner</td><td>Checking — a connectivity check is in progress.</td></tr>
+                    </table>
+                    <p>
+                        The same dot appears on open tabs and in <em>Cluster → Open Cluster</em>. If a
+                        tab loses its connection, a banner appears at the top of the Topics panel with
+                        a <strong>Connect</strong> button to retry.
+                    </p>
+
+                    <h3>Automatic health checks</h3>
+                    <p>
+                        KafkaLens re-checks connections periodically. The interval is set in
+                        <em>Edit → Preferences → Browser → Connection Checks</em>:
+                        <em>Never</em>, <em>Every 30 seconds</em>, <em>Every minute</em>,
+                        <em>Every 5 minutes</em> (default), <em>Every 10 minutes</em>,
+                        <em>Every 15 minutes</em>, or <em>Every 30 minutes</em>.
+                        Choose <em>Never</em> to disable automatic checks; you can still test a
+                        connection manually from the Edit Clusters dialog.
+                    </p>
+
+                    <h2>Where configuration is stored</h2>
+                    <p>
+                        Clusters and clients are stored as JSON in the KafkaLens data directory:
+                    </p>
+                    <table>
+                        <tr><th>File</th><th>Contents</th></tr>
+                        <tr><td><code>cluster_info.json</code></td><td>Direct cluster definitions.</td></tr>
+                        <tr><td><code>client_info.json</code></td><td>KafkaLens client definitions.</td></tr>
+                    </table>
+                    <p>
+                        The directory is <code>%LocalAppData%\KafkaLens</code> on Windows,
+                        <code>~/.local/share/KafkaLens</code> on Linux, and
+                        <code>~/Library/Application Support/KafkaLens</code> on macOS.
+                        Click <strong>Open Settings dir…</strong> at the bottom of the Edit Clusters
+                        dialog to open it in your file manager.
+                    </p>
+                    <div class="callout">
+                        <p>
+                            Editing these JSON files by hand is supported — useful for seeding many
+                            clusters at once — but close KafkaLens first so your edits aren't
+                            overwritten on save.
+                        </p>
+                    </div>
+
+                    <nav class="guide-prevnext">
+                        <a href="/guide/getting-started.html"><span class="prev-next-label">Previous</span>← Getting Started</a>
+                        <a href="/guide/browsing-messages.html"><span class="prev-next-label">Next</span>Browsing Messages →</a>
+                    </nav>
+                </article>
+            </div>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/assets/fragments.js"></script>
+    <script src="/assets/style.js"></script>
+</body>
+</html>

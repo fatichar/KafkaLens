@@ -31,7 +31,7 @@
         "description": "A fast, secure, cross-platform desktop Kafka client.",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Windows, macOS, Linux",
-        "softwareVersion": "0.9.9",
+        "softwareVersion": "1.0",
         "downloadUrl": "https://kafkalens.com/download.html",
         "codeRepository": "https://github.com/fatichar/KafkaLens"
     }
@@ -45,7 +45,7 @@
 <body>
     <div id="navbar-placeholder"></div>
     <noscript>
-        <nav aria-label="Primary navigation"><a href="index.html">Home</a> <a href="download.html">Download</a> <a href="usage.html">Usage</a></nav>
+        <nav aria-label="Primary navigation"><a href="/">Home</a> <a href="/download.html">Download</a> <a href="/guide/">Docs</a></nav>
     </noscript>
 
     <main>
@@ -100,9 +100,9 @@
                     <div class="install-card">
                         <h3>🍎 macOS</h3>
                         <ol>
-                            <li>Download the <code>.zip</code> for your architecture.</li>
-                            <li>Extract and move <code>KafkaLens.app</code> to your <code>/Applications</code> folder.</li>
-                            <li>If macOS blocks the app, go to <strong>System Settings > Privacy & Security</strong> and click <strong>Open Anyway</strong>.</li>
+                            <li>Download the <code>.zip</code> (Apple Silicon).</li>
+                            <li>Extract it and move the contents to a folder of your choice.</li>
+                            <li>Run the <code>KafkaLens</code> binary — if Gatekeeper blocks it, right-click → <strong>Open</strong>, or run <code>xattr -dr com.apple.quarantine</code> on it.</li>
                         </ol>
                     </div>
                     <div class="install-card">
@@ -114,6 +114,7 @@
                         </ol>
                     </div>
                 </div>
+                <p style="text-align:center; margin-top:2rem;">First time here? <a href="/guide/getting-started.html" style="color:var(--primary-color);">See the Getting Started guide</a>.</p>
             </div>
         </section>
     </main>
