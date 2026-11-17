@@ -65,13 +65,14 @@ public partial class MainViewModel
     internal SettingsSnapshot.Inventory BuildTelemetryInventory()
     {
         var clients = ClientInfoRepository.GetAll()?.Values.ToList() ?? new();
-        var pluginStates = settingsService.GetPluginSettings().PluginStates;
+        // Discovered plugins, not persisted states: uninstall leaves stale PluginStates entries.
+        var plugins = _pluginRegistry?.InstalledPlugins ?? Array.Empty<KafkaLens.Shared.Plugins.PluginInfo>();
         return new SettingsSnapshot.Inventory(
             Clusters: Clusters.Count(c => TelemetryExtensions.ClientKind(c.Client) != "saved"),
             LocalClients: Clusters.Count(c => TelemetryExtensions.ClientKind(c.Client) == "local"),
             GrpcClients: clients.Count(c => string.Equals(c.Protocol, "grpc", StringComparison.OrdinalIgnoreCase)),
             RestClients: clients.Count(c => string.Equals(c.Protocol, "rest", StringComparison.OrdinalIgnoreCase)),
-            PluginsInstalled: pluginStates.Count,
-            PluginsEnabled: pluginStates.Count(p => p.Value));
+            PluginsInstalled: plugins.Count,
+            PluginsEnabled: plugins.Count(p => _pluginRegistry!.IsEnabled(p.Id)));
     }
 }

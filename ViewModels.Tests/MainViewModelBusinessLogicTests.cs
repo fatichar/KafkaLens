@@ -136,6 +136,20 @@ public class MainViewModelBusinessLogicTests
     }
 
     [Fact]
+    public void TelemetryInventory_CountsDiscoveredPlugins_NotStaleSavedStates()
+    {
+        var pluginSettings = new PluginSettings();
+        pluginSettings.PluginStates["uninstalled-plugin"] = true;
+        settingsService.GetPluginSettings().Returns(pluginSettings);
+        var vm = CreateViewModel();
+
+        var inventory = vm.BuildTelemetryInventory();
+
+        inventory.PluginsInstalled.Should().Be(0);
+        inventory.PluginsEnabled.Should().Be(0);
+    }
+
+    [Fact]
     public async Task TelemetryNotice_NotNeeded_IsNotShown()
     {
         var control = CreateTelemetryNeedingNotice();

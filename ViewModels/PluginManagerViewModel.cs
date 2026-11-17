@@ -242,14 +242,25 @@ public partial class PluginManagerViewModel : ViewModelBase
 
     private async Task RefreshAsync()
     {
-        if (SelectedRepository == null) return;
+        // Bind everything (results and telemetry classification) to the repository fetched,
+        // not to whatever is selected when the response arrives.
+        var repository = SelectedRepository;
+        if (repository == null) return;
 
         IsLoading    = true;
         ErrorMessage = null;
+        var superseded = false;
 
         try
         {
-            var index = await _repoClient.FetchAsync(SelectedRepository);
+            var index = await _repoClient.FetchAsync(repository);
+
+            // The selection changed while fetching: a newer refresh owns the UI now.
+            if (!string.Equals(repository, SelectedRepository, StringComparison.Ordinal))
+            {
+                superseded = true;
+                return;
+            }
 
             if (index == null)
             {
@@ -263,7 +274,7 @@ public partial class PluginManagerViewModel : ViewModelBase
                 .ToDictionary(p => p.Plugin.Id, p => p.Plugin.Version);
 
             // Only plugin ids from the official index are reported; private repos may reveal names.
-            var isOfficialRepository = new PluginSettings().Repositories.Contains(SelectedRepository);
+            var isOfficialRepository = new PluginSettings().Repositories.Contains(repository);
             var vms = index.Plugins.Select(p =>
             {
                 var status = "Install";
@@ -295,7 +306,7 @@ public partial class PluginManagerViewModel : ViewModelBase
         }
         finally
         {
-            IsLoading = false;
+            if (!superseded) IsLoading = false;
         }
     }
 
