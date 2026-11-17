@@ -10,7 +10,7 @@ using KafkaLens.Shared.Services;
 using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Messages;
 using KafkaLens.ViewModels.Services;
-using AvaloniaApp.Services;
+using KafkaLens.UI.Services;
 
 namespace KafkaLens.ViewModels.Tests;
 

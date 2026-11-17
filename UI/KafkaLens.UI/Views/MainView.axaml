@@ -1,0 +1,256 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             xmlns:svc="clr-namespace:KafkaLens.ViewModels.Services;assembly=KafkaLens.ViewModels"
+             xmlns:views="clr-namespace:KafkaLens.UI.Views"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="KafkaLens.UI.Views.MainView"
+             x:DataType="vm:MainViewModel">
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Ctrl+Tab" Command="{Binding NextTabCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+Tab" Command="{Binding PreviousTabCommand}" />
+    </UserControl.KeyBindings>
+    <DockPanel Margin="0" Background="{DynamicResource ThemeBackgroundBrush}">
+        <Menu x:Name="MenuBar" DockPanel.Dock="Top" ItemsSource="{Binding MenuItems}">
+            <Menu.Styles>
+                <Style Selector="MenuItem" x:DataType="vm:MenuItemViewModel">
+                    <Design.DataContext>
+                        <vm:MenuItemViewModel />
+                    </Design.DataContext>
+                    <Setter Property="Header" Value="{Binding Header}"/>
+                    <Setter Property="ItemsSource" Value="{Binding Items}"/>
+                    <Setter Property="Command" Value="{Binding Command}"/>
+                    <Setter Property="CommandParameter" Value="{Binding CommandParameter}"/>
+                    <Setter Property="InputGesture" Value="{Binding Gesture}"/>
+                    <Setter Property="IsEnabled" Value="{Binding IsEnabled}"/>
+                    <Setter Property="Icon" Value="{Binding Icon}"/>
+                    <Setter Property="ToggleType" Value="{Binding ToggleType}"/>
+                    <Setter Property="IsChecked" Value="{Binding IsChecked}"/>
+                </Style>
+            </Menu.Styles>
+            <Menu.DataTemplates>
+                <DataTemplate DataType="{x:Type vm:StatusIconViewModel}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" VerticalAlignment="Center" IsVisible="{Binding !IsLoading}"/>
+                        <ProgressBar Classes="circular" MinWidth="0" Width="12" Height="12" IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </Menu.DataTemplates>
+        </Menu>
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding IsSaveNotificationVisible}"
+                Background="{DynamicResource ThemeToolbarBackgroundBrush}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="8,4">
+            <Grid>
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Margin="0,0,28,0">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding SaveNotificationMessage}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1"
+                            Content="Open folder"
+                            Command="{Binding OpenSavedMessagesDirectoryCommand}"
+                            Padding="8,2"/>
+                    <Button Grid.Column="2"
+                            Content="Hide for this session"
+                            Command="{Binding HideSaveNotificationsForSessionCommand}"
+                            Padding="8,2"/>
+                    <Button Grid.Column="3"
+                            Content="Never show again"
+                            Command="{Binding NeverShowSaveNotificationsCommand}"
+                            Padding="8,2"/>
+                </Grid>
+                <Button Content="×"
+                        Command="{Binding CloseSaveNotificationCommand}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        ToolTip.Tip="Dismiss"
+                        Padding="4,0"
+                        FontSize="14"/>
+            </Grid>
+        </Border>
+        <Border DockPanel.Dock="Bottom"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Background="{DynamicResource ThemeToolbarBackgroundBrush}">
+            <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="26">
+                <Button Grid.Column="0"
+                        Content="Log"
+                        Command="{Binding ToggleAppLogPanelCommand}"
+                        Margin="4,2"
+                        Padding="8,2"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Toggle application log panel"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding AppLogService.LatestEntry.Message, TargetNullValue=Ready}"
+                           Foreground="{DynamicResource ThemeForegroundBrush}"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="4,0"/>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding AppLogService.LatestEntry.Timestamp, StringFormat={}{0:HH:mm:ss}}"
+                           Foreground="{DynamicResource ThemeForegroundBrush}"
+                           VerticalAlignment="Center"
+                           Margin="8,0"/>
+            </Grid>
+        </Border>
+        <Border x:Name="AppLogPanel"
+                DockPanel.Dock="Bottom"
+                Height="220"
+                IsVisible="{Binding IsAppLogPanelVisible}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Background="{DynamicResource ThemeBackgroundBrush}">
+            <Grid RowDefinitions="Auto,*">
+                <DockPanel Grid.Row="0"
+                           LastChildFill="False"
+                           Background="{DynamicResource ThemeToolbarBackgroundBrush}"
+                           Margin="0">
+                    <TextBlock DockPanel.Dock="Left"
+                               Text="Application Log"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ThemeForegroundBrush}"
+                               VerticalAlignment="Center"
+                               Margin="8,4"/>
+                    <Button DockPanel.Dock="Right"
+                            Content="Open Log File"
+                            Command="{Binding OpenDiagnosticLogFileCommand}"
+                            Margin="4"
+                            Padding="8,2"/>
+                    <Button DockPanel.Dock="Right"
+                            Content="Clear"
+                            Command="{Binding ClearAppLogCommand}"
+                            Margin="4"
+                            Padding="8,2"/>
+                    <Button DockPanel.Dock="Right"
+                            Content="Copy All"
+                            Command="{Binding CopyAppLogCommand}"
+                            Margin="4"
+                            Padding="8,2"/>
+                    <StackPanel DockPanel.Dock="Right"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center"
+                                Margin="4,0,8,0"
+                                ToolTip.Tip="Search highlights matching rows; Filter hides non-matching rows.">
+                        <TextBlock Text="Search"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource ThemeForegroundBrush}"/>
+                        <ToggleSwitch IsChecked="{Binding AppLogFilterMode}"
+                                      OnContent=""
+                                      OffContent=""
+                                      VerticalAlignment="Center"/>
+                        <TextBlock Text="Filter"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource ThemeForegroundBrush}"/>
+                    </StackPanel>
+                    <TextBox DockPanel.Dock="Right"
+                             x:Name="AppLogFilterBox"
+                             Text="{Binding AppLogFilterText}"
+                             PlaceholderText="Search / filter…"
+                             Width="220"
+                             Margin="4,2"
+                             VerticalAlignment="Center"
+                             KeyDown="OnAppLogFilterBoxKeyDown"
+                             TextChanged="OnAppLogFilterBoxTextChanged"/>
+                </DockPanel>
+                <DataGrid x:Name="AppLogGrid"
+                          Grid.Row="1"
+                          ItemsSource="{Binding AppLogView}"
+                          AutoGenerateColumns="False"
+                          CanUserSortColumns="True"
+                          IsReadOnly="True"
+                          RowHeight="22"
+                          LoadingRow="OnAppLogGridLoadingRow"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          Background="{DynamicResource ThemeBackgroundBrush}"
+                          Foreground="{DynamicResource ThemeForegroundBrush}"
+                          BorderThickness="0">
+                    <DataGrid.Styles>
+                        <Style Selector="DataGridRow.searchMatch /template/ Rectangle#BackgroundRectangle">
+                            <Setter Property="Fill" Value="{DynamicResource ThemeAccentBrush}"/>
+                            <Setter Property="Opacity" Value="0.25"/>
+                            <Setter Property="IsVisible" Value="True"/>
+                        </Style>
+                        <Style Selector="DataGridRow.searchMatch:selected /template/ Rectangle#BackgroundRectangle">
+                            <Setter Property="Fill" Value="{DynamicResource ThemeAccentBrush}"/>
+                            <Setter Property="Opacity" Value="0.6"/>
+                            <Setter Property="IsVisible" Value="True"/>
+                        </Style>
+                    </DataGrid.Styles>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn x:DataType="svc:AppLogEntry"
+                                            Header="Time"
+                                            Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"
+                                            SortMemberPath="Timestamp"
+                                            Width="90"/>
+                        <DataGridTextColumn x:DataType="svc:AppLogEntry"
+                                            Header="Level"
+                                            Binding="{Binding Level}"
+                                            SortMemberPath="Level"
+                                            Width="90"/>
+                        <DataGridTextColumn x:DataType="svc:AppLogEntry"
+                                            Header="Source"
+                                            Binding="{Binding Source}"
+                                            SortMemberPath="Source"
+                                            Width="120"/>
+                        <DataGridTextColumn x:DataType="svc:AppLogEntry"
+                                            Header="Message"
+                                            Binding="{Binding Message}"
+                                            SortMemberPath="Message"
+                                            Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+        <GridSplitter x:Name="AppLogSplitter"
+                      DockPanel.Dock="Bottom"
+                      IsVisible="{Binding IsAppLogPanelVisible}"
+                      Height="5"
+                      HorizontalAlignment="Stretch"
+                      ResizeDirection="Rows"
+                      Background="Transparent"
+                      DragDelta="OnAppLogSplitterDragDelta"/>
+        <TabControl ItemsSource="{Binding OpenedClusters}"
+                    SelectedIndex="{Binding SelectedIndex}"
+                    Background="{DynamicResource ThemeBackgroundBrush}"
+                    Padding="0"
+                    BorderThickness="0,2,0,0">
+            <TabControl.Styles>
+                <Style Selector="TabItem Button.closeBtn">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="IsHitTestVisible" Value="True"/>
+                </Style>
+            </TabControl.Styles>
+            <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:OpenedClusterViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <Ellipse Width="10" Height="10" Classes="status" Tag="{Binding StatusColor}" VerticalAlignment="Center" IsVisible="{Binding !IsChecking}"/>
+                        <ProgressBar Classes="circular" MinWidth="0" Width="12" Height="12" IsIndeterminate="True" IsVisible="{Binding IsChecking}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                        <Button Content="✕"
+                                Classes="closeBtn"
+                                Command="{Binding CloseCommand}"
+                                Padding="3,0"
+                                FontSize="10"
+                                VerticalAlignment="Center"
+                                Background="Transparent"
+                                BorderThickness="0" />
+                    </StackPanel>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <DockPanel LastChildFill="True">
+                        <views:OpenedClusterPanel/>
+                    </DockPanel>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+    </DockPanel>
+</UserControl>

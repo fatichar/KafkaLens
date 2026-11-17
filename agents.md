@@ -13,17 +13,15 @@ Built with .NET 10 and Avalonia UI, targeting Windows, Linux, macOS (and experim
 ## Repository Layout
 
 ```
-AvaloniaApp/
-  AvaloniaApp/          Views, converters, ViewLocator  → see AvaloniaApp/agents.md
-  AvaloniaApp.Desktop/  Desktop entry point, publish scripts
-  AvaloniaApp.Android/  Android target
-  AvaloniaApp.Browser/  WASM/Browser target
+UI/
+  KafkaLens.UI/       Views, converters, ViewLocator   → see UI/agents.md
+  KafkaLens.Desktop/  Desktop entry point, publish scripts
+  KafkaLens.Android/  Android target
+  KafkaLens.Browser/  WASM/Browser target
 Core/                   Kafka consumer infrastructure    → see Core/agents.md
 ViewModels/             MVVM ViewModels                  → see ViewModels/agents.md
 GrpcApi/                gRPC server (Kafka-facing)
 GrpcClient/             gRPC client library
-RestApi/                REST API (alternative backend)
-RestClient/             REST client library
 LocalClient/            Local saved-messages client
 Shared/                 Shared models, interfaces, data-access abstractions
 Formatting/             Message key/value formatters
@@ -54,7 +52,7 @@ dotnet build KafkaLens.slnx -c Release
 dotnet test KafkaLens.slnx -c Release
 ```
 
-Do **not** use the `AvaloniaApp.sln` — use `KafkaLens.slnx`.
+Use `KafkaLens.slnx` as the solution file.
 
 ## Architecture Guidelines
 

@@ -64,7 +64,7 @@ jobs:
           $releasesDir = "Releases"
 
           # Build
-          dotnet publish AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj `
+          dotnet publish UI/KafkaLens.Desktop/KafkaLens.Desktop.csproj `
             -r "$platformName" `
             -c Release `
             --sc `
@@ -115,7 +115,7 @@ jobs:
           zipFile="Releases/${baseName}.zip"
 
           # Build
-          dotnet publish AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj \
+          dotnet publish UI/KafkaLens.Desktop/KafkaLens.Desktop.csproj \
             -r "$platformName" \
             -c Release \
             --sc \
@@ -165,7 +165,7 @@ jobs:
           zipFile="Releases/${baseName}.zip"
 
           # Build
-          dotnet publish AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj \
+          dotnet publish UI/KafkaLens.Desktop/KafkaLens.Desktop.csproj \
             -r "$platformName" \
             -c Release \
             --sc \

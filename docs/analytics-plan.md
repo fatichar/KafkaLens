@@ -156,7 +156,7 @@ ViewModels ──► ITelemetry (Shared)  ── Track(name, props) — non-bloc
 - `ITelemetry` in `Shared` so Core-free modules and plugins (optionally, later) can use it.
 - Event names/props are **constants + typed helpers** (`Telemetry.FetchCompleted(...)`), not free strings,
   so `privacy.html` and a unit test can enumerate the full schema.
-- `ActivityTracker` (AvaloniaApp layer, thin): window focus + last-input timestamp → exposes
+- `ActivityTracker` (KafkaLens.UI layer, thin): window focus + last-input timestamp → exposes
   `IsActive` to `TelemetryService` via an interface. No logic in Views beyond wiring.
 - Wiring points: `App.axaml.cs` (DI, start/exit), `MainViewModel.*` (menus, tabs, updates,
   preferences), `OpenedClusterViewModel.Fetching.cs` (`OnStreamFinished` → `fetch_completed`),
@@ -238,9 +238,9 @@ Move the site to the VPS only if we later need server-side logic (signed downloa
 ## 11. Impacted modules
 
 `Shared` (interface + event types), `ViewModels` (service, sink, wiring, Preferences UI VM),
-`AvaloniaApp` (DI, activity tracker, first-run dialog view, Preferences view),
+`KafkaLens.UI` (DI, activity tracker, first-run dialog view, Preferences view),
 `ViewModels.Tests`, `docs/` (privacy page, this plan), VPS/DNS (outside repo).
-No change to `Core`, `GrpcApi`, `RestApi`, clients, or packaging.
+No change to `Core`, `GrpcApi`, clients, or packaging.
 
 ## 11a. Implementation notes (as built)
 

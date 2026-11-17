@@ -14,7 +14,7 @@ namespace IntegrationTests;
 
 public abstract class IntegrationTestBase
 {
-    protected TestApp App => (TestApp)AvaloniaApp.App.Current;
+    protected TestApp App => (TestApp)KafkaLens.UI.App.Current;
     protected MainViewModel MainViewModel => App.Services!.GetRequiredService<MainViewModel>();
     protected FakeKafkaClient FakeKafkaClient => (FakeKafkaClient)App.Services!.GetRequiredService<KafkaLens.Shared.IKafkaLensClient>();
 

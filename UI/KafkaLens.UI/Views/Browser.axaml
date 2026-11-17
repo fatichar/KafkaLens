@@ -1,0 +1,114 @@
+﻿<UserControl x:Class="KafkaLens.UI.Views.Browser"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:KafkaLens.ViewModels;assembly=KafkaLens.ViewModels"
+             xmlns:views="clr-namespace:KafkaLens.UI.Views"
+             xmlns:avaloniaApp="clr-namespace:KafkaLens.UI"
+             xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit"
+             x:DataType="vm:OpenedClusterViewModel">
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}" />
+    </UserControl.KeyBindings>
+    <UserControl.Resources>
+        <ContextMenu x:Key="MessageGridContextMenu">
+            <MenuItem Header="Copy">
+                <MenuItem Header="Key" Command="{Binding CopyKeyCommand}"/>
+                <MenuItem Header="Value" Command="{Binding CopyValueCommand}"/>
+                <MenuItem Header="Offset" Command="{Binding CopyOffsetCommand}"/>
+                <MenuItem Header="Timestamp" Command="{Binding CopyTimestampCommand}"/>
+                <Separator/>
+                <MenuItem Header="All" Command="{Binding CopyAllCommand}"/>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Save Selected">
+                <MenuItem Header="As RAW" Command="{Binding SaveSelectedAsRawCommand}"/>
+                <MenuItem Header="As Formatted" Command="{Binding SaveSelectedAsFormattedCommand}"/>
+            </MenuItem>
+            <MenuItem Header="Save All">
+                <MenuItem Header="As RAW" Command="{Binding SaveAllAsRawCommand}"/>
+                <MenuItem Header="As Formatted" Command="{Binding SaveAllAsFormattedCommand}"/>
+            </MenuItem>
+        </ContextMenu>
+        <avaloniaApp:NodeTypeConverter x:Key="IsNodeType" />
+    </UserControl.Resources>
+    <TabControl BorderThickness="0,1,0,0" Padding="0">
+        <TabItem Header="Messages">
+            <Grid RowDefinitions="*, 3, *">
+                <DockPanel Margin="0">
+                    <views:MessagesToolbar x:Name="MessagesToolbar" DockPanel.Dock="Top"
+                                           HorizontalAlignment="Stretch"
+                                           Background="{DynamicResource ThemeToolbarBackgroundBrush}"
+                                           BorderThickness="0,1,0,1" BorderBrush="{DynamicResource ThemeBorderBrush}">
+                    </views:MessagesToolbar>
+
+                    <DataGrid Name="MessagesGrid" AutoGenerateColumns="False" HeadersVisibility="All"
+                              HorizontalAlignment="Stretch"
+                              CanUserReorderColumns="True"
+                              CanUserResizeColumns="True"
+                              LoadingRow="messagesGrid_LoadingRow"
+                              Sorting="MessagesGrid_OnSorting"
+                              CanUserSortColumns="True"
+                              RowHeaderWidth="50"
+                              IsReadOnly="True"
+                              ItemsSource="{Binding CurrentMessages.Filtered}"
+                              SelectedItem="{Binding CurrentMessages.CurrentMessage, Mode=TwoWay}"
+                              SelectionChanged="MessagesGrid_OnSelectionChanged"
+                              ContextMenu="{StaticResource MessageGridContextMenu}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Partition"
+                                                Binding="{Binding Partition }" SortMemberPath="Partition" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Offset" Binding="{Binding Offset}" SortMemberPath="Offset" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Timestamp"
+                                                Binding="{Binding Timestamp}" SortMemberPath="Timestamp" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Key" Binding="{Binding Key }" SortMemberPath="Key" />
+                            <DataGridTextColumn x:DataType="vm:MessageViewModel" Header="Value" Binding="{Binding Summary }" SortMemberPath="Summary" />
+                        </DataGrid.Columns>
+                        <DataGrid.RowDetailsTemplate></DataGrid.RowDetailsTemplate>
+                    </DataGrid>
+                </DockPanel>
+
+                <GridSplitter Grid.Row="1" />
+
+                <DockPanel Grid.Row="2">
+                    <views:MessageDisplayToolbar x:Name="MessageDisplayToolbar" DockPanel.Dock="Bottom"
+                                                 VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                                                 Background="{DynamicResource ThemeToolbarBackgroundBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ThemeBorderBrush}">
+                    </views:MessageDisplayToolbar>
+                    <TabControl Padding="0" BorderThickness="0">
+                        <TabItem Header="Body">
+                            <avaloniaEdit:TextEditor
+                                Name="MessageViewer"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Background="{DynamicResource ThemeBackgroundBrush}"
+                                Foreground="{DynamicResource ThemeForegroundBrush}"
+                                FontFamily="Consolas"
+                                FontSize="{Binding FontSize}"
+                                IsReadOnly="True"
+                                />
+                        </TabItem>
+                        <TabItem Header="Headers">
+                            <DataGrid AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      HeadersVisibility="Column"
+                                      ItemsSource="{Binding CurrentMessages.CurrentMessage.Headers}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn x:DataType="vm:MessageHeaderViewModel"
+                                                        Header="Name" Binding="{Binding Name}" Width="*"/>
+                                    <DataGridTextColumn x:DataType="vm:MessageHeaderViewModel"
+                                                        Header="Value" Binding="{Binding Value}" Width="2*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                    </TabControl>
+                </DockPanel>
+            </Grid>
+        </TabItem>
+        <TabItem Header="Configuration">
+            <Panel>
+                <views:TopicConfigView IsVisible="{Binding SelectedNodeType, Converter={StaticResource IsNodeType}, ConverterParameter=TOPIC}"/>
+                <views:PartitionConfigView IsVisible="{Binding SelectedNodeType, Converter={StaticResource IsNodeType}, ConverterParameter=PARTITION}"/>
+            </Panel>
+        </TabItem>
+    </TabControl>
+</UserControl>

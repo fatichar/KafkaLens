@@ -6,7 +6,7 @@
             "type": "node-terminal",
             "request": "launch",
             "preLaunchTask": "build",
-            "command": "dotnet run --project AvaloniaApp/AvaloniaApp.Desktop/AvaloniaApp.Desktop.csproj --no-build",
+            "command": "dotnet run --project UI/KafkaLens.Desktop/KafkaLens.Desktop.csproj --no-build",
             "cwd": "${workspaceFolder}"
         }
     ]

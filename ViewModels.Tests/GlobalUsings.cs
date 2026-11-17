@@ -8,7 +8,7 @@ global using AutoFixture.Xunit3;
 global using NSubstitute;
 global using FluentAssertions;
 global using KafkaLens.ViewModels;
-global using AvaloniaApp;
+global using KafkaLens.UI;
 global using KafkaLens.Shared.Models;
 global using KafkaLens.Shared.Entities;
 global using KafkaLens.Clients.Entities;

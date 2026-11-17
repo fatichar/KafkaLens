@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Headless;
-using AvaloniaApp;
+using KafkaLens.UI;
 using Avalonia.Headless.XUnit;
 
 [assembly: AvaloniaTestApplication(typeof(IntegrationTests.TestAppBuilder))]

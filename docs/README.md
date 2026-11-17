@@ -4,8 +4,8 @@ KafkaLens is a cross-platform desktop client for Apache Kafka, built with .NET a
 
 ## Repository Overview
 
-- `AvaloniaApp/AvaloniaApp.Desktop`: Main desktop application entry point and publish scripts.
-- `Core`, `GrpcApi`, `RestApi`, `ViewModels`, `Shared`: Core libraries and services used by the app.
+- `UI/KafkaLens.Desktop`: Main desktop application entry point and publish scripts.
+- `Core`, `GrpcApi`, `ViewModels`, `Shared`: Core libraries and services used by the app.
 - `*.Tests` projects: Unit/integration test projects.
 - `Installer`: Windows installer resources (`install_windows.iss`).
 - `Releases`: Build artifacts output directory.
@@ -41,7 +41,7 @@ Run all platform publish scripts:
 ./publish.sh
 ```
 
-Run a single platform from `AvaloniaApp/AvaloniaApp.Desktop`:
+Run a single platform from `UI/KafkaLens.Desktop`:
 
 ```bash
 ./publish_windows.sh

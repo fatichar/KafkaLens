@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using AvaloniaApp;
+using KafkaLens.UI;
 using KafkaLens.Formatting;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
@@ -93,7 +93,7 @@ public sealed class BenchmarkApp : App
         services.AddSingleton(new PluginRepositoryClient());
         services.AddSingleton(new PluginInstaller(pluginsDir));
         services.AddSingleton(new RepositoryManager(settingsService));
-        services.AddSingleton<IThemeService>(new AvaloniaApp.Services.ThemeService(extensionRegistry, pluginsDir));
+        services.AddSingleton<IThemeService>(new KafkaLens.UI.Services.ThemeService(extensionRegistry, pluginsDir));
 
         services.AddSingleton<MainViewModel>();
         services.AddLogging();

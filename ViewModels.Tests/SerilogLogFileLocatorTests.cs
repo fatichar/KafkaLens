@@ -1,5 +1,5 @@
 using System.IO;
-using AvaloniaApp.Services;
+using KafkaLens.UI.Services;
 
 namespace KafkaLens.ViewModels.Tests;
 
