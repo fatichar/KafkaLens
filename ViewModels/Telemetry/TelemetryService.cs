@@ -50,6 +50,8 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
     private readonly TaskCompletionSource consentGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly CancellationTokenSource loopCts = new();
     private readonly SemaphoreSlim flushLock = new(1, 1);
+    private CancellationTokenSource disableCts = new();
+    private bool remoteConfigChecked;
     private readonly ConcurrentQueue<string> recentEvents = new();
     private readonly Stopwatch sessionClock = Stopwatch.StartNew();
     private readonly string sessionId = Guid.NewGuid().ToString("N");
@@ -131,6 +133,8 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
         settings.SetValue(EnabledKey, enabled ? "true" : "false");
         if (!enabled)
         {
+            // Abort any in-flight send so nothing more leaves the machine after opt-out.
+            Interlocked.Exchange(ref disableCts, new CancellationTokenSource()).Cancel();
             while (channel.Reader.TryRead(out _)) { }
             spool.Clear();
         }
@@ -278,6 +282,7 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
         await ShutdownAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         loopCts.Dispose();
         flushLock.Dispose();
+        disableCts.Dispose();
     }
 
     // ── Internals ───────────────────────────────────────────────────────────
@@ -351,25 +356,13 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
         {
             await consentGate.Task.WaitAsync(ct).ConfigureAwait(false);
 
-            if (remoteEnabledCheck != null)
-            {
-                try
-                {
-                    remoteDisabled = !await remoteEnabledCheck(ct).ConfigureAwait(false);
-                    if (remoteDisabled) Log.Information("Telemetry disabled by remote config");
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    Log.Debug(ex, "Telemetry remote config check failed");
-                }
-            }
-
-            var includeSpool = true;
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Math.Max(1, options.FlushIntervalSeconds)));
             do
             {
-                await FlushAsync(includeSpool, ct).ConfigureAwait(false);
-                includeSpool = true;
+                // No network contact at all (not even the kill-switch fetch) while the user has opted out.
+                if (!userEnabled) continue;
+                await CheckRemoteConfigOnceAsync(ct).ConfigureAwait(false);
+                await FlushAsync(includeSpool: true, ct).ConfigureAwait(false);
             } while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false));
         }
         catch (OperationCanceledException)
@@ -381,6 +374,23 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
             Log.Debug(ex, "Telemetry sender loop failed");
         }
     }
+
+    private async Task CheckRemoteConfigOnceAsync(CancellationToken ct)
+    {
+        if (remoteConfigChecked || remoteEnabledCheck == null) return;
+        remoteConfigChecked = true;
+        try
+        {
+            remoteDisabled = !await remoteEnabledCheck(ct).ConfigureAwait(false);
+            if (remoteDisabled) Log.Information("Telemetry disabled by remote config");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.Debug(ex, "Telemetry remote config check failed");
+        }
+    }
+
+    private bool CanSend => userEnabled && IsAvailable && !remoteDisabled;
 
     /// <summary>Sends spooled + queued events; anything not sent is spooled.</summary>
     internal async Task FlushAsync(bool includeSpool, CancellationToken ct)
@@ -411,18 +421,20 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
         while (channel.Reader.TryRead(out var e)) pending.Add(e);
         if (pending.Count == 0) return;
 
-        if (!userEnabled || !IsAvailable || remoteDisabled)
+        if (!CanSend)
         {
             spool.Clear();
             return;
         }
 
         var sent = 0;
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, Volatile.Read(ref disableCts).Token);
         try
         {
             foreach (var e in pending)
             {
-                if (!await sink.SendAsync(e, ct).ConfigureAwait(false)) break;
+                if (!CanSend) break;
+                if (!await sink.SendAsync(e, linked.Token).ConfigureAwait(false)) break;
                 RecordSent(e);
                 sent++;
             }
@@ -436,7 +448,8 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
             Log.Debug(ex, "Telemetry flush failed");
         }
 
-        if (sent < pending.Count) spool.Append(pending.Skip(sent));
+        // Never re-create the spool after an opt-out that happened mid-flush.
+        if (sent < pending.Count && CanSend) spool.Append(pending.Skip(sent));
     }
 
     private void RecordSent(TelemetryEvent e)

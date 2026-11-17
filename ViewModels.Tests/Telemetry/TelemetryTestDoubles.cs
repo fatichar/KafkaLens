@@ -33,6 +33,28 @@ internal sealed class RecordingSink : ITelemetrySink
     }
 }
 
+/// <summary>Blocks every send until cancelled; signals when a send has started.</summary>
+internal sealed class BlockingSink : ITelemetrySink
+{
+    public TaskCompletionSource SendStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public bool WasCancelled { get; private set; }
+
+    public async Task<bool> SendAsync(TelemetryEvent telemetryEvent, CancellationToken cancellationToken)
+    {
+        SendStarted.TrySetResult();
+        try
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            WasCancelled = true;
+            throw;
+        }
+    }
+}
+
 internal sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
 {
     public List<(HttpRequestMessage Request, string Body)> Requests { get; } = new();
@@ -51,6 +73,7 @@ internal sealed class TelemetryFixture : IAsyncDisposable
     public string Dir { get; } = Path.Combine(Path.GetTempPath(), "kl-telemetry-" + Guid.NewGuid().ToString("N"));
     public SettingsService Settings { get; }
     public RecordingSink Sink { get; } = new();
+    public ITelemetrySink ActiveSink { get; }
     public TelemetrySpool Spool { get; }
     public ActivityTracker Activity { get; } = new();
     public TelemetryService Service { get; }
@@ -62,15 +85,17 @@ internal sealed class TelemetryFixture : IAsyncDisposable
         TelemetryOptions? options = null,
         Dictionary<string, string?>? env = null,
         Action<SettingsService>? seedSettings = null,
-        Func<CancellationToken, Task<bool>>? remoteCheck = null)
+        Func<CancellationToken, Task<bool>>? remoteCheck = null,
+        ITelemetrySink? sink = null)
     {
+        ActiveSink = sink ?? Sink;
         Directory.CreateDirectory(Dir);
         Settings = new SettingsService(Path.Combine(Dir, "settings.json"));
         seedSettings?.Invoke(Settings);
         Spool = new TelemetrySpool(Path.Combine(Dir, "telemetry", "queue.jsonl"), 1_000_000, TimeSpan.FromDays(7));
         Service = new TelemetryService(
             options ?? new TelemetryOptions { WebsiteId = "site", FlushIntervalSeconds = 3600 },
-            Settings, Sink, Spool, Env, Activity,
+            Settings, ActiveSink, Spool, Env, Activity,
             Path.Combine(Dir, "telemetry", "session.lock"),
             name => env != null && env.TryGetValue(name, out var v) ? v : null,
             remoteCheck);

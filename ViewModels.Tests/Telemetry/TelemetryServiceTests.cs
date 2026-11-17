@@ -195,6 +195,42 @@ public class TelemetryServiceTests
     }
 
     [Fact]
+    public async Task OptedOutUser_NeverContactsRemoteConfig_UntilReEnabled()
+    {
+        var calls = 0;
+        await using var f = new TelemetryFixture(
+            new TelemetryOptions { WebsiteId = "site", FlushIntervalSeconds = 1 },
+            remoteCheck: _ => { Interlocked.Increment(ref calls); return Task.FromResult(true); });
+        f.Service.Start();
+
+        f.Service.AcknowledgeNotice(enabled: false);
+        await Task.Delay(1500);
+        Volatile.Read(ref calls).Should().Be(0);
+
+        f.Service.SetEnabled(true);
+        await WaitUntil(() => Volatile.Read(ref calls) > 0);
+        Volatile.Read(ref calls).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DisablingDuringFlush_CancelsSend_AndDoesNotRecreateSpool()
+    {
+        var sink = new BlockingSink();
+        await using var f = new TelemetryFixture(sink: sink);
+        f.Service.Start(runBackgroundLoops: false);
+        f.Service.AcknowledgeNotice(true);
+        f.Service.Feature(TelemetrySchema.Features.CopyKey);
+
+        var flush = f.Service.FlushAsync(includeSpool: true, CancellationToken.None);
+        await sink.SendStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        f.Service.SetEnabled(false);
+        await flush.WaitAsync(TimeSpan.FromSeconds(5));
+
+        sink.WasCancelled.Should().BeTrue();
+        File.Exists(f.Spool.FilePath).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task PreviousSessionWithoutCleanExit_IsReportedOnStartup()
     {
         await using var f = new TelemetryFixture();
