@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using KafkaLens.ViewModels.Telemetry;
+using Microsoft.Extensions.DependencyInjection;
 using Avalonia.VisualTree;
 using KafkaLens.ViewModels;
 
@@ -20,6 +23,21 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        WireActivityTracking();
+    }
+
+    // Feeds the telemetry "active time" tracker: focus + any input. No input content is read.
+    private void WireActivityTracking()
+    {
+        var tracker = (Avalonia.Application.Current as App)?.Services?.GetService<ActivityTracker>();
+        if (tracker == null) return;
+
+        Activated += (_, _) => tracker.SetFocused(true);
+        Deactivated += (_, _) => tracker.SetFocused(false);
+        AddHandler(KeyDownEvent, (_, _) => tracker.RecordInput(), RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerPressedEvent, (_, _) => tracker.RecordInput(), RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerMovedEvent, (_, _) => tracker.RecordInput(), RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerWheelChangedEvent, (_, _) => tracker.RecordInput(), RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
     protected override void OnDataContextChanged(EventArgs args)

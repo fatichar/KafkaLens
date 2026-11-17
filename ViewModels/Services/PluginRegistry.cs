@@ -47,10 +47,13 @@ public class PluginRegistry : IDisposable
     /// and records any <see cref="IKafkaLensPlugin"/> implementations for later
     /// initialisation via <see cref="InitializeAll"/>.
     /// </summary>
+    /// <summary>Result of the most recent <see cref="LoadPlugins"/> scan (installed plugins on disk).</summary>
+    public IReadOnlyList<PluginInfo> InstalledPlugins { get; private set; } = [];
+
     public IReadOnlyList<PluginInfo> LoadPlugins()
     {
         if (!Directory.Exists(_pluginsDir))
-            return [];
+            return InstalledPlugins = [];
 
         var pluginSettings = _settings.GetPluginSettings();
         var pluginStates = pluginSettings.PluginStates;
@@ -118,7 +121,7 @@ public class PluginRegistry : IDisposable
             _settings.SavePluginSettings(pluginSettings);
         }
 
-        return result;
+        return InstalledPlugins = result;
     }
 
     /// <summary>

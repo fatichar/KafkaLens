@@ -5,7 +5,7 @@
         Width="420"
         MinWidth="360"
         SizeToContent="Height"
-        MaxHeight="320"
+        MaxHeight="480"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">

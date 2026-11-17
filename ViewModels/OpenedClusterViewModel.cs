@@ -8,6 +8,8 @@ using KafkaLens.Shared.Models;
 using KafkaLens.Shared;
 using KafkaLens.ViewModels.Messages;
 using KafkaLens.ViewModels.Services;
+using KafkaLens.Shared.Telemetry;
+using KafkaLens.ViewModels.Telemetry;
 
 namespace KafkaLens.ViewModels;
 
@@ -23,6 +25,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
     private readonly IFormatterService formatterService;
     private ClusterViewModel cluster;
     private readonly IAppLogService appLogService;
+    private readonly ITelemetry telemetry;
+    private bool applyingTabState;
+    private bool topicFilterTracked;
+    private readonly HashSet<string> filtersTrackedForFetch = new();
     private bool disposed;
     private readonly string tabSuffix;
     private IKafkaLensClient KafkaLensClient => cluster.Client;
@@ -171,8 +177,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         IFormatterService formatterService,
         ClusterViewModel cluster,
         string name,
-        IAppLogService? appLogService = null)
+        IAppLogService? appLogService = null,
+        ITelemetry? telemetry = null)
     {
+        this.telemetry = telemetry ?? NullTelemetry.Instance;
         this.settingsService = settingsService;
         this.topicSettingsService = topicSettingsService;
         this.messageSaver = messageSaver;
@@ -196,38 +204,52 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
 
         ToggleFetchCommand = new RelayCommand(() =>
         {
-            if (IsLoading) StopLoading();
+            if (IsLoading)
+            {
+                this.telemetry.Feature(TelemetrySchema.Features.StopFetch);
+                StopLoading();
+            }
             else FetchMessages();
         });
         RefreshCommand = new RelayCommand(() =>
         {
+            this.telemetry.Feature(TelemetrySchema.Features.RefreshFetch);
             if (IsLoading) StopLoading();
             FetchMessages();
         });
-        ConnectCommand = new AsyncRelayCommand(ConnectAsync);
+        ConnectCommand = new AsyncRelayCommand(() =>
+        {
+            this.telemetry.Feature(TelemetrySchema.Features.ConnectRetry);
+            return ConnectAsync();
+        });
         GuessValueFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: false));
         GuessKeyFormatterCommand = new RelayCommand(() => GuessFormatterForSelectedNode(isKeyFormatter: true));
-        OpenFormatterPreferencesCommand = new RelayCommand(() => MainViewModel.ShowFormatterPreferences());
+        OpenFormatterPreferencesCommand = new RelayCommand(() =>
+        {
+            this.telemetry.Feature(TelemetrySchema.Features.FormatterPreferencesOpen, "tab");
+            MainViewModel.ShowFormatterPreferences();
+        });
         SaveTopicSettingsCommand = new AsyncRelayCommand(SaveTopicSettingsAsync);
+        CurrentMessages.PropertyChanged += OnCurrentMessagesPropertyChanged;
 
         SaveSelectedAsRawCommand = new AsyncRelayCommand(
-            () => SaveMessagesAsync(SelectedMessages, false),
+            () => SaveMessagesAsync(SelectedMessages, false, "selected_raw"),
             () => cluster.Client.CanSaveMessages);
         SaveSelectedAsFormattedCommand = new AsyncRelayCommand(
-            () => SaveMessagesAsync(SelectedMessages, true),
+            () => SaveMessagesAsync(SelectedMessages, true, "selected_formatted"),
             () => cluster.Client.CanSaveMessages);
         SaveAllAsRawCommand = new AsyncRelayCommand(
-            () => SaveMessagesAsync(CurrentMessages.Messages, false),
+            () => SaveMessagesAsync(CurrentMessages.Messages, false, "all_raw"),
             () => cluster.Client.CanSaveMessages);
         SaveAllAsFormattedCommand = new AsyncRelayCommand(
-            () => SaveMessagesAsync(CurrentMessages.Messages, true),
+            () => SaveMessagesAsync(CurrentMessages.Messages, true, "all_formatted"),
             () => cluster.Client.CanSaveMessages);
 
-        CopyKeyCommand = new AsyncRelayCommand(CopyKeyAsync);
-        CopyValueCommand = new AsyncRelayCommand(CopyValueAsync);
-        CopyOffsetCommand = new AsyncRelayCommand(CopyOffsetAsync);
-        CopyTimestampCommand = new AsyncRelayCommand(CopyTimestampAsync);
-        CopyAllCommand = new AsyncRelayCommand(CopyAllAsync);
+        CopyKeyCommand = new AsyncRelayCommand(() => Tracked(TelemetrySchema.Features.CopyKey, CopyKeyAsync));
+        CopyValueCommand = new AsyncRelayCommand(() => Tracked(TelemetrySchema.Features.CopyValue, CopyValueAsync));
+        CopyOffsetCommand = new AsyncRelayCommand(() => Tracked(TelemetrySchema.Features.CopyOffset, CopyOffsetAsync));
+        CopyTimestampCommand = new AsyncRelayCommand(() => Tracked(TelemetrySchema.Features.CopyTimestamp, CopyTimestampAsync));
+        CopyAllCommand = new AsyncRelayCommand(() => Tracked(TelemetrySchema.Features.CopyAll, CopyAllAsync));
 
         Nodes.Add(this);
         IsSelected = true;
@@ -252,8 +274,9 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         });
     }
 
-    private async Task SaveMessagesAsync(IList<MessageViewModel> messages, bool formatted)
+    private async Task SaveMessagesAsync(IList<MessageViewModel> messages, bool formatted, string source)
     {
+        telemetry.Feature(TelemetrySchema.Features.SaveMessages, source);
         var result = await messageSaver.SaveAsync(messages, Name, formatted);
         if (result != null)
         {
@@ -338,6 +361,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         fetchCts?.Dispose();
         cluster.PropertyChanged -= OnClusterPropertyChanged;
         Topics.CollectionChanged -= OnTopicsCollectionChanged;
+        CurrentMessages.PropertyChanged -= OnCurrentMessagesPropertyChanged;
         WeakReferenceMessenger.Default.UnregisterAll(this);
         IsActive = false;
     }

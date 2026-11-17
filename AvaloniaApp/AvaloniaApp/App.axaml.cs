@@ -22,6 +22,10 @@ using KafkaLens.Shared.Services;
 using AvaloniaApp.Services;
 using Serilog;
 using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Telemetry;
+using KafkaLens.ViewModels.Telemetry;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace AvaloniaApp;
 
@@ -30,6 +34,7 @@ public class App : Application
     public IServiceProvider? Services { get; protected set; }
     public new static App Current => (App)Application.Current!;
     private IThemeService? _themeService;
+    private int _pluginsLoaded;
 
     public App()
     {
@@ -75,6 +80,15 @@ public class App : Application
         var settingsService = new SettingsService(settingsFilePath);
         services.AddSingleton<ISettingsService>(settingsService);
 
+        var activityTracker = new ActivityTracker();
+        services.AddSingleton(activityTracker);
+        var telemetryService = CreateTelemetryService(config.Telemetry, settingsService, kafkaLensDataPath, activityTracker);
+        services.AddSingleton(telemetryService);
+        services.AddSingleton<ITelemetry>(telemetryService);
+        services.AddSingleton<ITelemetryControl>(telemetryService);
+        RegisterGlobalErrorHandlers(telemetryService);
+        telemetryService.Start();
+
         var kafkaConfig = settingsService.GetKafkaConfig();
         services.AddSingleton(kafkaConfig);
 
@@ -95,7 +109,7 @@ public class App : Application
         var pluginRegistry    = new PluginRegistry(pluginManagerDir, settingsService, extensionRegistry);
 
         // Load enabled plugins so their extensions are registered
-        _ = pluginRegistry.LoadPlugins();
+        _pluginsLoaded = pluginRegistry.LoadPlugins().Count;
 
         // Initialize ThemeService after plugins are loaded, passing the resolved plugins directory
         // so it can locate plugin XAML resources without hard-coding the path.
@@ -135,6 +149,59 @@ public class App : Application
             FormatterFactory.Instance.AddFormatter(formatter);
 
         return provider;
+    }
+
+    private static TelemetryService CreateTelemetryService(
+        TelemetryOptions options, ISettingsService settingsService, string dataPath, ActivityTracker activityTracker)
+    {
+        var environment = TelemetryEnvironment.Detect();
+        var telemetryDir = Path.Combine(dataPath, "telemetry");
+        var spool = new TelemetrySpool(
+            Path.Combine(telemetryDir, "queue.jsonl"),
+            options.MaxSpoolBytes,
+            TimeSpan.FromDays(options.MaxSpoolAgeDays));
+#if DEBUG
+        // Debug builds never send: events go to the diagnostic log only.
+        ITelemetrySink sink = new LogTelemetrySink();
+        Func<System.Threading.CancellationToken, Task<bool>>? remoteCheck = null;
+#else
+        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        ITelemetrySink sink = new UmamiTelemetrySink(http, options, environment);
+        var remoteCheck = TelemetryService.CreateRemoteConfigCheck(http, options);
+#endif
+        return new TelemetryService(options, settingsService, sink, spool, environment, activityTracker,
+            Path.Combine(telemetryDir, "session.lock"), remoteEnabledCheck: remoteCheck);
+    }
+
+    private static void RegisterGlobalErrorHandlers(TelemetryService telemetry)
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            if (e.ExceptionObject is not Exception ex) return;
+            Log.Fatal(ex, "Unhandled exception (terminating: {IsTerminating})", e.IsTerminating);
+            telemetry.ReportError(ex, "unhandled", e.IsTerminating);
+            if (e.IsTerminating) Log.CloseAndFlush();
+        };
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Log.Error(e.Exception, "Unobserved task exception");
+            telemetry.ReportError(e.Exception, "unobserved_task", terminating: false);
+        };
+        // Environment.Exit (e.g. after launching the updater) skips the normal exit path.
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => telemetry.HandleProcessExit();
+    }
+
+    private void ReportStartup()
+    {
+        try
+        {
+            var startup = DateTime.Now - Process.GetCurrentProcess().StartTime;
+            Services?.GetService<TelemetryService>()?.ReportStartup(startup, _pluginsLoaded);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Failed to report startup telemetry");
+        }
     }
 
     private static void AddLocalDependencies(
@@ -466,7 +533,8 @@ KKKKKKKKK    KKKKKKK  aaaaaaaaaa  aaaafffffffff            kkkkkkkk    kkkkkkkaa
                 {
                     viewModel.CurrentTheme = theme;
                 },
-                Services.GetService<IFormatterService>())
+                Services.GetService<IFormatterService>(),
+                Services.GetService<ITelemetry>())
             {
                 SelectedTabIndex = 3
             };
@@ -483,9 +551,20 @@ KKKKKKKKK    KKKKKKK  aaaaaaaaaa  aaaafffffffff            kkkkkkkk    kkkkkkkaa
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
                 DataContext = viewModel
+            };
+            desktop.MainWindow = mainWindow;
+            mainWindow.Opened += async (_, _) =>
+            {
+                ReportStartup();
+                if (viewModel != null) await viewModel.ShowTelemetryNoticeIfNeededAsync();
+            };
+            desktop.Exit += (_, _) =>
+            {
+                // Bounded (2s) final flush; loops use ConfigureAwait(false), so blocking here cannot deadlock.
+                Services?.GetService<TelemetryService>()?.ShutdownAsync(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)

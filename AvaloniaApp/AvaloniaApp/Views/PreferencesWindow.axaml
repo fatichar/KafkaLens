@@ -134,6 +134,32 @@
           </ScrollViewer>
         </DockPanel>
       </TabItem>
+
+      <TabItem Header="Privacy" IsVisible="{Binding IsTelemetryAvailable}">
+        <DockPanel Margin="10">
+          <StackPanel DockPanel.Dock="Top" Spacing="10">
+            <CheckBox IsChecked="{Binding SendUsageData}"
+                      IsEnabled="{Binding !IsTelemetryForcedOff}"
+                      Content="Send anonymous usage data"/>
+            <TextBlock TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       Text="Helps decide what to improve. Includes app version, OS, features used, fetch sizes and timings, settings, and crash details. Never includes cluster, broker, topic or message data, file paths, or personal information."/>
+            <TextBlock TextWrapping="Wrap" IsVisible="{Binding IsTelemetryForcedOff}"
+                       Text="Disabled by the DO_NOT_TRACK or KAFKALENS_TELEMETRY environment variable."/>
+            <SelectableTextBlock Text="{Binding TelemetryPrivacyUrl, StringFormat='Full list of collected data: {0}'}"
+                                 TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <SelectableTextBlock VerticalAlignment="Center"
+                                   Text="{Binding TelemetryInstallId, StringFormat='Anonymous install ID: {0}'}"/>
+              <Button Content="Reset" Command="{Binding ResetTelemetryIdCommand}"/>
+            </StackPanel>
+            <TextBlock Text="Data sent in this session" FontWeight="Bold" Margin="0,8,0,0"/>
+          </StackPanel>
+          <TextBox Text="{Binding RecentTelemetryEvents}" IsReadOnly="True" TextWrapping="Wrap"
+                   FontFamily="monospace" FontSize="11"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+        </DockPanel>
+      </TabItem>
     </TabControl>
   </DockPanel>
 </views:DialogBase>

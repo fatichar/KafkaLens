@@ -1,5 +1,6 @@
 using KafkaLens.Shared.Models;
 using Serilog;
+using KafkaLens.ViewModels.Telemetry;
 
 namespace KafkaLens.ViewModels;
 
@@ -18,6 +19,11 @@ public partial class OpenedClusterViewModel
             ValueFormatter = formatterService.ToKnownFormatterOrNull(node.FormatterName)
         };
         topicSettingsService.SetSettings(cluster.Id, topicName, settings, ApplyToAllClusters);
+        telemetry.Feature(ApplyToAllClusters
+            ? Telemetry.TelemetrySchema.Features.ApplyFormatterAllClusters
+            : Telemetry.TelemetrySchema.Features.TopicSettingsSaved);
+        TrackFormatterSelected(settings.ValueFormatter, "value", auto: false);
+        TrackFormatterSelected(settings.KeyFormatter, "key", auto: false);
 
         foreach (var msg in CurrentMessages.Messages)
         {
@@ -58,6 +64,7 @@ public partial class OpenedClusterViewModel
     private void GuessFormatterForSelectedNode(bool isKeyFormatter)
     {
         if (SelectedNode is not IMessageSource node || CurrentMessages.Messages.Count == 0) return;
+        telemetry.Feature(Telemetry.TelemetrySchema.Features.GuessFormatter, isKeyFormatter ? "key" : "value");
 
         var firstMessage = CurrentMessages.Messages[0].Message;
 

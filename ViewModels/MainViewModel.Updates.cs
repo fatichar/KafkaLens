@@ -11,6 +11,11 @@ public partial class MainViewModel
     {
         Log.Information("Checking for updates...");
         var result = await UpdateService.CheckForUpdateAsync();
+        telemetry.Track(Telemetry.TelemetrySchema.Events.UpdateCheck, new Dictionary<string, object?>
+        {
+            ["result"] = result.UpdateAvailable ? "available" : result.LatestVersion != null ? "up_to_date" : "failed",
+            ["manual"] = !silent,
+        });
         if (result.UpdateAvailable)
         {
 
@@ -30,6 +35,10 @@ public partial class MainViewModel
     private void PerformUpdate(UpdateCheckResult result)
     {
         if (!ValidateResult(result)) return;
+        telemetry.Track(Telemetry.TelemetrySchema.Events.UpdateStarted, new Dictionary<string, object?>
+        {
+            ["to_version"] = result.LatestVersion?.TrimStart('v'),
+        });
 
         var appDir = AppContext.BaseDirectory;
         var updaterPath = Path.Combine(appDir, "KafkaLens.Updater");

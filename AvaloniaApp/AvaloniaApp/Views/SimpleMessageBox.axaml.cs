@@ -33,6 +33,14 @@ public partial class SimpleMessageBox : DialogBase
         }
     }
 
+    /// <summary>Confirmation box with custom button labels. Primary returns true, secondary false.</summary>
+    public SimpleMessageBox(string title, string message, string primaryText, string secondaryText)
+        : this(title, message, isConfirmation: true)
+    {
+        PrimaryButton.Content = primaryText;
+        SecondaryButton.Content = secondaryText;
+    }
+
     public Task ShowMessageAsync(Window owner)
     {
         return ShowDialog(owner);

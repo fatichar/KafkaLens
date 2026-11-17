@@ -3,6 +3,7 @@ using System.Threading;
 using Avalonia.Threading;
 using KafkaLens.Shared.Models;
 using Serilog;
+using KafkaLens.ViewModels.Telemetry;
 
 namespace KafkaLens.ViewModels;
 
@@ -14,6 +15,8 @@ public partial class OpenedClusterViewModel
     private CancellationTokenSource? fetchCts;
     private string? activeFetchDescription;
     private int activeFetchRequestedCount;
+    private long activeFetchStartedTimestamp;
+    private Dictionary<string, object?>? activeFetchTelemetry;
 
     private MessageStream.FinishedEventHandler? streamFinishedHandler;
 
@@ -29,6 +32,10 @@ public partial class OpenedClusterViewModel
             // strand the spinner forever whenever the cluster was invalidated mid-fetch.
             IsLoading = false;
             messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
+            TrackFetchCompleted(finished.Messages.Count,
+                fetchCts?.IsCancellationRequested == true || finished.WasCanceled
+                    ? "cancelled"
+                    : TelemetryExtensions.ErrorCategory(finished.Error));
 
             // Status reporting is generation-scoped: a result from a superseded connection
             // must not overwrite the status of the current one.
@@ -86,6 +93,21 @@ public partial class OpenedClusterViewModel
         var fetchOptions = CreateFetchOptions();
         activeFetchDescription = GetFetchDescription(selectedNode);
         activeFetchRequestedCount = fetchOptions.Limit;
+        filtersTrackedForFetch.Clear();
+        activeFetchStartedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+        activeFetchTelemetry = telemetry.IsEnabled
+            ? new Dictionary<string, object?>
+            {
+                ["client_kind"] = TelemetryExtensions.ClientKind(KafkaLensClient),
+                ["node"] = selectedNode is PartitionViewModel ? "partition" : "topic",
+                ["position"] = TelemetryExtensions.PositionName(FetchPosition),
+                ["direction"] = FetchBackward ? "backward" : "forward",
+                // Presets are a fixed list, so the exact value is useful for picking defaults.
+                ["requested"] = FetchCounts.Contains(fetchOptions.Limit)
+                    ? fetchOptions.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    : TelemetryBuckets.Count(fetchOptions.Limit),
+            }
+            : null;
         appLogService.LogInfo(
             $"Fetching {fetchOptions.Limit} messages from {activeFetchDescription}",
             "Fetch");
@@ -109,6 +131,7 @@ public partial class OpenedClusterViewModel
             {
                 owner.ReportMessageResult(topicName, partitionId, e, version);
             }
+            TrackFetchCompleted(0, TelemetryExtensions.ErrorCategory(e));
             Log.Error(e, "Failed to fetch messages for {ClusterName}", Name);
             appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {e.Message}", "Fetch");
             return;
@@ -160,6 +183,7 @@ public partial class OpenedClusterViewModel
                 var message = (Message)e.NewItems![0]!;
                 var formatter = formatterService.GuessValueFormatter(message, ValueFormatterNames);
                 node.FormatterName = formatter?.Name ?? formatterService.GetDefaultFormatterName();
+                TrackFormatterSelected(node.FormatterName, "value", auto: true);
             }
             settingsChanged = true;
             Log.Information("Guessed value formatter {Formatter} for topic {Topic}", node.FormatterName, topicName);
@@ -174,6 +198,7 @@ public partial class OpenedClusterViewModel
                 if (formatter != null)
                 {
                     node.KeyFormatterName = formatter.Name;
+                    TrackFormatterSelected(node.KeyFormatterName, "key", auto: true);
                     settingsChanged = true;
                     Log.Information("Guessed key formatter {Formatter} for topic {Topic}", node.KeyFormatterName, topicName);
                 }
