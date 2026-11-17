@@ -188,7 +188,7 @@ public class App : Application
             telemetry.ReportError(e.Exception, "unobserved_task", terminating: false);
         };
         // Environment.Exit (e.g. after launching the updater) skips the normal exit path.
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => telemetry.PersistPending();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => telemetry.HandleProcessExit();
     }
 
     private void ReportStartup()

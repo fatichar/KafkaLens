@@ -311,6 +311,33 @@ public class TelemetryServiceTests
         await f.DisposeAsync();
     }
 
+    [Fact]
+    public async Task ProcessExitWithoutShutdown_IsClean_AndSpoolsQueuedEvents()
+    {
+        await using var f = new TelemetryFixture();
+        f.Service.Start(runBackgroundLoops: false);
+        f.Service.AcknowledgeNotice(true);
+        f.Service.Track(TelemetrySchema.Events.UpdateStarted, new Dictionary<string, object?> { ["to_version"] = "1.0.1" });
+
+        f.Service.HandleProcessExit(); // e.g. Environment.Exit after launching the updater
+
+        File.Exists(Path.Combine(f.Dir, "telemetry", "session.lock")).Should().BeFalse();
+        File.ReadAllText(f.Spool.FilePath).Should().Contain(TelemetrySchema.Events.UpdateStarted);
+    }
+
+    [Fact]
+    public async Task ProcessExitAfterTerminatingError_KeepsSessionMarker()
+    {
+        await using var f = new TelemetryFixture();
+        f.Service.Start(runBackgroundLoops: false);
+        f.Service.AcknowledgeNotice(true);
+
+        f.Service.ReportError(new InvalidOperationException(), "unhandled", terminating: true);
+        f.Service.HandleProcessExit();
+
+        File.Exists(Path.Combine(f.Dir, "telemetry", "session.lock")).Should().BeTrue();
+    }
+
     private static async Task WaitUntil(Func<bool> condition, TimeSpan? timeout = null)
     {
         var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));

@@ -61,6 +61,7 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
     private volatile string installId;
     private bool previousUncleanExit;
     private bool started;
+    private volatile bool terminatingErrorSeen;
     private bool shutDown;
     private long activeSecondsSinceHeartbeat;
     private long activeSecondsTotal;
@@ -205,6 +206,8 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
     /// </summary>
     public void ReportError(Exception exception, string kind, bool terminating)
     {
+        // Recorded regardless of consent: it only decides whether the session marker is kept.
+        if (terminating) terminatingErrorSeen = true;
         try
         {
             if (!IsEnabled) return;
@@ -219,23 +222,44 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
         }
     }
 
-    /// <summary>Emits the final events and flushes, bounded by <paramref name="timeout"/>.</summary>
-    /// <summary>Synchronously moves queued events to the spool (process is exiting abruptly).</summary>
-    public void PersistPending()
+    /// <summary>
+    /// Process is exiting without the normal shutdown path (e.g. <c>Environment.Exit</c> after
+    /// launching the updater). Synchronously spools queued events and, unless a terminating
+    /// exception was seen, marks the session as cleanly exited.
+    /// </summary>
+    public void HandleProcessExit()
     {
+        if (shutDown) return;
         try
         {
-            if (shutDown || !consentGate.Task.IsCompleted || !IsEnabled) return;
-            var pending = new List<TelemetryEvent>();
-            while (channel.Reader.TryRead(out var e)) pending.Add(e);
-            spool.Append(pending);
+            if (consentGate.Task.IsCompleted && IsEnabled)
+            {
+                var pending = new List<TelemetryEvent>();
+                while (channel.Reader.TryRead(out var e)) pending.Add(e);
+                spool.Append(pending);
+            }
         }
         catch (Exception ex)
         {
-            Log.Debug(ex, "Telemetry PersistPending failed");
+            Log.Debug(ex, "Telemetry HandleProcessExit failed to spool");
+        }
+
+        if (!terminatingErrorSeen) DeleteSessionMarker();
+    }
+
+    private void DeleteSessionMarker()
+    {
+        try
+        {
+            if (File.Exists(sessionMarkerPath)) File.Delete(sessionMarkerPath);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Could not delete telemetry session marker");
         }
     }
 
+    /// <summary>Emits the final events and flushes, bounded by <paramref name="timeout"/>.</summary>
     public async Task ShutdownAsync(TimeSpan timeout)
     {
         if (shutDown) return;
@@ -269,14 +293,7 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
             await FlushAsync(includeSpool: false, timeoutCts.Token).ConfigureAwait(false);
         }
 
-        try
-        {
-            if (File.Exists(sessionMarkerPath)) File.Delete(sessionMarkerPath);
-        }
-        catch (Exception ex)
-        {
-            Log.Debug(ex, "Could not delete telemetry session marker");
-        }
+        DeleteSessionMarker();
     }
 
     public async ValueTask DisposeAsync()
