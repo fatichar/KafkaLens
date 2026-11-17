@@ -152,17 +152,6 @@ public partial class OpenedClusterViewModel
         }
     }
 
-    private void TrackFetchCompleted(int received, string result)
-    {
-        var props = Interlocked.Exchange(ref activeFetchTelemetry, null);
-        if (props == null) return;
-        props["received"] = TelemetryBuckets.Count(received);
-        props["duration"] = TelemetryBuckets.Duration(
-            System.Diagnostics.Stopwatch.GetElapsedTime(activeFetchStartedTimestamp));
-        props["result"] = result;
-        telemetry.Track(TelemetrySchema.Events.FetchCompleted, props);
-    }
-
     private static string GetFetchDescription(ITreeNode node) => node switch
     {
         TopicViewModel topic => $"topic {topic.Name}",

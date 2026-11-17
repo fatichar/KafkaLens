@@ -288,6 +288,29 @@ public class TelemetryServiceTests
             .Sum(e => Convert.ToInt64(e.Properties["active_s"])).Should().BeGreaterThan(0);
     }
 
+    [Fact]
+    public async Task OptedOutTime_IsNotCounted_AfterReEnabling()
+    {
+        var options = new TelemetryOptions
+        {
+            WebsiteId = "site", FlushIntervalSeconds = 3600,
+            ActivitySampleSeconds = 1, HeartbeatIntervalSeconds = 3600, IdleThresholdSeconds = 60
+        };
+        var f = new TelemetryFixture(options);
+        f.Service.Start();
+        f.Service.AcknowledgeNotice(false);
+        f.Activity.SetFocused(true);
+
+        await Task.Delay(2500); // active but opted out
+        f.Service.SetEnabled(true);
+        await f.Service.ShutdownAsync(TimeSpan.FromSeconds(2));
+
+        var exited = f.Sink.Sent.Single(e => e.Name == TelemetrySchema.Events.AppExited);
+        // At most one sample can land between re-enabling and shutdown.
+        Convert.ToInt64(exited.Properties["session_active_s"]).Should().BeLessThanOrEqualTo(1);
+        await f.DisposeAsync();
+    }
+
     private static async Task WaitUntil(Func<bool> condition, TimeSpan? timeout = null)
     {
         var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));

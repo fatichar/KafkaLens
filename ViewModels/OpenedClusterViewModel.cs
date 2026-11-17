@@ -274,43 +274,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         });
     }
 
-    private Task Tracked(string feature, Func<Task> action)
-    {
-        telemetry.Feature(feature);
-        return action();
-    }
-
-    private void OnCurrentMessagesPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (applyingTabState) return;
-        var (feature, value) = e.PropertyName switch
-        {
-            nameof(MessagesViewModel.PositiveFilter) => (TelemetrySchema.Features.PositiveFilter, CurrentMessages.PositiveFilter),
-            nameof(MessagesViewModel.NegativeFilter) => (TelemetrySchema.Features.NegativeFilter, CurrentMessages.NegativeFilter),
-            nameof(MessagesViewModel.LineFilter) => (TelemetrySchema.Features.LineFilter, CurrentMessages.LineFilter),
-            _ => (null, null)
-        };
-        // Once per fetch result per filter kind; filter text is never sent.
-        if (feature != null && !string.IsNullOrEmpty(value) && filtersTrackedForFetch.Add(feature))
-            telemetry.Feature(feature);
-    }
-
-    partial void OnMessagesSortColumnChanged(string? value)
-    {
-        if (!applyingTabState && value != null) telemetry.Feature(TelemetrySchema.Features.SortMessages);
-    }
-
-    partial void OnIsNavigatorOpenChanged(bool value) => telemetry.Feature(TelemetrySchema.Features.NavigatorToggle);
-
-    partial void OnIsFetchPanelOpenChanged(bool value) => telemetry.Feature(TelemetrySchema.Features.FetchPanelToggle);
-
-    private void TrackTopicFilter()
-    {
-        if (topicFilterTracked || applyingTabState || string.IsNullOrEmpty(FilterText)) return;
-        topicFilterTracked = true;
-        telemetry.Feature(TelemetrySchema.Features.TopicFilter);
-    }
-
     private async Task SaveMessagesAsync(IList<MessageViewModel> messages, bool formatted, string source)
     {
         telemetry.Feature(TelemetrySchema.Features.SaveMessages, source);

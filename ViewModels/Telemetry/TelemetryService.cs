@@ -135,6 +135,8 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
         {
             // Abort any in-flight send so nothing more leaves the machine after opt-out.
             Interlocked.Exchange(ref disableCts, new CancellationTokenSource()).Cancel();
+            Interlocked.Exchange(ref activeSecondsSinceHeartbeat, 0);
+            Interlocked.Exchange(ref activeSecondsTotal, 0);
             while (channel.Reader.TryRead(out _)) { }
             spool.Clear();
         }
@@ -470,7 +472,8 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
             using var timer = new PeriodicTimer(sample);
             while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
             {
-                if (activity.IsActive(idle))
+                // Opted-out time is never counted, even if the user re-enables later this session.
+                if (IsEnabled && activity.IsActive(idle))
                 {
                     Interlocked.Add(ref activeSecondsSinceHeartbeat, (long)sample.TotalSeconds);
                     Interlocked.Add(ref activeSecondsTotal, (long)sample.TotalSeconds);

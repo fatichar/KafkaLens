@@ -61,20 +61,6 @@ public partial class OpenedClusterViewModel
         }
     }
 
-    internal void TrackFormatterSelected(string? formatterName, string target, bool auto)
-    {
-        if (!telemetry.IsEnabled || formatterName == null) return;
-        var builtIn = new HashSet<string>(target == "key"
-            ? formatterService.GetBuiltInKeyFormatterNames()
-            : formatterService.GetBuiltInFormatterNames(), StringComparer.Ordinal);
-        telemetry.Track(Telemetry.TelemetrySchema.Events.FormatterSelected, new Dictionary<string, object?>
-        {
-            ["formatter"] = Telemetry.TelemetryExtensions.FormatterName(formatterName, builtIn),
-            ["target"] = target,
-            ["auto"] = auto,
-        });
-    }
-
     private void GuessFormatterForSelectedNode(bool isKeyFormatter)
     {
         if (SelectedNode is not IMessageSource node || CurrentMessages.Messages.Count == 0) return;
