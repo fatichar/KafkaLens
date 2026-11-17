@@ -62,6 +62,18 @@ public partial class MainView : UserControl
             _ = box.ShowMessageAsync(mainWindow);
         };
 
+        MainViewModel.ConfirmTelemetryNotice = async (title, message) =>
+        {
+            var mainWindow = GetMainWindow();
+            if (mainWindow == null)
+            {
+                return null;
+            }
+
+            var box = new SimpleMessageBox(title, message, primaryText: "OK", secondaryText: "Disable");
+            return await box.ShowConfirmationAsync(mainWindow);
+        };
+
         MainViewModel.ConfirmRestoreTabs = async (count) =>
         {
             var mainWindow = GetMainWindow();

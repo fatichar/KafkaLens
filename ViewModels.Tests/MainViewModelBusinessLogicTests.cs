@@ -52,7 +52,8 @@ public class MainViewModelBusinessLogicTests
         themeService    = new ThemeService(extensionRegistry, pluginsDir: Path.GetTempPath());
     }
 
-    private MainViewModel CreateViewModel(ObservableCollection<ClusterViewModel>? clusters = null)
+    private MainViewModel CreateViewModel(ObservableCollection<ClusterViewModel>? clusters = null,
+        KafkaLens.Shared.Telemetry.ITelemetry? telemetry = null)
     {
         if (clusters != null)
         {
@@ -87,7 +88,65 @@ public class MainViewModelBusinessLogicTests
             pluginInstaller,
             repoManager,
             themeService,
-            appLogService);
+            appLogService,
+            telemetry);
+    }
+
+    private static ITelemetryControlTelemetry CreateTelemetryNeedingNotice()
+    {
+        var control = Substitute.For<ITelemetryControlTelemetry>();
+        control.NeedsNotice.Returns(true);
+        control.PrivacyUrl.Returns("https://kafkalens.com/privacy.html");
+        return control;
+    }
+
+    public interface ITelemetryControlTelemetry :
+        KafkaLens.ViewModels.Telemetry.ITelemetryControl, KafkaLens.Shared.Telemetry.ITelemetry { }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TelemetryNotice_AcknowledgesUserChoice(bool keepEnabled)
+    {
+        var control = CreateTelemetryNeedingNotice();
+        string? shownTitle = null;
+        MainViewModel.ConfirmTelemetryNotice = (title, _) =>
+        {
+            shownTitle = title;
+            return Task.FromResult<bool?>(keepEnabled);
+        };
+        var vm = CreateViewModel(telemetry: control);
+
+        await vm.ShowTelemetryNoticeIfNeededAsync();
+
+        shownTitle.Should().Be(MainViewModel.TelemetryNoticeTitle);
+        control.Received(1).AcknowledgeNotice(keepEnabled);
+    }
+
+    [Fact]
+    public async Task TelemetryNotice_NotShown_IsNotAcknowledged()
+    {
+        var control = CreateTelemetryNeedingNotice();
+        MainViewModel.ConfirmTelemetryNotice = (_, _) => Task.FromResult<bool?>(null);
+        var vm = CreateViewModel(telemetry: control);
+
+        await vm.ShowTelemetryNoticeIfNeededAsync();
+
+        control.DidNotReceive().AcknowledgeNotice(Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task TelemetryNotice_NotNeeded_IsNotShown()
+    {
+        var control = CreateTelemetryNeedingNotice();
+        control.NeedsNotice.Returns(false);
+        var shown = false;
+        MainViewModel.ConfirmTelemetryNotice = (_, _) => { shown = true; return Task.FromResult<bool?>(true); };
+        var vm = CreateViewModel(telemetry: control);
+
+        await vm.ShowTelemetryNoticeIfNeededAsync();
+
+        shown.Should().BeFalse();
     }
 
     private (ClusterViewModel vm, KafkaCluster model) CreateClusterVmWithModel(string id = "c1", string name = "Cluster1", string address = "localhost:9092")

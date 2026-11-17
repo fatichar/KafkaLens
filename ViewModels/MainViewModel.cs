@@ -359,45 +359,6 @@ public partial class MainViewModel : ViewModelBase
             formatterService, telemetry));
     }
 
-    private void TrackTabShortcut() => telemetry.Feature(TelemetrySchema.Features.TabSwitchShortcut, "shortcut");
-
-    private void SendSettingsSnapshot(string trigger)
-    {
-        try
-        {
-            SettingsSnapshot.Send(telemetry, settingsService, BuildTelemetryInventory(), trigger);
-        }
-        catch (Exception e)
-        {
-            Log.Debug(e, "Failed to send settings snapshot");
-        }
-    }
-
-    private void SendSettingsSnapshotIfDue()
-    {
-        try
-        {
-            SettingsSnapshot.SendIfDue(telemetry, settingsService, BuildTelemetryInventory());
-        }
-        catch (Exception e)
-        {
-            Log.Debug(e, "Failed to send settings snapshot");
-        }
-    }
-
-    internal SettingsSnapshot.Inventory BuildTelemetryInventory()
-    {
-        var clients = ClientInfoRepository.GetAll()?.Values.ToList() ?? new();
-        var pluginStates = settingsService.GetPluginSettings().PluginStates;
-        return new SettingsSnapshot.Inventory(
-            Clusters: Clusters.Count(c => TelemetryExtensions.ClientKind(c.Client) != "saved"),
-            LocalClients: Clusters.Count(c => TelemetryExtensions.ClientKind(c.Client) == "local"),
-            GrpcClients: clients.Count(c => string.Equals(c.Protocol, "grpc", StringComparison.OrdinalIgnoreCase)),
-            RestClients: clients.Count(c => string.Equals(c.Protocol, "rest", StringComparison.OrdinalIgnoreCase)),
-            PluginsInstalled: pluginStates.Count,
-            PluginsEnabled: pluginStates.Count(p => p.Value));
-    }
-
     private string ValidateTheme(string themeName)
     {
         if (_themeService != null)

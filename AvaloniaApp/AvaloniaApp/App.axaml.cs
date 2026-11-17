@@ -191,33 +191,16 @@ public class App : Application
         AppDomain.CurrentDomain.ProcessExit += (_, _) => telemetry.PersistPending();
     }
 
-    private async Task OnMainWindowOpenedAsync(Window mainWindow)
+    private void ReportStartup()
     {
-        var telemetry = Services?.GetService<TelemetryService>();
-        if (telemetry == null) return;
-
         try
         {
             var startup = DateTime.Now - Process.GetCurrentProcess().StartTime;
-            telemetry.ReportStartup(startup, _pluginsLoaded);
-
-            if (!telemetry.NeedsNotice) return;
-
-            var box = new SimpleMessageBox(
-                "Help improve KafkaLens",
-                "KafkaLens sends anonymous usage data (app version, OS, which features are used, " +
-                "fetch sizes and timings, settings, and crash details) to help decide what to improve.\n\n" +
-                "It never sends cluster, broker, topic or message data, file paths, or anything that identifies you.\n\n" +
-                $"Details: {telemetry.PrivacyUrl}\n" +
-                "You can change this any time in Preferences → Privacy.",
-                primaryText: "OK",
-                secondaryText: "Disable");
-            var keepEnabled = await box.ShowConfirmationAsync(mainWindow);
-            telemetry.AcknowledgeNotice(keepEnabled);
+            Services?.GetService<TelemetryService>()?.ReportStartup(startup, _pluginsLoaded);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to show telemetry notice");
+            Log.Debug(ex, "Failed to report startup telemetry");
         }
     }
 
@@ -573,7 +556,11 @@ KKKKKKKKK    KKKKKKK  aaaaaaaaaa  aaaafffffffff            kkkkkkkk    kkkkkkkaa
                 DataContext = viewModel
             };
             desktop.MainWindow = mainWindow;
-            mainWindow.Opened += async (_, _) => await OnMainWindowOpenedAsync(mainWindow);
+            mainWindow.Opened += async (_, _) =>
+            {
+                ReportStartup();
+                if (viewModel != null) await viewModel.ShowTelemetryNoticeIfNeededAsync();
+            };
             desktop.Exit += (_, _) =>
             {
                 // Bounded (2s) final flush; loops use ConfigureAwait(false), so blocking here cannot deadlock.
