@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Shared.Models;
 using Serilog;
 
+using KafkaLens.ViewModels.Telemetry;
+
 namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel
@@ -85,8 +87,16 @@ public partial class MainViewModel
         }
 
         var openedCluster = new OpenedClusterViewModel(
-            settingsService, topicSettingsService, messageSaver, formatterService, clusterViewModel, newName, AppLogService);
-        openedCluster.CloseCommand = new RelayCommand(() => CloseTab(openedCluster));
+            settingsService, topicSettingsService, messageSaver, formatterService, clusterViewModel, newName, AppLogService,
+            telemetry);
+        openedCluster.CloseCommand = new RelayCommand(() =>
+        {
+            telemetry.Feature(TelemetrySchema.Features.TabClose, "button");
+            CloseTab(openedCluster);
+        });
+        if (tabState == null)
+            telemetry.Feature(TelemetrySchema.Features.TabOpen,
+                TelemetryExtensions.ClientKind(clusterViewModel.Client) == "saved" ? "saved" : "cluster");
         openedCluster.ApplyOpenedTabState(tabState);
         alreadyOpened.Add(openedCluster);
         OpenedClusters.Add(openedCluster);
@@ -101,7 +111,11 @@ public partial class MainViewModel
             _ = ObserveClusterFlowAsync(RefreshClustersForClientAsync(clusterViewModel.Client.Name));
     }
 
-    public async void OpenSavedMessages(string path) => await OpenSavedMessagesAsync(path, null);
+    public async void OpenSavedMessages(string path)
+    {
+        telemetry.Feature(TelemetrySchema.Features.OpenSavedMessages);
+        await OpenSavedMessagesAsync(path, null);
+    }
 
     private async Task OpenSavedMessagesAsync(string path, OpenedTabState? tabState)
     {

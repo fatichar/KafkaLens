@@ -1,6 +1,8 @@
 # Product Analytics Plan (pre-1.0)
 
-Status: **Proposal — awaiting approval.** No code changes yet.
+Status: **Approved and implemented.** Decisions: opt-out with first-run notice, self-hosted Umami,
+13-month raw retention, full event list for 1.0, plus unexpected-failure reporting (`app_error`).
+The authoritative event list is `ViewModels/Telemetry/TelemetrySchema.cs` / `docs/privacy.html`.
 
 ## 1. Problem
 
@@ -22,7 +24,7 @@ Goals
 - Zero impact on UI responsiveness and fetch performance; works offline.
 
 Non-goals
-- No crash reporting / stack traces (separate decision; can reuse the same pipeline later).
+- No full crash dumps or exception messages. Failures are reported as type + method-name frames only (`app_error`).
 - No per-user profiling, no session replay, no A/B framework.
 - No change to the website hosting (see §8).
 
@@ -239,6 +241,29 @@ Move the site to the VPS only if we later need server-side logic (signed downloa
 `AvaloniaApp` (DI, activity tracker, first-run dialog view, Preferences view),
 `ViewModels.Tests`, `docs/` (privacy page, this plan), VPS/DNS (outside repo).
 No change to `Core`, `GrpcApi`, `RestApi`, clients, or packaging.
+
+## 11a. Implementation notes (as built)
+
+- `Shared/Telemetry/ITelemetry.cs` — interface + `NullTelemetry`.
+- `ViewModels/Telemetry/` — `TelemetryService` (channel → sender loop, consent gate, kill-switch,
+  heartbeats, `SemaphoreSlim`-serialized flush), `TelemetrySpool`, `UmamiTelemetrySink`,
+  `LogTelemetrySink` (Debug builds), `TelemetrySchema` (allow-list), `SettingsSnapshot`, `ErrorReport`,
+  `ActivityTracker`, `TelemetryEnvironment`.
+- Unexpected failures: `AppDomain.UnhandledException` (spooled synchronously, sent next launch),
+  `TaskScheduler.UnobservedTaskException`; `previous_unclean_exit` on `app_started` catches native
+  crashes / kills via a session marker file.
+- UI: first-run notice (OK / Disable), Preferences → Privacy (toggle, install-id reset, events sent this session).
+- Config: `appsettings.json` → `Telemetry` section. **`WebsiteId` is empty, so nothing is sent until it is set.**
+
+### Ops checklist before 1.0
+
+1. Umami: create website "KafkaLens App"; put its id in `appsettings.json` → `Telemetry.WebsiteId`.
+2. Verify on the running Umami: version ≥ 2.13 (distinct `id`), payload `timestamp` accepted,
+   UA `Mozilla/5.0 (...) KafkaLens/x.y.z` not filtered as a bot.
+3. DNS `t.kafkalens.com` → VPS; reverse-proxy `/api/send` → Umami; serve `/config.json` = `{"enabled": true}`.
+4. Umami data retention: 13 months.
+5. Dashboards: DAU/WAU/MAU = distinct ids per day/week/month; time spent = sum `heartbeat.active_s`;
+   crash rate = `app_error` with `kind=unhandled` ÷ `app_started`, grouped by `fingerprint` / `app_version`.
 
 ## 12. Risks
 

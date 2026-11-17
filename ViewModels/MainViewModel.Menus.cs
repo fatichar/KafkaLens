@@ -6,6 +6,8 @@ using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Shared;
 using Serilog;
 
+using KafkaLens.ViewModels.Telemetry;
+
 namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel
@@ -280,7 +282,11 @@ public partial class MainViewModel
                 ToggleType = MenuItemToggleType.CheckBox,
                 IsChecked = AutoCheckForUpdates
             },
-            new MenuItemViewModel { Header = "_About", Command = new RelayCommand(() => ShowAboutDialog()) }
+            new MenuItemViewModel { Header = "_About", Command = new RelayCommand(() =>
+            {
+                telemetry.Feature(TelemetrySchema.Features.AboutOpen);
+                ShowAboutDialog();
+            }) }
         }
     };
 

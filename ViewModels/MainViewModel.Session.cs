@@ -3,6 +3,8 @@ using System.ComponentModel;
 using KafkaLens.Shared.Models;
 using KafkaLens.ViewModels.Messages;
 
+using KafkaLens.ViewModels.Telemetry;
+
 namespace KafkaLens.ViewModels;
 
 public partial class MainViewModel
@@ -61,7 +63,10 @@ public partial class MainViewModel
             {
                 var tabsToRestore = config.OpenedTabs.Where(t => !string.IsNullOrWhiteSpace(t.ClusterId)).ToList();
                 if (tabsToRestore.Count > 0 && await ConfirmRestoreTabs(tabsToRestore.Count))
+                {
+                    telemetry.Feature(TelemetrySchema.Features.RestoreTabs);
                     pendingRestoreTabs.AddRange(tabsToRestore);
+                }
             }
         }
         finally

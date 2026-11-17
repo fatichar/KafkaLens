@@ -6,6 +6,8 @@ using KafkaLens.Shared.Models;
 using KafkaLens.Shared.Services;
 using KafkaLens.ViewModels.Messages;
 using KafkaLens.ViewModels.Services;
+using KafkaLens.Shared.Telemetry;
+using KafkaLens.ViewModels.Telemetry;
 using Newtonsoft.Json;
 using Serilog;
 using System.Collections.ObjectModel;
@@ -81,6 +83,29 @@ public partial class PreferencesViewModel : ViewModelBase
     [ObservableProperty]
     private string savedMessagesDirectoryError = "";
 
+    // ── Privacy / telemetry ──
+    private readonly ITelemetry telemetry;
+    private readonly ITelemetryControl? telemetryControl;
+
+    /// <summary>True when the build is configured to send usage data at all.</summary>
+    public bool IsTelemetryAvailable => telemetryControl?.IsAvailable == true;
+
+    /// <summary>True when DO_NOT_TRACK / KAFKALENS_TELEMETRY forces telemetry off.</summary>
+    public bool IsTelemetryForcedOff => telemetryControl?.IsForcedOff == true;
+
+    public string TelemetryPrivacyUrl => telemetryControl?.PrivacyUrl ?? "";
+
+    [ObservableProperty]
+    private bool sendUsageData;
+
+    [ObservableProperty]
+    private string telemetryInstallId = "";
+
+    [ObservableProperty]
+    private string recentTelemetryEvents = "";
+
+    public IRelayCommand ResetTelemetryIdCommand { get; }
+
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand CancelCommand { get; }
     public IAsyncRelayCommand BrowseSavedMessagesDirectoryCommand { get; }
@@ -91,8 +116,19 @@ public partial class PreferencesViewModel : ViewModelBase
     private readonly Action<string>? applyTheme;
     private readonly string originalTheme;
 
-    public PreferencesViewModel(ISettingsService settingsService, IThemeService? themeService = null, Action<string>? applyTheme = null, IFormatterService? formatterService = null)
+    public PreferencesViewModel(ISettingsService settingsService, IThemeService? themeService = null, Action<string>? applyTheme = null, IFormatterService? formatterService = null, ITelemetry? telemetry = null)
     {
+        this.telemetry = telemetry ?? NullTelemetry.Instance;
+        telemetryControl = telemetry as ITelemetryControl;
+        sendUsageData = telemetryControl?.UserEnabled == true;
+        telemetryInstallId = telemetryControl?.InstallId ?? "";
+        recentTelemetryEvents = BuildRecentTelemetryText();
+        ResetTelemetryIdCommand = new RelayCommand(() =>
+        {
+            telemetryControl?.ResetInstallId();
+            TelemetryInstallId = telemetryControl?.InstallId ?? "";
+        });
+
         this.settingsService = settingsService;
         this.themeService = themeService;
         this.applyTheme = applyTheme;
@@ -411,6 +447,10 @@ public partial class PreferencesViewModel : ViewModelBase
             GetConnectionCheckFrequencySeconds(SelectedConnectionCheckFrequency).ToString(System.Globalization.CultureInfo.InvariantCulture));
         SaveFormatterSettings();
 
+        if (telemetryControl != null && telemetryControl.UserEnabled != SendUsageData)
+            telemetryControl.SetEnabled(SendUsageData);
+        telemetry.Feature(TelemetrySchema.Features.PreferencesSaved);
+
         WeakReferenceMessenger.Default.Send(new ConfigurationChangedMessage());
 
         CloseAction();
@@ -430,6 +470,14 @@ public partial class PreferencesViewModel : ViewModelBase
         {
             return "Saved messages folder is not a valid path.";
         }
+    }
+
+    private string BuildRecentTelemetryText()
+    {
+        var events = telemetryControl?.RecentEvents ?? Array.Empty<string>();
+        return events.Count == 0
+            ? "No usage data has been sent in this session."
+            : string.Join(Environment.NewLine, events.Reverse());
     }
 
     private void Cancel()

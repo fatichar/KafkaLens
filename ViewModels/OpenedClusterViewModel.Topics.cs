@@ -3,6 +3,7 @@ using KafkaLens.Shared;
 using KafkaLens.Shared.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Serilog;
+using KafkaLens.ViewModels.Telemetry;
 
 namespace KafkaLens.ViewModels;
 
@@ -12,7 +13,11 @@ public partial class OpenedClusterViewModel
 
     [ObservableProperty] private string filterText = "";
 
-    partial void OnFilterTextChanged(string value) => FilterTopics();
+    partial void OnFilterTextChanged(string value)
+    {
+        TrackTopicFilter();
+        FilterTopics();
+    }
 
     private async Task ConnectAsync()
     {
@@ -34,7 +39,14 @@ public partial class OpenedClusterViewModel
         {
             appLogService.LogInfo($"Loading topics for {Name}", "Topics");
             await cluster.EnsureTopicsLoadedAsync(forceRefresh: Topics.Count > 0);
-            if (cluster.TopicLoadState == TopicLoadState.Failed && cluster.Topics.Count == 0)
+            var failed = cluster.TopicLoadState == TopicLoadState.Failed && cluster.Topics.Count == 0;
+            telemetry.Track(TelemetrySchema.Events.ClusterConnected, new Dictionary<string, object?>
+            {
+                ["client_kind"] = TelemetryExtensions.ClientKind(KafkaLensClient),
+                ["result"] = failed ? "failed" : "ok",
+                ["topics"] = TelemetryBuckets.Count(cluster.Topics.Count),
+            });
+            if (failed)
             {
                 return;
             }

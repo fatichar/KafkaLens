@@ -120,6 +120,14 @@ Do not proceed until clear approval is granted.
 - Never push code automatically. Always ask for permission before pushing.
 - Commit messages should be brief.
 
+## Telemetry
+
+- Anonymous usage telemetry lives in `ViewModels/Telemetry/` (design: `docs/analytics-plan.md`).
+- Inject `ITelemetry` (from `KafkaLens.Shared.Telemetry`); use `telemetry.Feature(...)` / `Track(...)` with
+  names from `TelemetrySchema`. Never pass cluster/topic/message data, filter text, paths or exception messages.
+- New events, properties or features must be added to `TelemetrySchema` **and** `docs/privacy.html`
+  (a unit test enforces this).
+
 ## Known Design Notes & Tech Debt
 
 - **Concurrent fetch plan:** `docs/concurrent-fetch-plan.md` — consumer pool refactor for

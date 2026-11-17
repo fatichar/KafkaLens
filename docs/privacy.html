@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KafkaLens Privacy | Usage Data</title>
+    <meta name="description" content="Exactly what anonymous usage data the KafkaLens desktop app sends, what it never sends, and how to turn it off.">
+    <link rel="canonical" href="https://kafkalens.com/privacy.html">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://kafkalens.com/privacy.html">
+    <meta property="og:title" content="KafkaLens Privacy | Usage Data">
+    <meta property="og:description" content="Exactly what anonymous usage data KafkaLens sends and how to turn it off.">
+    <meta property="og:site_name" content="KafkaLens">
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .privacy-table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1.5rem; font-size: 0.95rem; }
+        .privacy-table th, .privacy-table td { text-align: left; vertical-align: top; padding: 0.5rem 0.6rem; border-bottom: 1px solid rgba(128,128,128,0.25); }
+        .privacy-table td:first-child { white-space: nowrap; }
+        .table-wrap { overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div id="navbar-placeholder"></div>
+    <noscript>
+        <nav aria-label="Primary navigation"><a href="index.html">Home</a> <a href="download.html">Download</a> <a href="usage.html">Usage</a></nav>
+    </noscript>
+    <main>
+        <section class="page-header">
+            <div class="container">
+                <h1>Privacy &amp; Usage Data</h1>
+                <p>What the KafkaLens desktop app sends, what it never sends, and how to turn it off.</p>
+            </div>
+        </section>
+        <section class="usage-content">
+            <div class="container">
+                <div class="usage-section">
+                    <h2>Summary</h2>
+                    <p>KafkaLens sends <strong>anonymous</strong> usage data so we can see which features matter,
+                        which defaults to ship, and what breaks. It is on by default; you are told on first launch
+                        and can turn it off at any time.</p>
+                    <ul>
+                        <li><strong>Never sent:</strong> cluster names, broker or bootstrap addresses, topic names,
+                            partitions, consumer groups, message keys, values or headers, filter or search text,
+                            file paths, user or machine names, exception messages, plugin configuration.</li>
+                        <li><strong>Identifier:</strong> a random install ID generated on first launch. It is not
+                            derived from your machine or account, and you can reset it in Preferences.</li>
+                        <li><strong>Counts and durations</strong> are sent as coarse buckets (for example
+                            <em>101-500</em> messages, <em>&lt;3s</em>), not exact values.</li>
+                        <li>Data goes to a self-hosted <a href="https://umami.is/" target="_blank" rel="noopener noreferrer">Umami</a>
+                            instance via <code>t.kafkalens.com</code>. It is not sold or shared. Raw events are kept for 13 months.</li>
+                        <li>Debug builds never send anything. The code is open source:
+                            <a href="https://github.com/fatichar/KafkaLens/tree/master/ViewModels/Telemetry" target="_blank" rel="noopener noreferrer">ViewModels/Telemetry</a>.</li>
+                    </ul>
+                </div>
+
+                <div class="usage-section">
+                    <h2>How to turn it off</h2>
+                    <ul>
+                        <li>Choose <strong>Disable</strong> in the first-launch notice, or</li>
+                        <li><strong>Preferences → Privacy</strong> → untick <em>Send anonymous usage data</em>, or</li>
+                        <li>set the environment variable <code>DO_NOT_TRACK=1</code> or <code>KAFKALENS_TELEMETRY=0</code>.</li>
+                    </ul>
+                    <p>When disabled, nothing is sent and any queued data on disk is deleted.
+                        <strong>Preferences → Privacy</strong> also shows every event sent in the current session.</p>
+                </div>
+
+                <div class="usage-section">
+                    <h2>Sent with every event</h2>
+                    <div class="table-wrap">
+                    <table class="privacy-table">
+                        <tr><th>Property</th><th>Meaning</th></tr>
+                        <tr><td><code>app_version</code></td><td>KafkaLens version, e.g. 1.0.0</td></tr>
+                        <tr><td><code>os</code></td><td>windows / macos / linux</td></tr>
+                        <tr><td><code>os_version</code></td><td>OS version number (major.minor.build)</td></tr>
+                        <tr><td><code>arch</code></td><td>CPU architecture, e.g. x64, arm64</td></tr>
+                        <tr><td><code>runtime</code></td><td>.NET runtime version</td></tr>
+                        <tr><td><code>install_kind</code></td><td>installer / zip / msix / app_bundle</td></tr>
+                        <tr><td><code>locale</code></td><td>UI language, e.g. en-US</td></tr>
+                        <tr><td><code>session_id</code></td><td>random ID for this app launch</td></tr>
+                        <tr><td><code>schema</code></td><td>version of this event format</td></tr>
+                    </table>
+                    </div>
+                    <p>Like any web request, the server sees your IP address; Umami uses it only to derive a
+                        country and does not store it.</p>
+                </div>
+
+                <div class="usage-section">
+                    <h2>Events</h2>
+                    <div class="table-wrap">
+                    <table class="privacy-table">
+                        <tr><th>Event</th><th>When</th><th>Properties</th></tr>
+                        <tr><td><code>app_first_run</code></td><td>first launch after install</td><td>—</td></tr>
+                        <tr><td><code>app_started</code></td><td>app launch</td>
+                            <td><code>startup_ms</code> (bucket), <code>previous_unclean_exit</code> (previous run crashed or was killed),
+                                <code>plugins_loaded</code> (count)</td></tr>
+                        <tr><td><code>heartbeat</code></td><td>every 5 minutes while the window is focused and in use</td>
+                            <td><code>active_s</code> (active seconds since last heartbeat)</td></tr>
+                        <tr><td><code>app_exited</code></td><td>app closes</td>
+                            <td><code>session_active_s</code>, <code>session_wall_s</code></td></tr>
+                        <tr><td><code>app_error</code></td><td>an unexpected failure (crash or unhandled background error)</td>
+                            <td><code>kind</code>, <code>exception_type</code>, <code>inner_type</code>,
+                                <code>frames</code> (method names of the top stack frames, no file paths or values),
+                                <code>fingerprint</code> (hash used to group identical failures)</td></tr>
+                        <tr><td><code>cluster_connected</code></td><td>a tab loads its topic list</td>
+                            <td><code>client_kind</code>, <code>result</code>, <code>topics</code> (bucket)</td></tr>
+                        <tr><td><code>fetch_completed</code></td><td>a message fetch ends</td>
+                            <td><code>client_kind</code> (local / grpc / rest / saved), <code>node</code> (topic / partition),
+                                <code>position</code> (start / end / offset / time), <code>direction</code>,
+                                <code>requested</code> (fetch size), <code>received</code> (bucket),
+                                <code>duration</code> (bucket), <code>result</code> (ok / cancelled / timeout / auth / network / other)</td></tr>
+                        <tr><td><code>feature_used</code></td><td>a feature below is used</td>
+                            <td><code>feature</code>, <code>source</code> (e.g. menu, shortcut, button)</td></tr>
+                        <tr><td><code>formatter_selected</code></td><td>a message formatter is chosen or auto-detected</td>
+                            <td><code>formatter</code> (built-in name, or "plugin"), <code>target</code> (key / value), <code>auto</code></td></tr>
+                        <tr><td><code>update_check</code></td><td>update check</td>
+                            <td><code>result</code>, <code>manual</code></td></tr>
+                        <tr><td><code>update_started</code></td><td>user starts an update</td><td><code>to_version</code></td></tr>
+                        <tr><td><code>plugin_installed</code></td><td>plugin installed from Plugin Manager</td>
+                            <td><code>plugin_id</code> (only for plugins from the official index, otherwise "third_party")</td></tr>
+                        <tr><td><code>plugin_removed</code></td><td>plugin uninstalled</td><td>—</td></tr>
+                        <tr><td><code>settings_snapshot</code></td><td>once a day, and after saving Preferences</td>
+                            <td>see below</td></tr>
+                    </table>
+                    </div>
+                </div>
+
+                <div class="usage-section">
+                    <h2>Features counted by <code>feature_used</code></h2>
+                    <p>Only the feature name is sent — never what you typed, copied or saved.</p>
+                    <p>
+                        <code>save_messages</code>, <code>open_saved_messages</code>, <code>copy_key</code>, <code>copy_value</code>,
+                        <code>copy_offset</code>, <code>copy_timestamp</code>, <code>copy_all</code>, <code>positive_filter</code>,
+                        <code>negative_filter</code>, <code>line_filter</code>, <code>topic_filter</code>, <code>sort_messages</code>,
+                        <code>navigator_toggle</code>, <code>fetch_panel_toggle</code>, <code>stop_fetch</code>, <code>refresh_fetch</code>,
+                        <code>tab_open</code>, <code>tab_close</code>, <code>tab_switch_shortcut</code>, <code>edit_clusters</code>,
+                        <code>preferences_open</code>, <code>preferences_saved</code>,
+                        <code>formatter_preferences_open</code>, <code>plugin_manager_open</code>, <code>theme_changed</code>,
+                        <code>app_log_toggle</code>, <code>diagnostic_log_open</code>, <code>apply_formatter_all_clusters</code>,
+                        <code>topic_settings_saved</code>, <code>guess_formatter</code>, <code>connect_retry</code>,
+                        <code>restore_tabs</code>, <code>about_open</code>, <code>update_check_manual</code>, <code>auto_update_toggle</code>.
+                    </p>
+                </div>
+
+                <div class="usage-section">
+                    <h2><code>settings_snapshot</code> properties</h2>
+                    <p>Setting values (or counts), each with a matching <code>*_is_default</code> flag. Paths and names are never included.</p>
+                    <p>
+                        <code>trigger</code>, <code>theme</code>, <code>theme_is_default</code>, <code>font_size</code>, <code>font_size_is_default</code>,
+                        <code>default_fetch_count</code>, <code>default_fetch_count_is_default</code>, <code>fetch_counts_is_default</code>,
+                        <code>restore_tabs_on_startup</code>, <code>restore_tabs_on_startup_is_default</code>,
+                        <code>eager_load_topics</code>, <code>eager_load_topics_is_default</code>,
+                        <code>show_save_notification</code>, <code>show_save_notification_is_default</code>,
+                        <code>saved_dir_is_default</code>, <code>auto_check_updates</code>, <code>auto_check_updates_is_default</code>,
+                        <code>connection_check_interval_s</code>, <code>connection_check_interval_s_is_default</code>,
+                        <code>hidden_key_formatters</code>, <code>hidden_value_formatters</code>, <code>kafka_timeouts_is_default</code>,
+                        <code>fetch_max_bytes</code>, <code>fetch_max_bytes_is_default</code>, <code>clusters</code> (bucket),
+                        <code>clients_local</code>, <code>clients_grpc</code>, <code>clients_rest</code>,
+                        <code>plugins_installed</code>, <code>plugins_enabled</code>.
+                    </p>
+                </div>
+
+                <div class="usage-section">
+                    <h2>Website</h2>
+                    <p>kafkalens.com uses the same self-hosted Umami for cookie-free page-view and download counts.</p>
+                    <p>Questions: <a href="https://github.com/fatichar/KafkaLens/issues" target="_blank" rel="noopener noreferrer">open an issue</a>.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    <div id="footer-placeholder"></div>
+    <script src="assets/fragments.js"></script>
+    <script src="assets/style.js"></script>
+</body>
+</html>

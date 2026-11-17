@@ -53,12 +53,20 @@ public partial class OpenedClusterViewModel
     {
         if (state == null) return;
 
-        MessagesSortColumn = state.MessagesSortColumn;
-        MessagesSortAscending = state.MessagesSortAscending;
-        CurrentMessages.PositiveFilter = state.PositiveFilter ?? "";
-        CurrentMessages.NegativeFilter = state.NegativeFilter ?? "";
-        CurrentMessages.LineFilter = state.LineFilter ?? "";
-        CurrentMessages.UseObjectFilter = state.UseObjectFilter;
+        applyingTabState = true;
+        try
+        {
+            MessagesSortColumn = state.MessagesSortColumn;
+            MessagesSortAscending = state.MessagesSortAscending;
+            CurrentMessages.PositiveFilter = state.PositiveFilter ?? "";
+            CurrentMessages.NegativeFilter = state.NegativeFilter ?? "";
+            CurrentMessages.LineFilter = state.LineFilter ?? "";
+            CurrentMessages.UseObjectFilter = state.UseObjectFilter;
+        }
+        finally
+        {
+            applyingTabState = false;
+        }
         pendingRestoreState = state;
     }
 

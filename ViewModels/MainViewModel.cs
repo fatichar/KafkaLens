@@ -14,6 +14,8 @@ using KafkaLens.ViewModels.Config;
 using KafkaLens.ViewModels.Messages;
 using KafkaLens.ViewModels.Services;
 using KafkaLens.Shared.Services;
+using KafkaLens.Shared.Telemetry;
+using KafkaLens.ViewModels.Telemetry;
 using Serilog;
 
 namespace KafkaLens.ViewModels;
@@ -39,6 +41,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly PluginInstaller _pluginInstaller;
     private readonly RepositoryManager _repoManager;
     private readonly IThemeService _themeService;
+    internal readonly ITelemetry telemetry;
 
     // Data
     public string? Title { get; private set; }
@@ -99,12 +102,14 @@ public partial class MainViewModel : ViewModelBase
     partial void OnAutoCheckForUpdatesChanged(bool value)
     {
         settingsService.SetValue("AutoCheckForUpdates", value.ToString().ToLower());
+        telemetry.Feature(TelemetrySchema.Features.AutoUpdateToggle);
         UpdateAutoCheckMenuCheckedState();
     }
 
     partial void OnCurrentThemeChanged(string value)
     {
         settingsService.SetValue("Theme", value);
+        telemetry.Feature(TelemetrySchema.Features.ThemeChanged);
         WeakReferenceMessenger.Default.Send(new ThemeChangedMessage(value));
         UpdateThemeMenuCheckedState();
     }
@@ -138,8 +143,10 @@ public partial class MainViewModel : ViewModelBase
         PluginInstaller pluginInstaller,
         RepositoryManager repoManager,
         IThemeService themeService,
-        IAppLogService? appLogService = null)
+        IAppLogService? appLogService = null,
+        ITelemetry? telemetry = null)
     {
+        this.telemetry = telemetry ?? NullTelemetry.Instance;
         this.messageSaver = messageSaver;
         this.formatterService = formatterService;
         this.clusterFactory = clusterFactory;
@@ -163,26 +170,54 @@ public partial class MainViewModel : ViewModelBase
 
         WeakReferenceMessenger.Default.Register<ConfigurationChangedMessage>(
             this,
-            (_, _) => ApplyConnectionCheckFrequency());
+            (_, _) =>
+            {
+                ApplyConnectionCheckFrequency();
+                SendSettingsSnapshot("preferences");
+            });
 
         Log.Information("Creating MainViewModel");
         AppLogService.LogInfo("KafkaLens started", "Startup");
 
-        EditClustersCommand = new RelayCommand(EditClustersAsync);
+        EditClustersCommand = new RelayCommand(() =>
+        {
+            this.telemetry.Feature(TelemetrySchema.Features.EditClusters);
+            EditClustersAsync();
+        });
         OpenClusterCommand = new RelayCommand<string>(OpenCluster);
         OpenSavedMessagesCommand = new RelayCommand(() => ShowFolderOpenDialog());
-        NextTabCommand = new RelayCommand(NextTab);
-        PreviousTabCommand = new RelayCommand(PreviousTab);
-        SelectTabCommand = new RelayCommand<string>(s => SelectTab(int.Parse(s ?? "1")));
-        CloseCurrentTabCommand = new RelayCommand(CloseCurrentTab);
-        CheckForUpdatesCommand = new AsyncRelayCommand(() => CheckForUpdatesAsync(false));
+        NextTabCommand = new RelayCommand(() => { TrackTabShortcut(); NextTab(); });
+        PreviousTabCommand = new RelayCommand(() => { TrackTabShortcut(); PreviousTab(); });
+        SelectTabCommand = new RelayCommand<string>(s => { TrackTabShortcut(); SelectTab(int.Parse(s ?? "1")); });
+        CloseCurrentTabCommand = new RelayCommand(() =>
+        {
+            this.telemetry.Feature(TelemetrySchema.Features.TabClose, "shortcut");
+            CloseCurrentTab();
+        });
+        CheckForUpdatesCommand = new AsyncRelayCommand(() =>
+        {
+            this.telemetry.Feature(TelemetrySchema.Features.UpdateCheckManual);
+            return CheckForUpdatesAsync(false);
+        });
         ShowPreferencesCommand = new RelayCommand(ShowPreferences);
-        ShowFormatterPreferencesCommand = new RelayCommand(() => ShowFormatterPreferences());
+        ShowFormatterPreferencesCommand = new RelayCommand(() =>
+        {
+            this.telemetry.Feature(TelemetrySchema.Features.FormatterPreferencesOpen, "menu");
+            ShowFormatterPreferences();
+        });
         ShowPluginManagerCommand = new RelayCommand(OpenPluginManager);
-        ToggleAppLogPanelCommand = new RelayCommand(() => IsAppLogPanelVisible = !IsAppLogPanelVisible);
+        ToggleAppLogPanelCommand = new RelayCommand(() =>
+        {
+            this.telemetry.Feature(TelemetrySchema.Features.AppLogToggle);
+            IsAppLogPanelVisible = !IsAppLogPanelVisible;
+        });
         ClearAppLogCommand = new RelayCommand(AppLogService.Clear);
         CopyAppLogCommand = new RelayCommand(CopyAppLog);
-        OpenDiagnosticLogFileCommand = new RelayCommand(() => OpenDiagnosticLogFile());
+        OpenDiagnosticLogFileCommand = new RelayCommand(() =>
+        {
+            this.telemetry.Feature(TelemetrySchema.Features.DiagnosticLogOpen);
+            OpenDiagnosticLogFile();
+        });
         InitializeSaveNotifications();
 
         OpenedClusters.CollectionChanged += (_, _) => UpdateCloseTabEnabled();
@@ -299,6 +334,7 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             await LoadClustersOnStartupAsync();
+            SendSettingsSnapshotIfDue();
             if (AutoCheckForUpdates)
                 _ = CheckForUpdatesAsync(true);
         }
@@ -316,7 +352,51 @@ public partial class MainViewModel : ViewModelBase
         return _startupTask = LoadClustersOnStartupAsync();
     }
 
-    private void ShowPreferences() => ShowPreferencesDialog(new PreferencesViewModel(settingsService, _themeService, theme => CurrentTheme = theme, formatterService));
+    private void ShowPreferences()
+    {
+        telemetry.Feature(TelemetrySchema.Features.PreferencesOpen);
+        ShowPreferencesDialog(new PreferencesViewModel(settingsService, _themeService, theme => CurrentTheme = theme,
+            formatterService, telemetry));
+    }
+
+    private void TrackTabShortcut() => telemetry.Feature(TelemetrySchema.Features.TabSwitchShortcut, "shortcut");
+
+    private void SendSettingsSnapshot(string trigger)
+    {
+        try
+        {
+            SettingsSnapshot.Send(telemetry, settingsService, BuildTelemetryInventory(), trigger);
+        }
+        catch (Exception e)
+        {
+            Log.Debug(e, "Failed to send settings snapshot");
+        }
+    }
+
+    private void SendSettingsSnapshotIfDue()
+    {
+        try
+        {
+            SettingsSnapshot.SendIfDue(telemetry, settingsService, BuildTelemetryInventory());
+        }
+        catch (Exception e)
+        {
+            Log.Debug(e, "Failed to send settings snapshot");
+        }
+    }
+
+    internal SettingsSnapshot.Inventory BuildTelemetryInventory()
+    {
+        var clients = ClientInfoRepository.GetAll()?.Values.ToList() ?? new();
+        var pluginStates = settingsService.GetPluginSettings().PluginStates;
+        return new SettingsSnapshot.Inventory(
+            Clusters: Clusters.Count(c => TelemetryExtensions.ClientKind(c.Client) != "saved"),
+            LocalClients: Clusters.Count(c => TelemetryExtensions.ClientKind(c.Client) == "local"),
+            GrpcClients: clients.Count(c => string.Equals(c.Protocol, "grpc", StringComparison.OrdinalIgnoreCase)),
+            RestClients: clients.Count(c => string.Equals(c.Protocol, "rest", StringComparison.OrdinalIgnoreCase)),
+            PluginsInstalled: pluginStates.Count,
+            PluginsEnabled: pluginStates.Count(p => p.Value));
+    }
 
     private string ValidateTheme(string themeName)
     {
@@ -352,7 +432,8 @@ public partial class MainViewModel : ViewModelBase
         Log.Information("OpenPluginManager called - creating PluginManagerViewModel");
         try
         {
-            var viewModel = new PluginManagerViewModel(_pluginRegistry, _repoClient, _pluginInstaller, _repoManager);
+            telemetry.Feature(TelemetrySchema.Features.PluginManagerOpen);
+            var viewModel = new PluginManagerViewModel(_pluginRegistry, _repoClient, _pluginInstaller, _repoManager, telemetry);
             Log.Information("PluginManagerViewModel created successfully, calling ShowPluginManagerDialog");
             ShowPluginManagerDialog(viewModel);
         }
