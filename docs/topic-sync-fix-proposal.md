@@ -1,6 +1,6 @@
 # Proposal: open tab stays empty after cluster reconnects
 
-Status: **proposal, no code changed.** Pick one option before implementation.
+Status: **Option A1 implemented** (Option A plus the follow-up-load skip below).
 
 ## Problem
 
@@ -46,8 +46,14 @@ The previous revision blamed the `!isSyncingTopics` guard. That was wrong: the g
 Replace `SyncTopics()` at the end of `ReattachCluster` with `_ = LoadTopicsAsync();`, the same pattern `AddTab` uses.
 
 - Pros: one place; covers every reattach path (periodic discovery and on-demand). If the load fails, `topicsError` is set and the existing health-check retry takes over. No change to locking or health-check semantics.
-- Cons: fire-and-forget from a sync method. The load can overlap the first connection check, which is handled by the cluster's shared `topicsLoadTask` and `connectionCheckLock`. `RefreshClustersForClientAsync` would then load twice for reattached tabs, but the second call joins or replays the shared task.
+- Cons: fire-and-forget from a sync method. On its own it double-loads on the on-demand path (see A1).
 - Risk: low.
+
+#### A1: Option A plus skipping already-loaded tabs (chosen)
+
+Option A alone double-loads in `RefreshClustersForClientAsync` (found in review). If the reattached tab's load finishes before the connection check returns, the follow-up `opened.LoadTopicsAsync()` runs with populated topics. It passes `forceRefresh: Topics.Count > 0`, so it starts a second fetch rather than joining the completed task. That rebuild discards the tab's nodes, selection, and restored session state.
+
+A1 keeps Option A and makes the follow-up loop in `RefreshClustersForClientAsync` skip tabs whose cluster is already `Loaded` or `Loading`. The loop still covers tabs on existing clusters whose topics were reset (for example, after an address change).
 
 ### Option B: make periodic discovery match the on-demand path
 
@@ -67,11 +73,16 @@ In `CheckConnectionAsync`, load when `isConnected && TopicLoadState != Loaded` i
 
 ## Tests
 
-Regression test in `ViewModels.Tests`: open a tab on a placeholder cluster, have discovery return the real cluster, run the health check, and assert the tab's `Topics` is populated. Keep the existing saved-tab restore tests passing.
+Added to `ViewModels.Tests/MainViewModelBusinessLogicTests.cs`:
 
-## Impacted components
+- `PeriodicDiscoveryReplacingPlaceholder_ShouldLoadTopicsForReattachedTab`: the reported bug.
+- `OnDemandRefresh_TopicLoadFinishesBeforeCheck_ShouldNotReloadReattachedTab`: one fetch, and the tab's topic nodes keep their instances.
+- `OnDemandRefresh_TopicLoadFinishesAfterCheck_ShouldLoadOnce`: the in-flight load populates the tab, with no second fetch.
 
-- Option A: `ViewModels/OpenedClusterViewModel.cs`
-- Option B: `ViewModels/MainViewModel.ClusterLoading.cs`
-- Option C: `ViewModels/ClusterViewModel.cs`
-- Tests: `ViewModels.Tests`
+All three fail without the fix. The second also fails with Option A alone.
+
+## Impacted components (A1)
+
+- `ViewModels/OpenedClusterViewModel.cs` (`ReattachCluster`)
+- `ViewModels/MainViewModel.ClusterLoading.cs` (`RefreshClustersForClientAsync`)
+- `ViewModels.Tests/MainViewModelBusinessLogicTests.cs`

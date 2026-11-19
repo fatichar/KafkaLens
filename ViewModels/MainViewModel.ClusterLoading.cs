@@ -232,7 +232,11 @@ public partial class MainViewModel
                 return pending.Distinct().ToArray();
             });
             await Task.WhenAll(checks.Select(c => CheckConnectionSafeAsync(c, allowRetries: false)));
-            foreach (var opened in OpenedClusters.Where(o => checks.Any(c => c.Id == o.ClusterId)).ToArray())
+            // Tabs reattached during the snapshot already started their own topic load. Reloading
+            // a Loaded/Loading cluster would force a second fetch and rebuild the tab's nodes,
+            // discarding selection and restored session state.
+            foreach (var opened in OpenedClusters.Where(o => checks.Any(c => c.Id == o.ClusterId &&
+                         c.TopicLoadState is not (TopicLoadState.Loaded or TopicLoadState.Loading))).ToArray())
                 await opened.LoadTopicsAsync();
         }
         finally
