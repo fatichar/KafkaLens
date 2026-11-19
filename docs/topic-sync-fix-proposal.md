@@ -4,57 +4,74 @@ Status: **proposal, no code changed.** Pick one option before implementation.
 
 ## Problem
 
-1. Open two gRPC clusters while the VPN is down. Both tabs show Disconnected.
-2. Connect the VPN. Cluster status turns Connected (green).
-3. Open tabs show no topics.
-4. Closing and reopening the tab shows topics.
+1. Start the app with the VPN down. gRPC clients are unreachable.
+2. Open a tab on a gRPC cluster. It shows Disconnected.
+3. Connect the VPN. The cluster turns Connected (green).
+4. The open tab shows no topics. Closing and reopening the tab shows them.
 
-## Root cause (from code reading; not yet reproduced)
+## Evidence (user reproduction log, abridged)
 
-- `ClusterViewModel` owns the authoritative topic list and `TopicLoadState`.
-- `OpenedClusterViewModel` keeps its own `Topics` collection, filled only by `SyncTopics()`.
-- `SyncTopics()` is called from:
-  - `OpenedClusterViewModel.LoadTopicsAsync()` (`ViewModels/OpenedClusterViewModel.Topics.cs`). It returns early on `Failed` and never syncs afterwards.
-  - The `TopicLoadState == Loaded` handler in `OnClusterPropertyChanged` (`ViewModels/OpenedClusterViewModel.cs`). It is skipped while `isSyncingTopics` is true.
-- After recovery, the cluster reaches `Loaded` through the periodic health check (`ClusterViewModel.CheckConnectionAsync` → `EnsureTopicsLoadedAsync`). If that happens while the tab's own load is still in flight, the sync is dropped and nothing retries it.
-- Reopening works because `LoadTopicsAsync()` short-circuits on `Loaded` and calls `SyncTopics()`. The cluster already holds the topics; only the tab's copy is stale.
+```
+18:37:58 [ERR] Failed to connect to grpc server: http://...-sandbox-...
+18:37:58 [INF] Loaded 1 clusters from Dev                 <- placeholder cluster
+18:38:20 [INF] Opening cluster: Dev                       <- tab opened on placeholder
+18:38:21 [INF] Loading clusters for client: Dev           <- RefreshClustersForClientAsync, still failing
+18:38:27 [INF] Periodic connection check ... Lab / Integ  <- placeholders skipped by health check
+18:38:30 [INF] Loading clusters for client: Dev ...       <- DiscoverClientsNeedingRefreshAsync, fails
+18:39:01 [INF] Loaded 1 clusters from Dev                 <- VPN up: real cluster discovered
+18:39:27 [INF] Periodic connection check ... Sandbox ...  <- real cluster checked, turns green
+          (no "Loading topics" for any gRPC cluster)
+18:39:28 [INF] Loading topics... / Loaded 125 topics      <- Integ (local client) recovering via topicsError path
+```
+
+The same-instance recovery path works (Integ). The gRPC tabs never request topics.
+
+## Root cause
+
+1. At startup each unreachable gRPC client produces an `IsUnavailablePlaceholder` cluster. The tab opens on it.
+2. `EnsureTopicsLoadedAsync()` returns immediately for placeholders, so no topic load and no `topicsError` is recorded.
+3. When the VPN returns, periodic discovery (`MainViewModel.DiscoverClientsNeedingRefreshAsync`) replaces the placeholder with the real cluster. `ReattachOrphanedTabs` re-points the tab via `OpenedClusterViewModel.ReattachCluster`.
+4. `ReattachCluster` only calls `SyncTopics()`. The new cluster is `NotLoaded`, so this does nothing.
+5. The follow-up `ClusterViewModel.CheckConnectionAsync` loads topics only when `topicsError != null`. The new cluster has never failed a topic load, so it turns green with `TopicLoadState == NotLoaded`.
+6. Nothing else starts a load. Reopening the tab works because `AddTab` calls `LoadTopicsAsync()`.
+
+The on-demand path `RefreshClustersForClientAsync` does call `opened.LoadTopicsAsync()` after reattaching. Periodic discovery does not. That asymmetry is the gap.
+
+The previous revision blamed the `!isSyncingTopics` guard. That was wrong: the guard only suppresses a duplicate sync while the tab's own awaited load is in flight, and removing it would break saved-tab selection restore.
 
 ## Options
 
-### Option 1: Remove the `!isSyncingTopics` guard
+### Option A: start a topic load in `ReattachCluster` (recommended)
 
-Change the condition at `OpenedClusterViewModel.cs` (`OnClusterPropertyChanged`) to sync on every `TopicLoadState == Loaded` transition.
+Replace `SyncTopics()` at the end of `ReattachCluster` with `_ = LoadTopicsAsync();`, the same pattern `AddTab` uses.
 
-- Pros: one-line change; `SyncTopics()` is idempotent (clear and rebuild).
-- Cons: may run `SyncTopics()` twice during a load. Also re-runs `RestorePendingSessionState()`, which costs extra work on large topic lists. Does not explain why the guard exists.
-- Risk: low. Test: a unit test that raises `TopicLoadState = Loaded` while `LoadTopicsAsync` is in flight and asserts `Topics` is populated.
+- Pros: one place; covers every reattach path (periodic discovery and on-demand). If the load fails, `topicsError` is set and the existing health-check retry takes over. No change to locking or health-check semantics.
+- Cons: fire-and-forget from a sync method. The load can overlap the first connection check, which is handled by the cluster's shared `topicsLoadTask` and `connectionCheckLock`. `RefreshClustersForClientAsync` would then load twice for reattached tabs, but the second call joins or replays the shared task.
+- Risk: low.
 
-### Option 2: Tab waits for a terminal state and syncs on a later `Loaded` (recommended)
+### Option B: make periodic discovery match the on-demand path
 
-- `LoadTopicsAsync()` waits until `TopicLoadState` is `Loaded` or `Failed`.
-- On `Failed`, the tab sets a pending-sync flag and stays subscribed. When the cluster later reaches `Loaded`, the tab syncs once and clears the flag.
-- Subscription is cleaned up in `Dispose()` and `ReattachCluster()`.
-- Pros: explicit; does not depend on event ordering; covers every reconnect path.
-- Cons: more code in the tab (flag plus subscription lifecycle). Needs care with `ReattachCluster`.
-- Risk: medium. Tests: failed-then-recovered load populates `Topics`; `Dispose` unsubscribes; reattach while pending.
+After the checks in `DiscoverClientsNeedingRefreshAsync`, call `LoadTopicsAsync()` for tabs on the checked clusters, via a helper shared with `RefreshClustersForClientAsync`.
 
-### Option 3: Sync on every connection-recovery transition
+- Pros: orchestration stays in `MainViewModel`, consistent with existing code.
+- Cons: covers only these two flows; any future reattach path must remember to do the same. Awaiting the loads holds `clusterRefreshLock`: a failing load with retries (~15s) would skip health checks, so loads must be fire-and-forget.
+- Risk: medium.
 
-- In addition to `TopicLoadState`, the tab also syncs when `Status` transitions to `Connected`.
-- Pros: covers recovery even when the topic load was already `Loaded` before the tab subscribed.
-- Cons: adds a second trigger that can fire without a real topic change; more events to reason about.
-- Risk: medium. Test: `Status` → `Connected` with unchanged topics does not clear the tab's selection state.
+### Option C: load topics on every successful connection check while not loaded
 
-## Recommendation
+In `CheckConnectionAsync`, load when `isConnected && TopicLoadState != Loaded` instead of `topicsError != null`.
 
-Option 2. It fixes the missing trigger directly. Option 1 is an acceptable quick fix if minimal change is preferred. Option 3 is a fallback and not needed if option 2 is chosen.
+- Pros: cluster-level guarantee that a connected cluster has topics.
+- Cons: fetches topic metadata for every cluster at startup and after each recovery, including clusters with no open tab. Costly with many large clusters and changes health-check semantics.
+- Risk: medium, performance.
+
+## Tests
+
+Regression test in `ViewModels.Tests`: open a tab on a placeholder cluster, have discovery return the real cluster, run the health check, and assert the tab's `Topics` is populated. Keep the existing saved-tab restore tests passing.
 
 ## Impacted components
 
-- `ViewModels/OpenedClusterViewModel.cs`, `ViewModels/OpenedClusterViewModel.Topics.cs`
-- `ViewModels/ClusterViewModel.cs` (no change expected for options 1 and 2)
-- `ViewModels.Tests/OpenedClusterViewModelBusinessLogicTests.cs` (regression tests)
-
-## Open questions
-
-- Confirm the reproduction path with a live VPN drop and reconnect before choosing. The fix should be validated against the exact interleaving, not only the inferred one.
+- Option A: `ViewModels/OpenedClusterViewModel.cs`
+- Option B: `ViewModels/MainViewModel.ClusterLoading.cs`
+- Option C: `ViewModels/ClusterViewModel.cs`
+- Tests: `ViewModels.Tests`
