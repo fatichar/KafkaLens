@@ -2,11 +2,11 @@ const KAFKALENS_CONFIG = {
     github: {
         owner: 'fatichar',
         repo: 'KafkaLens',
-        version: 'v1.0.0',
+        version: 'v1.0.1',
         assets: {
-            windows: 'KafkaLens-1.0.0-win-x64-installer.exe',
-            macos: 'KafkaLens-1.0.0-macos-arm64.zip',
-            linux: 'KafkaLens-1.0.0-linux-x64.zip'
+            windows: 'KafkaLens-1.0.1-win-x64-installer.exe',
+            macos: 'KafkaLens-1.0.1-macos-arm64.zip',
+            linux: 'KafkaLens-1.0.1-linux-x64.zip'
         }
     },
     umami: {
