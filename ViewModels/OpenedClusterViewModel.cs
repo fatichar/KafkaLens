@@ -349,7 +349,10 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         UpdateClusterName(cluster.Name);
 
         Topics.Clear();
-        SyncTopics();
+        // The replacement (typically a real cluster replacing an unavailable placeholder) may not
+        // have loaded topics yet, and its connection check only reloads topics after a prior
+        // topic failure. Start the load here so the tab doesn't stay empty after recovery.
+        _ = LoadTopicsAsync();
     }
 
     public void Dispose()
