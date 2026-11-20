@@ -1,0 +1,22 @@
+services:
+  metabase:
+    image: ${METABASE_IMAGE:?Set a pinned metabase/metabase image tag or digest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${METABASE_PORT:-3130}:3000"
+    environment:
+      MB_SITE_URL: ${METABASE_SITE_URL:?Set the external HTTPS URL}
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: ${METABASE_DB_HOST:?Set the host of the Metabase metadata database}
+      MB_DB_PORT: ${METABASE_DB_PORT:-5432}
+      MB_DB_DBNAME: ${METABASE_DB_NAME:-metabase}
+      MB_DB_USER: ${METABASE_DB_USER:?Set the owner of the Metabase metadata database}
+      MB_DB_PASS: ${METABASE_DB_PASSWORD:?Set the metadata database password}
+      MB_ENCRYPTION_SECRET_KEY: ${METABASE_ENCRYPTION_KEY:?Set a stable encryption key}
+    networks:
+      - reporting
+
+networks:
+  reporting:
+    external: true
+    name: ${REPORTING_NETWORK:?Set the private network shared with PostgreSQL}
