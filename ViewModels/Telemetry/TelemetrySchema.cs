@@ -6,7 +6,7 @@ namespace KafkaLens.ViewModels.Telemetry;
 /// </summary>
 public static class TelemetrySchema
 {
-    public const int Version = 1;
+    public const int Version = 2;
 
     public static class Events
     {
@@ -16,6 +16,7 @@ public static class TelemetrySchema
         public const string AppExited = "app_exited";
         public const string AppError = "app_error";
         public const string ClusterConnected = "cluster_connected";
+        public const string TopicsAvailable = "topics_available";
         public const string FetchCompleted = "fetch_completed";
         public const string FeatureUsed = "feature_used";
         public const string FormatterSelected = "formatter_selected";
@@ -68,7 +69,7 @@ public static class TelemetrySchema
     /// <summary>Properties added by the service to every event.</summary>
     public static readonly IReadOnlySet<string> CommonProperties = new HashSet<string>
     {
-        "app_version", "os", "os_version", "arch", "runtime", "install_kind", "locale", "session_id", "schema"
+        "app_version", "os", "os_version", "arch", "runtime", "install_kind", "locale", "session_id", "seq", "launch_elapsed_ms", "schema"
     };
 
     /// <summary>Per-event allow-list of properties.</summary>
@@ -76,13 +77,14 @@ public static class TelemetrySchema
         new Dictionary<string, IReadOnlySet<string>>
         {
             [Events.AppFirstRun] = Set(),
-            [Events.AppStarted] = Set("startup_ms", "duration_ms", "previous_unclean_exit", "plugins_loaded"),
+            [Events.AppStarted] = Set("duration_ms", "previous_unclean_exit", "plugins_loaded"),
             [Events.Heartbeat] = Set("active_s"),
             [Events.AppExited] = Set("session_active_s", "session_wall_s"),
             [Events.AppError] = Set("kind", "exception_type", "inner_type", "frames", "fingerprint"),
-            [Events.ClusterConnected] = Set("client_kind", "result", "topics", "duration_ms"),
+            [Events.ClusterConnected] = Set("client_kind", "result", "topics", "duration_ms", "attempts"),
+            [Events.TopicsAvailable] = Set("source"),
             [Events.FetchCompleted] = Set("client_kind", "node", "position", "direction", "requested",
-                "received", "duration", "duration_ms", "result"),
+                "received", "duration_ms", "result"),
             [Events.FeatureUsed] = Set("feature", "source"),
             [Events.FormatterSelected] = Set("formatter", "target", "auto"),
             [Events.UpdateCheck] = Set("result", "manual"),

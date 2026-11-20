@@ -134,7 +134,7 @@ public partial class MainViewModel
 
         var newCluster = new NewKafkaCluster(clusterName, path);
         var cluster = await savedMessagesClient.AddAsync(newCluster);
-        var clusterViewModel = new ClusterViewModel(cluster, savedMessagesClient, AppLogService);
+        var clusterViewModel = new ClusterViewModel(cluster, savedMessagesClient, AppLogService, telemetry);
         Clusters.Add(clusterViewModel);
         return clusterViewModel;
     }

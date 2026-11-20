@@ -49,7 +49,7 @@
                             derived from your machine or account, and you can reset it in Preferences.</li>
                         <li><strong>Measurements:</strong> message counts use coarse buckets such as
                             <em>101-500</em>. Startup, message fetches and topic loading also report elapsed whole
-                            milliseconds.</li>
+                            milliseconds, capped at 10 minutes per operation.</li>
                         <li>Data goes to a self-hosted <a href="https://umami.is/" target="_blank" rel="noopener noreferrer">Umami</a>
                             instance via <code>t.kafkalens.com</code>. It is not sold or shared. Raw events are kept for 13 months.</li>
                         <li>Debug builds never send anything. The code is open source:
@@ -81,6 +81,8 @@
                         <tr><td><code>install_kind</code></td><td>installer / zip / msix / app_bundle</td></tr>
                         <tr><td><code>locale</code></td><td>UI language, e.g. en-US</td></tr>
                         <tr><td><code>session_id</code></td><td>random ID for this app launch</td></tr>
+                        <tr><td><code>seq</code></td><td>event order within the app launch</td></tr>
+                        <tr><td><code>launch_elapsed_ms</code></td><td>whole milliseconds since the launch telemetry clock started</td></tr>
                         <tr><td><code>schema</code></td><td>version of this event format</td></tr>
                     </table>
                     </div>
@@ -95,7 +97,7 @@
                         <tr><th>Event</th><th>When</th><th>Properties</th></tr>
                         <tr><td><code>app_first_run</code></td><td>first launch after install</td><td>—</td></tr>
                         <tr><td><code>app_started</code></td><td>app launch</td>
-                            <td><code>startup_ms</code> (bucket), <code>duration_ms</code> (elapsed whole milliseconds),
+                            <td><code>duration_ms</code> (elapsed whole milliseconds),
                                 <code>previous_unclean_exit</code> (previous run crashed or was killed),
                                 <code>plugins_loaded</code> (count)</td></tr>
                         <tr><td><code>heartbeat</code></td><td>every 5 minutes while the window is focused and in use</td>
@@ -106,15 +108,17 @@
                             <td><code>kind</code>, <code>exception_type</code>, <code>inner_type</code>,
                                 <code>frames</code> (method names of the top stack frames, no file paths or values),
                                 <code>fingerprint</code> (hash used to group identical failures)</td></tr>
-                        <tr><td><code>cluster_connected</code></td><td>a tab loads its topic list</td>
+                        <tr><td><code>cluster_connected</code></td><td>a request to load topics succeeds or runs out of retries</td>
                             <td><code>client_kind</code>, <code>result</code>, <code>topics</code> (bucket),
-                                <code>duration_ms</code> (elapsed whole milliseconds when the tab waits for loading)</td></tr>
+                                <code>duration_ms</code> (final request duration in milliseconds), <code>attempts</code> (request count)</td></tr>
+                        <tr><td><code>topics_available</code></td><td>a tab first has its topic list available</td>
+                            <td><code>source</code> (initial load, retry, or background health check)</td></tr>
                         <tr><td><code>fetch_completed</code></td><td>a message fetch ends</td>
                             <td><code>client_kind</code> (local / grpc / rest / saved), <code>node</code> (topic / partition),
                                 <code>position</code> (start / end / offset / time), <code>direction</code>,
                                 <code>requested</code> (fetch size), <code>received</code> (bucket),
-                                <code>duration</code> (bucket), <code>duration_ms</code> (elapsed whole milliseconds),
-                                <code>result</code> (ok / cancelled / timeout / auth / network / other)</td></tr>
+                                <code>duration_ms</code> (elapsed whole milliseconds),
+                                <code>result</code> (ok / cancelled / superseded / timeout / auth / network / other)</td></tr>
                         <tr><td><code>feature_used</code></td><td>a feature below is used</td>
                             <td><code>feature</code>, <code>source</code> (e.g. menu, shortcut, button)</td></tr>
                         <tr><td><code>formatter_selected</code></td><td>a message formatter is chosen or auto-detected</td>

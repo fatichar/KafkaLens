@@ -1,11 +1,14 @@
 ﻿using System.Collections.ObjectModel;
 using System.Threading;
+using System.Diagnostics;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Shared.Models;
 using KafkaLens.Shared;
+using KafkaLens.Shared.Telemetry;
 using KafkaLens.ViewModels.Services;
+using KafkaLens.ViewModels.Telemetry;
 
 namespace KafkaLens.ViewModels;
 
@@ -26,6 +29,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     public IAsyncRelayCommand LoadTopicsCommand { get; }
     private readonly KafkaCluster cluster;
     private readonly IAppLogService? appLogService;
+    private readonly ITelemetry telemetry;
     private readonly SemaphoreSlim connectionCheckLock = new(1, 1);
     private readonly Dictionary<(string Topic, int? Partition), string> messageFailures = new();
     private ConnectionState brokerStatus;
@@ -101,11 +105,13 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         UpdateEffectiveStatus();
     }
 
-    public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient client, IAppLogService? appLogService = null)
+    public ClusterViewModel(KafkaCluster cluster, IKafkaLensClient client, IAppLogService? appLogService = null,
+        ITelemetry? telemetry = null)
     {
         Client = client;
         this.cluster = cluster;
         this.appLogService = appLogService;
+        this.telemetry = telemetry ?? NullTelemetry.Instance;
         name = cluster.Name;
         address = cluster.Address;
         isEnabled = cluster.IsEnabled;
@@ -225,20 +231,19 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: true);
     }
 
-    internal async Task<bool> EnsureTopicsLoadedAsync(bool forceRefresh = false, bool logTopicLoad = false,
+    internal async Task EnsureTopicsLoadedAsync(bool forceRefresh = false, bool logTopicLoad = false,
         int maxRetries = TOPIC_LOAD_RETRY_COUNT, CancellationToken cancellationToken = default)
     {
-        if (!IsAvailable || IsUnavailablePlaceholder) return false;
+        if (!IsAvailable || IsUnavailablePlaceholder) return;
         Task loadTask;
         lock (topicsLoadLock)
         {
-            if (!forceRefresh && TopicLoadState == TopicLoadState.Loaded) return false;
+            if (!forceRefresh && TopicLoadState == TopicLoadState.Loaded) return;
             if (topicsLoadTask == null || topicsLoadTask.IsCompleted)
                 topicsLoadTask = LoadTopicsWithRetryAsync(logTopicLoad, maxRetries, ConnectionVersion, connectionLifetime.Token);
             loadTask = topicsLoadTask;
         }
         await loadTask.WaitAsync(cancellationToken);
-        return true;
     }
 
     private async Task LoadTopicsWithRetryAsync(bool logTopicLoad, int maxRetries, int version, CancellationToken token)
@@ -249,16 +254,33 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
             for (var attempt = 0; attempt <= maxRetries; attempt++)
             {
                 token.ThrowIfCancellationRequested();
-                await LoadTopicsCoreAsync(logTopicLoad, attempt == maxRetries, version, token);
-                if (TopicLoadState == TopicLoadState.Loaded) return;
-                if (attempt < maxRetries) await Task.Delay(TopicLoadRetryDelay, token);
+                var duration = await LoadTopicsCoreAsync(logTopicLoad, attempt == maxRetries, version, token);
+                token.ThrowIfCancellationRequested();
+                if (version != ConnectionVersion) return;
+                var loaded = TopicLoadState == TopicLoadState.Loaded;
+                if (loaded || attempt == maxRetries)
+                {
+                    if (telemetry.IsEnabled)
+                        telemetry.Track(TelemetrySchema.Events.ClusterConnected, new Dictionary<string, object?>
+                        {
+                            ["client_kind"] = TelemetryExtensions.ClientKind(Client),
+                            ["result"] = loaded ? "ok" : "failed",
+                            ["topics"] = TelemetryBuckets.Count(Topics.Count),
+                            ["duration_ms"] = duration,
+                            ["attempts"] = attempt + 1,
+                        });
+                    return;
+                }
+                await Task.Delay(TopicLoadRetryDelay, token);
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
     }
 
-    private async Task LoadTopicsCoreAsync(bool logTopicLoad, bool isLastAttempt, int version, CancellationToken token)
+    private async Task<long?> LoadTopicsCoreAsync(bool logTopicLoad, bool isLastAttempt, int version, CancellationToken token)
     {
+        long? started = null;
+        long? duration = null;
         try
         {
             await OnUiAsync(() =>
@@ -266,7 +288,9 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
                 TopicLoadState = TopicLoadState.Loading;
                 SetCheckingIfStatusIsUnknown();
             });
+            started = Stopwatch.GetTimestamp();
             var topics = await Client.GetTopicsAsync(cluster.Id).WaitAsync(token);
+            duration = TelemetryBuckets.Milliseconds(Stopwatch.GetElapsedTime(started.Value));
             await OnUiAsync(() =>
             {
                 if (!IsAvailable || version != ConnectionVersion) return;
@@ -283,6 +307,8 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception e)
         {
+            if (duration == null && started is long timestamp)
+                duration = TelemetryBuckets.Milliseconds(Stopwatch.GetElapsedTime(timestamp));
             Serilog.Log.Error(e, "Failed to load topics for cluster {ClusterName}", Name);
             await OnUiAsync(() =>
             {
@@ -294,6 +320,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
             if (logTopicLoad && isLastAttempt)
                 appLogService?.LogError($"Could not load topics for {Name}: {e.Message}", "Topics");
         }
+        return duration;
     }
 
     private void SetCheckingIfStatusIsUnknown()

@@ -4,13 +4,14 @@ using KafkaLens.Shared.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Serilog;
 using KafkaLens.ViewModels.Telemetry;
-using System.Diagnostics;
 
 namespace KafkaLens.ViewModels;
 
 public partial class OpenedClusterViewModel
 {
     private bool isSyncingTopics;
+    private bool isRetryingTopics;
+    private bool topicsAvailabilityTracked;
 
     [ObservableProperty] private string filterText = "";
 
@@ -25,11 +26,19 @@ public partial class OpenedClusterViewModel
         if (cluster.IsChecking) return;
 
         if (disposed || !cluster.IsAvailable) return;
-        await cluster.RecheckConnectionAsync();
-        if (cluster.HasMessageFailures && selectedNode is TopicViewModel or PartitionViewModel)
-            FetchMessages();
-        else
-            SyncTopics();
+        isRetryingTopics = true;
+        try
+        {
+            await cluster.RecheckConnectionAsync();
+            if (cluster.HasMessageFailures && selectedNode is TopicViewModel or PartitionViewModel)
+                FetchMessages();
+            else
+                SyncTopics("retry");
+        }
+        finally
+        {
+            isRetryingTopics = false;
+        }
     }
 
     internal async Task LoadTopicsAsync()
@@ -39,25 +48,14 @@ public partial class OpenedClusterViewModel
         try
         {
             appLogService.LogInfo($"Loading topics for {Name}", "Topics");
-            var started = Stopwatch.GetTimestamp();
-            var waitedForLoad = await cluster.EnsureTopicsLoadedAsync(forceRefresh: Topics.Count > 0);
-            var elapsed = Stopwatch.GetElapsedTime(started);
+            await cluster.EnsureTopicsLoadedAsync(forceRefresh: Topics.Count > 0);
             var failed = cluster.TopicLoadState == TopicLoadState.Failed && cluster.Topics.Count == 0;
-            telemetry.Track(TelemetrySchema.Events.ClusterConnected, new Dictionary<string, object?>
-            {
-                ["client_kind"] = TelemetryExtensions.ClientKind(KafkaLensClient),
-                ["result"] = failed ? "failed" : "ok",
-                ["topics"] = TelemetryBuckets.Count(cluster.Topics.Count),
-                ["duration_ms"] = waitedForLoad && cluster.TopicLoadState is TopicLoadState.Loaded or TopicLoadState.Failed
-                    ? TelemetryBuckets.Milliseconds(elapsed)
-                    : null,
-            });
             if (failed)
             {
                 return;
             }
 
-            SyncTopics();
+            SyncTopics("initial");
             appLogService.LogInfo($"Loaded {Topics.Count} topics for {Name}", "Topics");
         }
         catch (Exception e)
@@ -70,7 +68,7 @@ public partial class OpenedClusterViewModel
         }
     }
 
-    private void SyncTopics()
+    private void SyncTopics(string source)
     {
         if (disposed || cluster.TopicLoadState != TopicLoadState.Loaded) return;
         Topics.Clear();
@@ -82,6 +80,11 @@ public partial class OpenedClusterViewModel
             Topics.Add(new TopicViewModel(topic, valueFormatter, keyFormatter));
         }
         FilterTopics();
+        if (!topicsAvailabilityTracked)
+        {
+            topicsAvailabilityTracked = true;
+            telemetry.Track(TelemetrySchema.Events.TopicsAvailable, new Dictionary<string, object?> { ["source"] = source });
+        }
         RestorePendingSessionState();
     }
 

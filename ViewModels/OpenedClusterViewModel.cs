@@ -214,7 +214,6 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         RefreshCommand = new RelayCommand(() =>
         {
             this.telemetry.Feature(TelemetrySchema.Features.RefreshFetch);
-            if (IsLoading) StopLoading();
             FetchMessages();
         });
         ConnectCommand = new AsyncRelayCommand(() =>
@@ -390,7 +389,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         else if (e.PropertyName == nameof(ClusterViewModel.TopicLoadState) &&
                  cluster.TopicLoadState == TopicLoadState.Loaded && !isSyncingTopics)
         {
-            SyncTopics();
+            SyncTopics(isRetryingTopics ? "retry" : "health_check");
         }
         else if (e.PropertyName == nameof(ClusterViewModel.Name))
             UpdateClusterName(cluster.Name);

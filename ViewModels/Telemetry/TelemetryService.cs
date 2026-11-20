@@ -55,6 +55,7 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
     private readonly ConcurrentQueue<string> recentEvents = new();
     private readonly Stopwatch sessionClock = Stopwatch.StartNew();
     private readonly string sessionId = Guid.NewGuid().ToString("N");
+    private long eventSequence;
 
     private volatile bool userEnabled;
     private volatile bool remoteDisabled;
@@ -194,7 +195,6 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
     {
         Track(TelemetrySchema.Events.AppStarted, new Dictionary<string, object?>
         {
-            ["startup_ms"] = TelemetryBuckets.Duration(startupDuration),
             ["duration_ms"] = TelemetryBuckets.Milliseconds(startupDuration),
             ["previous_unclean_exit"] = previousUncleanExit,
             ["plugins_loaded"] = pluginsLoaded,
@@ -325,6 +325,8 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
             ["install_kind"] = environment.InstallKind,
             ["locale"] = environment.Locale,
             ["session_id"] = sessionId,
+            ["seq"] = Interlocked.Increment(ref eventSequence),
+            ["launch_elapsed_ms"] = sessionClock.ElapsedMilliseconds,
             ["schema"] = TelemetrySchema.Version,
         };
 

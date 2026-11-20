@@ -7,6 +7,7 @@ using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Entities;
 using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Telemetry;
 
 namespace KafkaLens.ViewModels;
 
@@ -18,6 +19,7 @@ public sealed class EditClustersViewModel : IDisposable
     private readonly IClientFactory ClientFactory;
     private readonly Func<string, Task> RefreshClustersForClient;
     private readonly ObservableCollection<ClusterViewModel> AllClusters;
+    private readonly ITelemetry? telemetry;
     private readonly Dictionary<string, ClusterInfo> originalClusters;
     private readonly Dictionary<string, ClientInfo> originalClients;
     private readonly HashSet<string> removedClusterIds = new(StringComparer.Ordinal);
@@ -46,13 +48,14 @@ public sealed class EditClustersViewModel : IDisposable
 
     public EditClustersViewModel(ObservableCollection<ClusterViewModel> clusters,
         IClusterInfoRepository clusterInfoRepository, IClientInfoRepository clientInfoRepository,
-        IClientFactory clientFactory, Func<string, Task> refreshClustersForClient)
+        IClientFactory clientFactory, Func<string, Task> refreshClustersForClient, ITelemetry? telemetry = null)
     {
         AllClusters = clusters;
         ClusterRepository = clusterInfoRepository;
         ClientRepository = clientInfoRepository;
         ClientFactory = clientFactory;
         RefreshClustersForClient = refreshClustersForClient;
+        this.telemetry = telemetry;
         originalClusters = (clusterInfoRepository.GetAll()?.Values ?? Enumerable.Empty<ClusterInfo>()).ToDictionary(c => c.Id, CopyCluster);
         originalClients = (clientInfoRepository.GetAll()?.Values ?? Enumerable.Empty<ClientInfo>()).ToDictionary(c => c.Id, CopyClient);
         Clusters = new ObservableCollection<ClusterViewModel>(clusters
@@ -525,7 +528,8 @@ public sealed class EditClustersViewModel : IDisposable
             var live = AllClusters.FirstOrDefault(c => c.Id == change.Id);
             if (live == null && change.Added)
             {
-                live = new ClusterViewModel(new KafkaCluster(change.Id, change.Name, change.Address) { IsEnabled = change.Enabled }, LocalClient);
+                live = new ClusterViewModel(new KafkaCluster(change.Id, change.Name, change.Address) { IsEnabled = change.Enabled },
+                    LocalClient, telemetry: telemetry);
                 AllClusters.Add(live);
             }
             if (live != null)

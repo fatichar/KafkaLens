@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -9,6 +10,8 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using KafkaLens.UI.Services;
+using KafkaLens.Shared.Telemetry;
+using Microsoft.Extensions.DependencyInjection;
 using KafkaLens.UI.Utils;
 using KafkaLens.ViewModels;
 using KafkaLens.ViewModels.Services;
@@ -120,7 +123,8 @@ public partial class MainView : UserControl
             dataContext.ClusterInfoRepository,
             dataContext.ClientInfoRepository,
             dataContext.ClientFactory,
-            dataContext.RefreshClustersForClientAsync)
+            dataContext.RefreshClustersForClientAsync,
+            (Application.Current as App)?.Services?.GetService<ITelemetry>())
         {
             AvailabilityChanged = dataContext.RefreshAvailability,
             HasOpenTabsForCluster = dataContext.HasOpenTabsForCluster,

@@ -21,13 +21,11 @@ public class TelemetryBucketsTests
     public void Count(long value, string expected) => TelemetryBuckets.Count(value).Should().Be(expected);
 
     [Theory]
-    [InlineData(50, "<100ms")]
-    [InlineData(999, "<1s")]
-    [InlineData(2500, "<3s")]
-    [InlineData(45_000, "<1m")]
-    [InlineData(120_000, "1m+")]
-    public void Duration(int ms, string expected) =>
-        TelemetryBuckets.Duration(TimeSpan.FromMilliseconds(ms)).Should().Be(expected);
+    [InlineData(-5, 0L)]
+    [InlineData(999, 999L)]
+    [InlineData(900_000, 600_000L)]
+    public void Milliseconds(int ms, long expected) =>
+        TelemetryBuckets.Milliseconds(TimeSpan.FromMilliseconds(ms)).Should().Be(expected);
 }
 
 public class ErrorReportTests

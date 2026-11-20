@@ -243,8 +243,13 @@ public class TelemetryServiceTests
 
         var started = f.Sink.Sent.Single(e => e.Name == TelemetrySchema.Events.AppStarted);
         started.Properties["previous_unclean_exit"].Should().Be(true);
-        started.Properties["startup_ms"].Should().Be("<1s");
         started.Properties["duration_ms"].Should().Be(800L);
+        started.Properties["schema"].Should().Be(2);
+        var firstRun = f.Sink.Sent.Single(e => e.Name == TelemetrySchema.Events.AppFirstRun);
+        started.Properties["session_id"].Should().Be(firstRun.Properties["session_id"]);
+        ((long)started.Properties["seq"]!).Should().BeGreaterThan((long)firstRun.Properties["seq"]!);
+        ((long)started.Properties["launch_elapsed_ms"]!).Should().BeGreaterThanOrEqualTo(
+            (long)firstRun.Properties["launch_elapsed_ms"]!);
         started.Properties["plugins_loaded"].Should().Be(2);
     }
 

@@ -32,10 +32,7 @@ public partial class OpenedClusterViewModel
             // strand the spinner forever whenever the cluster was invalidated mid-fetch.
             IsLoading = false;
             messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
-            TrackFetchCompleted(finished.Messages.Count,
-                fetchCts?.IsCancellationRequested == true || finished.WasCanceled
-                    ? "cancelled"
-                    : TelemetryExtensions.ErrorCategory(finished.Error));
+            TrackFetchCompleted(finished.Messages.Count, FetchResult(finished));
 
             // Status reporting is generation-scoped: a result from a superseded connection
             // must not overwrite the status of the current one.
@@ -66,8 +63,20 @@ public partial class OpenedClusterViewModel
         lock (pendingMessages) pendingMessages.Clear();
     }
 
+    private string FetchResult(MessageStream stream) =>
+        fetchCts?.IsCancellationRequested == true || stream.WasCanceled
+            ? "cancelled"
+            : TelemetryExtensions.ErrorCategory(stream.Error);
+
+    private void FinishInterruptedFetch(string reason)
+    {
+        if (messages is { } stream)
+            TrackFetchCompleted(stream.Messages.Count, stream.HasMore ? reason : FetchResult(stream));
+    }
+
     private void StopLoading()
     {
+        FinishInterruptedFetch("cancelled");
         if (IsLoading && activeFetchDescription != null)
             appLogService.LogInfo($"Cancelled fetch from {activeFetchDescription}", "Fetch");
         fetchCts?.Cancel();
@@ -78,6 +87,7 @@ public partial class OpenedClusterViewModel
     {
         if (disposed || !cluster.IsAvailable || selectedNode is not (TopicViewModel or PartitionViewModel)) return;
 
+        FinishInterruptedFetch("superseded");
         fetchCts?.Cancel();
         fetchCts?.Dispose();
         fetchCts = new CancellationTokenSource();

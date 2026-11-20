@@ -49,7 +49,6 @@ public partial class OpenedClusterViewModel
         if (props == null) return;
         props["received"] = TelemetryBuckets.Count(received);
         var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(activeFetchStartedTimestamp);
-        props["duration"] = TelemetryBuckets.Duration(elapsed);
         props["duration_ms"] = TelemetryBuckets.Milliseconds(elapsed);
         props["result"] = result;
         telemetry.Track(TelemetrySchema.Events.FetchCompleted, props);
