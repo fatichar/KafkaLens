@@ -14,7 +14,7 @@ JOIN public.session AS s
   ON s.session_id = e.session_id AND s.website_id = e.website_id
 CROSS JOIN LATERAL (
     SELECT jsonb_object_agg(d.data_key, CASE d.data_type
-               WHEN 2 THEN to_jsonb(d.number_value)
+               WHEN 2 THEN to_jsonb(trim_scale(d.number_value))
                ELSE to_jsonb(d.string_value)
            END ORDER BY d.event_data_id) AS properties
     FROM public.event_data AS d
@@ -22,7 +22,7 @@ CROSS JOIN LATERAL (
       AND d.data_key IN (
           'app_version', 'schema', 'session_id', 'seq', 'launch_elapsed_ms',
           'active_s', 'feature', 'result', 'received', 'duration_ms', 'attempts', 'startup_ms', 'duration',
-          'position', 'direction', 'theme', 'theme_is_default', 'default_fetch_count', 'default_fetch_count_is_default',
+          'position', 'direction', 'fetch_origin', 'trigger', 'theme', 'theme_is_default', 'default_fetch_count', 'default_fetch_count_is_default',
           'restore_tabs_on_startup', 'restore_tabs_on_startup_is_default', 'eager_load_topics',
           'eager_load_topics_is_default', 'auto_check_updates', 'auto_check_updates_is_default',
           'connection_check_interval_s', 'connection_check_interval_s_is_default'
@@ -171,6 +171,7 @@ AS $$
                CASE event_name WHEN 'app_started' THEN properties->>'startup_ms'
                                WHEN 'fetch_completed' THEN properties->>'duration' END AS bucket
         FROM kafkalens_private.events(p_start, p_end, ARRAY['app_started', 'fetch_completed', 'cluster_connected'])
+        WHERE event_name <> 'cluster_connected' OR properties->>'trigger' IS DISTINCT FROM 'health_check'
     )
     SELECT event_name, coalesce(result, CASE WHEN event_name = 'app_started' THEN 'ok' ELSE 'Unknown' END),
            count(*), count(milliseconds),
@@ -190,15 +191,17 @@ AS $$
     GROUP BY 1, 2, 3
 $$;
 
-CREATE OR REPLACE FUNCTION kafkalens_reporting.flow(p_start timestamptz, p_end timestamptz)
-RETURNS TABLE (launches bigint, topics_available bigint, successful_fetch bigint, first_fetch_empty bigint,
-               fetch_failed bigint, recovered_after_failure bigint, timed_fetches bigint, p50_first_fetch_ms numeric)
+DROP FUNCTION IF EXISTS kafkalens_reporting.flow(timestamptz, timestamptz);
+CREATE FUNCTION kafkalens_reporting.flow(p_start timestamptz, p_end timestamptz)
+RETURNS TABLE (first_result_origin text, launches bigint, topics_available bigint, successful_fetch bigint,
+               first_fetch_empty bigint, fetch_failed bigint, recovered_after_failure bigint,
+               timed_fetches bigint, p50_time_to_first_result_ms numeric)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp
 AS $$
     WITH events AS MATERIALIZED (
         SELECT properties->>'session_id' AS launch_id, event_name,
                (properties->>'seq')::numeric AS seq, properties->>'result' AS outcome,
-               properties->>'received' AS received,
+               properties->>'received' AS received, properties->>'fetch_origin' AS origin,
                CASE WHEN jsonb_typeof(properties->'launch_elapsed_ms') = 'number'
                     THEN (properties->>'launch_elapsed_ms')::numeric END AS elapsed
         FROM kafkalens_private.events(p_start, p_end, ARRAY['app_started', 'topics_available', 'fetch_completed'])
@@ -210,20 +213,25 @@ AS $$
         SELECT e.*, l.topics_seq FROM events AS e JOIN launches AS l USING (launch_id)
         WHERE e.event_name = 'fetch_completed' AND e.seq > l.topics_seq
     ), first_success AS (
-        SELECT DISTINCT ON (launch_id) launch_id, seq, received, elapsed
+        SELECT DISTINCT ON (launch_id) launch_id, seq, received, elapsed, origin
         FROM fetches WHERE outcome = 'ok' ORDER BY launch_id, seq
     ), first_failure AS (
         SELECT launch_id, min(seq) AS seq FROM fetches
-        WHERE outcome NOT IN ('ok', 'cancelled', 'superseded') GROUP BY launch_id
+        WHERE outcome NOT IN ('ok', 'cancelled', 'superseded', 'closed') GROUP BY launch_id
     ), recovery AS (
         SELECT DISTINCT f.launch_id FROM fetches AS f JOIN first_failure AS bad USING (launch_id)
         WHERE f.outcome = 'ok' AND f.seq > bad.seq
     )
-    SELECT count(*), count(l.topics_seq), count(ok.launch_id), count(*) FILTER (WHERE ok.received = '0'),
+    SELECT CASE WHEN grouping(cohort.origin) = 1 THEN 'all' ELSE cohort.origin END,
+           count(*), count(l.topics_seq), count(ok.launch_id), count(*) FILTER (WHERE ok.received = '0'),
            count(bad.launch_id), count(r.launch_id), count(ok.elapsed),
            round((percentile_cont(0.5) WITHIN GROUP (ORDER BY ok.elapsed))::numeric, 1)
     FROM launches AS l LEFT JOIN first_success AS ok USING (launch_id)
     LEFT JOIN first_failure AS bad USING (launch_id) LEFT JOIN recovery AS r USING (launch_id)
+    CROSS JOIN LATERAL (
+        SELECT CASE WHEN ok.launch_id IS NULL THEN 'not_reached' ELSE coalesce(ok.origin, 'unknown') END AS origin
+    ) AS cohort
+    GROUP BY GROUPING SETS ((), (cohort.origin))
 $$;
 
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA kafkalens_private, kafkalens_reporting FROM PUBLIC;

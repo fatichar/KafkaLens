@@ -32,17 +32,19 @@ INSERT INTO fixture_events VALUES
     (5, 2, 2, 'topics_available', '{"schema":2,"session_id":"new","seq":1,"source":"retry","launch_elapsed_ms":3}'),
     (6, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":2,"result":"failed","duration_ms":10,"launch_elapsed_ms":7}'),
     (7, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":3,"result":"superseded","duration_ms":10,"launch_elapsed_ms":9}'),
-    (8, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":4,"result":"ok","duration_ms":200,"launch_elapsed_ms":17,"received":"0"}'),
-    (9, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":4,"result":"ok","duration_ms":200,"launch_elapsed_ms":17,"received":"0"}'),
+    (8, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":4,"result":"ok","duration_ms":200,"launch_elapsed_ms":17,"fetch_origin":"restored","received":"0"}'),
+    (9, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":4,"result":"ok","duration_ms":200,"launch_elapsed_ms":17,"fetch_origin":"restored","received":"0"}'),
     (10, 2, 2, 'heartbeat', '{"app_version":"1.1.0","schema":2,"session_id":"new","seq":6,"active_s":100}'),
-    (11, 2, 2, 'settings_snapshot', '{"app_version":"1.1.0","schema":2,"session_id":"new","seq":7,"theme":"System","theme_is_default":true}'),
+    (11, 2, 2, 'settings_snapshot', '{"app_version":"1.1.0","schema":2,"session_id":"new","seq":7,"theme":"System","theme_is_default":true,"default_fetch_count":10,"default_fetch_count_is_default":false}'),
     (12, 2, 2, 'feature_used', '{"schema":2,"session_id":"new","seq":8,"feature":"tab_open"}'),
-    (13, 2, 2, 'cluster_connected', '{"schema":2,"session_id":"new","seq":9,"result":"ok","duration_ms":20,"attempts":2}'),
+    (13, 2, 2, 'cluster_connected', '{"schema":2,"session_id":"new","seq":9,"result":"ok","duration_ms":20,"attempts":2,"trigger":"retry"}'),
     (14, 3, 2, 'heartbeat', '{"app_version":"1.0.0","schema":1,"session_id":"old","active_s":50}'),
     (15, 5, 2, 'heartbeat', '{"app_version":"foreign","schema":1,"active_s":999}'),
     (16, 4, 2, 'feature_used', '{"feature":"tab_open"}'),
     (17, 2, 3, 'app_started', '{"app_version":"future","schema":2,"session_id":"future","seq":1}'),
-    (18, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":10,"result":"ok","duration_ms":400,"launch_elapsed_ms":22,"received":"1"}');
+    (18, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":10,"result":"ok","duration_ms":400,"launch_elapsed_ms":22,"fetch_origin":"interactive","received":"1"}'),
+    (19, 2, 2, 'cluster_connected', '{"schema":2,"session_id":"new","seq":11,"result":"failed","duration_ms":780,"attempts":1,"trigger":"health_check"}'),
+    (20, 2, 2, 'fetch_completed', '{"schema":2,"session_id":"new","seq":12,"result":"closed","duration_ms":30}');
 
 INSERT INTO public.website_event (event_id, website_id, session_id, created_at, event_name)
 SELECT md5('e' || f.id)::uuid, s.website_id, s.session_id,

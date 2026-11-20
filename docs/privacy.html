@@ -110,7 +110,8 @@
                                 <code>fingerprint</code> (hash used to group identical failures)</td></tr>
                         <tr><td><code>cluster_connected</code></td><td>a request to load topics succeeds or runs out of retries</td>
                             <td><code>client_kind</code>, <code>result</code>, <code>topics</code> (bucket),
-                                <code>duration_ms</code> (final request duration in milliseconds), <code>attempts</code> (request count)</td></tr>
+                                <code>duration_ms</code> (final request duration in milliseconds), <code>attempts</code> (request count),
+                                <code>trigger</code> (tab, retry, sidebar, or background health check)</td></tr>
                         <tr><td><code>topics_available</code></td><td>a tab first has its topic list available</td>
                             <td><code>source</code> (initial load, retry, or background health check)</td></tr>
                         <tr><td><code>fetch_completed</code></td><td>a message fetch ends</td>
@@ -118,7 +119,8 @@
                                 <code>position</code> (start / end / offset / time), <code>direction</code>,
                                 <code>requested</code> (fetch size), <code>received</code> (bucket),
                                 <code>duration_ms</code> (elapsed whole milliseconds),
-                                <code>result</code> (ok / cancelled / superseded / timeout / auth / network / other)</td></tr>
+                                <code>result</code> (ok / cancelled / closed / superseded / timeout / auth / network / other),
+                                <code>fetch_origin</code> (interactive or restored tab)</td></tr>
                         <tr><td><code>feature_used</code></td><td>a feature below is used</td>
                             <td><code>feature</code>, <code>source</code> (e.g. menu, shortcut, button)</td></tr>
                         <tr><td><code>formatter_selected</code></td><td>a message formatter is chosen or auto-detected</td>

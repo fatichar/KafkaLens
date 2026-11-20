@@ -74,16 +74,16 @@ public partial class OpenedClusterViewModel
             TrackFetchCompleted(stream.Messages.Count, stream.HasMore ? reason : FetchResult(stream));
     }
 
-    private void StopLoading()
+    private void StopLoading(string reason = "cancelled")
     {
-        FinishInterruptedFetch("cancelled");
+        FinishInterruptedFetch(reason);
         if (IsLoading && activeFetchDescription != null)
             appLogService.LogInfo($"Cancelled fetch from {activeFetchDescription}", "Fetch");
         fetchCts?.Cancel();
         IsLoading = false;
     }
 
-    private void FetchMessages()
+    private void FetchMessages(string origin = "interactive")
     {
         if (disposed || !cluster.IsAvailable || selectedNode is not (TopicViewModel or PartitionViewModel)) return;
 
@@ -112,6 +112,7 @@ public partial class OpenedClusterViewModel
                 ["node"] = selectedNode is PartitionViewModel ? "partition" : "topic",
                 ["position"] = TelemetryExtensions.PositionName(FetchPosition),
                 ["direction"] = FetchBackward ? "backward" : "forward",
+                ["fetch_origin"] = origin,
                 // Presets are a fixed list, so the exact value is useful for picking defaults.
                 ["requested"] = FetchCounts.Contains(fetchOptions.Limit)
                     ? fetchOptions.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture)

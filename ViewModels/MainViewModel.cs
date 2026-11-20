@@ -43,6 +43,9 @@ public partial class MainViewModel : ViewModelBase
     private readonly IThemeService _themeService;
     internal readonly ITelemetry telemetry;
 
+    public EditClustersViewModel CreateEditClustersViewModel() =>
+        new(Clusters, ClusterInfoRepository, ClientInfoRepository, ClientFactory, RefreshClustersForClientAsync, telemetry);
+
     // Data
     public string? Title { get; private set; }
     public ObservableCollection<ClusterViewModel> Clusters { get; } = new();

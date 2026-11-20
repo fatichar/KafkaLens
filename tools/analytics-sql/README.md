@@ -93,10 +93,14 @@ startup reporting finishes. Counts cover launches with schema-2 startup events i
 selected window, with steps observed within that window. A successful empty fetch
 counts as a successful operation and has its own total. Recovery means a later
 success in the same launch. The telemetry does not link a retry to a specific topic.
-Time to first fetch uses monotonic elapsed time from launch telemetry initialization.
+Time to first result includes time spent before selecting a topic. It uses monotonic
+elapsed time from launch telemetry initialization. The `all` row covers all launches.
+Additional rows separate automatic fetches on restored tabs, interactive fetches,
+and launches without a successful result.
 
 Historical timing buckets remain separate from numeric percentiles. Topic timing uses
-the successful or final request's duration and counts attempts independently. Cached
+the successful or final request's duration and counts attempts independently. The
+latency report omits periodic health checks. Cached
 and shared waits do not generate additional latency samples. The first reports can use
 existing event data for adoption, feature use, settings and historical buckets. The
 flow report and numeric percentiles need schema-2 clients.

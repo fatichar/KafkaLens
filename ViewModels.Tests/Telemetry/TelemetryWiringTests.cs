@@ -15,14 +15,15 @@ public class TelemetryWiringTests
     private readonly ITopicSettingsService topicSettingsService = Substitute.For<ITopicSettingsService>();
     private readonly RecordingTelemetry telemetry = new();
 
-    private OpenedClusterViewModel CreateViewModel(IKafkaLensClient? client = null, ClusterViewModel? clusterVm = null)
+    private OpenedClusterViewModel CreateViewModel(IKafkaLensClient? client = null, ClusterViewModel? clusterVm = null,
+        IAppLogService? appLog = null)
     {
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
         topicSettingsService.GetSettings(Arg.Any<string>(), Arg.Any<string>()).Returns(new TopicSettings());
         var cluster = new KafkaCluster("c1", "Cluster", "localhost:9092");
         clusterVm ??= new ClusterViewModel(cluster, client ?? Substitute.For<IKafkaLensClient>(), telemetry: telemetry);
         return new OpenedClusterViewModel(settingsService, topicSettingsService, Substitute.For<IMessageSaver>(),
-            new FormatterService(), clusterVm, "Cluster", telemetry: telemetry);
+            new FormatterService(), clusterVm, "Cluster", appLogService: appLog, telemetry: telemetry);
     }
 
     [AvaloniaFact]
@@ -98,6 +99,7 @@ public class TelemetryWiringTests
 
         var timing = telemetry.Events.Should().ContainSingle(e => e.Name == TelemetrySchema.Events.ClusterConnected).Which;
         timing.Props["attempts"].Should().Be(1);
+        timing.Props["trigger"].Should().Be("tab");
         timing.Props["result"].Should().Be("ok");
         timing.Props["duration_ms"].Should().BeOfType<long>();
         telemetry.Events.Count(e => e.Name == TelemetrySchema.Events.TopicsAvailable).Should().Be(3);
@@ -108,6 +110,7 @@ public class TelemetryWiringTests
     public async Task FailedTopicRequest_ReportsFailureAndAvailabilityOnlyAfterRecovery()
     {
         var client = Substitute.For<IKafkaLensClient>();
+        client.ValidateConnectionAsync("localhost:9092").Returns(true);
         client.GetTopicsAsync("c1").Returns(
             Task.FromException<IList<Topic>>(new InvalidOperationException("internal details")),
             Task.FromResult<IList<Topic>>(new List<Topic>()));
@@ -116,13 +119,58 @@ public class TelemetryWiringTests
 
         await cluster.EnsureTopicsLoadedAsync(maxRetries: 0);
         telemetry.Events.Should().NotContain(e => e.Name == TelemetrySchema.Events.TopicsAvailable);
-        await cluster.EnsureTopicsLoadedAsync(maxRetries: 0);
+        await cluster.CheckConnectionAsync(allowRetries: false);
 
         var timings = telemetry.Events.Where(e => e.Name == TelemetrySchema.Events.ClusterConnected).ToArray();
         timings.Select(e => e.Props["result"]).Should().Equal("failed", "ok");
+        timings.Select(e => e.Props["trigger"]).Should().Equal("tab", "health_check");
         timings.Select(e => e.Props["duration_ms"]).Should().OnlyContain(duration => duration is long);
         telemetry.Events.Should().ContainSingle(e => e.Name == TelemetrySchema.Events.TopicsAvailable)
             .Which.Props["source"].Should().Be("health_check");
+    }
+
+    [AvaloniaFact]
+    public async Task RetryAfterTopicFailure_RecordsOneRetryLoad()
+    {
+        var client = Substitute.For<IKafkaLensClient>();
+        client.ValidateConnectionAsync("localhost:9092").Returns(true);
+        client.GetTopicsAsync("c1").Returns(
+            Task.FromException<IList<Topic>>(new InvalidOperationException("unavailable")),
+            Task.FromResult<IList<Topic>>(new List<Topic>()));
+        var cluster = new ClusterViewModel(new KafkaCluster("c1", "Cluster", "localhost:9092"), client, telemetry: telemetry);
+
+        await cluster.EnsureTopicsLoadedAsync(maxRetries: 0, trigger: "health_check");
+        await cluster.RecheckConnectionAsync();
+
+        await client.Received(2).GetTopicsAsync("c1");
+        var triggers = telemetry.Events.Where(e => e.Name == TelemetrySchema.Events.ClusterConnected)
+            .Select(e => e.Props["trigger"]);
+        triggers.Should().Equal("health_check", "retry");
+    }
+
+    [AvaloniaFact]
+    public async Task RefreshWhenClusterUnavailable_CancelsAndClearsSpinner()
+    {
+        var client = Substitute.For<IKafkaLensClient>();
+        client.GetTopicsAsync("c1").Returns(new List<Topic> { new("topic", new List<Partition>()) });
+        var token = CancellationToken.None;
+        client.GetMessageStream("c1", "topic", Arg.Any<FetchOptions>(), Arg.Do<CancellationToken>(value => token = value))
+            .Returns(new MessageStream());
+        var appLog = Substitute.For<IAppLogService>();
+        var cluster = new ClusterViewModel(new KafkaCluster("c1", "Cluster", "localhost:9092"), client, telemetry: telemetry);
+        using var vm = CreateViewModel(clusterVm: cluster, appLog: appLog);
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+        vm.SelectedNode = vm.Topics[0];
+        vm.IsLoading.Should().BeTrue();
+
+        cluster.IsClientEnabled = false;
+        vm.RefreshCommand.Execute(null);
+
+        token.IsCancellationRequested.Should().BeTrue();
+        vm.IsLoading.Should().BeFalse();
+        appLog.Received(1).LogInfo("Cancelled fetch from topic topic", "Fetch");
+        client.Received(1).GetMessageStream("c1", "topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>());
     }
 
     [AvaloniaFact]
@@ -147,6 +195,27 @@ public class TelemetryWiringTests
         fetches.Select(e => e.Props["result"]).Should().Equal("superseded", "ok");
         fetches.Select(e => e.Props["duration_ms"]).Should().OnlyContain(duration => duration is long);
         fetches[1].Props["received"].Should().Be("0");
+        fetches[1].Props["fetch_origin"].Should().Be("interactive");
+    }
+
+    [AvaloniaFact]
+    public async Task ClosingRestoredTab_RecordsTheFetchOriginAndCloseOutcome()
+    {
+        var client = Substitute.For<IKafkaLensClient>();
+        client.GetTopicsAsync("c1").Returns(new List<Topic> { new("topic", new List<Partition>()) });
+        client.GetMessageStream("c1", "topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new MessageStream());
+        using var vm = CreateViewModel(client);
+        vm.IsCurrent = true;
+        vm.ApplyOpenedTabState(new OpenedTabState { ClusterId = "c1", SelectedTopicName = "topic" });
+        await vm.LoadTopicsAsync();
+        vm.IsLoading.Should().BeTrue();
+
+        vm.Dispose();
+
+        var fetch = telemetry.Events.Should().ContainSingle(e => e.Name == TelemetrySchema.Events.FetchCompleted).Which;
+        fetch.Props["fetch_origin"].Should().Be("restored");
+        fetch.Props["result"].Should().Be("closed");
     }
 
     [Fact]

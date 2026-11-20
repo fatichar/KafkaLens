@@ -214,6 +214,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         RefreshCommand = new RelayCommand(() =>
         {
             this.telemetry.Feature(TelemetrySchema.Features.RefreshFetch);
+            if (IsLoading) StopLoading("superseded");
             FetchMessages();
         });
         ConnectCommand = new AsyncRelayCommand(() =>
@@ -358,7 +359,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
     {
         if (disposed) return;
         disposed = true;
-        StopLoading();
+        StopLoading("closed");
         DetachMessageStream();
         fetchCts?.Dispose();
         cluster.PropertyChanged -= OnClusterPropertyChanged;

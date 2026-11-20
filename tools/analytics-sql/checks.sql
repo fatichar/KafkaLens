@@ -37,11 +37,21 @@ BEGIN
         RAISE EXCEPTION 'Unexpected default use: %', metrics;
     END IF;
 
-    SELECT * INTO STRICT metrics FROM kafkalens_reporting.flow(start_at, end_at);
+    SELECT * INTO STRICT metrics FROM kafkalens_reporting.settings(start_at, end_at) WHERE setting = 'default_fetch_count';
+    IF metrics.value IS DISTINCT FROM '10' THEN RAISE EXCEPTION 'Numeric setting retains decimal scale'; END IF;
+    SELECT * INTO STRICT metrics FROM kafkalens_reporting.settings_defaults(start_at, end_at) WHERE setting = 'default_fetch_count';
+    IF metrics.default_pct IS DISTINCT FROM 0::numeric THEN RAISE EXCEPTION 'Non-default uses must show zero percent'; END IF;
+
+    SELECT * INTO STRICT metrics FROM kafkalens_reporting.flow(start_at, end_at) WHERE first_result_origin = 'all';
     IF (metrics.launches, metrics.topics_available, metrics.successful_fetch, metrics.first_fetch_empty,
-        metrics.fetch_failed, metrics.recovered_after_failure, metrics.timed_fetches, metrics.p50_first_fetch_ms)
+        metrics.fetch_failed, metrics.recovered_after_failure, metrics.timed_fetches, metrics.p50_time_to_first_result_ms)
        IS DISTINCT FROM (1::bigint, 1::bigint, 1::bigint, 1::bigint, 1::bigint, 1::bigint, 1::bigint, 17::numeric) THEN
         RAISE EXCEPTION 'Unexpected flow: %', metrics;
+    END IF;
+
+    SELECT * INTO STRICT metrics FROM kafkalens_reporting.flow(start_at, end_at) WHERE first_result_origin = 'restored';
+    IF metrics.p50_time_to_first_result_ms IS DISTINCT FROM 17::numeric THEN
+        RAISE EXCEPTION 'Flow origin must come from the first successful fetch: %', metrics;
     END IF;
 
     SELECT * INTO STRICT metrics FROM kafkalens_reporting.latency(start_at, end_at)
