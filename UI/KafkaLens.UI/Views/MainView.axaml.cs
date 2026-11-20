@@ -115,34 +115,27 @@ public partial class MainView : UserControl
         var dialog = new EditClustersDialog();
         var dataContext = DataContext as MainViewModel;
         if (dataContext == null || mainWindow == null) return;
-        var vm = new EditClustersViewModel(
-            dataContext.Clusters,
-            dataContext.ClusterInfoRepository,
-            dataContext.ClientInfoRepository,
-            dataContext.ClientFactory,
-            dataContext.RefreshClustersForClientAsync)
+        var vm = dataContext.CreateEditClustersViewModel();
+        vm.AvailabilityChanged = dataContext.RefreshAvailability;
+        vm.HasOpenTabsForCluster = dataContext.HasOpenTabsForCluster;
+        vm.HasOpenTabsForClient = dataContext.HasOpenTabsForClient;
+        vm.CloseTabsForCluster = dataContext.CloseTabsForCluster;
+        vm.CloseTabsForClient = dataContext.CloseTabsForClient;
+        vm.ConfirmDisableCluster = async cluster =>
         {
-            AvailabilityChanged = dataContext.RefreshAvailability,
-            HasOpenTabsForCluster = dataContext.HasOpenTabsForCluster,
-            HasOpenTabsForClient = dataContext.HasOpenTabsForClient,
-            CloseTabsForCluster = dataContext.CloseTabsForCluster,
-            CloseTabsForClient = dataContext.CloseTabsForClient,
-            ConfirmDisableCluster = async (cluster) =>
-            {
-                var box = new SimpleMessageBox(
-                    "Disable Cluster",
-                    $"Disabling '{cluster.Name}' will close its open tab(s). Are you sure you want to proceed?",
-                    isConfirmation: true);
-                return await box.ShowConfirmationAsync(dialog);
-            },
-            ConfirmDisableClient = async (client) =>
-            {
-                var box = new SimpleMessageBox(
-                    "Disable Client",
-                    $"Disabling client '{client.Name}' will close open tab(s) for its cluster(s). Are you sure you want to proceed?",
-                    isConfirmation: true);
-                return await box.ShowConfirmationAsync(dialog);
-            }
+            var box = new SimpleMessageBox(
+                "Disable Cluster",
+                $"Disabling '{cluster.Name}' will close its open tab(s). Are you sure you want to proceed?",
+                isConfirmation: true);
+            return await box.ShowConfirmationAsync(dialog);
+        };
+        vm.ConfirmDisableClient = async client =>
+        {
+            var box = new SimpleMessageBox(
+                "Disable Client",
+                $"Disabling client '{client.Name}' will close its open tab(s). Are you sure you want to proceed?",
+                isConfirmation: true);
+            return await box.ShowConfirmationAsync(dialog);
         };
         dialog.DataContext = vm;
         dialog.ShowDialog(mainWindow);

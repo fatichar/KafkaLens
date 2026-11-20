@@ -130,6 +130,6 @@ public partial class OpenedClusterViewModel
         if (IsFetchBackwardEnabled) FetchBackward = state.FetchBackward;
 
         if (IsCurrent && targetNode is { Type: ITreeNode.NodeType.Topic or ITreeNode.NodeType.Partition })
-            FetchMessages();
+            FetchMessages(origin: "restored");
     }
 }

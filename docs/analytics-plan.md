@@ -264,6 +264,10 @@ No change to `Core`, `GrpcApi`, clients, or packaging.
 4. Umami data retention: 13 months.
 5. Dashboards: DAU/WAU/MAU = distinct ids per day/week/month; time spent = sum `heartbeat.active_s`;
    crash rate = `app_error` with `kind=unhandled` ÷ `app_started`, grouped by `fingerprint` / `app_version`.
+   The [PostgreSQL reporting setup](../tools/analytics-sql/README.md) serves adoption, feature use,
+   settings, latency and launch flow to Metabase. Schema 2 adds per-launch event order and elapsed time,
+   topics available, fetch supersession and numeric operation timings. Historical startup and fetch buckets
+   remain queryable.
 
 ## 12. Risks
 

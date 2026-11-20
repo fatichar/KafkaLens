@@ -32,10 +32,7 @@ public partial class OpenedClusterViewModel
             // strand the spinner forever whenever the cluster was invalidated mid-fetch.
             IsLoading = false;
             messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
-            TrackFetchCompleted(finished.Messages.Count,
-                fetchCts?.IsCancellationRequested == true || finished.WasCanceled
-                    ? "cancelled"
-                    : TelemetryExtensions.ErrorCategory(finished.Error));
+            TrackFetchCompleted(finished.Messages.Count, FetchResult(finished));
 
             // Status reporting is generation-scoped: a result from a superseded connection
             // must not overwrite the status of the current one.
@@ -66,18 +63,31 @@ public partial class OpenedClusterViewModel
         lock (pendingMessages) pendingMessages.Clear();
     }
 
-    private void StopLoading()
+    private string FetchResult(MessageStream stream) =>
+        fetchCts?.IsCancellationRequested == true || stream.WasCanceled
+            ? "cancelled"
+            : TelemetryExtensions.ErrorCategory(stream.Error);
+
+    private void FinishInterruptedFetch(string reason)
     {
+        if (messages is { } stream)
+            TrackFetchCompleted(stream.Messages.Count, stream.HasMore ? reason : FetchResult(stream));
+    }
+
+    private void StopLoading(string reason = "cancelled")
+    {
+        FinishInterruptedFetch(reason);
         if (IsLoading && activeFetchDescription != null)
             appLogService.LogInfo($"Cancelled fetch from {activeFetchDescription}", "Fetch");
         fetchCts?.Cancel();
         IsLoading = false;
     }
 
-    private void FetchMessages()
+    private void FetchMessages(string origin = "interactive")
     {
         if (disposed || !cluster.IsAvailable || selectedNode is not (TopicViewModel or PartitionViewModel)) return;
 
+        FinishInterruptedFetch("superseded");
         fetchCts?.Cancel();
         fetchCts?.Dispose();
         fetchCts = new CancellationTokenSource();
@@ -102,6 +112,7 @@ public partial class OpenedClusterViewModel
                 ["node"] = selectedNode is PartitionViewModel ? "partition" : "topic",
                 ["position"] = TelemetryExtensions.PositionName(FetchPosition),
                 ["direction"] = FetchBackward ? "backward" : "forward",
+                ["fetch_origin"] = origin,
                 // Presets are a fixed list, so the exact value is useful for picking defaults.
                 ["requested"] = FetchCounts.Contains(fetchOptions.Limit)
                     ? fetchOptions.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture)
