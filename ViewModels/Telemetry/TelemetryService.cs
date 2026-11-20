@@ -195,6 +195,7 @@ public sealed class TelemetryService : ITelemetry, ITelemetryControl, IAsyncDisp
         Track(TelemetrySchema.Events.AppStarted, new Dictionary<string, object?>
         {
             ["startup_ms"] = TelemetryBuckets.Duration(startupDuration),
+            ["duration_ms"] = TelemetryBuckets.Milliseconds(startupDuration),
             ["previous_unclean_exit"] = previousUncleanExit,
             ["plugins_loaded"] = pluginsLoaded,
         });

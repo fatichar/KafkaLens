@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KafkaLens desktop analytics</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="/dashboard.css">
+  <script src="/dashboard.js" defer></script>
+</head>
+<body>
+  <main>
+    <header class="page-header">
+      <div>
+        <h1>KafkaLens desktop analytics</h1>
+        <p>Usage and performance from installations that report telemetry.</p>
+      </div>
+      <div class="controls">
+        <label class="visually-hidden" for="date-range">Date range (UTC)</label>
+        <select id="date-range">
+          <option value="7">Last 7 days (UTC)</option>
+          <option value="30" selected>Last 30 days (UTC)</option>
+          <option value="90">Last 90 days (UTC)</option>
+        </select>
+        <button id="refresh" type="button">Refresh</button>
+      </div>
+    </header>
+    <p id="status" role="status">Loading report…</p>
+    <div id="report" hidden>
+      <dl class="summary">
+        <div><dt>Active installations</dt><dd id="active-installations"></dd></div>
+        <div><dt>App launches</dt><dd id="launches"></dd></div>
+        <div><dt>Feature events</dt><dd id="feature-events"></dd></div>
+      </dl>
+      <div class="usage">
+        <section aria-labelledby="version-heading">
+          <h2 id="version-heading">Version adoption</h2>
+          <table aria-labelledby="version-heading">
+            <thead><tr><th scope="col">Version</th><th scope="col">Installs</th><th scope="col">Share</th></tr></thead>
+            <tbody id="versions"></tbody>
+          </table>
+        </section>
+        <section aria-labelledby="feature-heading">
+          <h2 id="feature-heading">Feature usage</h2>
+          <div class="feature-scroll" role="region" aria-labelledby="feature-heading" tabindex="0">
+            <table aria-labelledby="feature-heading">
+              <thead><tr><th scope="col">Feature</th><th scope="col">Uses</th><th scope="col">Installs</th><th scope="col">Reach</th></tr></thead>
+              <tbody id="features"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+      <section aria-labelledby="latency-heading">
+        <h2 id="latency-heading">Operation latency</h2>
+        <table class="latency" aria-labelledby="latency-heading">
+          <thead><tr><th scope="col">Operation</th><th scope="col">Samples</th><th scope="col">p50</th><th scope="col">p95</th><th scope="col">Historical buckets</th></tr></thead>
+          <tbody id="latency"></tbody>
+        </table>
+      </section>
+      <footer>
+        <p id="report-period"></p>
+        <p id="identity-note" hidden></p>
+        <p>Version adoption uses the latest reported version for each active installation in the selected period. Reach is the share of active installations that used a feature. Percentiles and sample counts use millisecond timings.</p>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>

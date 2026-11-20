@@ -264,6 +264,9 @@ No change to `Core`, `GrpcApi`, clients, or packaging.
 4. Umami data retention: 13 months.
 5. Dashboards: DAU/WAU/MAU = distinct ids per day/week/month; time spent = sum `heartbeat.active_s`;
    crash rate = `app_error` with `kind=unhandled` ÷ `app_started`, grouped by `fingerprint` / `app_version`.
+   The [desktop dashboard](../tools/analytics-dashboard/README.md) reports version adoption, feature use
+   and operation latency from named events. The `duration_ms` property adds whole-millisecond timings
+   to startup, fetch and topic-load events. Older startup and fetch buckets remain available.
 
 ## 12. Risks
 

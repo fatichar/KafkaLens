@@ -76,13 +76,13 @@ public static class TelemetrySchema
         new Dictionary<string, IReadOnlySet<string>>
         {
             [Events.AppFirstRun] = Set(),
-            [Events.AppStarted] = Set("startup_ms", "previous_unclean_exit", "plugins_loaded"),
+            [Events.AppStarted] = Set("startup_ms", "duration_ms", "previous_unclean_exit", "plugins_loaded"),
             [Events.Heartbeat] = Set("active_s"),
             [Events.AppExited] = Set("session_active_s", "session_wall_s"),
             [Events.AppError] = Set("kind", "exception_type", "inner_type", "frames", "fingerprint"),
-            [Events.ClusterConnected] = Set("client_kind", "result", "topics"),
+            [Events.ClusterConnected] = Set("client_kind", "result", "topics", "duration_ms"),
             [Events.FetchCompleted] = Set("client_kind", "node", "position", "direction", "requested",
-                "received", "duration", "result"),
+                "received", "duration", "duration_ms", "result"),
             [Events.FeatureUsed] = Set("feature", "source"),
             [Events.FormatterSelected] = Set("formatter", "target", "auto"),
             [Events.UpdateCheck] = Set("result", "manual"),

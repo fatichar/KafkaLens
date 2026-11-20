@@ -225,19 +225,20 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         await EnsureTopicsLoadedAsync(forceRefresh: true, logTopicLoad: true);
     }
 
-    internal async Task EnsureTopicsLoadedAsync(bool forceRefresh = false, bool logTopicLoad = false,
+    internal async Task<bool> EnsureTopicsLoadedAsync(bool forceRefresh = false, bool logTopicLoad = false,
         int maxRetries = TOPIC_LOAD_RETRY_COUNT, CancellationToken cancellationToken = default)
     {
-        if (!IsAvailable || IsUnavailablePlaceholder) return;
+        if (!IsAvailable || IsUnavailablePlaceholder) return false;
         Task loadTask;
         lock (topicsLoadLock)
         {
-            if (!forceRefresh && TopicLoadState == TopicLoadState.Loaded) return;
+            if (!forceRefresh && TopicLoadState == TopicLoadState.Loaded) return false;
             if (topicsLoadTask == null || topicsLoadTask.IsCompleted)
                 topicsLoadTask = LoadTopicsWithRetryAsync(logTopicLoad, maxRetries, ConnectionVersion, connectionLifetime.Token);
             loadTask = topicsLoadTask;
         }
         await loadTask.WaitAsync(cancellationToken);
+        return true;
     }
 
     private async Task LoadTopicsWithRetryAsync(bool logTopicLoad, int maxRetries, int version, CancellationToken token)

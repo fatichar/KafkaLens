@@ -4,6 +4,7 @@ using KafkaLens.Shared.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Serilog;
 using KafkaLens.ViewModels.Telemetry;
+using System.Diagnostics;
 
 namespace KafkaLens.ViewModels;
 
@@ -38,13 +39,18 @@ public partial class OpenedClusterViewModel
         try
         {
             appLogService.LogInfo($"Loading topics for {Name}", "Topics");
-            await cluster.EnsureTopicsLoadedAsync(forceRefresh: Topics.Count > 0);
+            var started = Stopwatch.GetTimestamp();
+            var waitedForLoad = await cluster.EnsureTopicsLoadedAsync(forceRefresh: Topics.Count > 0);
+            var elapsed = Stopwatch.GetElapsedTime(started);
             var failed = cluster.TopicLoadState == TopicLoadState.Failed && cluster.Topics.Count == 0;
             telemetry.Track(TelemetrySchema.Events.ClusterConnected, new Dictionary<string, object?>
             {
                 ["client_kind"] = TelemetryExtensions.ClientKind(KafkaLensClient),
                 ["result"] = failed ? "failed" : "ok",
                 ["topics"] = TelemetryBuckets.Count(cluster.Topics.Count),
+                ["duration_ms"] = waitedForLoad && cluster.TopicLoadState is TopicLoadState.Loaded or TopicLoadState.Failed
+                    ? TelemetryBuckets.Milliseconds(elapsed)
+                    : null,
             });
             if (failed)
             {

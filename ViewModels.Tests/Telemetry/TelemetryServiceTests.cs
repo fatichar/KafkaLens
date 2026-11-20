@@ -244,6 +244,7 @@ public class TelemetryServiceTests
         var started = f.Sink.Sent.Single(e => e.Name == TelemetrySchema.Events.AppStarted);
         started.Properties["previous_unclean_exit"].Should().Be(true);
         started.Properties["startup_ms"].Should().Be("<1s");
+        started.Properties["duration_ms"].Should().Be(800L);
         started.Properties["plugins_loaded"].Should().Be(2);
     }
 

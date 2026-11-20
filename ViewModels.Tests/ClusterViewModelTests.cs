@@ -216,8 +216,8 @@ public class ClusterViewModelTests
         mockClient.GetTopicsAsync(cluster.Id).Returns((IList<Topic>)topics);
 
         // Act
-        await viewModel.EnsureTopicsLoadedAsync();
-        await viewModel.EnsureTopicsLoadedAsync();
+        Assert.True(await viewModel.EnsureTopicsLoadedAsync());
+        Assert.False(await viewModel.EnsureTopicsLoadedAsync());
 
         // Assert
         viewModel.Topics.Should().BeEquivalentTo(topics);

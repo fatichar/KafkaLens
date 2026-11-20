@@ -47,8 +47,9 @@
                             file paths, user or machine names, exception messages, plugin configuration.</li>
                         <li><strong>Identifier:</strong> a random install ID generated on first launch. It is not
                             derived from your machine or account, and you can reset it in Preferences.</li>
-                        <li><strong>Counts and durations</strong> are sent as coarse buckets (for example
-                            <em>101-500</em> messages, <em>&lt;3s</em>), not exact values.</li>
+                        <li><strong>Measurements:</strong> message counts use coarse buckets such as
+                            <em>101-500</em>. Startup, message fetches and topic loading also report elapsed whole
+                            milliseconds.</li>
                         <li>Data goes to a self-hosted <a href="https://umami.is/" target="_blank" rel="noopener noreferrer">Umami</a>
                             instance via <code>t.kafkalens.com</code>. It is not sold or shared. Raw events are kept for 13 months.</li>
                         <li>Debug builds never send anything. The code is open source:
@@ -94,7 +95,8 @@
                         <tr><th>Event</th><th>When</th><th>Properties</th></tr>
                         <tr><td><code>app_first_run</code></td><td>first launch after install</td><td>—</td></tr>
                         <tr><td><code>app_started</code></td><td>app launch</td>
-                            <td><code>startup_ms</code> (bucket), <code>previous_unclean_exit</code> (previous run crashed or was killed),
+                            <td><code>startup_ms</code> (bucket), <code>duration_ms</code> (elapsed whole milliseconds),
+                                <code>previous_unclean_exit</code> (previous run crashed or was killed),
                                 <code>plugins_loaded</code> (count)</td></tr>
                         <tr><td><code>heartbeat</code></td><td>every 5 minutes while the window is focused and in use</td>
                             <td><code>active_s</code> (active seconds since last heartbeat)</td></tr>
@@ -105,12 +107,14 @@
                                 <code>frames</code> (method names of the top stack frames, no file paths or values),
                                 <code>fingerprint</code> (hash used to group identical failures)</td></tr>
                         <tr><td><code>cluster_connected</code></td><td>a tab loads its topic list</td>
-                            <td><code>client_kind</code>, <code>result</code>, <code>topics</code> (bucket)</td></tr>
+                            <td><code>client_kind</code>, <code>result</code>, <code>topics</code> (bucket),
+                                <code>duration_ms</code> (elapsed whole milliseconds when the tab waits for loading)</td></tr>
                         <tr><td><code>fetch_completed</code></td><td>a message fetch ends</td>
                             <td><code>client_kind</code> (local / grpc / rest / saved), <code>node</code> (topic / partition),
                                 <code>position</code> (start / end / offset / time), <code>direction</code>,
                                 <code>requested</code> (fetch size), <code>received</code> (bucket),
-                                <code>duration</code> (bucket), <code>result</code> (ok / cancelled / timeout / auth / network / other)</td></tr>
+                                <code>duration</code> (bucket), <code>duration_ms</code> (elapsed whole milliseconds),
+                                <code>result</code> (ok / cancelled / timeout / auth / network / other)</td></tr>
                         <tr><td><code>feature_used</code></td><td>a feature below is used</td>
                             <td><code>feature</code>, <code>source</code> (e.g. menu, shortcut, button)</td></tr>
                         <tr><td><code>formatter_selected</code></td><td>a message formatter is chosen or auto-detected</td>

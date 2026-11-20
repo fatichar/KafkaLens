@@ -1,6 +1,6 @@
 namespace KafkaLens.ViewModels.Telemetry;
 
-/// <summary>Coarse buckets so that raw counts/durations are never sent.</summary>
+/// <summary>Coarse telemetry buckets and whole-unit elapsed times.</summary>
 public static class TelemetryBuckets
 {
     public static string Count(long value) => value switch
@@ -30,6 +30,8 @@ public static class TelemetryBuckets
         < 60_000 => "<1m",
         _ => "1m+"
     };
+
+    public static long Milliseconds(TimeSpan duration) => Math.Max(0, (long)Math.Round(duration.TotalMilliseconds));
 
     /// <summary>Rounds seconds to whole numbers, capped to avoid outliers from sleep/hibernate.</summary>
     public static long Seconds(TimeSpan duration, long cap = 24 * 3600) =>

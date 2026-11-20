@@ -48,8 +48,9 @@ public partial class OpenedClusterViewModel
         var props = Interlocked.Exchange(ref activeFetchTelemetry, null);
         if (props == null) return;
         props["received"] = TelemetryBuckets.Count(received);
-        props["duration"] = TelemetryBuckets.Duration(
-            System.Diagnostics.Stopwatch.GetElapsedTime(activeFetchStartedTimestamp));
+        var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(activeFetchStartedTimestamp);
+        props["duration"] = TelemetryBuckets.Duration(elapsed);
+        props["duration_ms"] = TelemetryBuckets.Milliseconds(elapsed);
         props["result"] = result;
         telemetry.Track(TelemetrySchema.Events.FetchCompleted, props);
     }
