@@ -141,11 +141,15 @@ public class LocalClient : IKafkaLensClient, IConnectionTestClient, ICancellable
 
     public Task<Shared.Models.KafkaCluster> GetClusterByIdAsync(string clusterId)
     {
-        return Task.Run(() =>
+        try
         {
             var cluster = ValidateClusterId(clusterId);
-            return ToModel(cluster);
-        });
+            return Task.FromResult(ToModel(cluster));
+        }
+        catch (Exception e)
+        {
+            return Task.FromException<Shared.Models.KafkaCluster>(e);
+        }
     }
 
     public async Task<Shared.Models.KafkaCluster> GetClusterByNameAsync(string name)
