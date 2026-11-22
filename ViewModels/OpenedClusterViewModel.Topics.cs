@@ -1,27 +1,44 @@
 using Avalonia.Threading;
 using KafkaLens.Shared;
+using KafkaLens.Formatting;
 using KafkaLens.Shared.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Serilog;
+using KafkaLens.ViewModels.Telemetry;
 
 namespace KafkaLens.ViewModels;
 
 public partial class OpenedClusterViewModel
 {
     private bool isSyncingTopics;
+    private bool isRetryingTopics;
+    private bool topicsAvailabilityTracked;
 
     [ObservableProperty] private string filterText = "";
 
-    partial void OnFilterTextChanged(string value) => FilterTopics();
+    partial void OnFilterTextChanged(string value)
+    {
+        TrackTopicFilter();
+        FilterTopics();
+    }
 
     private async Task ConnectAsync()
     {
         if (cluster.IsChecking) return;
 
-        await cluster.RecheckConnectionAsync();
-        if (cluster.Status == ConnectionState.Connected)
+        if (disposed || !cluster.IsAvailable) return;
+        isRetryingTopics = true;
+        try
         {
-            await LoadTopicsAsync();
+            await cluster.RecheckConnectionAsync();
+            if (cluster.HasMessageFailures && selectedNode is TopicViewModel or PartitionViewModel)
+                FetchMessages();
+            else
+                SyncTopics("retry");
+        }
+        finally
+        {
+            isRetryingTopics = false;
         }
     }
 
@@ -33,30 +50,13 @@ public partial class OpenedClusterViewModel
         {
             appLogService.LogInfo($"Loading topics for {Name}", "Topics");
             await cluster.EnsureTopicsLoadedAsync(forceRefresh: Topics.Count > 0);
-            if (cluster.TopicLoadState == TopicLoadState.Failed && cluster.Topics.Count == 0)
+            var failed = cluster.TopicLoadState == TopicLoadState.Failed && cluster.Topics.Count == 0;
+            if (failed)
             {
                 return;
             }
 
-            Topics.Clear();
-            var hasSchemaRegistry = !string.IsNullOrWhiteSpace(cluster.SchemaRegistryUrl);
-            if (hasSchemaRegistry)
-            {
-                KafkaLens.Formatting.SchemaRegistryFormatter.ActiveSchemaRegistryUrl = cluster.SchemaRegistryUrl;
-                KafkaLens.Formatting.SchemaRegistryFormatter.GetClient(cluster.SchemaRegistryUrl!);
-            }
-
-            foreach (var topic in cluster.Topics)
-            {
-                var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
-                var defaultFormatter = hasSchemaRegistry ? "Schema Registry" : null;
-                var valueFormatter = formatterService.NormalizeFormatterName(settings.ValueFormatter ?? defaultFormatter, ValueFormatterNames);
-                var keyFormatter = formatterService.NormalizeFormatterName(settings.KeyFormatter ?? defaultFormatter, KeyFormatterNames);
-                Topics.Add(new TopicViewModel(topic, valueFormatter, keyFormatter));
-            }
-
-            FilterTopics();
-            RestorePendingSessionState();
+            SyncTopics("initial");
             appLogService.LogInfo($"Loaded {Topics.Count} topics for {Name}", "Topics");
         }
         catch (Exception e)
@@ -67,6 +67,55 @@ public partial class OpenedClusterViewModel
         {
             isSyncingTopics = false;
         }
+    }
+
+    private void SyncTopics(string source)
+    {
+        if (disposed || cluster.TopicLoadState != TopicLoadState.Loaded) return;
+        Topics.Clear();
+        var registryDefault = GetRegistryDefault();
+        foreach (var topic in cluster.Topics)
+        {
+            var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
+            var valueFormatter = formatterService.NormalizeFormatterName(settings.ValueFormatter ?? registryDefault, ValueFormatterNames);
+            var keyFormatter = formatterService.NormalizeFormatterName(settings.KeyFormatter ?? registryDefault, KeyFormatterNames);
+            Topics.Add(new TopicViewModel(topic, valueFormatter, keyFormatter));
+        }
+        FilterTopics();
+        if (!topicsAvailabilityTracked)
+        {
+            topicsAvailabilityTracked = true;
+            telemetry.Track(TelemetrySchema.Events.TopicsAvailable, new Dictionary<string, object?> { ["source"] = source });
+        }
+        RestorePendingSessionState();
+    }
+
+    private string? GetRegistryDefault() =>
+        string.IsNullOrWhiteSpace(cluster.SchemaRegistryUrl) ? null : SchemaRegistryFormatter.Name;
+
+    private void UpdateSchemaRegistryFormatters()
+    {
+        var registryDefault = GetRegistryDefault();
+        foreach (var topic in Topics)
+        {
+            var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
+            if (settings.ValueFormatter == null && (formatterService.IsUnknownFormatter(topic.FormatterName) ||
+                topic.FormatterName == SchemaRegistryFormatter.Name))
+            {
+                topic.FormatterName = formatterService.NormalizeFormatterName(registryDefault, ValueFormatterNames);
+            }
+            if (settings.KeyFormatter == null && (formatterService.IsUnknownFormatter(topic.KeyFormatterName) ||
+                topic.KeyFormatterName == SchemaRegistryFormatter.Name))
+            {
+                topic.KeyFormatterName = formatterService.NormalizeFormatterName(registryDefault, KeyFormatterNames);
+            }
+        }
+
+        foreach (var message in CurrentMessages.Messages)
+            message.UpdateSchemaRegistryUrl(cluster.SchemaRegistryUrl);
+        lock (pendingMessages)
+            foreach (var message in pendingMessages)
+                message.UpdateSchemaRegistryUrl(cluster.SchemaRegistryUrl);
     }
 
     internal void FilterTopics()

@@ -15,4 +15,8 @@
       <ProjectReference Include="..\Core\Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <InternalsVisibleTo Include="KafkaLens.LocalClient.Tests" />
+    </ItemGroup>
+
 </Project>

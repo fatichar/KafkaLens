@@ -3,12 +3,19 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using KafkaLens.Shared.Models;
+using NSubstitute;
 using Xunit;
 using GrpcFetchOptions = KafkaLens.Grpc.FetchOptions;
 using GrpcMessage = KafkaLens.Grpc.Message;
 using GrpcTopic = KafkaLens.Grpc.Topic;
 using GrpcCluster = KafkaLens.Grpc.Cluster;
+using ValidateConnectionRequest = KafkaLens.Grpc.ValidateConnectionRequest;
+using ValidateConnectionResponse = KafkaLens.Grpc.ValidateConnectionResponse;
+using GetClustersResponse = KafkaLens.Grpc.GetClustersResponse;
+using GetTopicsRequest = KafkaLens.Grpc.GetTopicsRequest;
+using GetTopicsResponse = KafkaLens.Grpc.GetTopicsResponse;
 
 namespace KafkaLens.Clients.Tests;
 
@@ -55,6 +62,27 @@ public class GrpcClientTests
         Assert.Equal("cluster-1", result.Id);
         Assert.Equal("MyCluster", result.Name);
         Assert.Equal("localhost:9092", result.Address);
+    }
+
+    [Fact]
+    public void ToClusterModel_PreservesEnabledStateWithBackwardCompatibleDefault()
+    {
+        var disabled = new GrpcCluster
+        {
+            Id = "cluster-1",
+            Name = "MyCluster",
+            BootstrapServers = "localhost:9092",
+            IsEnabled = false
+        };
+        var legacy = new GrpcCluster
+        {
+            Id = "cluster-2",
+            Name = "Legacy",
+            BootstrapServers = "localhost:9093"
+        };
+
+        Assert.False(InvokeStatic<KafkaCluster>("ToClusterModel", disabled).IsEnabled);
+        Assert.True(InvokeStatic<KafkaCluster>("ToClusterModel", legacy).IsEnabled);
     }
 
     [Fact]
@@ -286,6 +314,134 @@ public class GrpcClientTests
 
         await Assert.ThrowsAsync<NotImplementedException>(() =>
             client.UpdateClusterAsync("id", update));
+    }
+
+    #endregion
+
+    #region ValidateConnectionWithDetailsAsync Fallback
+
+    private static AsyncUnaryCall<T> CreateCall<T>(T response) =>
+        new(Task.FromResult(response), Task.FromResult(new Metadata()), () => Status.DefaultSuccess, () => new Metadata(), () => { });
+
+    private static AsyncUnaryCall<T> CreateFailedCall<T>(StatusCode code, string detail = "Error") =>
+        new(Task.FromException<T>(new RpcException(new Status(code, detail))), Task.FromResult(new Metadata()), () => new Status(code, detail), () => new Metadata(), () => { });
+
+    [Fact]
+    public async Task ValidateConnection_WhenUnimplemented_FallsBackToClusters_MatchingConnected()
+    {
+        var mockApi = NSubstitute.Substitute.For<KafkaLens.Grpc.KafkaApi.KafkaApiClient>();
+        mockApi.ValidateConnectionAsync(Arg.Any<ValidateConnectionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateFailedCall<ValidateConnectionResponse>(StatusCode.Unimplemented));
+
+        var clusters = new GetClustersResponse();
+        clusters.Clusters.Add(new GrpcCluster
+        {
+            Id = "c1",
+            Name = "Cluster1",
+            BootstrapServers = "localhost:9092",
+            IsConnected = true
+        });
+        mockApi.GetAllClustersAsync(Arg.Any<Empty>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateCall(clusters));
+
+        var grpcClient = new GrpcClient("Test", "http://localhost:50051", mockApi);
+        var result = await grpcClient.ValidateConnectionWithDetailsAsync("localhost:9092", System.Threading.CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task ValidateConnection_WhenUnimplemented_FallsBackToClusters_MatchingDisconnected()
+    {
+        var mockApi = NSubstitute.Substitute.For<KafkaLens.Grpc.KafkaApi.KafkaApiClient>();
+        mockApi.ValidateConnectionAsync(Arg.Any<ValidateConnectionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateFailedCall<ValidateConnectionResponse>(StatusCode.Unimplemented));
+
+        var clusters = new GetClustersResponse();
+        clusters.Clusters.Add(new GrpcCluster
+        {
+            Id = "c1",
+            Name = "Cluster1",
+            BootstrapServers = "localhost:9092",
+            IsConnected = false
+        });
+        mockApi.GetAllClustersAsync(Arg.Any<Empty>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateCall(clusters));
+
+        var grpcClient = new GrpcClient("Test", "http://localhost:50051", mockApi);
+        var result = await grpcClient.ValidateConnectionWithDetailsAsync("localhost:9092", System.Threading.CancellationToken.None);
+
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task ValidateConnection_WhenUnimplemented_AndNoIsConnectedFlag_ProbesTopics_Success()
+    {
+        var mockApi = NSubstitute.Substitute.For<KafkaLens.Grpc.KafkaApi.KafkaApiClient>();
+        mockApi.ValidateConnectionAsync(Arg.Any<ValidateConnectionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateFailedCall<ValidateConnectionResponse>(StatusCode.Unimplemented));
+
+        var clusters = new GetClustersResponse();
+        clusters.Clusters.Add(new GrpcCluster
+        {
+            Id = "c1",
+            Name = "Cluster1",
+            BootstrapServers = "localhost:9092"
+        });
+        mockApi.GetAllClustersAsync(Arg.Any<Empty>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateCall(clusters));
+
+        var topicsResponse = new GetTopicsResponse();
+        topicsResponse.Topics.Add(new GrpcTopic { Name = "test-topic", PartitionCount = 1 });
+        mockApi.GetTopicsAsync(Arg.Any<GetTopicsRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateCall(topicsResponse));
+
+        var grpcClient = new GrpcClient("Test", "http://localhost:50051", mockApi);
+        var result = await grpcClient.ValidateConnectionWithDetailsAsync("localhost:9092", System.Threading.CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task ValidateConnection_WhenUnimplemented_AndNoIsConnectedFlag_ProbesTopics_Failure()
+    {
+        var mockApi = NSubstitute.Substitute.For<KafkaLens.Grpc.KafkaApi.KafkaApiClient>();
+        mockApi.ValidateConnectionAsync(Arg.Any<ValidateConnectionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateFailedCall<ValidateConnectionResponse>(StatusCode.Unimplemented));
+
+        var clusters = new GetClustersResponse();
+        clusters.Clusters.Add(new GrpcCluster
+        {
+            Id = "c1",
+            Name = "Cluster1",
+            BootstrapServers = "localhost:9092"
+        });
+        mockApi.GetAllClustersAsync(Arg.Any<Empty>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateCall(clusters));
+
+        mockApi.GetTopicsAsync(Arg.Any<GetTopicsRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateFailedCall<GetTopicsResponse>(StatusCode.Unavailable, "Kafka broker unreachable"));
+
+        var grpcClient = new GrpcClient("Test", "http://localhost:50051", mockApi);
+        var result = await grpcClient.ValidateConnectionWithDetailsAsync("localhost:9092", System.Threading.CancellationToken.None);
+
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task ValidateConnection_WhenUnimplemented_AndDaemonUnreachable_Fails()
+    {
+        var mockApi = NSubstitute.Substitute.For<KafkaLens.Grpc.KafkaApi.KafkaApiClient>();
+        mockApi.ValidateConnectionAsync(Arg.Any<ValidateConnectionRequest>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateFailedCall<ValidateConnectionResponse>(StatusCode.Unimplemented));
+
+        mockApi.GetAllClustersAsync(Arg.Any<Empty>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(), Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateFailedCall<GetClustersResponse>(StatusCode.Unavailable, "gRPC server unavailable"));
+
+        var grpcClient = new GrpcClient("Test", "http://localhost:50051", mockApi);
+        var result = await grpcClient.ValidateConnectionWithDetailsAsync("localhost:9092", System.Threading.CancellationToken.None);
+
+        Assert.False(result.Succeeded);
     }
 
     #endregion

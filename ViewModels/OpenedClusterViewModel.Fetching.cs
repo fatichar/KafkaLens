@@ -3,6 +3,7 @@ using System.Threading;
 using Avalonia.Threading;
 using KafkaLens.Shared.Models;
 using Serilog;
+using KafkaLens.ViewModels.Telemetry;
 
 namespace KafkaLens.ViewModels;
 
@@ -14,55 +15,91 @@ public partial class OpenedClusterViewModel
     private CancellationTokenSource? fetchCts;
     private string? activeFetchDescription;
     private int activeFetchRequestedCount;
+    private long activeFetchStartedTimestamp;
+    private Dictionary<string, object?>? activeFetchTelemetry;
 
-    private void OnStreamFinished()
+    private MessageStream.FinishedEventHandler? streamFinishedHandler;
+
+    private void OnStreamFinished(MessageStream finished, ClusterViewModel owner, string topic, int? partition, int version)
     {
-        Dispatcher.UIThread.InvokeAsync(() =>
+        Dispatcher.UIThread.Post(() =>
         {
+            // This stream is no longer the active one, so it owns no UI state at all.
+            if (disposed || !ReferenceEquals(finished, messages)) return;
+
+            // The fetch that owns the spinner has ended, so clear it regardless of whether the
+            // result is still current. Deciding this behind the generation guard below would
+            // strand the spinner forever whenever the cluster was invalidated mid-fetch.
             IsLoading = false;
-            if (messages?.Error is { } error)
+            messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
+            TrackFetchCompleted(finished.Messages.Count, FetchResult(finished));
+
+            // Status reporting is generation-scoped: a result from a superseded connection
+            // must not overwrite the status of the current one.
+            if (!ReferenceEquals(owner, cluster) || version != cluster.ConnectionVersion ||
+                fetchCts?.IsCancellationRequested == true) return;
+            if (finished.Error is { } error)
             {
-                cluster.LastError = error.Message;
-                cluster.Status = ConnectionState.Failed;
+                owner.ReportMessageResult(topic, partition, error, version);
                 appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {error.Message}", "Fetch");
             }
-            else if (messages?.WasCanceled != true)
+            else if (!finished.WasCanceled)
             {
-                cluster.LastError = null;
-                cluster.Status = ConnectionState.Connected;
+                owner.ReportMessageResult(topic, partition, null, version);
                 appLogService.LogInfo(
-                    $"Fetched {messages?.Messages.Count ?? 0} of {activeFetchRequestedCount} messages from {activeFetchDescription}",
+                    $"Fetched {finished.Messages.Count} of {activeFetchRequestedCount} messages from {activeFetchDescription}",
                     "Fetch");
             }
-            messageLoadListeners.ForEach(l => l.MessageLoadingFinished());
         });
     }
 
-    private void StopLoading()
+    private void DetachMessageStream()
     {
+        if (messages == null) return;
+        messages.Messages.CollectionChanged -= OnMessagesChanged;
+        messages.Finished -= streamFinishedHandler;
+        streamFinishedHandler = null;
+        messages = null;
+        lock (pendingMessages)
+        {
+            foreach (var message in pendingMessages) message.CancelRegistryDecodes();
+            pendingMessages.Clear();
+        }
+    }
+
+    private string FetchResult(MessageStream stream) =>
+        fetchCts?.IsCancellationRequested == true || stream.WasCanceled
+            ? "cancelled"
+            : TelemetryExtensions.ErrorCategory(stream.Error);
+
+    private void FinishInterruptedFetch(string reason)
+    {
+        if (messages is { } stream)
+            TrackFetchCompleted(stream.Messages.Count, stream.HasMore ? reason : FetchResult(stream));
+    }
+
+    private void StopLoading(string reason = "cancelled")
+    {
+        FinishInterruptedFetch(reason);
         if (IsLoading && activeFetchDescription != null)
             appLogService.LogInfo($"Cancelled fetch from {activeFetchDescription}", "Fetch");
         fetchCts?.Cancel();
         IsLoading = false;
     }
 
-    private void FetchMessages()
+    private void FetchMessages(string origin = "interactive")
     {
-        if (selectedNode == null) return;
+        if (disposed || !cluster.IsAvailable || selectedNode is not (TopicViewModel or PartitionViewModel)) return;
 
-        if (!string.IsNullOrWhiteSpace(cluster.SchemaRegistryUrl))
-        {
-            KafkaLens.Formatting.SchemaRegistryFormatter.ActiveSchemaRegistryUrl = cluster.SchemaRegistryUrl;
-        }
-
+        FinishInterruptedFetch("superseded");
         fetchCts?.Cancel();
+        fetchCts?.Dispose();
         fetchCts = new CancellationTokenSource();
-
-        if (messages != null)
-        {
-            messages.Messages.CollectionChanged -= OnMessagesChanged;
-            messages.Finished -= OnStreamFinished;
-        }
+        DetachMessageStream();
+        var owner = cluster;
+        var version = owner.ConnectionVersion;
+        var topicName = GetCurrentTopicName();
+        int? partitionId = (selectedNode as PartitionViewModel)?.Id;
 
         CurrentMessages.Clear();
         IsLoading = true;
@@ -70,6 +107,22 @@ public partial class OpenedClusterViewModel
         var fetchOptions = CreateFetchOptions();
         activeFetchDescription = GetFetchDescription(selectedNode);
         activeFetchRequestedCount = fetchOptions.Limit;
+        filtersTrackedForFetch.Clear();
+        activeFetchStartedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+        activeFetchTelemetry = telemetry.IsEnabled
+            ? new Dictionary<string, object?>
+            {
+                ["client_kind"] = TelemetryExtensions.ClientKind(KafkaLensClient),
+                ["node"] = selectedNode is PartitionViewModel ? "partition" : "topic",
+                ["position"] = TelemetryExtensions.PositionName(FetchPosition),
+                ["direction"] = FetchBackward ? "backward" : "forward",
+                ["fetch_origin"] = origin,
+                // Presets are a fixed list, so the exact value is useful for picking defaults.
+                ["requested"] = FetchCounts.Contains(fetchOptions.Limit)
+                    ? fetchOptions.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    : TelemetryBuckets.Count(fetchOptions.Limit),
+            }
+            : null;
         appLogService.LogInfo(
             $"Fetching {fetchOptions.Limit} messages from {activeFetchDescription}",
             "Fetch");
@@ -91,9 +144,9 @@ public partial class OpenedClusterViewModel
             IsLoading = false;
             if (e is not OperationCanceledException)
             {
-                cluster.LastError = e.Message;
-                cluster.Status = ConnectionState.Failed;
+                owner.ReportMessageResult(topicName, partitionId, e, version);
             }
+            TrackFetchCompleted(0, TelemetryExtensions.ErrorCategory(e));
             Log.Error(e, "Failed to fetch messages for {ClusterName}", Name);
             appLogService.LogError($"Could not fetch messages from {activeFetchDescription}: {e.Message}", "Fetch");
             return;
@@ -101,8 +154,16 @@ public partial class OpenedClusterViewModel
 
         if (messages != null)
         {
-            messages.Messages.CollectionChanged += OnMessagesChanged;
-            messages.Finished += OnStreamFinished;
+            var stream = messages;
+            var completed = 0;
+            streamFinishedHandler = () =>
+            {
+                if (Interlocked.Exchange(ref completed, 1) == 0)
+                    OnStreamFinished(stream, owner, topicName, partitionId, version);
+            };
+            stream.Messages.CollectionChanged += OnMessagesChanged;
+            stream.Finished += streamFinishedHandler;
+            if (!stream.HasMore) streamFinishedHandler();
         }
     }
 
@@ -115,6 +176,15 @@ public partial class OpenedClusterViewModel
 
     private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            if (e.NewItems == null) return;
+            var items = e.NewItems.Cast<Message>().ToArray();
+            Dispatcher.UIThread.Post(() => OnMessagesChanged(sender,
+                new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, items)));
+            return;
+        }
+        if (disposed || !ReferenceEquals(sender, messages?.Messages) || fetchCts?.IsCancellationRequested == true) return;
         var node = (IMessageSource?)SelectedNode;
         if (node == null) return;
 
@@ -128,6 +198,7 @@ public partial class OpenedClusterViewModel
                 var message = (Message)e.NewItems![0]!;
                 var formatter = formatterService.GuessValueFormatter(message, ValueFormatterNames);
                 node.FormatterName = formatter?.Name ?? formatterService.GetDefaultFormatterName();
+                TrackFormatterSelected(node.FormatterName, "value", auto: true);
             }
             settingsChanged = true;
             Log.Information("Guessed value formatter {Formatter} for topic {Topic}", node.FormatterName, topicName);
@@ -142,6 +213,7 @@ public partial class OpenedClusterViewModel
                 if (formatter != null)
                 {
                     node.KeyFormatterName = formatter.Name;
+                    TrackFormatterSelected(node.KeyFormatterName, "key", auto: true);
                     settingsChanged = true;
                     Log.Information("Guessed key formatter {Formatter} for topic {Topic}", node.KeyFormatterName, topicName);
                 }
@@ -163,8 +235,8 @@ public partial class OpenedClusterViewModel
             var keyFormatterName = formatterService.NormalizeFormatterName(node.KeyFormatterName, KeyFormatterNames);
             foreach (var msg in e.NewItems ?? new List<Message>())
             {
-                var viewModel = new MessageViewModel((Message)msg, valueFormatterName, keyFormatterName);
-                viewModel.Topic = topicName;
+                var viewModel = new MessageViewModel((Message)msg, valueFormatterName, keyFormatterName,
+                    cluster.SchemaRegistryUrl, topicName);
                 pendingMessages.Add(viewModel);
             }
 

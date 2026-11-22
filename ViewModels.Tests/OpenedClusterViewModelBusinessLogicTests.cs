@@ -477,6 +477,43 @@ public class OpenedClusterViewModelBusinessLogicTests
     }
 
     [AvaloniaFact]
+    public async Task FetchMessages_WhenClusterInvalidatedMidFetch_ShouldStillClearIsLoading()
+    {
+        // Arrange
+        settingsService.GetBrowserConfig().Returns(new BrowserConfig());
+        var cluster = new KafkaCluster("c1", "TestCluster", "localhost:9092")
+        {
+            Status = ConnectionState.Connected
+        };
+        var clusterVm = new ClusterViewModel(cluster, mockClient);
+        var vm = new OpenedClusterViewModel(
+            settingsService,
+            topicSettingsService,
+            messageSaver,
+            formatterService,
+            clusterVm,
+            "TestCluster");
+        var topics = new List<Topic> { new("test-topic", new List<Partition> { new(0) }) };
+        mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
+        await vm.LoadTopicsAsync();
+        vm.IsCurrent = true;
+        var messageStream = new MessageStream();
+        mockClient.GetMessageStream("c1", "test-topic", Arg.Any<FetchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(messageStream);
+
+        // Act — start a fetch, then bump the cluster's ConnectionVersion (as an address change or
+        // placeholder upgrade would) before the stream finishes.
+        vm.SelectedNode = vm.Topics[0];
+        Assert.True(vm.IsLoading);
+        clusterVm.Address = "localhost:9093";
+        messageStream.HasMore = false;
+        await Task.Delay(50);
+
+        // Assert — the stale result must not report status, but the spinner must still clear.
+        Assert.False(vm.IsLoading);
+    }
+
+    [AvaloniaFact]
     public async Task FetchMessages_WhenStopped_ShouldLogCancellation()
     {
         // Arrange
@@ -1080,6 +1117,7 @@ public class OpenedClusterViewModelBusinessLogicTests
             clusterVm,
             "TestCluster");
         var topics = new List<Topic> { new("reconnected-topic", new List<Partition>()) };
+        mockClient.ValidateConnectionAsync(cluster.Address).Returns(Task.FromResult(true));
         mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
 
         // Act
@@ -1097,7 +1135,7 @@ public class OpenedClusterViewModelBusinessLogicTests
     #region OnClusterPropertyChanged
 
     [AvaloniaFact]
-    public async Task OnClusterPropertyChanged_WhenConnectedAndNoTopics_ShouldLoadTopics()
+    public async Task OnClusterPropertyChanged_WhenConnectedAndNoTopics_ShouldNotStartNetworkOperation()
     {
         // Arrange
         settingsService.GetBrowserConfig().Returns(new BrowserConfig());
@@ -1108,16 +1146,16 @@ public class OpenedClusterViewModelBusinessLogicTests
         var topics = new List<Topic> { new("auto-loaded-topic", new List<Partition>()) };
         mockClient.GetTopicsAsync("c1").Returns(Task.FromResult<IList<Topic>>(topics));
 
-        // Act — simulate cluster becoming connected
+        // Act — publish connected status without explicitly requesting topics
         mockClient.ValidateConnectionAsync("localhost:9092").Returns(Task.FromResult(true));
         await clusterVm.CheckConnectionAsync();
 
-        // Allow async LoadTopicsAsync to complete
+        // Allow any accidentally queued UI work to execute
         await Task.Delay(100);
 
         // Assert
-        Assert.Single(vm.Topics);
-        Assert.Equal("auto-loaded-topic", vm.Topics[0].Name);
+        Assert.Empty(vm.Topics);
+        await mockClient.DidNotReceive().GetTopicsAsync("c1");
     }
 
     #endregion

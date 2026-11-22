@@ -1,4 +1,6 @@
 
+using KafkaLens.ViewModels.Telemetry;
+
 namespace KafkaLens.ViewModels.Config;
 
 public record AppConfig
@@ -7,4 +9,5 @@ public record AppConfig
 	public string ClusterInfoFilePath { get; set; } = "cluster_info.json";
 	public string ClientInfoFilePath { get; set; } = "client_info.json";
     public int ClusterRefreshIntervalSeconds { get; init; } = 300;
+    public TelemetryOptions Telemetry { get; init; } = new();
 }

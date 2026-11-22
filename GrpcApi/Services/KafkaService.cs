@@ -38,11 +38,17 @@ public class KafkaService(
 
     public override async Task<ValidateConnectionResponse> ValidateConnection(ValidateConnectionRequest request, ServerCallContext context)
     {
-        var isConnected = await kafkaLensClient.ValidateConnectionAsync(request.BootstrapServers);
+        var result = kafkaLensClient is ICancellableConnectionClient cancellable
+            ? await cancellable.ValidateConnectionWithDetailsAsync(request.BootstrapServers, context.CancellationToken)
+            : kafkaLensClient is IConnectionTestClient detailed
+                ? await detailed.ValidateConnectionWithDetailsAsync(request.BootstrapServers).WaitAsync(context.CancellationToken)
+                : await kafkaLensClient.ValidateConnectionAsync(request.BootstrapServers).WaitAsync(context.CancellationToken)
+                    ? Models.ConnectionValidationResult.Success()
+                    : Models.ConnectionValidationResult.Failed();
         return new ValidateConnectionResponse
         {
-            IsConnected = isConnected,
-            Message = isConnected ? "Connected" : "Failed to connect"
+            IsConnected = result.Succeeded,
+            Message = result.Succeeded ? "Connected" : result.ErrorMessage ?? "Failed to connect"
         };
     }
     #endregion Create
@@ -237,7 +243,8 @@ public class KafkaService(
             Id = cluster.Id,
             Name = cluster.Name,
             BootstrapServers = cluster.Address,
-            IsConnected = cluster.Status == Models.ConnectionState.Connected
+            IsConnected = cluster.Status == Models.ConnectionState.Connected,
+            IsEnabled = cluster.IsEnabled
         };
     }
 

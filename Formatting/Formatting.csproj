@@ -31,8 +31,9 @@
       <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
       <PackageReference Include="Confluent.SchemaRegistry" Version="2.13.0" />
       <PackageReference Include="Confluent.SchemaRegistry.Serdes.Avro" Version="2.13.0" />
-      <PackageReference Include="Confluent.SchemaRegistry.Serdes.Protobuf" Version="2.13.0" />
-      <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.13.0" />
+      <PackageReference Include="Google.Protobuf" Version="3.33.5" />
+      <PackageReference Include="protobuf-net" Version="3.2.52" />
+      <PackageReference Include="protobuf-net.Reflection" Version="3.2.52" Aliases="ProtoSchema" />
     </ItemGroup>
     <!-- Source Link for debugging -->
     <ItemGroup Condition=" '$(CI)' == 'true' ">

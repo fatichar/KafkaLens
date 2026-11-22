@@ -28,6 +28,15 @@ public abstract class ConsumerBase : IKafkaConsumer
         }
     }
 
+    public virtual Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(CancellationToken cancellationToken = default)
+        => Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = ValidateConnectionWithDetails();
+            cancellationToken.ThrowIfCancellationRequested();
+            return result;
+        }, cancellationToken);
+
     public virtual List<Topic> GetTopics()
     {
         // if topics were loaded in the last 60 minutes, return them
@@ -111,7 +120,7 @@ public abstract class ConsumerBase : IKafkaConsumer
             {
                 messages.HasMore = false;
             }
-        }, cancellationToken);
+        }, CancellationToken.None);
         return messages;
     }
 
@@ -141,7 +150,7 @@ public abstract class ConsumerBase : IKafkaConsumer
             {
                 messages.HasMore = false;
             }
-        }, cancellationToken);
+        }, CancellationToken.None);
         return messages;
     }
 
@@ -149,7 +158,7 @@ public abstract class ConsumerBase : IKafkaConsumer
         CancellationToken cancellationToken = default)
     {
         var messages = new MessageStream();
-        await GetMessagesAsync(topic, options, messages, cancellationToken);
+        await Task.Run(() => GetMessagesAsync(topic, options, messages, cancellationToken), cancellationToken).ConfigureAwait(false);
         return messages.Messages.ToList();
     }
 
@@ -157,7 +166,7 @@ public abstract class ConsumerBase : IKafkaConsumer
         CancellationToken cancellationToken = default)
     {
         var messages = new MessageStream();
-        await GetMessagesAsync(topic, partition, options, messages, cancellationToken);
+        await Task.Run(() => GetMessagesAsync(topic, partition, options, messages, cancellationToken), cancellationToken).ConfigureAwait(false);
         return messages.Messages.ToList();
     }
 

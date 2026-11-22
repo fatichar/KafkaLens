@@ -41,7 +41,6 @@ public class FormatterFactory
         AddBuiltInFormatter(new UInt32Formatter(), supportsKeyFormatting: true);
         AddBuiltInFormatter(new Int64Formatter(), supportsKeyFormatting: true);
         AddBuiltInFormatter(new UInt64Formatter(), supportsKeyFormatting: true);
-        AddBuiltInFormatter(new SchemaRegistryFormatter(), supportsKeyFormatting: true);
     }
 
     public IMessageFormatter DefaultFormatter => formatters[JSON];

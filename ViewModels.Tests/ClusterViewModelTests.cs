@@ -14,10 +14,79 @@ public class ClusterViewModelTests
     {
         fixture = new Fixture();
         mockClient = Substitute.For<IKafkaLensClient>();
-        cluster = fixture.Create<KafkaCluster>();
+        cluster = fixture.Build<KafkaCluster>().With(c => c.IsEnabled, true)
+            .With(c => c.IsUnavailablePlaceholder, false).With(c => c.Status, ConnectionState.Unknown).Create();
     }
 
-    [Fact]
+    [AvaloniaFact]
+    public async Task MessageFailures_AreClearedOnlyBySuccessfulRetryOfTheSamePath()
+    {
+        var vm = new ClusterViewModel(cluster, mockClient);
+        mockClient.ValidateConnectionAsync(cluster.Address).Returns(true);
+        vm.ReportMessageResult("orders", 0, new Exception("orders denied"), vm.ConnectionVersion);
+        vm.ReportMessageResult("payments", 1, new Exception("payments denied"), vm.ConnectionVersion);
+        await vm.CheckConnectionAsync(false);
+        vm.ApplyDiagnosticStatus(ConnectionState.Unknown);
+        vm.ApplyDiagnosticStatus(ConnectionState.Connected);
+        Assert.Equal(ConnectionState.Failed, vm.Status);
+        vm.ReportMessageResult("orders", 0, null, vm.ConnectionVersion);
+        Assert.Equal(ConnectionState.Failed, vm.Status);
+        Assert.Equal("payments denied", vm.LastError);
+        vm.ReportMessageResult("payments", 1, null, vm.ConnectionVersion);
+        Assert.Equal(ConnectionState.Connected, vm.Status);
+    }
+
+    [AvaloniaFact]
+    public async Task AddressChange_DiscardsStaleValidationResult()
+    {
+        var vm = new ClusterViewModel(cluster, mockClient);
+        var pending = new TaskCompletionSource<bool>();
+        mockClient.ValidateConnectionAsync(cluster.Address).Returns(pending.Task);
+        var check = vm.CheckConnectionAsync(false);
+        vm.Address = "changed:9092";
+        pending.SetResult(true);
+        await check;
+        Assert.Equal(ConnectionState.Unknown, vm.Status);
+        Assert.Empty(vm.Topics);
+    }
+
+    [AvaloniaFact]
+    public async Task DisableDuringValidation_RemainsDisabledAfterCompletion()
+    {
+        var vm = new ClusterViewModel(cluster, mockClient);
+        var pending = new TaskCompletionSource<bool>();
+        mockClient.ValidateConnectionAsync(cluster.Address).Returns(pending.Task);
+        var check = vm.CheckConnectionAsync(false);
+        vm.IsClientEnabled = false;
+        pending.SetResult(true);
+        await check;
+        vm.Status = ConnectionState.Connected;
+        Assert.False(vm.IsAvailable);
+        Assert.Equal("Disabled", vm.ConnectionStatus);
+        Assert.Equal("Gray", vm.StatusColor);
+        Assert.False(vm.IsChecking);
+    }
+
+    [AvaloniaFact]
+    public async Task CheckConnection_ForwardsCancellationToCapableClient()
+    {
+        var client = Substitute.For<IKafkaLensClient, ICancellableConnectionClient>();
+        var capable = (ICancellableConnectionClient)client;
+        using var cts = new System.Threading.CancellationTokenSource();
+        capable.ValidateConnectionWithDetailsAsync(cluster.Address, Arg.Any<System.Threading.CancellationToken>())
+            .Returns(async call =>
+            {
+                await Task.Delay(System.Threading.Timeout.Infinite, call.ArgAt<System.Threading.CancellationToken>(1));
+                return ConnectionValidationResult.Success();
+            });
+        var vm = new ClusterViewModel(cluster, client);
+        var check = vm.CheckConnectionAsync(false, cts.Token);
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => check);
+        await client.DidNotReceive().ValidateConnectionAsync(Arg.Any<string>());
+    }
+
+    [AvaloniaFact]
     public void Constructor_ShouldInitializeProperties()
     {
         // Act
@@ -33,7 +102,7 @@ public class ClusterViewModelTests
         Assert.NotNull(viewModel.LoadTopicsCommand);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task CheckConnectionAsync_ShouldUpdateStatus()
     {
         // Arrange
@@ -48,7 +117,7 @@ public class ClusterViewModelTests
         await mockClient.Received(1).ValidateConnectionAsync(cluster.Address);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task CheckConnectionAsync_WhenStatusIsKnown_ShouldKeepPreviousStatusWhileChecking()
     {
         // Arrange
@@ -65,7 +134,8 @@ public class ClusterViewModelTests
         // Assert
         Assert.Equal(ConnectionState.Connected, viewModel.Status);
         Assert.Equal("Green", viewModel.StatusColor);
-        Assert.False(viewModel.IsChecking);
+        Assert.True(viewModel.IsChecking);
+        Assert.Equal("Checking...", viewModel.ConnectionStatus);
 
         pendingResult.SetResult(false);
         await checkTask;
@@ -73,7 +143,7 @@ public class ClusterViewModelTests
         Assert.Equal(ConnectionState.Failed, viewModel.Status);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task CheckConnectionAsync_WhenStatusIsUnknown_ShouldShowCheckingUntilResultIsAvailable()
     {
         // Arrange
@@ -95,7 +165,7 @@ public class ClusterViewModelTests
         Assert.Equal(ConnectionState.Connected, viewModel.Status);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task LoadTopicsAsync_ShouldLoadTopicsSuccessfully()
     {
         // Arrange
@@ -114,7 +184,7 @@ public class ClusterViewModelTests
         await mockClient.Received(1).GetTopicsAsync(cluster.Id);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task LoadTopicsAsync_WhenAlreadyLoading_ShouldAwaitInFlightLoad()
     {
         // Arrange
@@ -137,7 +207,7 @@ public class ClusterViewModelTests
         await mockClient.Received(1).GetTopicsAsync(cluster.Id);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task EnsureTopicsLoadedAsync_WhenAlreadyLoaded_ShouldReplayLoadedState()
     {
         // Arrange
@@ -155,7 +225,7 @@ public class ClusterViewModelTests
         await mockClient.Received(1).GetTopicsAsync(cluster.Id);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task EnsureTopicsLoadedAsync_WhenRefreshFails_ShouldKeepPreviousTopics()
     {
         // Arrange
@@ -176,7 +246,7 @@ public class ClusterViewModelTests
         Assert.Equal(TopicLoadState.Failed, viewModel.TopicLoadState);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task LoadTopicsAsync_ShouldHandleException()
     {
         // Arrange
@@ -192,7 +262,7 @@ public class ClusterViewModelTests
         Assert.Equal(TopicLoadState.Failed, viewModel.TopicLoadState);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task CheckConnectionAsync_WhenReturnsFalse_ShouldSetStatusToFailed()
     {
         // Arrange
@@ -210,8 +280,8 @@ public class ClusterViewModelTests
         Assert.Equal("Red", viewModel.StatusColor);
     }
 
-    [Fact]
-    public async Task CheckConnectionAsync_WhenValidationReturnsFalseButTopicsLoad_ShouldSetStatusToConnected()
+    [AvaloniaFact]
+    public async Task CheckConnectionAsync_WhenValidationFails_ShouldNotReplaceFailureWithWeakerTopicMetadata()
     {
         // Arrange
         var viewModel = new ClusterViewModel(cluster, mockClient);
@@ -223,11 +293,11 @@ public class ClusterViewModelTests
         await viewModel.CheckConnectionAsync();
 
         // Assert
-        Assert.Equal(ConnectionState.Connected, viewModel.Status);
-        Assert.Null(viewModel.LastError);
-        Assert.Equal(topics.Count, viewModel.Topics.Count);
+        Assert.Equal(ConnectionState.Failed, viewModel.Status);
+        Assert.NotNull(viewModel.LastError);
+        Assert.Empty(viewModel.Topics);
         await mockClient.Received(1).ValidateConnectionAsync(cluster.Address);
-        await mockClient.Received(1).GetTopicsAsync(cluster.Id);
+        await mockClient.DidNotReceive().GetTopicsAsync(cluster.Id);
     }
 
     [AvaloniaFact]
@@ -247,5 +317,48 @@ public class ClusterViewModelTests
         Assert.Contains("Broker unavailable", entry.Message);
         Assert.DoesNotContain(" at ", entry.Message);
         Assert.DoesNotContain(nameof(Exception), entry.Message);
+    }
+
+    [AvaloniaFact]
+    public async Task CheckConnectionAsync_WhenDisabled_ShouldNotValidateConnection()
+    {
+        // Arrange
+        var disabledCluster = fixture.Build<KafkaCluster>().With(c => c.IsEnabled, false).Create();
+        var viewModel = new ClusterViewModel(disabledCluster, mockClient);
+
+        // Act
+        await viewModel.CheckConnectionAsync();
+
+        // Assert
+        await mockClient.DidNotReceive().ValidateConnectionAsync(Arg.Any<string>());
+    }
+
+    [AvaloniaFact]
+    public async Task EnsureTopicsLoadedAsync_WhenDisabled_ShouldNotLoadTopics()
+    {
+        // Arrange
+        var disabledCluster = fixture.Build<KafkaCluster>().With(c => c.IsEnabled, false).Create();
+        var viewModel = new ClusterViewModel(disabledCluster, mockClient);
+
+        // Act
+        await viewModel.EnsureTopicsLoadedAsync();
+
+        // Assert
+        await mockClient.DidNotReceive().GetTopicsAsync(Arg.Any<string>());
+    }
+
+    [AvaloniaFact]
+    public void SettingIsEnabled_ShouldPropagateToClusterModel()
+    {
+        // Arrange
+        var viewModel = new ClusterViewModel(cluster, mockClient);
+        Assert.True(viewModel.IsEnabled);
+        Assert.True(cluster.IsEnabled);
+
+        // Act
+        viewModel.IsEnabled = false;
+
+        // Assert
+        Assert.False(cluster.IsEnabled);
     }
 }

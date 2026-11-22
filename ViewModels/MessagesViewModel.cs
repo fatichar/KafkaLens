@@ -1,4 +1,6 @@
 using System.Linq;
+using System.ComponentModel;
+using Avalonia.Threading;
 ﻿using KafkaLens.ViewModels.Search;
 using KafkaLens.Shared.Utils;
 
@@ -102,6 +104,23 @@ public sealed class MessagesViewModel: ViewModelBase
         }
     }
 
+    private bool filterRefreshQueued;
+
+    private void OnMessageChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(MessageViewModel.DecodedMessage) ||
+            (string.IsNullOrWhiteSpace(positiveFilter) && string.IsNullOrWhiteSpace(negativeFilter)) ||
+            filterRefreshQueued)
+            return;
+
+        filterRefreshQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            filterRefreshQueued = false;
+            ApplyFilter();
+        });
+    }
+
     private void ApplyFilter()
     {
         var filtered = Messages.Where(m => FilterAccepts(m.DecodedMessage)).ToList();
@@ -126,6 +145,11 @@ public sealed class MessagesViewModel: ViewModelBase
 
     internal void Clear()
     {
+        foreach (var message in Messages)
+        {
+            message.PropertyChanged -= OnMessageChanged;
+            message.CancelRegistryDecodes();
+        }
         Messages.Clear();
         Filtered.Clear();
         CurrentMessage = null;
@@ -133,6 +157,7 @@ public sealed class MessagesViewModel: ViewModelBase
 
     internal void Add(MessageViewModel message)
     {
+        message.PropertyChanged += OnMessageChanged;
         Messages.Add(message);
         if (FilterAccepts(message.DecodedMessage))
         {
@@ -145,6 +170,7 @@ public sealed class MessagesViewModel: ViewModelBase
         var list = messages.ToList();
         if (list.Count == 0) return;
 
+        foreach (var message in list) message.PropertyChanged += OnMessageChanged;
         Messages.AddRange(list);
 
         var filteredList = list.Where(m => FilterAccepts(m.DecodedMessage)).ToList();

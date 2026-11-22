@@ -1,73 +1,120 @@
 using System;
 using System.Buffers.Binary;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Confluent.SchemaRegistry;
 using FluentAssertions;
 using KafkaLens.Formatting;
+using Newtonsoft.Json.Linq;
+using NSubstitute;
 using Xunit;
 
 namespace KafkaLens.Formatting.Tests;
 
 public class SchemaRegistryFormatterTests
 {
-    private readonly SchemaRegistryFormatter formatter = new();
-
     [Fact]
-    public void Name_ShouldBeSchemaRegistry()
+    public async Task DecodeAsync_IgnoresDataWithoutConfluentFraming()
     {
-        formatter.Name.Should().Be("Schema Registry");
+        var client = Substitute.For<ISchemaRegistryClient>();
+        var formatter = new SchemaRegistryFormatter(client);
+
+        (await formatter.DecodeAsync(null, "topic", false)).Should().BeNull();
+        (await formatter.DecodeAsync([0, 1, 2, 3], "topic", false)).Should().BeNull();
+        (await formatter.DecodeAsync([1, 0, 0, 0, 1, 0], "topic", false)).Should().BeNull();
+        _ = client.DidNotReceiveWithAnyArgs().GetSchemaAsync(default);
     }
 
     [Fact]
-    public void FormatterFactory_ShouldIncludeSchemaRegistry()
+    public async Task DecodeAsync_UsesOnlyTheSuppliedRegistry()
     {
-        var registered = FormatterFactory.Instance.GetFormatter("Schema Registry");
-        registered.Should().NotBeNull();
-        registered.Should().BeOfType<SchemaRegistryFormatter>();
+        var jsonClient = Substitute.For<ISchemaRegistryClient>();
+        var avroClient = Substitute.For<ISchemaRegistryClient>();
+        jsonClient.GetSchemaAsync(42).Returns(Task.FromResult(new Schema("{}", SchemaType.Json)));
+        avroClient.GetSchemaAsync(42).Returns(Task.FromException<Schema>(new InvalidOperationException("Unknown schema")));
+        var payload = Frame(42, Encoding.UTF8.GetBytes("""{"test":"value"}"""));
+
+        var decoded = await new SchemaRegistryFormatter(jsonClient).DecodeAsync(payload, "topic", false);
+        JObject.Parse(decoded!)["test"]!.Value<string>().Should().Be("value");
+        Func<Task> decode = () => new SchemaRegistryFormatter(avroClient).DecodeAsync(payload, "topic", false);
+        await decode.Should().ThrowAsync<InvalidOperationException>().WithMessage("Unknown schema");
     }
 
     [Fact]
-    public void Format_NullData_ShouldReturnNull()
+    public async Task DecodeAsync_AvroDisplaysRecordFields()
     {
-        var result = formatter.Format(null!, prettyPrint: true);
-        result.Should().BeNull();
+        var client = Substitute.For<ISchemaRegistryClient>();
+        var schema = new Schema("""
+            {"type":"record","name":"Outer","fields":[{"name":"nested","type":{
+                "type":"record","name":"Inner","fields":[{"name":"text","type":"string"}]}}]}
+            """, SchemaType.Avro);
+        client.GetSchemaAsync(42, Arg.Any<string>()).Returns(Task.FromResult(schema));
+        client.GetSchemaBySubjectAndIdAsync(Arg.Any<string>(), 42, Arg.Any<string>()).Returns(Task.FromResult(schema));
+
+        var decoded = await new SchemaRegistryFormatter(client).DecodeAsync(
+            Frame(42, [4, (byte)'h', (byte)'i']), "topic", false);
+
+        var json = JObject.Parse(decoded!);
+        json["nested"]!["text"]!.Value<string>().Should().Be("hi");
+        json["Schema"].Should().BeNull();
     }
 
     [Fact]
-    public void Format_InvalidLength_ShouldReturnNull()
+    public async Task DecodeAsync_ProtobufResolvesImportsAndNestedMessageIndexes()
     {
-        var shortBytes = new byte[] { 0, 1, 2, 3 }; // < 5 bytes
-        var result = formatter.Format(shortBytes, prettyPrint: true);
-        result.Should().BeNull();
+        var client = Substitute.For<ISchemaRegistryClient>();
+        var root = new Schema("""
+            syntax = "proto3";
+            package example;
+            import "common.proto";
+            message Unused {}
+            message Envelope {
+                message Nested {
+                    common.Imported item = 1;
+                    repeated int32 numbers = 2;
+                    map<string, bool> flags = 3;
+                }
+            }
+            """, [new SchemaReference("common.proto", "common-subject", 1)], SchemaType.Protobuf);
+        var dependency = new RegisteredSchema("common-subject", 1, 43, """
+            syntax = "proto3";
+            package common;
+            message Imported { string text = 1; }
+            """, SchemaType.Protobuf, []);
+        client.GetSchemaAsync(42).Returns(Task.FromResult(root));
+        client.GetRegisteredSchemaAsync("common-subject", 1).Returns(Task.FromResult(dependency));
+
+        var decoded = await new SchemaRegistryFormatter(client).DecodeAsync(Frame(42,
+            [4, 2, 0, 0x0A, 4, 0x0A, 2, (byte)'h', (byte)'i', 0x12, 2, 1, 2,
+                0x1A, 5, 0x0A, 1, (byte)'x', 0x10, 1]), "topic", false);
+
+        var json = JObject.Parse(decoded!);
+        json["item"]!["text"]!.Value<string>().Should().Be("hi");
+        json["numbers"]!.Values<int>().Should().Equal(1, 2);
+        json["flags"]!["x"]!.Value<bool>().Should().BeTrue();
     }
 
     [Fact]
-    public void Format_InvalidMagicByte_ShouldReturnNull()
+    public async Task DecodeAsync_CancelsWhileRegistryRequestIsPending()
     {
-        var invalidMagic = new byte[] { 0x01, 0x00, 0x00, 0x00, 0x01, 0x7B, 0x7D }; // Magic byte != 0
-        var result = formatter.Format(invalidMagic, prettyPrint: true);
-        result.Should().BeNull();
+        var client = Substitute.For<ISchemaRegistryClient>();
+        var pending = new TaskCompletionSource<Schema>(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.GetSchemaAsync(42).Returns(pending.Task);
+        using var cancellation = new CancellationTokenSource();
+        var decoding = new SchemaRegistryFormatter(client).DecodeAsync(Frame(42, []), "topic", false, cancellation.Token);
+
+        decoding.IsCompleted.Should().BeFalse();
+        cancellation.Cancel();
+        Func<Task> wait = () => decoding;
+        await wait.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    [Fact]
-    public void Format_JsonSchemaPayload_WithoutActiveUrl_ShouldThrowException()
+    private static byte[] Frame(int id, byte[] payload)
     {
-        SchemaRegistryFormatter.ActiveSchemaRegistryUrl = null;
-        SchemaRegistryFormatter.ClearCache();
-
-        var payload = CreateConfluentWireFormatPayload(100, "{\"hello\":\"world\"}");
-
-        Action act = () => formatter.Format(payload, prettyPrint: true);
-        act.Should().Throw<InvalidOperationException>()
-           .WithMessage("*Schema Registry URL is not configured*");
-    }
-
-    private static byte[] CreateConfluentWireFormatPayload(int schemaId, string jsonContent)
-    {
-        var jsonBytes = Encoding.UTF8.GetBytes(jsonContent);
-        var buffer = new byte[5 + jsonBytes.Length];
-        buffer[0] = 0x00; // Magic byte
-        BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(1, 4), schemaId);
-        Array.Copy(jsonBytes, 0, buffer, 5, jsonBytes.Length);
+        var buffer = new byte[5 + payload.Length];
+        BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(1, 4), id);
+        payload.CopyTo(buffer, 5);
         return buffer;
     }
 }

@@ -4,7 +4,7 @@ See root [`agents.md`](../agents.md) for project-wide conventions.
 
 ## Layer Role
 
-ViewModels are the bridge between the UI (AvaloniaApp) and the domain (Core, clients).
+ViewModels are the bridge between the UI (KafkaLens.UI) and the domain (Core, clients).
 They must remain UI-framework-agnostic except for `Dispatcher.UIThread` usage.
 
 ## Toolkit

@@ -1,6 +1,6 @@
 #! /bin/bash -x
 
-cd AvaloniaApp/AvaloniaApp.Desktop/
+cd UI/KafkaLens.Desktop/
 
 ./publish_windows.sh
 ./publish_linux.sh

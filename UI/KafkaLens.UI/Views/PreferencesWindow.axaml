@@ -1,0 +1,165 @@
+<views:DialogBase xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:KafkaLens.ViewModels"
+        xmlns:views="clr-namespace:KafkaLens.UI.Views"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="KafkaLens.UI.Views.PreferencesWindow"
+        x:DataType="vm:PreferencesViewModel"
+        Title="Preferences"
+        Width="650" Height="700"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:PreferencesViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="10">
+    <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" HorizontalAlignment="Right" Spacing="10">
+      <Button Command="{Binding SaveCommand}" Content="Save" IsDefault="True"/>
+      <Button Command="{Binding CancelCommand}" Content="Cancel" IsCancel="True"/>
+    </StackPanel>
+
+    <TabControl SelectedIndex="{Binding SelectedTabIndex}">
+      <TabItem Header="General">
+        <StackPanel Spacing="10" Margin="10">
+          <TextBlock Text="Theme" FontWeight="Bold"/>
+          <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" Width="200"/>
+        </StackPanel>
+      </TabItem>
+
+      <TabItem Header="Kafka">
+        <ScrollViewer>
+            <StackPanel Spacing="10" Margin="10">
+              <TextBlock Text="Timeouts (ms)" FontWeight="Bold"/>
+
+              <TextBlock Text="Query Watermark Timeout"/>
+              <TextBox Text="{Binding KafkaConfig.QueryWatermarkTimeoutMs}" PlaceholderText="30000"/>
+
+              <TextBlock Text="Query Topics Timeout"/>
+              <TextBox Text="{Binding KafkaConfig.QueryTopicsTimeoutMs}" PlaceholderText="30000"/>
+
+              <TextBlock Text="Consume Timeout"/>
+              <TextBox Text="{Binding KafkaConfig.ConsumeTimeoutMs}" PlaceholderText="5000"/>
+
+              <TextBlock Text="Admin Metadata Timeout"/>
+              <TextBox Text="{Binding KafkaConfig.AdminMetadataTimeoutMs}" PlaceholderText="30000"/>
+
+              <TextBlock Text="Limits" FontWeight="Bold" Margin="0,10,0,0"/>
+
+              <TextBlock Text="Fetch Max Bytes"/>
+              <TextBox Text="{Binding KafkaConfig.FetchMaxBytes}" PlaceholderText="52428800"/>
+
+              <TextBlock Text="Statistics Interval (ms)"/>
+              <TextBox Text="{Binding KafkaConfig.StatisticsIntervalMs}" PlaceholderText="0"/>
+
+              <TextBlock Text="Consumer Config" FontWeight="Bold" Margin="0,10,0,0"/>
+              <TextBlock Text="Group ID"/>
+              <TextBox Text="{Binding KafkaConfig.GroupId}"/>
+
+              <CheckBox IsChecked="{Binding KafkaConfig.EnableAutoOffsetStore}" Content="Enable Auto Offset Store"/>
+              <CheckBox IsChecked="{Binding KafkaConfig.EnableAutoCommit}" Content="Enable Auto Commit"/>
+            </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Browser">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="10" Margin="10">
+          <TextBlock Text="Display" FontWeight="Bold"/>
+
+          <TextBlock Text="Font Size"/>
+          <TextBox Text="{Binding BrowserConfig.FontSize}"/>
+
+          <TextBlock Text="Available Fetch Counts (comma separated)"/>
+          <TextBox Text="{Binding FetchCountsString}"/>
+          <TextBlock Text="{Binding FetchCountsError}" Foreground="Red" FontSize="12" Margin="0,2,0,0"/>
+
+          <TextBlock Text="Default Fetch Count"/>
+          <ComboBox ItemsSource="{Binding AvailableFetchCounts}" SelectedItem="{Binding SelectedDefaultFetchCount}" Width="200"/>
+
+          <TextBlock Text="Saved Messages" FontWeight="Bold" Margin="0,10,0,0"/>
+          <TextBlock Text="Folder"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Grid.Column="0" Text="{Binding BrowserConfig.SavedMessagesDirectory}"/>
+            <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseSavedMessagesDirectoryCommand}"/>
+          </Grid>
+          <TextBlock Text="{Binding SavedMessagesDirectoryError}" Foreground="Red" FontSize="12" Margin="0,2,0,0"/>
+          <CheckBox IsChecked="{Binding BrowserConfig.ShowSaveNotification}"
+                    Content="Show save notifications after saving messages"/>
+
+          <TextBlock Text="Behavior" FontWeight="Bold" Margin="0,10,0,0"/>
+          <CheckBox IsChecked="{Binding BrowserConfig.RestoreTabsOnStartup}" Content="Restore open tabs on startup"/>
+
+          <TextBlock Text="Connection Checks" FontWeight="Bold" Margin="0,10,0,0"/>
+          <TextBlock Text="Automatic connection check frequency"/>
+          <ComboBox ItemsSource="{Binding ConnectionCheckFrequencies}"
+                    SelectedItem="{Binding SelectedConnectionCheckFrequency}"
+                    Width="220"/>
+          <TextBlock Text="Choose Never to disable automatic checks. You can still check a cluster manually."
+                     TextWrapping="Wrap"
+                     FontSize="12"
+                     Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Message Format">
+        <DockPanel Margin="10">
+          <TextBlock DockPanel.Dock="Top" Text="Enable or disable formatters for message keys and values." Margin="0,0,0,8" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,80,80" Margin="0,0,0,4">
+            <TextBlock Grid.Column="0" Text="Formatter" FontWeight="SemiBold" Margin="4,0,0,0"/>
+            <TextBlock Grid.Column="1" Text="Keys" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            <TextBlock Grid.Column="2" Text="Values" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+          </Grid>
+          <Rectangle DockPanel.Dock="Top" Height="1" Fill="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,0,0,4"/>
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding FormatterSettings}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:FormatterSettingViewModel">
+                  <Grid ColumnDefinitions="*,80,80" Margin="0,2,0,2">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    <CheckBox Grid.Column="1"
+                              IsChecked="{Binding IsEnabledForKeys}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <CheckBox Grid.Column="2"
+                              IsChecked="{Binding IsEnabledForValues}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Privacy" IsVisible="{Binding IsTelemetryAvailable}">
+        <DockPanel Margin="10">
+          <StackPanel DockPanel.Dock="Top" Spacing="10">
+            <CheckBox IsChecked="{Binding SendUsageData}"
+                      IsEnabled="{Binding !IsTelemetryForcedOff}"
+                      Content="Send anonymous usage data"/>
+            <TextBlock TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       Text="Helps decide what to improve. Includes app version, OS, features used, fetch sizes and timings, settings, and crash details. Never includes cluster, broker, topic or message data, file paths, or personal information."/>
+            <TextBlock TextWrapping="Wrap" IsVisible="{Binding IsTelemetryForcedOff}"
+                       Text="Disabled by the DO_NOT_TRACK or KAFKALENS_TELEMETRY environment variable."/>
+            <SelectableTextBlock Text="{Binding TelemetryPrivacyUrl, StringFormat='Full list of collected data: {0}'}"
+                                 TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <SelectableTextBlock VerticalAlignment="Center"
+                                   Text="{Binding TelemetryInstallId, StringFormat='Anonymous install ID: {0}'}"/>
+              <Button Content="Reset" Command="{Binding ResetTelemetryIdCommand}"/>
+            </StackPanel>
+            <TextBlock Text="Data sent in this session" FontWeight="Bold" Margin="0,8,0,0"/>
+          </StackPanel>
+          <TextBox Text="{Binding RecentTelemetryEvents}" IsReadOnly="True" TextWrapping="Wrap"
+                   FontFamily="monospace" FontSize="11"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</views:DialogBase>

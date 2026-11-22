@@ -1,0 +1,35 @@
+using Avalonia.Data.Converters;
+using System;
+using System.Globalization;
+
+namespace KafkaLens.UI;
+public class FetchPositionConverter : IValueConverter
+{
+    public object Convert(object? position, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (position == null)
+            return false;
+
+        try
+        {
+            var value = position.ToString();
+            var target = parameter?.ToString();
+
+            if (target == null)
+            {
+                return value is "Timestamp";
+            }
+
+            return value?.Equals(target, StringComparison.OrdinalIgnoreCase) ?? false;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

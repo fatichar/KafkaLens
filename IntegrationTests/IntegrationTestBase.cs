@@ -14,7 +14,7 @@ namespace IntegrationTests;
 
 public abstract class IntegrationTestBase
 {
-    protected TestApp App => (TestApp)AvaloniaApp.App.Current;
+    protected TestApp App => (TestApp)KafkaLens.UI.App.Current;
     protected MainViewModel MainViewModel => App.Services!.GetRequiredService<MainViewModel>();
     protected FakeKafkaClient FakeKafkaClient => (FakeKafkaClient)App.Services!.GetRequiredService<KafkaLens.Shared.IKafkaLensClient>();
 
@@ -45,6 +45,28 @@ public abstract class IntegrationTestBase
 
         return MainViewModel.OpenedClusters.Last(c => c.ClusterId == cluster.Id);
     }
+
+    /// <summary>
+    /// Wires an EditClustersViewModel the same way MainView.axaml.cs does in production
+    /// (tab-close/confirm delegates included), so tests exercise the real integration path
+    /// rather than a partially-wired instance.
+    /// </summary>
+    protected EditClustersViewModel CreateEditClustersViewModel(bool confirmDisable = true) =>
+        new(
+            MainViewModel.Clusters,
+            MainViewModel.ClusterInfoRepository,
+            MainViewModel.ClientInfoRepository,
+            MainViewModel.ClientFactory,
+            MainViewModel.RefreshClustersForClientAsync)
+        {
+            HasOpenTabsForCluster = MainViewModel.HasOpenTabsForCluster,
+            HasOpenTabsForClient = MainViewModel.HasOpenTabsForClient,
+            CloseTabsForCluster = MainViewModel.CloseTabsForCluster,
+            CloseTabsForClient = MainViewModel.CloseTabsForClient,
+            ConfirmDisableCluster = _ => Task.FromResult(confirmDisable),
+            ConfirmDisableClient = _ => Task.FromResult(confirmDisable),
+            AvailabilityChanged = MainViewModel.RefreshAvailability
+        };
 
     protected async Task WaitUntilAsync(Func<bool> condition, int timeoutMs = 5000)
     {

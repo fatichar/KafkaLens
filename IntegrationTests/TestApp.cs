@@ -1,6 +1,6 @@
 using System;
 using Avalonia;
-using AvaloniaApp;
+using KafkaLens.UI;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
@@ -36,6 +36,8 @@ public class TestApp : App
         services.AddSingleton<IClientInfoRepository>(clientRepo);
 
         var settingsService = Substitute.For<ISettingsService>();
+        settingsService.GetValue(PreferencesViewModel.CONNECTION_CHECK_INTERVAL_SECONDS_KEY).Returns("0");
+        settingsService.GetValue("AutoCheckForUpdates").Returns("false");
         services.AddSingleton(settingsService);
 
         var kafkaConfig = new KafkaConfig();
@@ -83,7 +85,7 @@ public class TestApp : App
         services.AddSingleton(new PluginRepositoryClient());
         services.AddSingleton(new PluginInstaller(pluginsDir));
         services.AddSingleton(new RepositoryManager(settingsService));
-        services.AddSingleton<IThemeService>(new AvaloniaApp.Services.ThemeService(extensionRegistry, pluginsDir));
+        services.AddSingleton<IThemeService>(new KafkaLens.UI.Services.ThemeService(extensionRegistry, pluginsDir));
 
         services.AddSingleton<MainViewModel>();
 

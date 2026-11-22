@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KafkaLens.Shared.Models;
 using KafkaLens.Shared.Plugins;
+using KafkaLens.Shared.Telemetry;
+using KafkaLens.ViewModels.Telemetry;
 using KafkaLens.ViewModels.Services;
 using Serilog;
 
@@ -161,6 +164,8 @@ public partial class PluginManagerViewModel : ViewModelBase
     /// </summary>
     [ObservableProperty] private bool _restartRequired;
 
+    private readonly ITelemetry _telemetry;
+
     public IAsyncRelayCommand   RefreshCommand          { get; }
     public IRelayCommand         AddRepositoryCommand    { get; }
     public IRelayCommand<string> RemoveRepositoryCommand { get; }
@@ -170,8 +175,10 @@ public partial class PluginManagerViewModel : ViewModelBase
         PluginRegistry registry,
         PluginRepositoryClient repoClient,
         PluginInstaller installer,
-        RepositoryManager repoManager)
+        RepositoryManager repoManager,
+        ITelemetry? telemetry = null)
     {
+        _telemetry   = telemetry ?? NullTelemetry.Instance;
         _registry    = registry;
         _repoClient  = repoClient;
         _installer   = installer;
@@ -209,7 +216,11 @@ public partial class PluginManagerViewModel : ViewModelBase
         var plugins = _registry.LoadPlugins()
             .Select(p => new InstalledPluginViewModel(
                 p, _registry, _installer,
-                onUninstall:       RemoveInstalled,
+                onUninstall:       vm =>
+                {
+                    _telemetry.Track(TelemetrySchema.Events.PluginRemoved);
+                    RemoveInstalled(vm);
+                },
                 onRestartRequired: () => RestartRequired = true));
         InstalledPlugins = new ObservableCollection<InstalledPluginViewModel>(plugins);
     }
@@ -231,14 +242,25 @@ public partial class PluginManagerViewModel : ViewModelBase
 
     private async Task RefreshAsync()
     {
-        if (SelectedRepository == null) return;
+        // Bind everything (results and telemetry classification) to the repository fetched,
+        // not to whatever is selected when the response arrives.
+        var repository = SelectedRepository;
+        if (repository == null) return;
 
         IsLoading    = true;
         ErrorMessage = null;
+        var superseded = false;
 
         try
         {
-            var index = await _repoClient.FetchAsync(SelectedRepository);
+            var index = await _repoClient.FetchAsync(repository);
+
+            // The selection changed while fetching: a newer refresh owns the UI now.
+            if (!string.Equals(repository, SelectedRepository, StringComparison.Ordinal))
+            {
+                superseded = true;
+                return;
+            }
 
             if (index == null)
             {
@@ -251,6 +273,8 @@ public partial class PluginManagerViewModel : ViewModelBase
             var installedIds = InstalledPlugins
                 .ToDictionary(p => p.Plugin.Id, p => p.Plugin.Version);
 
+            // Only plugin ids from the official index are reported; private repos may reveal names.
+            var isOfficialRepository = new PluginSettings().Repositories.Contains(repository);
             var vms = index.Plugins.Select(p =>
             {
                 var status = "Install";
@@ -262,7 +286,14 @@ public partial class PluginManagerViewModel : ViewModelBase
                         ? "Update Available"
                         : "Installed";
                 }
-                return new AvailablePluginViewModel(p, status, _installer, LoadInstalledPlugins,
+                var pluginId = isOfficialRepository ? p.Id : "third_party";
+                return new AvailablePluginViewModel(p, status, _installer,
+                    () =>
+                    {
+                        _telemetry.Track(TelemetrySchema.Events.PluginInstalled,
+                            new Dictionary<string, object?> { ["plugin_id"] = pluginId });
+                        LoadInstalledPlugins();
+                    },
                     () => RestartRequired = true);
             });
 
@@ -275,7 +306,7 @@ public partial class PluginManagerViewModel : ViewModelBase
         }
         finally
         {
-            IsLoading = false;
+            if (!superseded) IsLoading = false;
         }
     }
 

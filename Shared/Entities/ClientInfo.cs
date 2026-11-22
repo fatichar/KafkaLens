@@ -20,4 +20,7 @@ public class ClientInfo(string id, string name, string address, string protocol)
     [Required]
     [JsonPropertyName("address")]
     public string Address { get; set; } = address;
+
+    [JsonPropertyName("isEnabled")]
+    public bool IsEnabled { get; set; } = true;
 }

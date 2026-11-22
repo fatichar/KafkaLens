@@ -1,185 +1,84 @@
 using System.Buffers.Binary;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Text;
+using Avro.Generic;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using Newtonsoft.Json;
-using Serilog;
 
 namespace KafkaLens.Formatting;
 
-public class SchemaRegistryFormatter : IMessageFormatter
+public sealed class SchemaRegistryFormatter
 {
-    public string Name => "Schema Registry";
+    public const string Name = "Schema Registry";
 
-    private static readonly ConcurrentDictionary<string, ISchemaRegistryClient> ClientCache = new(StringComparer.OrdinalIgnoreCase);
-    private readonly JsonFormatter jsonFormatter = new();
+    private static readonly ConcurrentDictionary<string, Lazy<SchemaRegistryFormatter>> Formatters =
+        new(StringComparer.Ordinal);
+    private static readonly UTF8Encoding Utf8 = new(false, true);
 
-    /// <summary>
-    /// Gets or sets the active Schema Registry URL for the current context/tab.
-    /// </summary>
-    public static string? ActiveSchemaRegistryUrl { get; set; }
+    private readonly ISchemaRegistryClient client;
+    private readonly DynamicProtobufDecoder protobuf;
+    private readonly AvroDeserializer<GenericRecord> avro;
 
-    /// <summary>
-    /// Registers or retrieves a cached ISchemaRegistryClient for a given URL.
-    /// </summary>
-    public static ISchemaRegistryClient GetClient(string url)
+    public SchemaRegistryFormatter(ISchemaRegistryClient client)
     {
-        return ClientCache.GetOrAdd(url, u =>
-        {
-            var config = new SchemaRegistryConfig
-            {
-                Url = u
-            };
-            return new CachedSchemaRegistryClient(config);
-        });
+        this.client = client;
+        protobuf = new DynamicProtobufDecoder(client);
+        avro = new AvroDeserializer<GenericRecord>(client);
     }
 
-    /// <summary>
-    /// Clears cached Schema Registry clients (e.g. when configuration changes).
-    /// </summary>
-    public static void ClearCache()
+    public static Task<string?> DecodeAsync(string? url, byte[]? data, string topic, bool isKey,
+        CancellationToken cancellationToken = default)
     {
-        foreach (var client in ClientCache.Values)
-        {
-            client.Dispose();
-        }
-        ClientCache.Clear();
-    }
-
-    public string? Format(byte[] data, bool prettyPrint)
-    {
-        return FormatInternal(data, prettyPrint);
-    }
-
-    public string? Format(byte[] data, string searchText, bool useObjectFilter = true)
-    {
-        var jsonText = FormatInternal(data, prettyPrint: true);
-        if (jsonText == null) return null;
-
-        return jsonFormatter.Format(Encoding.UTF8.GetBytes(jsonText), searchText, useObjectFilter);
-    }
-
-    private string? FormatInternal(byte[] data, bool prettyPrint)
-    {
-        if (data == null || data.Length < 5 || data[0] != 0)
-        {
-            return null;
-        }
-
-        var urlsToTry = GetUrlsToTry();
-        if (urlsToTry.Count == 0)
-        {
+        if (!HasSchemaId(data)) return Task.FromResult<string?>(null);
+        if (string.IsNullOrWhiteSpace(url))
             throw new InvalidOperationException("Schema Registry URL is not configured for this cluster.");
-        }
 
-        Exception? lastException = null;
-
-        foreach (var url in urlsToTry)
-        {
-            try
-            {
-                var client = GetClient(url);
-                return DeserializeWithClient(client, data, prettyPrint);
-            }
-            catch (Exception ex)
-            {
-                lastException = ex;
-                Log.Debug(ex, "Failed to deserialize Schema Registry message using URL {Url}", url);
-            }
-        }
-
-        if (lastException != null)
-        {
-            throw new Exception($"Schema Registry deserialization failed: {lastException.Message}", lastException);
-        }
-
-        return null;
+        var formatter = Formatters.GetOrAdd(url, address => new Lazy<SchemaRegistryFormatter>(() =>
+            new(new CachedSchemaRegistryClient(new SchemaRegistryConfig { Url = address })))).Value;
+        return formatter.DecodeAsync(data, topic, isKey, cancellationToken);
     }
 
-    private static List<string> GetUrlsToTry()
+    public async Task<string?> DecodeAsync(byte[]? data, string topic, bool isKey,
+        CancellationToken cancellationToken = default)
     {
-        var urls = new List<string>();
-        if (!string.IsNullOrWhiteSpace(ActiveSchemaRegistryUrl))
-        {
-            urls.Add(ActiveSchemaRegistryUrl);
-        }
+        if (!HasSchemaId(data)) return null;
+        cancellationToken.ThrowIfCancellationRequested();
 
-        foreach (var key in ClientCache.Keys)
-        {
-            if (!urls.Contains(key, StringComparer.OrdinalIgnoreCase))
-            {
-                urls.Add(key);
-            }
-        }
+        int id = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(1, 4));
+        var schema = await client.GetSchemaAsync(id).WaitAsync(cancellationToken).ConfigureAwait(false);
 
-        return urls;
+        return schema.SchemaType switch
+        {
+            SchemaType.Avro => await DecodeAvroAsync(data!, topic, isKey, cancellationToken).ConfigureAwait(false),
+            SchemaType.Json => JsonConvert.SerializeObject(JsonConvert.DeserializeObject(
+                Utf8.GetString(data!.AsSpan(5)))),
+            SchemaType.Protobuf => (await protobuf.DecodeAsync(schema, data!, cancellationToken)
+                .ConfigureAwait(false)).ToString(Newtonsoft.Json.Formatting.None),
+            _ => throw new NotSupportedException($"Unsupported Schema Registry type {schema.SchemaType}.")
+        };
     }
 
-    private string DeserializeWithClient(ISchemaRegistryClient client, byte[] data, bool prettyPrint)
+    private static bool HasSchemaId(byte[]? data) => data is { Length: >= 5 } && data[0] == 0;
+
+    private async Task<string> DecodeAvroAsync(byte[] data, string topic, bool isKey, CancellationToken cancellationToken)
     {
-        int schemaId = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(1, 4));
-        var schema = client.GetSchemaAsync(schemaId).GetAwaiter().GetResult();
-
-        var schemaType = schema.SchemaType;
-
-        switch (schemaType)
-        {
-            case SchemaType.Avro:
-                return DeserializeAvro(client, data, prettyPrint);
-
-            case SchemaType.Json:
-                return DeserializeJsonSchema(data, prettyPrint);
-
-            case SchemaType.Protobuf:
-                return DeserializeProtobuf(client, data, schema, prettyPrint);
-
-            default:
-                return DeserializeAvro(client, data, prettyPrint);
-        }
+        var context = new SerializationContext(isKey ? MessageComponentType.Key : MessageComponentType.Value, topic);
+        var record = await avro.DeserializeAsync(data, false, context)
+            .WaitAsync(cancellationToken).ConfigureAwait(false);
+        return JsonConvert.SerializeObject(ToJsonCompatibleValue(record));
     }
 
-    private string DeserializeAvro(ISchemaRegistryClient client, byte[] data, bool prettyPrint)
+    private static object? ToJsonCompatibleValue(object? value) => value switch
     {
-        var deserializer = new AvroDeserializer<Avro.Generic.GenericRecord>(client);
-        var record = deserializer.DeserializeAsync(data, isNull: false, SerializationContext.Empty).GetAwaiter().GetResult();
-
-        var formatting = prettyPrint ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None;
-        return JsonConvert.SerializeObject(record, formatting);
-    }
-
-    private string DeserializeJsonSchema(byte[] data, bool prettyPrint)
-    {
-        var jsonBytes = data.AsSpan(5).ToArray();
-        var jsonText = Encoding.UTF8.GetString(jsonBytes);
-
-        if (!prettyPrint) return jsonText;
-
-        try
-        {
-            var parsed = JsonConvert.DeserializeObject(jsonText);
-            return JsonConvert.SerializeObject(parsed, Newtonsoft.Json.Formatting.Indented);
-        }
-        catch
-        {
-            return jsonText;
-        }
-    }
-
-    private string DeserializeProtobuf(ISchemaRegistryClient client, byte[] data, Schema schema, bool prettyPrint)
-    {
-        try
-        {
-            var jsonDeserializer = new JsonDeserializer<object>(client);
-            var obj = jsonDeserializer.DeserializeAsync(data, isNull: false, SerializationContext.Empty).GetAwaiter().GetResult();
-            var formatting = prettyPrint ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None;
-            return JsonConvert.SerializeObject(obj, formatting);
-        }
-        catch
-        {
-            var jsonBytes = data.AsSpan(5).ToArray();
-            return Encoding.UTF8.GetString(jsonBytes);
-        }
-    }
+        GenericRecord record => record.Schema.Fields.ToDictionary(field => field.Name,
+            field => ToJsonCompatibleValue(record.GetValue(field.Pos))),
+        GenericEnum item => item.Value,
+        GenericFixed item => item.Value,
+        IDictionary map => map.Keys.Cast<string>().ToDictionary(key => key, key => ToJsonCompatibleValue(map[key])),
+        Array array when value is not byte[] => array.Cast<object?>().Select(ToJsonCompatibleValue).ToArray(),
+        _ => value
+    };
 }

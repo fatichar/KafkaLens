@@ -14,7 +14,7 @@ All code warnings have been fixed except the one listed below.
 
 **Warning:** `'OpenFolderDialog' is obsolete: 'Use Window.StorageProvider API or TopLevel.StorageProvider API'`
 
-**File:** `AvaloniaApp/AvaloniaApp/Views/MainView.axaml.cs`
+**File:** `UI/KafkaLens.UI/Views/MainView.axaml.cs`
 
 **Current code:**
 ```csharp

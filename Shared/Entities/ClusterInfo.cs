@@ -19,11 +19,15 @@ public class ClusterInfo(string id, string name, string address, string? protoco
     [JsonPropertyName("address")]
     public string Address { get; set; } = address;
 
+    [Required]
     [JsonPropertyName("protocol")]
     public string? Protocol { get; set; } = protocol;
 
     [JsonPropertyName("schemaRegistryUrl")]
     public string? SchemaRegistryUrl { get; set; } = schemaRegistryUrl;
+
+    [JsonPropertyName("isEnabled")]
+    public bool IsEnabled { get; set; } = true;
 
     public static ClusterInfo Create(string name, string address, string? schemaRegistryUrl = null)
     {

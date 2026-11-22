@@ -1,0 +1,225 @@
+<views:DialogBase xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:KafkaLens.ViewModels"
+        xmlns:views="clr-namespace:KafkaLens.UI.Views"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        x:Class="KafkaLens.UI.Views.PluginManagerWindow"
+        x:DataType="vm:PluginManagerViewModel"
+        Title="Plugin Manager"
+        Width="900" Height="600"
+        WindowStartupLocation="CenterOwner">
+
+  <DockPanel Margin="8">
+
+    <!-- ── Top toolbar ── -->
+    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,48">
+
+      <!-- Repo selector row -->
+      <Grid HorizontalAlignment="Center">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*" MinWidth="300" MaxWidth="600"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Repository:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+        <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Repositories}"
+                  SelectedItem="{Binding SelectedRepository}"
+                  VerticalAlignment="Center"/>
+        <Button Grid.Row="0" Grid.Column="2" Content="＋" ToolTip.Tip="Add repository"
+                Command="{Binding ToggleAddRepoCommand}"
+                VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <Button Grid.Row="0" Grid.Column="3" Content="－" ToolTip.Tip="Remove selected repository"
+                Command="{Binding RemoveRepositoryCommand}"
+                CommandParameter="{Binding SelectedRepository}"
+                VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <Button Grid.Row="0" Grid.Column="4" Content="Refresh" Command="{Binding RefreshCommand}"
+                VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <ProgressBar Grid.Row="0" Grid.Column="5" IsIndeterminate="True" Width="80" Height="6"
+                     IsVisible="{Binding IsLoading}"
+                     VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="6" Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Foreground="Red"
+                   VerticalAlignment="Center"
+                   TextWrapping="Wrap"
+                   MaxWidth="600" Margin="0,6,0,0"/>
+      </Grid>
+
+      <!-- Add-repo input row (toggled) -->
+      <StackPanel Orientation="Horizontal" Spacing="6"
+                  IsVisible="{Binding IsAddingRepository}">
+        <TextBox Name="NewRepoUrlBox"
+                 Text="{Binding NewRepositoryUrl}"
+                 PlaceholderText="https://example.com/plugins.json"
+                 Width="400"
+                 KeyDown="OnNewRepoUrlBoxKeyDown"/>
+        <Button Content="Add" Command="{Binding AddRepositoryCommand}"/>
+        <Button Content="Cancel" Command="{Binding ToggleAddRepoCommand}"/>
+      </StackPanel>
+
+    </StackPanel>
+
+    <!-- ── Restart-required banner ── -->
+    <Border DockPanel.Dock="Bottom"
+            Background="#FFF3CD" BorderBrush="#E8A000" BorderThickness="1"
+            CornerRadius="4" Padding="10,6" Margin="0,8,0,0"
+            IsVisible="{Binding RestartRequired}">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="&#9888;" Foreground="#7A5900" FontSize="14" VerticalAlignment="Center"/>
+        <TextBlock Text="A restart is required for plugin changes to take effect."
+                   Foreground="#7A5900" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+
+    <!-- ── Tab content ── -->
+    <TabControl>
+
+      <!-- Available plugins tab -->
+      <TabItem Header="Available">
+        <DataGrid ItemsSource="{Binding AvailablePlugins}"
+                  IsReadOnly="True"
+                  AutoGenerateColumns="False"
+                  GridLinesVisibility="Horizontal"
+                  CanUserResizeColumns="True">
+          <DataGrid.Columns>
+
+            <!-- Name column with optional icon -->
+            <DataGridTemplateColumn Header="Name" Width="180">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:AvailablePluginViewModel">
+                  <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="4,0">
+                    <TextBlock Text="{Binding Plugin.Name}" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTextColumn Header="Description" Binding="{Binding Plugin.Description}" Width="*"/>
+            <DataGridTextColumn Header="Author"      Binding="{Binding Plugin.Author}"      Width="120"/>
+            <DataGridTextColumn Header="Version"     Binding="{Binding Plugin.Version}"     Width="80"/>
+
+            <!-- Homepage link -->
+            <DataGridTemplateColumn Header="Info" Width="70">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:AvailablePluginViewModel">
+                  <Button Content="🌐"
+                          ToolTip.Tip="{Binding Plugin.Homepage}"
+                          IsVisible="{Binding HasHomepage}"
+                          Tag="{Binding Plugin.Homepage}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Padding="4,2"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Action column -->
+            <DataGridTemplateColumn Header="Action" Width="160">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:AvailablePluginViewModel">
+                  <StackPanel Orientation="Horizontal" Spacing="6"
+                              VerticalAlignment="Center" Margin="4,0">
+                    <TextBlock Text="{Binding Status}"
+                               IsVisible="{Binding !IsInstallable}"
+                               VerticalAlignment="Center"/>
+                    <Button Content="{Binding Status}"
+                            Command="{Binding InstallCommand}"
+                            IsVisible="{Binding IsInstallable}"
+                            IsEnabled="{Binding !IsInstalling}"
+                            Padding="6,2"
+                            VerticalAlignment="Center"/>
+                    <ProgressBar IsIndeterminate="True" Width="40" Height="6"
+                                 IsVisible="{Binding IsInstalling}"
+                                 VerticalAlignment="Center"/>
+                  </StackPanel>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+          </DataGrid.Columns>
+        </DataGrid>
+      </TabItem>
+
+      <!-- Installed plugins tab -->
+      <TabItem Header="Installed">
+        <DataGrid ItemsSource="{Binding InstalledPlugins}"
+                  IsReadOnly="False"
+                  AutoGenerateColumns="False"
+                  GridLinesVisibility="Horizontal"
+                  CanUserResizeColumns="True">
+          <DataGrid.Columns>
+
+            <!-- Name column with optional icon -->
+            <DataGridTemplateColumn Header="Name" Width="200">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:InstalledPluginViewModel">
+                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="4,0">
+                    <Image Source="{Binding Plugin.IconPath}"
+                           IsVisible="{Binding HasIcon}"
+                           Width="16" Height="16"
+                           VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Plugin.Name}" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTextColumn Header="Version" Binding="{Binding Plugin.Version}" Width="100" IsReadOnly="True"/>
+            <DataGridTextColumn Header="Author"  Binding="{Binding Plugin.Author}"  Width="140" IsReadOnly="True"/>
+
+            <!-- Homepage link -->
+            <DataGridTemplateColumn Header="Info" Width="70">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:InstalledPluginViewModel">
+                  <Button Content="🌐"
+                          ToolTip.Tip="{Binding Plugin.Homepage}"
+                          IsVisible="{Binding HasHomepage}"
+                          Tag="{Binding Plugin.Homepage}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Padding="4,2"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Enabled toggle -->
+            <DataGridTemplateColumn Header="Enabled" Width="90">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:InstalledPluginViewModel">
+                  <ToggleSwitch IsChecked="{Binding IsEnabled}"
+                                OnContent="" OffContent=""
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!-- Uninstall button -->
+            <DataGridTemplateColumn Header="" Width="100">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:InstalledPluginViewModel">
+                  <Button Content="Uninstall"
+                          Command="{Binding UninstallCommand}"
+                          Padding="6,2"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+          </DataGrid.Columns>
+        </DataGrid>
+      </TabItem>
+
+    </TabControl>
+  </DockPanel>
+</views:DialogBase>

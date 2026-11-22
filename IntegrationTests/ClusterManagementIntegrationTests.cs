@@ -17,7 +17,7 @@ public class ClusterManagementIntegrationTests : IntegrationTestBase
         const string clusterName = "New Test Cluster";
         const string clusterAddress = "localhost:9092";
 
-        await editClustersVm.AddClusterAsync(clusterName, clusterAddress);
+        await editClustersVm.AddClusterImmediatelyAsync(clusterName, clusterAddress);
 
         MainViewModel.Clusters.Should().ContainSingle(c => c.Name == clusterName && c.Address == clusterAddress);
         editClustersVm.Clusters.Should().ContainSingle(c => c.Name == clusterName && c.Address == clusterAddress);
@@ -31,7 +31,7 @@ public class ClusterManagementIntegrationTests : IntegrationTestBase
         var editClustersVm = CreateEditClustersViewModel();
         var cluster = MainViewModel.Clusters.Single();
 
-        await editClustersVm.UpdateClusterAsync(cluster, "Cluster After Edit", "localhost:9093");
+        await editClustersVm.UpdateClusterImmediatelyAsync(cluster, "Cluster After Edit", "localhost:9093");
 
         cluster.Name.Should().Be("Cluster After Edit");
         cluster.Address.Should().Be("localhost:9093");
@@ -46,17 +46,9 @@ public class ClusterManagementIntegrationTests : IntegrationTestBase
         var editClustersVm = CreateEditClustersViewModel();
         var cluster = MainViewModel.Clusters.Single();
 
-        editClustersVm.RemoveCluster(cluster);
+        editClustersVm.RemoveClusterImmediately(cluster);
 
         MainViewModel.Clusters.Should().NotContain(c => c.Id == cluster.Id);
         editClustersVm.Clusters.Should().NotContain(c => c.Id == cluster.Id);
     }
-
-    private EditClustersViewModel CreateEditClustersViewModel() =>
-        new(
-            MainViewModel.Clusters,
-            MainViewModel.ClusterInfoRepository,
-            MainViewModel.ClientInfoRepository,
-            MainViewModel.ClientFactory,
-            MainViewModel.RefreshClustersForClientAsync);
 }

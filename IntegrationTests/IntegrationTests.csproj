@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AvaloniaApp\AvaloniaApp\AvaloniaApp.csproj" />
+    <ProjectReference Include="..\UI\KafkaLens.UI\KafkaLens.UI.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
