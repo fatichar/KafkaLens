@@ -59,7 +59,16 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     private string address;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveSchemaRegistryUrl))]
     private string? schemaRegistryUrl;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveSchemaRegistryUrl))]
+    private string? clientSchemaRegistryUrl;
+
+    public string? EffectiveSchemaRegistryUrl => string.IsNullOrWhiteSpace(ClientSchemaRegistryUrl)
+        ? SchemaRegistryUrl
+        : ClientSchemaRegistryUrl;
 
     [ObservableProperty]
     private TopicLoadState topicLoadState = TopicLoadState.NotLoaded;

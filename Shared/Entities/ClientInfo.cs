@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace KafkaLens.Clients.Entities;
 
-public class ClientInfo(string id, string name, string address, string protocol)
+public class ClientInfo(string id, string name, string address, string protocol, string? schemaRegistryUrl = null)
 {
     [Required]
     [JsonPropertyName("id")]
@@ -20,6 +20,9 @@ public class ClientInfo(string id, string name, string address, string protocol)
     [Required]
     [JsonPropertyName("address")]
     public string Address { get; set; } = address;
+
+    [JsonPropertyName("schemaRegistryUrl")]
+    public string? SchemaRegistryUrl { get; set; } = schemaRegistryUrl;
 
     [JsonPropertyName("isEnabled")]
     public bool IsEnabled { get; set; } = true;

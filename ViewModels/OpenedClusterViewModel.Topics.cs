@@ -91,7 +91,7 @@ public partial class OpenedClusterViewModel
     }
 
     private string? GetRegistryDefault() =>
-        string.IsNullOrWhiteSpace(cluster.SchemaRegistryUrl) ? null : SchemaRegistryFormatter.Name;
+        string.IsNullOrWhiteSpace(cluster.EffectiveSchemaRegistryUrl) ? null : SchemaRegistryFormatter.Name;
 
     private void UpdateSchemaRegistryFormatters()
     {
@@ -112,10 +112,10 @@ public partial class OpenedClusterViewModel
         }
 
         foreach (var message in CurrentMessages.Messages)
-            message.UpdateSchemaRegistryUrl(cluster.SchemaRegistryUrl);
+            message.UpdateSchemaRegistryUrl(cluster.EffectiveSchemaRegistryUrl);
         lock (pendingMessages)
             foreach (var message in pendingMessages)
-                message.UpdateSchemaRegistryUrl(cluster.SchemaRegistryUrl);
+                message.UpdateSchemaRegistryUrl(cluster.EffectiveSchemaRegistryUrl);
     }
 
     internal void FilterTopics()

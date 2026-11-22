@@ -109,7 +109,7 @@ public partial class EditClustersDialog : DialogBase
 
             if (result != null)
             {
-                await Context.StageAddClientAsync(result.Name, result.Address, result.Protocol);
+                await Context.StageAddClientAsync(result.Name, result.Address, result.Protocol, result.SchemaRegistryUrl);
             }
         }
         catch (Exception ex)
@@ -129,7 +129,7 @@ public partial class EditClustersDialog : DialogBase
             var existingNames = Context.Clients.Select(c => c.Name).ToList();
             var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(
                 address => Context.TestClientConnectionAsync(selected, address));
-            var info = new ClientInfo(selected.Id, selected.Name, selected.Address, selected.Protocol) { IsEnabled = selected.IsEnabled };
+            var info = new ClientInfo(selected.Id, selected.Name, selected.Address, selected.Protocol, selected.SchemaRegistryUrl) { IsEnabled = selected.IsEnabled };
             var dialog = new AddEditClientDialog(info, existingNames, validator);
             var result = await dialog.ShowDialog<ClientInfo?>(this);
 

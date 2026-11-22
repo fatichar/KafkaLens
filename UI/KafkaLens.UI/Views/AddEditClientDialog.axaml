@@ -19,6 +19,10 @@
                 <ComboBoxItem Content="grpc"/>
             </ComboBox>
 
+            <Label Content="Schema Registry URL (optional)"/>
+            <TextBox Name="SchemaRegistryBox" PlaceholderText="e.g. http://localhost:8081"
+                     ToolTip.Tip="Overrides the registry URL for clusters from this gRPC client. Leave blank to use the server setting."/>
+
             <TextBlock Name="ErrorTextBlock" Foreground="{DynamicResource ThemeErrorBrush}" TextWrapping="Wrap" Margin="0,10,0,0"/>
             <TextBlock Name="StatusTextBlock" Foreground="{DynamicResource StatusConnectedBrush}" TextWrapping="Wrap" Margin="0,5,0,0"/>
             <Expander Name="DetailsExpander" Header="Show error details" IsVisible="False" IsExpanded="False" Margin="0,5,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">

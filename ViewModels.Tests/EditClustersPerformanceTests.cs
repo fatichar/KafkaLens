@@ -295,10 +295,11 @@ public class EditClustersPerformanceTests
     {
         using var fixture = new DialogFixture();
         fixture.Factory.LoadClientsAsync().Returns(Task.FromException(new InvalidOperationException("Reload failed")), Task.CompletedTask);
-        await fixture.Dialog.StageAddClientAsync("Added", "added-server");
+        const string registryUrl = "http://registry:8081";
+        await fixture.Dialog.StageAddClientAsync("Added", "added-server", schemaRegistryUrl: registryUrl);
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Dialog.SaveAsync());
         await fixture.Dialog.SaveAsync();
-        fixture.ClientRepo.Received(1).Add(Arg.Is<ClientInfo>(c => c.Name == "Added"));
+        fixture.ClientRepo.Received(1).Add(Arg.Is<ClientInfo>(c => c.Name == "Added" && c.SchemaRegistryUrl == registryUrl));
         Assert.Equal(new[] { "Added" }, fixture.Refreshes);
     }
 

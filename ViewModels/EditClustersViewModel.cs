@@ -71,7 +71,7 @@ public sealed class EditClustersViewModel : IDisposable
     }
 
     private static ClusterInfo CopyCluster(ClusterInfo c) => new(c.Id, c.Name, c.Address, c.Protocol, c.SchemaRegistryUrl) { IsEnabled = c.IsEnabled };
-    private static ClientInfo CopyClient(ClientInfo c) => new(c.Id, c.Name, c.Address, c.Protocol) { IsEnabled = c.IsEnabled };
+    private static ClientInfo CopyClient(ClientInfo c) => new(c.Id, c.Name, c.Address, c.Protocol, c.SchemaRegistryUrl) { IsEnabled = c.IsEnabled };
     private static ClusterViewModel CopyCluster(ClusterViewModel c) => new(new KafkaCluster(c.Id, c.Name, c.Address, c.SchemaRegistryUrl) { IsEnabled = c.IsEnabled, Status = c.Status, LastError = c.LastError }, c.Client) { IsClientEnabled = c.IsClientEnabled };
 
     private void Dispatch(Action action)
@@ -416,9 +416,9 @@ public sealed class EditClustersViewModel : IDisposable
         await SaveCoreAsync(null, Clients.Last().Id);
     }
 
-    public Task StageAddClientAsync(string name, string address, string protocol = "grpc")
+    public Task StageAddClientAsync(string name, string address, string protocol = "grpc", string? schemaRegistryUrl = null)
     {
-        var info = new ClientInfo(Guid.NewGuid().ToString(), name, address, protocol);
+        var info = new ClientInfo(Guid.NewGuid().ToString(), name, address, protocol, schemaRegistryUrl);
         addedClientIds.Add(info.Id);
         var row = new ClientInfoViewModel(info);
         row.PropertyChanged += OnStagedClientChanged;
@@ -444,7 +444,7 @@ public sealed class EditClustersViewModel : IDisposable
     }
 
     private sealed record ClusterChange(string Id, string Name, string Address, string? Protocol, string? SchemaRegistryUrl, bool Enabled, bool Added, bool AddressChanged, bool NewlyEnabled);
-    private sealed record ClientChange(string Id, string Name, string Address, string Protocol, bool Enabled, bool Added, string? OldName, bool TransportChanged, bool NewlyEnabled);
+    private sealed record ClientChange(string Id, string Name, string Address, string Protocol, string? SchemaRegistryUrl, bool Enabled, bool Added, string? OldName, bool TransportChanged, bool NewlyEnabled);
 
     public Task SaveAsync() => SaveCoreAsync(null, null);
 
@@ -475,10 +475,10 @@ public sealed class EditClustersViewModel : IDisposable
         var clientChanges = clientRows.Select(row =>
         {
             var old = originalClients.GetValueOrDefault(row.Id);
-            return new ClientChange(row.Id, row.Name, row.Address, row.Protocol, row.IsEnabled, addedClientIds.Contains(row.Id), old?.Name,
+            return new ClientChange(row.Id, row.Name, row.Address, row.Protocol, row.SchemaRegistryUrl, row.IsEnabled, addedClientIds.Contains(row.Id), old?.Name,
                 old != null && (old.Address != row.Address || old.Protocol != row.Protocol), old is { IsEnabled: false } && row.IsEnabled);
         }).Where(c => c.Added || originalClients.GetValueOrDefault(c.Id) is { } old
-            && (old.Name != c.Name || c.TransportChanged || old.IsEnabled != c.Enabled)).ToArray();
+            && (old.Name != c.Name || c.TransportChanged || old.SchemaRegistryUrl != c.SchemaRegistryUrl || old.IsEnabled != c.Enabled)).ToArray();
         var clusterRemovals = removedClusterIds.Where(id => onlyClientId == null && (onlyClusterId == null || id == onlyClusterId)).ToArray();
         var clientRemovals = removedClientIds.Where(id => onlyClusterId == null && (onlyClientId == null || id == onlyClientId)).ToArray();
         if (clusterChanges.Length + clientChanges.Length + clusterRemovals.Length + clientRemovals.Length == 0
@@ -506,7 +506,7 @@ public sealed class EditClustersViewModel : IDisposable
         }
         foreach (var change in clientChanges)
         {
-            var info = new ClientInfo(change.Id, change.Name, change.Address, change.Protocol) { IsEnabled = change.Enabled };
+            var info = new ClientInfo(change.Id, change.Name, change.Address, change.Protocol, change.SchemaRegistryUrl) { IsEnabled = change.Enabled };
             if (change.Added) ClientRepository.Add(info); else ClientRepository.Update(info);
             originalClients[change.Id] = CopyClient(info);
             addedClientIds.Remove(change.Id);

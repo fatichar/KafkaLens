@@ -236,7 +236,7 @@ public partial class OpenedClusterViewModel
             foreach (var msg in e.NewItems ?? new List<Message>())
             {
                 var viewModel = new MessageViewModel((Message)msg, valueFormatterName, keyFormatterName,
-                    cluster.SchemaRegistryUrl, topicName);
+                    cluster.EffectiveSchemaRegistryUrl, topicName);
                 pendingMessages.Add(viewModel);
             }
 
