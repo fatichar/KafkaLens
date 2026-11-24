@@ -35,6 +35,10 @@ dotnet test KafkaLens.slnx -c Release
 
 ## Publish Artifacts
 
+Use the [release signing workflow](release-signing.md) for distribution artifacts and the
+[smoke test runbook](release-smoke-tests.md) for candidate verification. The local publish scripts
+produce unsigned development packages.
+
 Run all platform publish scripts:
 
 ```bash

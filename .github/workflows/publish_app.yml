@@ -41,11 +41,14 @@ jobs:
 
       - name: Check if tag
         id: check_tag
+        env:
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref }}
         run: |
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "is_tag=true" >> $GITHUB_OUTPUT
+          if [[ "$RELEASE_EVENT" == "push" && "$RELEASE_REF" == refs/tags/* ]]; then
+            echo "is_tag=true" >> "$GITHUB_OUTPUT"
           else
-            echo "is_tag=false" >> $GITHUB_OUTPUT
+            echo "is_tag=false" >> "$GITHUB_OUTPUT"
           fi
 
   build-windows:
@@ -86,6 +89,9 @@ jobs:
           AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
           AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
         run: ./Installer/package-windows.ps1 -Version $env:RELEASE_VERSION
+
+      - name: Smoke-test signed Windows installation
+        run: ./Installer/smoke-windows.ps1 -Installer "Releases/KafkaLens-$env:RELEASE_VERSION-win-x64-installer.exe"
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -138,11 +144,22 @@ jobs:
           # Cleanup
           rm -rf "$outDir"
 
+      - name: Smoke-test Linux archive in a virtual display
+        env:
+          RELEASE_VERSION: ${{ needs.extract-version.outputs.version }}
+        run: |
+          if ! command -v xvfb-run || ! command -v xauth || ! command -v xwininfo; then
+            sudo apt-get update
+            sudo apt-get install -y xvfb xauth x11-utils
+          fi
+          bash Installer/smoke-linux.sh "Releases/KafkaLens-$RELEASE_VERSION-linux-x64.zip"
+
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v7
         with:
           name: kafkalens-linux-${{ steps.publish.outputs.version }}
-          path: Releases/KafkaLens-*.zip
+          path: Releases/KafkaLens-${{ steps.publish.outputs.version }}-linux-x64.zip
+          if-no-files-found: error
 
   build-macos:
     needs: extract-version
@@ -215,6 +232,9 @@ jobs:
           git tag -l --format='%(contents)' "$RELEASE_TAG" > tag_message.txt
           printf '\n\n%s\n\n%s\n' '### Updating macOS from KafkaLens 1.0.1 or earlier' \
             'Download the ZIP for your Mac from the assets below. Quit KafkaLens, extract the ZIP, and move `KafkaLens.app` to Applications. Earlier versions require a manual download for this upgrade.' \
+            >> tag_message.txt
+          printf '\n%s\n\n%s\n' '### Updating Linux from KafkaLens 1.0.1 or earlier' \
+            'Download and extract the Linux ZIP into a new directory. Quit the old version and launch KafkaLens from the new directory. Earlier versions require a manual download for this upgrade.' \
             >> tag_message.txt
 
       - name: Create Release

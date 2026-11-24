@@ -214,11 +214,11 @@ public partial class MainWindow : Window
         }
         Log.Information("Archive extraction completed");
 
-        await UpdateStatus("Replacing files...", "Backing up and replacing...");
+        await UpdateStatus("Replacing files...", "Installing the extracted update...");
         await UpdateProgress(90);
 
         Log.Information("Replacing files from {Source} to {Dest}", extractDir, destPath);
-        await Task.Run(() => ReplaceFiles(extractDir, destPath!));
+        await Task.Run(() => ArchiveUpdate.ReplaceFiles(extractDir, destPath!, Path.GetFileName(executablePath!)));
         Log.Information("File replacement completed");
     }
 
@@ -391,27 +391,6 @@ public partial class MainWindow : Window
 
         var error = await process.StandardError.ReadToEndAsync(cts.Token);
         throw new Exception($"tar failed with exit code {process.ExitCode}: {error}");
-    }
-
-    private static void ReplaceFiles(string sourceDir, string destDir)
-    {
-        const string updaterDirName = "updater";
-        var source = new DirectoryInfo(sourceDir);
-        var destination = new DirectoryInfo(destDir);
-
-        foreach (var dir in source.GetDirectories("*", SearchOption.AllDirectories))
-        {
-            if (dir.Name.Equals(updaterDirName, StringComparison.OrdinalIgnoreCase)) continue;
-            var targetDir = Path.Combine(destination.FullName, dir.FullName.Replace(source.FullName, "").TrimStart('\\'));
-            Directory.CreateDirectory(targetDir);
-        }
-
-        foreach (var file in source.GetFiles("*", SearchOption.AllDirectories))
-        {
-            if (file.DirectoryName?.Contains(updaterDirName, StringComparison.OrdinalIgnoreCase) == true) continue;
-            var targetFile = Path.Combine(destination.FullName, file.FullName.Replace(source.FullName, "").TrimStart('\\'));
-            file.CopyTo(targetFile, true);
-        }
     }
 
     private static void RemoveTempDir(string tempDir)

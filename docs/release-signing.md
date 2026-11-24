@@ -3,7 +3,7 @@
 The [Publish Release workflow](../.github/workflows/publish_app.yml) uses the version in
 `Directory.Build.props`. A manual run produces CI artifacts. Use a trusted ref and have the signing
 environment reviewers approve the run. Version tags also enable the release job after every package job
-succeeds. During P0, use manual runs for validation.
+succeeds. During P0, use manual runs for validation. Record platform results in the [smoke test matrix](release-smoke-tests.md).
 
 ## Windows x64
 

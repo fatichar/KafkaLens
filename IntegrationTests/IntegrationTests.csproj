@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\UI\KafkaLens.UI\KafkaLens.UI.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Updater\KafkaLens.Updater\KafkaLens.Updater.csproj" />
   </ItemGroup>
 
 </Project>
