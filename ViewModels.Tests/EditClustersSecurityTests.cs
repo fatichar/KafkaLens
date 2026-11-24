@@ -112,4 +112,21 @@ public sealed class EditClustersSecurityTests : IDisposable
         tested!.GetSecret(ClusterSecretNames.SslKeyPassword).Should().Be("pw");
         tested.Security.SslKeyLocation.Should().Be("/c.key");
     }
+
+    [AvaloniaFact]
+    public async Task Sasl_StoresPasswordInStore_AndKeepsUsernameInSettings()
+    {
+        var clusters = new ObservableCollection<ClusterViewModel>();
+        using var dialog = NewDialog(clusters);
+        var sasl = new ClusterSecurity { Protocol = KafkaSecurityProtocol.SaslSsl, SaslMechanism = KafkaSaslMechanism.ScramSha512, SaslUsername = "alice" };
+
+        await dialog.StageAddClusterAsync("auth", "b:9093", sasl, new() { [ClusterSecretNames.SaslPassword] = "s3cr3t" });
+        await dialog.SaveAsync();
+
+        var saved = repo.GetAll().Values.Single();
+        saved.Security!.SaslUsername.Should().Be("alice");
+        saved.GetSecret(ClusterSecretNames.SaslPassword).Should().Be("s3cr3t");
+        File.ReadAllText(file).Should().Contain("alice").And.NotContain("s3cr3t");
+        clusters.Single().SecuritySummary.Should().Be("SASL/SCRAM-SHA-512 + TLS");
+    }
 }

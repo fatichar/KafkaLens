@@ -71,7 +71,18 @@ public partial class AddEditClusterDialog : DialogBase
         KeyLocationBox.Text = security.SslKeyLocation;
         if (storedSecretNames.Contains(ClusterSecretNames.SslKeyPassword))
             KeyPasswordBox.PlaceholderText = "saved — leave empty to keep";
+        SaslUsernameBox.Text = security.SaslUsername;
+        var mechanism = MechanismCombo.Items.OfType<ComboBoxItem>()
+            .FirstOrDefault(i => (string?)i.Tag == security.EffectiveSaslMechanism.ToString());
+        if (mechanism != null) MechanismCombo.SelectedItem = mechanism;
+        if (storedSecretNames.Contains(ClusterSecretNames.SaslPassword))
+            SaslPasswordBox.PlaceholderText = "saved — leave empty to keep";
     }
+
+    private KafkaSaslMechanism SelectedMechanism =>
+        MechanismCombo.SelectedItem is ComboBoxItem { Tag: string tag } && Enum.TryParse<KafkaSaslMechanism>(tag, out var m)
+            ? m
+            : KafkaSaslMechanism.Plain;
 
     private void SelectProtocol(KafkaSecurityProtocol protocol)
     {
@@ -91,6 +102,8 @@ public partial class AddEditClusterDialog : DialogBase
         if (TlsPanel == null) return;
         var security = new ClusterSecurity { Protocol = SelectedProtocol };
         TlsPanel.IsVisible = security.UsesTls;
+        SaslPanel.IsVisible = security.UsesSasl;
+        UnencryptedWarning.IsVisible = security.SendsCredentialsUnencrypted;
         SecretStorageHint.IsVisible = !string.IsNullOrEmpty(SecretStorageHint.Text) && !security.IsDefault;
     }
 
@@ -99,7 +112,9 @@ public partial class AddEditClusterDialog : DialogBase
         Protocol = SelectedProtocol,
         SslCaLocation = CaLocationBox.Text,
         SslCertificateLocation = CertificateLocationBox.Text,
-        SslKeyLocation = KeyLocationBox.Text
+        SslKeyLocation = KeyLocationBox.Text,
+        SaslMechanism = SelectedMechanism,
+        SaslUsername = SaslUsernameBox.Text
     }.Normalized();
 
     /// <summary>Only secrets the user typed; empty fields mean "keep the saved value".</summary>
@@ -107,6 +122,7 @@ public partial class AddEditClusterDialog : DialogBase
     {
         var secrets = new Dictionary<string, string>(StringComparer.Ordinal);
         if (!string.IsNullOrEmpty(KeyPasswordBox.Text)) secrets[ClusterSecretNames.SslKeyPassword] = KeyPasswordBox.Text;
+        if (!string.IsNullOrEmpty(SaslPasswordBox.Text)) secrets[ClusterSecretNames.SaslPassword] = SaslPasswordBox.Text;
         return secrets;
     }
 
@@ -221,6 +237,11 @@ public partial class AddEditClusterDialog : DialogBase
         if (security.Validate() is { } problem)
         {
             ErrorTextBlock.Text = problem;
+            return;
+        }
+        if (security.UsesSasl && string.IsNullOrEmpty(SaslPasswordBox.Text) && !storedSecretNames.Contains(ClusterSecretNames.SaslPassword))
+        {
+            ErrorTextBlock.Text = "A SASL password is required.";
             return;
         }
 

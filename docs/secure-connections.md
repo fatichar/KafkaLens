@@ -1,6 +1,7 @@
 # Connecting to secured Kafka clusters
 
-KafkaLens can connect to brokers that require TLS encryption. Configure it per cluster in
+KafkaLens can connect to brokers that require TLS encryption and/or SASL authentication
+(PLAIN, SCRAM-SHA-256, SCRAM-SHA-512). Configure it per cluster in
 **Cluster → Edit Clusters → Add/Edit**, under **Security**.
 
 ## Where credentials are stored
@@ -44,6 +45,31 @@ point *CA certificate* at the CA's PEM file instead.
 Use **Test Connection** to check the settings before saving. Errors such as an untrusted certificate or
 a host-name mismatch are shown with technical details.
 
+## SASL authentication (PLAIN, SCRAM)
+
+Choose **Security → SASL over SSL/TLS (SASL_SSL)** — or, only on fully trusted networks,
+**SASL without encryption (SASL_PLAINTEXT)**.
+
+| Field | Meaning |
+|---|---|
+| SASL mechanism | `PLAIN`, `SCRAM-SHA-256` or `SCRAM-SHA-512`, as configured on the broker listener. |
+| User name (API key) | SASL user name; for Confluent Cloud the API key. Saved in `cluster_info.json`. |
+| Password (API secret) | Stored in the credential store, never in the settings file or logs. When editing, leave it empty to keep the saved password. |
+
+With SASL_SSL the TLS fields above (CA certificate, optional client certificate) apply as well.
+
+SASL_PLAINTEXT sends the user name and password **unencrypted**; the dialog shows a warning and the
+cluster list marks it *(unencrypted)*. Prefer SASL_SSL.
+
+Passwords are removed from error messages and logs. A wrong password or mechanism shows as a failed
+connection test.
+
+### Verifying with a local test broker
+
+`tools/test-brokers/secure-broker.sh` starts a disposable broker with SASL_PLAINTEXT, SASL_SSL and SSL
+listeners (user `alice` / `alice-secret`, test CA) — see `tools/test-brokers/README.md`. The opt-in tests
+in `Core.Tests/Security/LiveBrokerSecurityTests.cs` run against it.
+
 ## KafkaLens backend (gRPC server)
 
 Clusters served by a KafkaLens backend are configured on the server, in its `cluster_info.json`:
@@ -63,6 +89,14 @@ Clusters served by a KafkaLens backend are configured on the server, in its `clu
         "sslKeyLocation": "/etc/kafkalens/client.key"
       },
       "storedSecrets": [ "ssl.key.password" ]
+    },
+    {
+      "id": "auth",
+      "name": "Authenticated",
+      "address": "kafka.internal:9094",
+      "protocol": null,
+      "security": { "protocol": "SaslSsl", "saslMechanism": "ScramSha512", "saslUsername": "kafkalens" },
+      "storedSecrets": [ "sasl.password" ]
     }
   ]
 }
@@ -70,7 +104,8 @@ Clusters served by a KafkaLens backend are configured on the server, in its `clu
 
 On servers, secrets are read from environment variables first, then from the OS keyring if one exists.
 The variable name is `KAFKALENS_SECRET__CLUSTER__<ID>__<SECRET>` with non-alphanumeric characters
-replaced by `_`, e.g. `KAFKALENS_SECRET__CLUSTER__PROD__SSL_KEY_PASSWORD`.
+replaced by `_`, e.g. `KAFKALENS_SECRET__CLUSTER__PROD__SSL_KEY_PASSWORD` or
+`KAFKALENS_SECRET__CLUSTER__AUTH__SASL_PASSWORD`. Desktop users of the backend never see these credentials.
 
 To serve the backend itself over TLS, set `Kestrel:EndpointDefaults:CertificatePath` to a PFX file
 (and `Kestrel:EndpointDefaults:HttpsPort`); its password comes from

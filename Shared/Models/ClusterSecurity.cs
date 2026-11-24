@@ -9,7 +9,19 @@ namespace KafkaLens.Shared.Models;
 public enum KafkaSecurityProtocol
 {
     Plaintext,
-    Ssl
+    Ssl,
+    /// <summary>SASL authentication without encryption: credentials can be read on the network.</summary>
+    SaslPlaintext,
+    /// <summary>SASL authentication over TLS (recommended; Confluent Cloud).</summary>
+    SaslSsl
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<KafkaSaslMechanism>))]
+public enum KafkaSaslMechanism
+{
+    Plain,
+    ScramSha256,
+    ScramSha512
 }
 
 /// <summary>
@@ -36,8 +48,34 @@ public sealed class ClusterSecurity
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SslKeyLocation { get; set; }
 
+    [JsonPropertyName("saslMechanism")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public KafkaSaslMechanism? SaslMechanism { get; set; }
+
+    /// <summary>SASL user name (API key for Confluent Cloud). The password is the <see cref="ClusterSecretNames.SaslPassword"/> secret.</summary>
+    [JsonPropertyName("saslUsername")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SaslUsername { get; set; }
+
     [JsonIgnore]
-    public bool UsesTls => Protocol == KafkaSecurityProtocol.Ssl;
+    public bool UsesTls => Protocol is KafkaSecurityProtocol.Ssl or KafkaSecurityProtocol.SaslSsl;
+
+    [JsonIgnore]
+    public bool UsesSasl => Protocol is KafkaSecurityProtocol.SaslPlaintext or KafkaSecurityProtocol.SaslSsl;
+
+    /// <summary>True when credentials would travel unencrypted (SASL without TLS). The UI must warn.</summary>
+    [JsonIgnore]
+    public bool SendsCredentialsUnencrypted => Protocol == KafkaSecurityProtocol.SaslPlaintext;
+
+    [JsonIgnore]
+    public KafkaSaslMechanism EffectiveSaslMechanism => SaslMechanism ?? KafkaSaslMechanism.Plain;
+
+    public static string MechanismName(KafkaSaslMechanism mechanism) => mechanism switch
+    {
+        KafkaSaslMechanism.ScramSha256 => "SCRAM-SHA-256",
+        KafkaSaslMechanism.ScramSha512 => "SCRAM-SHA-512",
+        _ => "PLAIN"
+    };
 
     [JsonIgnore]
     public bool IsDefault => Protocol == KafkaSecurityProtocol.Plaintext;
@@ -45,6 +83,8 @@ public sealed class ClusterSecurity
     public string Summary() => Protocol switch
     {
         KafkaSecurityProtocol.Ssl => string.IsNullOrWhiteSpace(SslCertificateLocation) ? "TLS" : "Mutual TLS",
+        KafkaSecurityProtocol.SaslSsl => $"SASL/{MechanismName(EffectiveSaslMechanism)} + TLS",
+        KafkaSecurityProtocol.SaslPlaintext => $"SASL/{MechanismName(EffectiveSaslMechanism)} (unencrypted)",
         _ => "Plaintext"
     };
 
@@ -53,12 +93,14 @@ public sealed class ClusterSecurity
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
         if (UsesTls && !string.IsNullOrWhiteSpace(SslKeyLocation)) names.Add(ClusterSecretNames.SslKeyPassword);
+        if (UsesSasl) names.Add(ClusterSecretNames.SaslPassword);
         return names;
     }
 
     /// <summary>Returns a problem description, or null when the settings are usable.</summary>
     public string? Validate()
     {
+        if (UsesSasl && string.IsNullOrWhiteSpace(SaslUsername)) return "A SASL user name is required.";
         if (!UsesTls) return null;
         var hasCert = !string.IsNullOrWhiteSpace(SslCertificateLocation);
         var hasKey = !string.IsNullOrWhiteSpace(SslKeyLocation);
@@ -90,7 +132,9 @@ public sealed class ClusterSecurity
         other != null && Protocol == other.Protocol
                       && Norm(SslCaLocation) == Norm(other.SslCaLocation)
                       && Norm(SslCertificateLocation) == Norm(other.SslCertificateLocation)
-                      && Norm(SslKeyLocation) == Norm(other.SslKeyLocation);
+                      && Norm(SslKeyLocation) == Norm(other.SslKeyLocation)
+                      && (UsesSasl ? EffectiveSaslMechanism : (KafkaSaslMechanism?)null) == (other.UsesSasl ? other.EffectiveSaslMechanism : null)
+                      && Norm(SaslUsername) == Norm(other.SaslUsername);
 
     private static string Norm(string? s) => s?.Trim() ?? "";
 
@@ -101,8 +145,16 @@ public sealed class ClusterSecurity
         copy.SslCaLocation = Blank(SslCaLocation);
         copy.SslCertificateLocation = Blank(SslCertificateLocation);
         copy.SslKeyLocation = Blank(SslKeyLocation);
+        copy.SaslUsername = Blank(SaslUsername);
         if (!copy.UsesTls)
             copy.SslCaLocation = copy.SslCertificateLocation = copy.SslKeyLocation = null;
+        if (copy.UsesSasl)
+            copy.SaslMechanism = copy.EffectiveSaslMechanism;
+        else
+        {
+            copy.SaslMechanism = null;
+            copy.SaslUsername = null;
+        }
         return copy;
     }
 

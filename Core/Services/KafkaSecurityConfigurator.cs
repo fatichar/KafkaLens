@@ -18,8 +18,23 @@ public static class KafkaSecurityConfigurator
         config.SecurityProtocol = security.Protocol switch
         {
             KafkaSecurityProtocol.Ssl => SecurityProtocol.Ssl,
+            KafkaSecurityProtocol.SaslSsl => SecurityProtocol.SaslSsl,
+            KafkaSecurityProtocol.SaslPlaintext => SecurityProtocol.SaslPlaintext,
             _ => SecurityProtocol.Plaintext
         };
+
+        if (security.UsesSasl)
+        {
+            config.SaslMechanism = security.EffectiveSaslMechanism switch
+            {
+                KafkaSaslMechanism.ScramSha256 => SaslMechanism.ScramSha256,
+                KafkaSaslMechanism.ScramSha512 => SaslMechanism.ScramSha512,
+                _ => SaslMechanism.Plain
+            };
+            config.SaslUsername = security.SaslUsername;
+            config.SaslPassword = settings.GetSecret(ClusterSecretNames.SaslPassword)
+                ?? throw new ArgumentException("The SASL password is missing. Enter it in the cluster settings.");
+        }
 
         if (!security.UsesTls) return;
 

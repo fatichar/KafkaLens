@@ -18,7 +18,27 @@
             <ComboBox Name="ProtocolCombo" HorizontalAlignment="Stretch" SelectionChanged="ProtocolCombo_SelectionChanged">
                 <ComboBoxItem Content="Plaintext (no encryption)" Tag="Plaintext"/>
                 <ComboBoxItem Content="SSL/TLS" Tag="Ssl"/>
+                <ComboBoxItem Content="SASL over SSL/TLS (SASL_SSL)" Tag="SaslSsl"/>
+                <ComboBoxItem Content="SASL without encryption (SASL_PLAINTEXT)" Tag="SaslPlaintext"/>
             </ComboBox>
+
+            <StackPanel Name="SaslPanel" Spacing="6" IsVisible="False">
+                <Label Content="SASL mechanism"/>
+                <ComboBox Name="MechanismCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                    <ComboBoxItem Content="PLAIN" Tag="Plain"/>
+                    <ComboBoxItem Content="SCRAM-SHA-256" Tag="ScramSha256"/>
+                    <ComboBoxItem Content="SCRAM-SHA-512" Tag="ScramSha512"/>
+                </ComboBox>
+                <Label Content="User name (API key)"/>
+                <TextBox Name="SaslUsernameBox"/>
+                <Label Content="Password (API secret)"/>
+                <TextBox Name="SaslPasswordBox" PasswordChar="•"/>
+                <Border Name="UnencryptedWarning" IsVisible="False" Padding="8" CornerRadius="4"
+                        BorderThickness="1" BorderBrush="{DynamicResource ThemeErrorBrush}">
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource ThemeErrorBrush}"
+                               Text="Warning: SASL_PLAINTEXT sends your user name and password unencrypted. Anyone on the network path can read them. Use SASL over SSL/TLS unless the network is fully trusted."/>
+                </Border>
+            </StackPanel>
 
             <StackPanel Name="TlsPanel" Spacing="6" IsVisible="False">
                 <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
