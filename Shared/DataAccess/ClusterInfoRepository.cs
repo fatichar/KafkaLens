@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using KafkaLens.Shared.Entities;
+using KafkaLens.Shared.Security;
 using Serilog;
 
 namespace KafkaLens.Shared.DataAccess;
@@ -13,12 +14,18 @@ public class ClusterInfoRepository : IClusterInfoRepository
 {
     private const string DEFAULT_FILE_PATH = "cluster_info.json";
     private readonly string filePath;
+    private readonly ISecretStore secretStore;
     private Dictionary<string, ClusterInfo> clusters = new();
     private ReadOnlyDictionary<string, ClusterInfo> readOnlyClusters;
     public ReadOnlyDictionary<string, ClusterInfo> GetAll() => readOnlyClusters;
 
-    public ClusterInfoRepository(string filePath)
+    /// <param name="filePath">JSON file holding the (non-secret) cluster configuration.</param>
+    /// <param name="secretStore">
+    /// Where cluster credentials are kept. Defaults to a session-only in-memory store, which never persists secrets.
+    /// </param>
+    public ClusterInfoRepository(string filePath, ISecretStore? secretStore = null)
     {
+        this.secretStore = secretStore ?? new InMemorySecretStore();
         readOnlyClusters = new(clusters);
         if (string.IsNullOrEmpty(filePath))
         {
@@ -42,11 +49,136 @@ public class ClusterInfoRepository : IClusterInfoRepository
         var configFile = File.ReadAllText(filePath);
         var clusterConfig = JsonSerializer.Deserialize<ClusterConfig>(configFile);
         if (clusterConfig == null) return;
+        var migrated = false;
         foreach (var cluster in clusterConfig.Clusters)
         {
+            migrated |= LoadSecrets(cluster);
             clusters.Add(cluster.Id, cluster);
         }
+
+        if (migrated)
+        {
+            SaveClusters();
+        }
     }
+
+    #region Secrets
+
+    private string Key(ClusterInfo cluster, string name) => SecretKeys.ForCluster(cluster.Id, name);
+
+    /// <summary>Resolves stored secrets and migrates plaintext ones. Returns true when the file must be rewritten.</summary>
+    private bool LoadSecrets(ClusterInfo cluster)
+    {
+        cluster.Secrets = new Dictionary<string, string>();
+        foreach (var name in cluster.StoredSecretNames ?? [])
+        {
+            try
+            {
+                var value = secretStore.Get(Key(cluster, name));
+                if (value != null)
+                    cluster.Secrets[name] = value;
+                else
+                    Log.Warning("Secret {SecretName} of cluster {ClusterName} was not found in {SecretStore}; it must be re-entered",
+                        name, cluster.Name, secretStore.BackendName);
+            }
+            catch (Exception e)
+            {
+                Log.Warning("Could not read secret {SecretName} of cluster {ClusterName} from {SecretStore}: {Error}",
+                    name, cluster.Name, secretStore.BackendName, SecretRedactor.Redact(e.Message));
+            }
+        }
+
+        if (cluster.PlaintextSecrets is not { Count: > 0 } plaintext)
+        {
+            cluster.PlaintextSecrets = null;
+            return false;
+        }
+
+        foreach (var (name, value) in plaintext)
+            cluster.Secrets[name] = value;
+
+        if (!secretStore.IsPersistent)
+        {
+            // Keeping the file as it is: removing the values without a place to persist them would lose them.
+            Log.Warning("Cluster {ClusterName} has {Count} plaintext secret(s) in {File}; they cannot be moved because no OS " +
+                        "credential storage is available", cluster.Name, plaintext.Count, filePath);
+            return false;
+        }
+
+        try
+        {
+            foreach (var (name, value) in plaintext)
+                secretStore.Set(Key(cluster, name), value);
+        }
+        catch (Exception e)
+        {
+            Log.Warning("Could not migrate plaintext secrets of cluster {ClusterName} to {SecretStore}; leaving them in place: {Error}",
+                cluster.Name, secretStore.BackendName, SecretRedactor.Redact(e.Message, plaintext.Values));
+            return false;
+        }
+
+        cluster.StoredSecretNames = cluster.Secrets.Keys.Order(StringComparer.Ordinal).ToList();
+        cluster.PlaintextSecrets = null;
+        Log.Information("Moved {Count} plaintext secret(s) of cluster {ClusterName} to {SecretStore}",
+            plaintext.Count, cluster.Name, secretStore.BackendName);
+        return true;
+    }
+
+    /// <summary>Writes <see cref="ClusterInfo.Secrets"/> to the store and removes secrets that are no longer set.</summary>
+    private void PersistSecrets(ClusterInfo cluster, ClusterInfo? previous)
+    {
+        if (cluster.Secrets == null)
+        {
+            // Caller did not touch secrets: keep what is stored.
+            cluster.Secrets = previous?.Secrets ?? new Dictionary<string, string>();
+            cluster.StoredSecretNames = previous?.StoredSecretNames;
+            cluster.PlaintextSecrets = previous?.PlaintextSecrets;
+            return;
+        }
+
+        var current = cluster.Secrets
+            .Where(kv => !string.IsNullOrEmpty(kv.Value))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        foreach (var (name, value) in current)
+            secretStore.Set(Key(cluster, name), value);
+
+        var previouslyStored = (previous?.StoredSecretNames ?? []).Concat(cluster.StoredSecretNames ?? []).Distinct();
+        foreach (var name in previouslyStored.Where(n => !current.ContainsKey(n)))
+            secretStore.Delete(Key(cluster, name));
+
+        cluster.Secrets = current;
+        cluster.StoredSecretNames = secretStore.IsPersistent && current.Count > 0
+            ? current.Keys.Order(StringComparer.Ordinal).ToList()
+            : null;
+
+        // Unmigrated plaintext values (only possible without a persistent store) are stale once replaced or cleared.
+        var plaintext = cluster.PlaintextSecrets ?? previous?.PlaintextSecrets;
+        if (plaintext != null)
+        {
+            var remaining = plaintext.Where(kv => current.TryGetValue(kv.Key, out var v) && v == kv.Value)
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+            cluster.PlaintextSecrets = remaining.Count > 0 && !secretStore.IsPersistent ? remaining : null;
+        }
+    }
+
+    private void DeleteSecrets(ClusterInfo cluster)
+    {
+        foreach (var name in (cluster.StoredSecretNames ?? []).Concat((IEnumerable<string>?)cluster.Secrets?.Keys ?? []).Distinct())
+        {
+            try
+            {
+                secretStore.Delete(Key(cluster, name));
+            }
+            catch (Exception e)
+            {
+                Log.Warning("Could not delete secret {SecretName} of cluster {ClusterName}: {Error}",
+                    name, cluster.Name, SecretRedactor.Redact(e.Message));
+            }
+        }
+    }
+
+    #endregion Secrets
 
     public ClusterInfo GetById(string id)
     {
@@ -62,6 +194,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
         }
 
         var clusterInfo = ClusterInfo.Create(name, address);
+        clusterInfo.Secrets = new Dictionary<string, string>();
         Add(clusterInfo);
         return clusterInfo;
     }
@@ -91,6 +224,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
             throw new Exception($"Cluster with id {clusterInfo.Id} already exists");
         }
 
+        PersistSecrets(clusterInfo, null);
         clusters.Add(clusterInfo.Id, clusterInfo);
     }
 
@@ -117,9 +251,19 @@ public class ClusterInfoRepository : IClusterInfoRepository
         File.WriteAllText(filePath, json);
     }
 
+    // When the caller mutates the stored instance in place, compare against what was stored before.
+    private static ClusterInfo Snapshot(ClusterInfo c) => new(c.Id, c.Name, c.Address, c.Protocol)
+    {
+        Secrets = c.Secrets,
+        StoredSecretNames = c.StoredSecretNames?.ToList(),
+        PlaintextSecrets = c.PlaintextSecrets
+    };
+
     public void Update(ClusterInfo clusterInfo)
     {
         ValidateClusterById(clusterInfo.Id);
+        var previous = clusters[clusterInfo.Id];
+        PersistSecrets(clusterInfo, ReferenceEquals(previous, clusterInfo) ? Snapshot(previous) : previous);
         clusters[clusterInfo.Id] = clusterInfo;
         SaveClusters();
     }
@@ -127,12 +271,15 @@ public class ClusterInfoRepository : IClusterInfoRepository
     public void Delete(string id)
     {
         ValidateClusterById(id);
+        DeleteSecrets(clusters[id]);
         clusters.Remove(id);
         SaveClusters();
     }
 
     public void DeleteAll()
     {
+        foreach (var cluster in clusters.Values)
+            DeleteSecrets(cluster);
         clusters.Clear();
         SaveClusters();
     }

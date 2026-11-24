@@ -22,6 +22,7 @@ using KafkaLens.Shared.Services;
 using KafkaLens.UI.Services;
 using Serilog;
 using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Security;
 using KafkaLens.Shared.Telemetry;
 using KafkaLens.ViewModels.Telemetry;
 using System.Net.Http;
@@ -70,7 +71,10 @@ public class App : Application
         // Create the directory if it doesn't exist
         Directory.CreateDirectory(kafkaLensDataPath);
 
-        var clusterRepo = new ClusterInfoRepository(Path.Combine(kafkaLensDataPath, config.ClusterInfoFilePath));
+        // Cluster credentials live in the OS credential store (or, without one, in memory for this session only).
+        var secretStore = SecretStoreFactory.CreateDefault();
+        services.AddSingleton(secretStore);
+        var clusterRepo = new ClusterInfoRepository(Path.Combine(kafkaLensDataPath, config.ClusterInfoFilePath), secretStore);
         services.AddSingleton<IClusterInfoRepository>(clusterRepo);
 
         var clientRepo = new ClientInfoRepository(Path.Combine(kafkaLensDataPath, config.ClientInfoFilePath));
