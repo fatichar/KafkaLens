@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory)]
-    [ValidatePattern('^\d+\.\d+\.\d+(\.\d+)?$')]
+    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+$')]
     [string] $Version
 )
 
