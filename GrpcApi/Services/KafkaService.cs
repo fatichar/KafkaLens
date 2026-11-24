@@ -4,6 +4,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using GrpcApi.Config;
 using KafkaLens.Grpc;
+using KafkaLens.Core.Services;
 using KafkaLens.Shared;
 using Models = KafkaLens.Shared.Models;
 using Topic = KafkaLens.Grpc.Topic;
@@ -53,6 +54,11 @@ public class KafkaService(
     }
     #endregion Create
 
+    /// <summary>Forwards actionable (already redacted) auth/ACL/TLS failures to the desktop client.</summary>
+    private static RpcException ToRpcException(KafkaAccessException e) => new(new Status(
+        e.Kind == ConnectionProblemKind.Authorization ? StatusCode.PermissionDenied : StatusCode.Unauthenticated,
+        e.Message));
+
     #region Read
     public override async Task<GetClustersResponse> GetAllClusters(Empty request, ServerCallContext context)
     {
@@ -65,7 +71,15 @@ public class KafkaService(
 
     public override async Task<GetTopicsResponse> GetTopics(GetTopicsRequest request, ServerCallContext context)
     {
-        var topics = await kafkaLensClient.GetTopicsAsync(request.ClusterId);
+        IList<Models.Topic> topics;
+        try
+        {
+            topics = await kafkaLensClient.GetTopicsAsync(request.ClusterId);
+        }
+        catch (KafkaAccessException e)
+        {
+            throw ToRpcException(e);
+        }
         var response = new GetTopicsResponse();
         response.Topics.AddRange(topics.Select(ToTopicResponse));
 
@@ -156,6 +170,10 @@ public class KafkaService(
         catch (ArgumentException e)
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, e.Message));
+        }
+        catch (KafkaAccessException e)
+        {
+            throw ToRpcException(e);
         }
         catch (Exception e)
         {

@@ -52,6 +52,11 @@ public abstract class ConsumerBase : IKafkaConsumer
                         LoadTopics();
                         LastRefreshTime = DateTime.Now;
                     }
+                    catch (KafkaAccessException)
+                    {
+                        // Already actionable (authentication / ACL / TLS); keep the message for the UI.
+                        throw;
+                    }
                     catch (Exception e)
                     {
                         Console.WriteLine(e);
@@ -96,6 +101,12 @@ public abstract class ConsumerBase : IKafkaConsumer
 
     protected abstract List<Topic> FetchTopics();
 
+    /// <summary>
+    /// Gives implementations a chance to replace a low-level failure with an actionable one
+    /// (e.g. "not authorized" instead of a raw broker error code). The original is kept as inner exception.
+    /// </summary>
+    protected virtual Exception DescribeFailure(Exception e) => e;
+
     public MessageStream GetMessageStream(string topic, FetchOptions options,
         CancellationToken cancellationToken = default)
     {
@@ -114,7 +125,7 @@ public abstract class ConsumerBase : IKafkaConsumer
                 if (e is OperationCanceledException)
                     messages.SetCanceled();
                 else
-                    messages.SetError(e);
+                    messages.SetError(DescribeFailure(e));
             }
             finally
             {
@@ -144,7 +155,7 @@ public abstract class ConsumerBase : IKafkaConsumer
                 if (e is OperationCanceledException)
                     messages.SetCanceled();
                 else
-                    messages.SetError(e);
+                    messages.SetError(DescribeFailure(e));
             }
             finally
             {
