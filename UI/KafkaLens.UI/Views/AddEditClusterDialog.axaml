@@ -13,7 +13,9 @@
             <TextBox Name="NameBox" PlaceholderText="e.g. Production"/>
 
             <Label Content="Bootstrap Servers"/>
-            <TextBox Name="AddressBox" PlaceholderText="e.g. localhost:9092"/>
+            <TextBox Name="AddressBox" PlaceholderText="e.g. localhost:9092" TextChanged="AddressBox_TextChanged"/>
+            <TextBlock Name="ServiceHint" TextWrapping="Wrap" FontSize="12" IsVisible="False"
+                       Foreground="{DynamicResource ThemeAccentBrush}"/>
 
             <Label Content="Security"/>
             <ComboBox Name="ProtocolCombo" HorizontalAlignment="Stretch" SelectionChanged="ProtocolCombo_SelectionChanged">
@@ -25,7 +27,7 @@
 
             <StackPanel Name="SaslPanel" Spacing="6" IsVisible="False">
                 <Label Content="SASL mechanism"/>
-                <ComboBox Name="MechanismCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                <ComboBox Name="MechanismCombo" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="ProtocolCombo_SelectionChanged">
                     <ComboBoxItem Content="PLAIN" Tag="Plain"/>
                     <ComboBoxItem Content="SCRAM-SHA-256" Tag="ScramSha256"/>
                     <ComboBoxItem Content="SCRAM-SHA-512" Tag="ScramSha512"/>

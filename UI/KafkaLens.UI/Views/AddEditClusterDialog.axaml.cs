@@ -106,9 +106,14 @@ public partial class AddEditClusterDialog : DialogBase
 
     private void ProtocolCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e) => UpdateSecurityPanels();
 
+    private void AddressBox_TextChanged(object? sender, TextChangedEventArgs e) => UpdateSecurityPanels();
+
     private void UpdateSecurityPanels()
     {
-        if (TlsPanel == null) return;
+        if (TlsPanel == null || ServiceHint == null || MechanismCombo == null) return;
+        var hint = ClusterSecurity.HintFor(AddressBox.Text, new ClusterSecurity { Protocol = SelectedProtocol, SaslMechanism = SelectedMechanism });
+        ServiceHint.Text = hint;
+        ServiceHint.IsVisible = hint != null;
         var security = new ClusterSecurity { Protocol = SelectedProtocol };
         TlsPanel.IsVisible = security.UsesTls;
         SaslPanel.IsVisible = security.UsesSasl;

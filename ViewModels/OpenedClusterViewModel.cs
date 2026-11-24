@@ -115,6 +115,18 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
     public string ClusterId => cluster.Id;
     public bool ShowConnectionBanner => cluster.Status != ConnectionState.Connected;
     public bool ShowEmptyConnectionState => ShowConnectionBanner && Topics.Count == 0;
+
+    /// <summary>Why the last connection attempt failed (already actionable and redacted), for the banner.</summary>
+    public string? ConnectionError => cluster.Status == ConnectionState.Failed && !string.IsNullOrWhiteSpace(cluster.LastError)
+        ? cluster.LastError
+        : null;
+
+    public const string NoTopicsHint =
+        "No topics are visible. If the cluster has topics, the credentials may lack DESCRIBE permission (ACLs) on them.";
+
+    /// <summary>Connected and loaded, but nothing visible: often missing ACLs (e.g. Confluent Cloud hides such topics).</summary>
+    public bool ShowNoTopicsHint => cluster.Status == ConnectionState.Connected
+                                    && cluster.TopicLoadState == TopicLoadState.Loaded && Topics.Count == 0;
     public string ConnectionMessage => cluster.Status switch
     {
         ConnectionState.Checking => "Connecting...",
@@ -373,6 +385,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
     private void OnTopicsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         OnPropertyChanged(nameof(ShowEmptyConnectionState));
+        OnPropertyChanged(nameof(ShowNoTopicsHint));
     }
 
     private void OnClusterPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -386,11 +399,15 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
             OnPropertyChanged(nameof(ShowEmptyConnectionState));
             OnPropertyChanged(nameof(ConnectionMessage));
             OnPropertyChanged(nameof(ConnectionActionText));
-
+            OnPropertyChanged(nameof(ConnectionError));
+            OnPropertyChanged(nameof(ShowNoTopicsHint));
         }
+        else if (e.PropertyName == nameof(ClusterViewModel.LastError))
+            OnPropertyChanged(nameof(ConnectionError));
         else if (e.PropertyName == nameof(ClusterViewModel.TopicLoadState) &&
                  cluster.TopicLoadState == TopicLoadState.Loaded && !isSyncingTopics)
         {
+            OnPropertyChanged(nameof(ShowNoTopicsHint));
             SyncTopics(isRetryingTopics ? "retry" : "health_check");
         }
         else if (e.PropertyName == nameof(ClusterViewModel.Name))
