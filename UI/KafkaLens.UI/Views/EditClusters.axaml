@@ -1,4 +1,4 @@
-<views:DialogBase xmlns="https://github.com/avaloniaui"
+﻿<views:DialogBase xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -54,6 +54,7 @@
                             </DataGridTemplateColumn>
                             <DataGridTextColumn x:DataType="vm:ClusterViewModel" Header="Name" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
                             <DataGridTextColumn x:DataType="vm:ClusterViewModel" Header="Address" Binding="{Binding Address}" IsReadOnly="True" Width="2*"/>
+                            <DataGridTextColumn x:DataType="vm:ClusterViewModel" Header="Security" Binding="{Binding SecuritySummary}" IsReadOnly="True" Width="Auto"/>
                         </DataGrid.Columns>
                     </DataGrid>
 

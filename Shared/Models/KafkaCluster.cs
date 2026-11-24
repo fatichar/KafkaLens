@@ -1,4 +1,6 @@
-﻿namespace KafkaLens.Shared.Models;
+﻿using System.Collections.Generic;
+
+namespace KafkaLens.Shared.Models;
 
 public class KafkaCluster(string id, string name, string address)
 {
@@ -9,5 +11,11 @@ public class KafkaCluster(string id, string name, string address)
     public string? LastError { get; set; }
     public bool IsUnavailablePlaceholder { get; set; }
     public bool IsEnabled { get; set; } = true;
+
+    /// <summary>Security settings (no secrets). Null when the client does not expose them (e.g. gRPC).</summary>
+    public ClusterSecurity? Security { get; set; }
+
+    /// <summary>Names of the secrets stored for this cluster, so editors can show "saved" without the value.</summary>
+    public IReadOnlyCollection<string> StoredSecretNames { get; set; } = [];
     public bool IsConnected => Status == ConnectionState.Connected;
 }

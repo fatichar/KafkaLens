@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using Avalonia.Threading;
@@ -70,9 +70,14 @@ public sealed class EditClustersViewModel : IDisposable
         ApplyExistingClientStatuses();
     }
 
-    private static ClusterInfo CopyCluster(ClusterInfo c) => new(c.Id, c.Name, c.Address, c.Protocol) { IsEnabled = c.IsEnabled };
+    private static ClusterInfo CopyCluster(ClusterInfo c) => new(c.Id, c.Name, c.Address, c.Protocol)
+        { IsEnabled = c.IsEnabled, Security = c.Security?.Clone(), StoredSecretNames = c.Secrets?.Keys.ToList() ?? c.StoredSecretNames?.ToList() };
     private static ClientInfo CopyClient(ClientInfo c) => new(c.Id, c.Name, c.Address, c.Protocol) { IsEnabled = c.IsEnabled };
-    private static ClusterViewModel CopyCluster(ClusterViewModel c) => new(new KafkaCluster(c.Id, c.Name, c.Address) { IsEnabled = c.IsEnabled, Status = c.Status, LastError = c.LastError }, c.Client) { IsClientEnabled = c.IsClientEnabled };
+    private static ClusterViewModel CopyCluster(ClusterViewModel c) => new(new KafkaCluster(c.Id, c.Name, c.Address)
+        {
+            IsEnabled = c.IsEnabled, Status = c.Status, LastError = c.LastError,
+            Security = c.Security.Clone(), StoredSecretNames = c.StoredSecretNames.ToList()
+        }, c.Client) { IsClientEnabled = c.IsClientEnabled };
 
     private void Dispatch(Action action)
     {
@@ -251,7 +256,23 @@ public sealed class EditClustersViewModel : IDisposable
         return TestConnectionCoreAsync(address, staged != null && staged.Address.Trim() == address.Trim() ? staged : null);
     }
 
-    private async Task<ConnectionValidationResult> TestConnectionCoreAsync(string address, ClusterViewModel? staged = null)
+    /// <summary>
+    /// Tests the settings entered in the Add/Edit dialog (address, TLS/authentication, secrets) without saving them.
+    /// <paramref name="cluster"/> is the edited cluster, or null when adding a new one.
+    /// </summary>
+    public Task<ConnectionValidationResult> TestConnectionAsync(ClusterViewModel? cluster, KafkaConnectionSettings settings)
+    {
+        if (cluster == null) return TestConnectionCoreAsync(settings.BootstrapServers, null, settings);
+        var staged = Clusters.FirstOrDefault(c => c.Id == cluster.Id);
+        if (staged != null && (!staged.IsAvailable || !IsOwnerEnabled(staged.Client, false)))
+            return Task.FromResult(ConnectionValidationResult.Failed("Cluster or client is disabled."));
+        var unchanged = staged != null && staged.Address.Trim() == settings.BootstrapServers.Trim()
+                        && staged.Security.SameAs(settings.Security);
+        return TestConnectionCoreAsync(settings.BootstrapServers, unchanged ? staged : null, settings);
+    }
+
+    private async Task<ConnectionValidationResult> TestConnectionCoreAsync(string address, ClusterViewModel? staged = null,
+        KafkaConnectionSettings? settings = null)
     {
         if (!IsOwnerEnabled(staged?.Client ?? LocalClient, false)
             || !IsOwnerEnabled(staged?.Client ?? LocalClient, true) || staged is { IsAvailable: false })
@@ -261,7 +282,9 @@ public sealed class EditClustersViewModel : IDisposable
         var stagedVersion = staged?.ConnectionVersion;
         try
         {
-            var result = LocalClient is IConnectionTestClient diagnostic
+            var result = settings != null && LocalClient is ISecureConnectionTestClient secure
+                ? await secure.ValidateConnectionWithDetailsAsync(settings, System.Threading.CancellationToken.None)
+                : LocalClient is IConnectionTestClient diagnostic
                 ? await diagnostic.ValidateConnectionWithDetailsAsync(address)
                 : (await LocalClient.ValidateConnectionAsync(address) ? ConnectionValidationResult.Success() : ConnectionValidationResult.Failed("Connection validation returned false."));
             Dispatch(() => ApplyClusterTestResult(staged, live, stagedVersion, liveVersion, result.Succeeded ? ConnectionState.Connected : ConnectionState.Failed, result.ErrorMessage));
@@ -350,32 +373,77 @@ public sealed class EditClustersViewModel : IDisposable
             ? ConnectionState.Connected : ConnectionState.Unknown;
     }
 
-    public async Task AddClusterImmediatelyAsync(string name, string address)
+    public async Task AddClusterImmediatelyAsync(string name, string address,
+        ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
     {
-        await StageAddClusterAsync(name, address);
+        await StageAddClusterAsync(name, address, security, secrets);
         await SaveCoreAsync(Clusters.Last().Id, null);
     }
 
-    public Task StageAddClusterAsync(string name, string address)
+    /// <param name="security">TLS/authentication settings; null = plaintext.</param>
+    /// <param name="secrets">Secrets entered by the user (e.g. key password); stored in the credential store on save.</param>
+    public Task StageAddClusterAsync(string name, string address,
+        ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
     {
         var info = ClusterInfo.Create(name, address);
         addedClusterIds.Add(info.Id);
-        Clusters.Add(new ClusterViewModel(new KafkaCluster(info.Id, name, address) { IsEnabled = true }, LocalClient)
-            { IsClientEnabled = IsOwnerEnabled(LocalClient, true) });
+        Clusters.Add(new ClusterViewModel(new KafkaCluster(info.Id, name, address)
+            {
+                IsEnabled = true,
+                Security = security?.Normalized() ?? new ClusterSecurity()
+            }, LocalClient)
+            { IsClientEnabled = IsOwnerEnabled(LocalClient, true), PendingSecrets = NonEmpty(secrets) });
         return Task.CompletedTask;
     }
 
-    public Task StageUpdateCluster(ClusterViewModel cluster, string name, string address)
+    /// <param name="security">New security settings, or null to keep the current ones.</param>
+    /// <param name="secrets">Newly entered secrets; empty/omitted values keep what is stored.</param>
+    public Task StageUpdateCluster(ClusterViewModel cluster, string name, string address,
+        ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
     {
         var row = Clusters.FirstOrDefault(c => c.Id == cluster.Id) ?? throw new ArgumentException("Cluster is not staged in this dialog.", nameof(cluster));
         row.Name = name;
         row.Address = address;
+        if (security != null) row.UpdateSecurity(security.Normalized());
+        if (NonEmpty(secrets) is { } entered)
+        {
+            row.PendingSecrets ??= new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var (k, v) in entered) row.PendingSecrets[k] = v;
+        }
         return Task.CompletedTask;
     }
 
-    public async Task UpdateClusterImmediatelyAsync(ClusterViewModel cluster, string name, string address)
+    private static Dictionary<string, string>? NonEmpty(Dictionary<string, string>? secrets)
     {
-        await StageUpdateCluster(cluster, name, address);
+        var result = secrets?.Where(kv => !string.IsNullOrEmpty(kv.Value)).ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+        return result is { Count: > 0 } ? result : null;
+    }
+
+    /// <summary>Secrets currently saved for a cluster (from the credential store); empty for new clusters.</summary>
+    private IReadOnlyDictionary<string, string>? StoredSecrets(string clusterId) =>
+        ClusterRepository.GetAll()?.TryGetValue(clusterId, out var info) == true ? info.Secrets : null;
+
+    /// <summary>
+    /// Connection settings for a test from the Add/Edit dialog: saved secrets of <paramref name="cluster"/> (if any)
+    /// plus staged and newly entered ones.
+    /// </summary>
+    public KafkaConnectionSettings BuildTestSettings(ClusterViewModel? cluster, string address, ClusterSecurity security,
+        IReadOnlyDictionary<string, string>? enteredSecrets)
+    {
+        var staged = cluster == null ? null : Clusters.FirstOrDefault(c => c.Id == cluster.Id);
+        var existing = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (cluster != null && StoredSecrets(cluster.Id) is { } stored)
+            foreach (var (k, v) in stored) existing[k] = v;
+        if (staged?.PendingSecrets is { } pending)
+            foreach (var (k, v) in pending) existing[k] = v;
+        var normalized = security.Normalized();
+        return new KafkaConnectionSettings(address.Trim(), normalized, ClusterSecurity.MergeSecrets(existing, enteredSecrets, normalized));
+    }
+
+    public async Task UpdateClusterImmediatelyAsync(ClusterViewModel cluster, string name, string address,
+        ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
+    {
+        await StageUpdateCluster(cluster, name, address, security, secrets);
         await SaveCoreAsync(cluster.Id, null);
     }
 
@@ -439,7 +507,8 @@ public sealed class EditClustersViewModel : IDisposable
         ApplyStagedAvailability();
     }
 
-    private sealed record ClusterChange(string Id, string Name, string Address, string? Protocol, bool Enabled, bool Added, bool AddressChanged, bool NewlyEnabled);
+    private sealed record ClusterChange(string Id, string Name, string Address, string? Protocol, bool Enabled, bool Added, bool AddressChanged, bool NewlyEnabled,
+        ClusterSecurity Security, Dictionary<string, string>? NewSecrets, bool SecurityChanged);
     private sealed record ClientChange(string Id, string Name, string Address, string Protocol, bool Enabled, bool Added, string? OldName, bool TransportChanged, bool NewlyEnabled);
 
     public Task SaveAsync() => SaveCoreAsync(null, null);
@@ -464,9 +533,12 @@ public sealed class EditClustersViewModel : IDisposable
         var clusterChanges = clusterRows.Select(row =>
         {
             var old = originalClusters.GetValueOrDefault(row.Id);
+            var security = row.Security.Normalized();
+            var securityChanged = old != null && (!security.SameAs(old.Security ?? new ClusterSecurity()) || row.PendingSecrets != null);
             return new ClusterChange(row.Id, row.Name, row.Address, old?.Protocol, row.IsEnabled, addedClusterIds.Contains(row.Id),
-                old != null && old.Address != row.Address, old is { IsEnabled: false } && row.IsEnabled);
-        }).Where(c => c.Added || originalClusters.GetValueOrDefault(c.Id) is { } old
+                old != null && (old.Address != row.Address || securityChanged), old is { IsEnabled: false } && row.IsEnabled,
+                security, row.PendingSecrets, securityChanged);
+        }).Where(c => c.Added || c.SecurityChanged || originalClusters.GetValueOrDefault(c.Id) is { } old
             && (old.Name != c.Name || old.Address != c.Address || old.IsEnabled != c.Enabled)).ToArray();
         var clientChanges = clientRows.Select(row =>
         {
@@ -523,19 +595,38 @@ public sealed class EditClustersViewModel : IDisposable
         }
         foreach (var change in clusterChanges)
         {
-            var info = new ClusterInfo(change.Id, change.Name, change.Address, change.Protocol) { IsEnabled = change.Enabled };
+            var info = new ClusterInfo(change.Id, change.Name, change.Address, change.Protocol)
+            {
+                IsEnabled = change.Enabled,
+                Security = change.Security.IsDefault ? null : change.Security,
+                // null keeps the stored secrets untouched; otherwise the full, filtered set is written.
+                Secrets = change.Added || change.SecurityChanged
+                    ? ClusterSecurity.MergeSecrets(StoredSecrets(change.Id), change.NewSecrets, change.Security)
+                    : null
+            };
             if (change.Added) ClusterRepository.Add(info); else ClusterRepository.Update(info);
+            var storedNames = StoredSecrets(change.Id)?.Keys.ToList() ?? [];
+            var row = Clusters.FirstOrDefault(c => c.Id == change.Id);
+            if (row != null)
+            {
+                row.PendingSecrets = null;
+                row.UpdateSecurity(change.Security, storedNames);
+            }
             var live = AllClusters.FirstOrDefault(c => c.Id == change.Id);
             if (live == null && change.Added)
             {
-                live = new ClusterViewModel(new KafkaCluster(change.Id, change.Name, change.Address) { IsEnabled = change.Enabled },
-                    LocalClient, telemetry: telemetry);
+                live = new ClusterViewModel(new KafkaCluster(change.Id, change.Name, change.Address)
+                    {
+                        IsEnabled = change.Enabled, Security = change.Security.Clone(), StoredSecretNames = storedNames
+                    }, LocalClient, telemetry: telemetry);
                 AllClusters.Add(live);
             }
             if (live != null)
             {
                 live.Name = change.Name;
                 live.Address = change.Address;
+                live.UpdateSecurity(change.Security, storedNames);
+                if (change.SecurityChanged) live.NotifySecretsChanged(storedNames);
                 live.IsEnabled = change.Enabled;
                 if (!change.Enabled) CloseTabsForCluster?.Invoke(change.Id);
             }

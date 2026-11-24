@@ -143,7 +143,11 @@ public class ClusterInfoRepository : IClusterInfoRepository
         foreach (var (name, value) in current)
             secretStore.Set(Key(cluster, name), value);
 
-        var previouslyStored = (previous?.StoredSecretNames ?? []).Concat(cluster.StoredSecretNames ?? []).Distinct();
+        var previouslyStored = (previous?.StoredSecretNames ?? [])
+            .Concat((IEnumerable<string>?)previous?.Secrets?.Keys ?? [])
+            .Concat(cluster.StoredSecretNames ?? [])
+            .Distinct()
+            .ToList();
         foreach (var name in previouslyStored.Where(n => !current.ContainsKey(n)))
             secretStore.Delete(Key(cluster, name));
 
