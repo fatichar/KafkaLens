@@ -12,7 +12,7 @@
     <meta property="og:url" content="https://kafkalens.com/">
     <meta property="og:title" content="KafkaLens | Cross-Platform Desktop Kafka Client">
     <meta property="og:description" content="Browse, filter, search, and decode Kafka messages with a fast desktop client for Windows, macOS, and Linux.">
-    <meta property="og:image" content="https://kafkalens.com/assets/images/Main.png">
+    <meta property="og:image" content="https://kafkalens.com/assets/images/screenshots/main.png">
     <meta property="og:image:alt" content="KafkaLens desktop Kafka message browser">
     <meta property="og:site_name" content="KafkaLens">
 
@@ -20,7 +20,7 @@
     <meta name="twitter:url" content="https://kafkalens.com/">
     <meta name="twitter:title" content="KafkaLens | Cross-Platform Desktop Kafka Client">
     <meta name="twitter:description" content="Browse, filter, search, and decode Kafka messages with a fast desktop client for Windows, macOS, and Linux.">
-    <meta name="twitter:image" content="https://kafkalens.com/assets/images/Main.png">
+    <meta name="twitter:image" content="https://kafkalens.com/assets/images/screenshots/main.png">
     <meta name="twitter:image:alt" content="KafkaLens desktop Kafka message browser">
 
     <script type="application/ld+json">
@@ -75,7 +75,7 @@
                 </div>
             </div>
             <div class="hero-image">
-                <img src="assets/images/Main.png" alt="KafkaLens desktop interface for browsing Kafka clusters and messages" loading="eager">
+                <img class="framed" src="assets/images/screenshots/main.webp" width="2484" height="1635" alt="KafkaLens desktop interface showing Kafka topics, a list of order messages and a pretty-printed JSON message" loading="eager">
             </div>
             <div class="hero-trust">
                 <span>⚡ Native Performance</span>
@@ -115,6 +115,21 @@
             </div>
         </section>
 
+        <section class="demo-video" id="demo">
+            <div class="container">
+                <h2 class="section-title">KafkaLens in 90 Seconds</h2>
+                <p>Connect, browse, filter and decode — a quick tour of the essentials.</p>
+                <div class="video-frame">
+                    <video controls preload="metadata" playsinline
+                           poster="assets/video/kafkalens-demo-poster.webp"
+                           width="1920" height="1200">
+                        <source src="assets/video/kafkalens-demo.mp4" type="video/mp4">
+                        Your browser can't play this video. <a href="assets/video/kafkalens-demo.mp4">Download it</a> instead.
+                    </video>
+                </div>
+            </div>
+        </section>
+
         <section class="visual-tour">
             <div class="container">
                 <h2 class="section-title">See KafkaLens in Action</h2>
@@ -122,25 +137,65 @@
                     <div class="tour-item">
                         <div class="tour-text">
                             <h3>Secure Access to Private Clusters</h3>
-                            <p>Access Kafka clusters inside your VPC without exposing them publicly.
-                                Install a lightweight backend service that exposes a read-only gRPC interface
+                            <p>Connect directly to any broker, or reach Kafka clusters inside your VPC without exposing them publicly:
+                                install a lightweight backend service that exposes a read-only gRPC interface
                                 consumed by the desktop app.</p>
                         </div>
                         <div class="tour-image">
-                            <img src="assets/images/Main.png" alt="KafkaLens cluster management and private VPC connection interface" loading="lazy">
+                            <img class="framed" src="assets/images/screenshots/edit-clusters.webp" width="2484" height="1635" alt="Edit Clusters dialog listing Production, Staging and Local Docker clusters with their connection status" loading="lazy">
                         </div>
                     </div>
                     <div class="tour-item reverse">
                         <div class="tour-text">
-                            <h3>Advanced Message Browsing</h3>
-                            <p>Browse and save messages locally, apply powerful filters,
-                                search efficiently, and plug in custom decoders to handle proprietary formats.</p>
+                            <h3>Find the Message You Need</h3>
+                            <p>Fetch from the end, the start, any timestamp or offset. Then narrow thousands of messages down instantly
+                                with boolean filters like <code>CANCELLED || PAYMENT_FAILED</code>.</p>
                         </div>
                         <div class="tour-image">
-                            <img src="assets/images/Feature1.png" alt="KafkaLens message inspection view with filtering and formatting tools" loading="lazy">
+                            <img class="framed" src="assets/images/screenshots/filter-messages.webp" width="2484" height="1635" alt="KafkaLens message list filtered to cancelled and failed orders" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="tour-item">
+                        <div class="tour-text">
+                            <h3>Read Big Payloads Comfortably</h3>
+                            <p>JSON is pretty-printed and highlighted. The object filter trims a large event down to just the
+                                fields you care about, and headers are one click away.</p>
+                        </div>
+                        <div class="tour-image">
+                            <img class="framed" src="assets/images/screenshots/object-filter.webp" width="2484" height="1635" alt="Object filter reducing a payment event to its payment method" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="tour-item reverse">
+                        <div class="tour-text">
+                            <h3>Decode Binary Data</h3>
+                            <p>Pick a formatter per topic — JSON, text, signed and unsigned integers — or add your own
+                                through plugins for proprietary formats.</p>
+                        </div>
+                        <div class="tour-image">
+                            <img class="framed" src="assets/images/screenshots/numeric-formatter.webp" width="2484" height="1635" alt="Binary latency metrics decoded as Int64 numbers" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="tour-item">
+                        <div class="tour-text">
+                            <h3>Many Clusters, One Window</h3>
+                            <p>Open production, staging and local clusters side by side in tabs. Save messages to disk and
+                                reopen them later, even offline.</p>
+                        </div>
+                        <div class="tour-image">
+                            <img class="framed" src="assets/images/screenshots/multi-cluster-tabs.webp" width="2484" height="1635" alt="Production, Staging and Local Docker clusters open in tabs" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="tour-item reverse">
+                        <div class="tour-text">
+                            <h3>Easy on the Eyes</h3>
+                            <p>Light and dark themes, adjustable font size, and layouts you can resize to fit your screen.</p>
+                        </div>
+                        <div class="tour-image">
+                            <img class="framed" src="assets/images/screenshots/dark-theme.webp" width="2484" height="1635" alt="KafkaLens dark theme" loading="lazy">
                         </div>
                     </div>
                 </div>
+                <p style="text-align:center;margin-top:3rem;"><a href="usage.html" class="btn btn-primary">Read the full usage guide</a></p>
             </div>
         </section>
 
