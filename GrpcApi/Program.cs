@@ -34,7 +34,10 @@ services.AddSingleton(config);
 services.AddSingleton(config.GrpcFetch);
 services.AddSingleton(new KafkaLens.Shared.Models.KafkaConfig());
 services.AddSingleton<GrpcFetchLimiter>();
-var clusterRepo = new ClusterInfoRepository(config.DatabasePath);
+// Credentials: KAFKALENS_SECRET__* environment variables first, then the OS keyring if one is available.
+var secretStore = KafkaLens.Shared.Security.SecretStoreFactory.CreateForServer();
+services.AddSingleton(secretStore);
+var clusterRepo = new ClusterInfoRepository(config.DatabasePath, secretStore);
 services.AddSingleton<IClusterInfoRepository>(clusterRepo);
 services.AddSingleton<IKafkaLensClient, SharedClient>();
 services.AddSingleton<ConsumerFactory>();
