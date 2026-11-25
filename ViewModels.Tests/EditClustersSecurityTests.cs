@@ -129,4 +129,28 @@ public sealed class EditClustersSecurityTests : IDisposable
         File.ReadAllText(file).Should().Contain("alice").And.NotContain("s3cr3t");
         clusters.Single().SecuritySummary.Should().Be("SASL/SCRAM-SHA-512 + TLS");
     }
+
+    [AvaloniaFact]
+    public async Task TestingUnsavedPassword_DoesNotChangeLiveStatus()
+    {
+        var clusters = new ObservableCollection<ClusterViewModel>();
+        using (var add = NewDialog(clusters))
+        {
+            await add.StageAddClusterAsync("secure", "b:9093", MutualTls(), new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
+            await add.SaveAsync();
+        }
+        var live = clusters.Single();
+        live.ApplyDiagnosticStatus(ConnectionState.Connected);
+        ((ISecureConnectionTestClient)local).ValidateConnectionWithDetailsAsync(Arg.Any<KafkaConnectionSettings>(), Arg.Any<CancellationToken>())
+            .Returns(ConnectionValidationResult.Failed("bad key password"));
+
+        using var dialog = NewDialog(clusters);
+        var row = dialog.Clusters.Single();
+        var settings = dialog.BuildTestSettings(row, "b:9093", MutualTls(), new Dictionary<string, string> { [ClusterSecretNames.SslKeyPassword] = "wrong" });
+        var result = await dialog.TestConnectionAsync(row, settings);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+        result.Succeeded.Should().BeFalse();
+        live.Status.Should().Be(ConnectionState.Connected);
+    }
 }

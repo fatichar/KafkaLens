@@ -266,8 +266,13 @@ public sealed class EditClustersViewModel : IDisposable
         var staged = Clusters.FirstOrDefault(c => c.Id == cluster.Id);
         if (staged != null && (!staged.IsAvailable || !IsOwnerEnabled(staged.Client, false)))
             return Task.FromResult(ConnectionValidationResult.Failed("Cluster or client is disabled."));
-        var unchanged = staged != null && staged.Address.Trim() == settings.BootstrapServers.Trim()
-                        && staged.Security.SameAs(settings.Security);
+        // Only a test of exactly the saved connection (address, security and secrets) may update the
+        // live cluster's status; anything unsaved is a dry run.
+        var saved = originalClusters.GetValueOrDefault(cluster.Id);
+        var unchanged = staged != null && saved != null && staged.PendingSecrets == null
+                        && new KafkaConnectionSettings(saved.Address, (saved.Security ?? new ClusterSecurity()).Normalized(),
+                                StoredSecrets(cluster.Id) ?? new Dictionary<string, string>())
+                            .Fingerprint() == settings.Fingerprint();
         return TestConnectionCoreAsync(settings.BootstrapServers, unchanged ? staged : null, settings);
     }
 

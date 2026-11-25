@@ -129,9 +129,8 @@ public class LocalClient : IKafkaLensClient, IConnectionTestClient, ICancellable
     }
     public Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(KafkaConnectionSettings settings, CancellationToken cancellationToken)
     {
-        if (settings.IsPlain && settings.Secrets.Count == 0)
-            return ValidateConnectionWithDetailsAsync(settings.BootstrapServers, cancellationToken);
-
+        // Never resolve a saved cluster by address here: the explicit settings (e.g. switching a saved
+        // TLS cluster to plaintext) must be tested as entered, with a temporary consumer.
         return Task.Run(async () =>
         {
             IKafkaConsumer? consumer = null;
