@@ -153,4 +153,16 @@ public sealed class EditClustersSecurityTests : IDisposable
         result.Succeeded.Should().BeFalse();
         live.Status.Should().Be(ConnectionState.Connected);
     }
+
+    [AvaloniaFact]
+    public async Task StagedButUnsavedPassword_CountsAsAvailable()
+    {
+        var clusters = new ObservableCollection<ClusterViewModel>();
+        using var dialog = NewDialog(clusters);
+        var sasl = new ClusterSecurity { Protocol = KafkaSecurityProtocol.SaslSsl, SaslUsername = "alice" };
+
+        await dialog.StageAddClusterAsync("auth", "b:9093", sasl, new() { [ClusterSecretNames.SaslPassword] = "pw" });
+
+        dialog.AvailableSecretNames(dialog.Clusters.Single()).Should().Contain(ClusterSecretNames.SaslPassword);
+    }
 }

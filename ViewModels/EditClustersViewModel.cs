@@ -418,6 +418,17 @@ public sealed class EditClustersViewModel : IDisposable
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Secrets already available for a staged cluster: saved ones plus those entered earlier in this dialog
+    /// session but not saved yet. Used so editing a just-added cluster does not demand passwords again.
+    /// </summary>
+    public IReadOnlyCollection<string> AvailableSecretNames(ClusterViewModel cluster)
+    {
+        var row = Clusters.FirstOrDefault(c => c.Id == cluster.Id) ?? cluster;
+        return row.StoredSecretNames.Concat((IEnumerable<string>?)row.PendingSecrets?.Keys ?? [])
+            .Distinct(StringComparer.Ordinal).ToList();
+    }
+
     private static Dictionary<string, string>? NonEmpty(Dictionary<string, string>? secrets)
     {
         var result = secrets?.Where(kv => !string.IsNullOrEmpty(kv.Value)).ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
