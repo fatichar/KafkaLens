@@ -4,10 +4,11 @@
         x:Class="KafkaLens.UI.Views.AddEditClusterDialog"
         Title="Add/Edit Cluster"
         Width="480" MinWidth="380" MinHeight="320"
-        SizeToContent="Height"
+        SizeToContent="Height" MaxHeight="680"
         WindowStartupLocation="CenterOwner">
-    <Grid Margin="20" RowDefinitions="Auto, Auto">
-        <StackPanel Grid.Row="0" Spacing="10">
+    <Grid Margin="20,20,20,20" RowDefinitions="*, Auto">
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,12,0">
+        <StackPanel Spacing="10">
             <Label Content="Cluster Name"/>
             <TextBox Name="NameBox" PlaceholderText="e.g. Production"/>
 
@@ -18,7 +19,27 @@
             <ComboBox Name="ProtocolCombo" HorizontalAlignment="Stretch" SelectionChanged="ProtocolCombo_SelectionChanged">
                 <ComboBoxItem Content="Plaintext (no encryption)" Tag="Plaintext"/>
                 <ComboBoxItem Content="SSL/TLS" Tag="Ssl"/>
+                <ComboBoxItem Content="SASL over SSL/TLS (SASL_SSL)" Tag="SaslSsl"/>
+                <ComboBoxItem Content="SASL without encryption (SASL_PLAINTEXT)" Tag="SaslPlaintext"/>
             </ComboBox>
+
+            <StackPanel Name="SaslPanel" Spacing="6" IsVisible="False">
+                <Label Content="SASL mechanism"/>
+                <ComboBox Name="MechanismCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                    <ComboBoxItem Content="PLAIN" Tag="Plain"/>
+                    <ComboBoxItem Content="SCRAM-SHA-256" Tag="ScramSha256"/>
+                    <ComboBoxItem Content="SCRAM-SHA-512" Tag="ScramSha512"/>
+                </ComboBox>
+                <Label Content="User name (API key)"/>
+                <TextBox Name="SaslUsernameBox"/>
+                <Label Content="Password (API secret)"/>
+                <TextBox Name="SaslPasswordBox" PasswordChar="•"/>
+                <Border Name="UnencryptedWarning" IsVisible="False" Padding="8" CornerRadius="4"
+                        BorderThickness="1" BorderBrush="{DynamicResource ThemeErrorBrush}">
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource ThemeErrorBrush}"
+                               Text="Warning: SASL_PLAINTEXT sends your user name and password unencrypted. Anyone on the network path can read them. Use SASL over SSL/TLS unless the network is fully trusted."/>
+                </Border>
+            </StackPanel>
 
             <StackPanel Name="TlsPanel" Spacing="6" IsVisible="False">
                 <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
@@ -50,6 +71,7 @@
                 <TextBox Name="DetailsTextBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" HorizontalAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
             </Expander>
         </StackPanel>
+        </ScrollViewer>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
             <Button Name="TestButton" Content="Test Connection" Click="TestButton_Click" IsVisible="False" ToolTip.Tip="Test connection to the Kafka cluster"/>

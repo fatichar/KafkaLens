@@ -68,7 +68,7 @@ public partial class EditClustersDialog : DialogBase
             var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address)
             {
                 Security = selected.Security.Clone(),
-                StoredSecretNames = selected.StoredSecretNames.ToList()
+                StoredSecretNames = context.AvailableSecretNames(selected).ToList()
             };
             var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator, SecretStore);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);

@@ -114,6 +114,23 @@ public sealed class EditClustersSecurityTests : IDisposable
     }
 
     [AvaloniaFact]
+    public async Task Sasl_StoresPasswordInStore_AndKeepsUsernameInSettings()
+    {
+        var clusters = new ObservableCollection<ClusterViewModel>();
+        using var dialog = NewDialog(clusters);
+        var sasl = new ClusterSecurity { Protocol = KafkaSecurityProtocol.SaslSsl, SaslMechanism = KafkaSaslMechanism.ScramSha512, SaslUsername = "alice" };
+
+        await dialog.StageAddClusterAsync("auth", "b:9093", sasl, new() { [ClusterSecretNames.SaslPassword] = "s3cr3t" });
+        await dialog.SaveAsync();
+
+        var saved = repo.GetAll().Values.Single();
+        saved.Security!.SaslUsername.Should().Be("alice");
+        saved.GetSecret(ClusterSecretNames.SaslPassword).Should().Be("s3cr3t");
+        File.ReadAllText(file).Should().Contain("alice").And.NotContain("s3cr3t");
+        clusters.Single().SecuritySummary.Should().Be("SASL/SCRAM-SHA-512 + TLS");
+    }
+
+    [AvaloniaFact]
     public async Task TestingUnsavedPassword_DoesNotChangeLiveStatus()
     {
         var clusters = new ObservableCollection<ClusterViewModel>();
@@ -135,5 +152,17 @@ public sealed class EditClustersSecurityTests : IDisposable
 
         result.Succeeded.Should().BeFalse();
         live.Status.Should().Be(ConnectionState.Connected);
+    }
+
+    [AvaloniaFact]
+    public async Task StagedButUnsavedPassword_CountsAsAvailable()
+    {
+        var clusters = new ObservableCollection<ClusterViewModel>();
+        using var dialog = NewDialog(clusters);
+        var sasl = new ClusterSecurity { Protocol = KafkaSecurityProtocol.SaslSsl, SaslUsername = "alice" };
+
+        await dialog.StageAddClusterAsync("auth", "b:9093", sasl, new() { [ClusterSecretNames.SaslPassword] = "pw" });
+
+        dialog.AvailableSecretNames(dialog.Clusters.Single()).Should().Contain(ClusterSecretNames.SaslPassword);
     }
 }
