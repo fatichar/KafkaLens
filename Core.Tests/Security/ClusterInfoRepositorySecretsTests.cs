@@ -246,4 +246,40 @@ public sealed class ClusterInfoRepositorySecretsTests : IDisposable
         json.Should().Contain("ssl.key.password").And.Contain("sasl.password").And.NotContain("plain-old");
         keyring.Received().Set("cluster/c1/sasl.password", "plain-old");
     }
+
+    [Fact]
+    public void MetadataOnlyUpdate_DoesNotRewriteUnchangedSecrets()
+    {
+        new ClusterInfoRepository(file, new FakeKeyring { Items = { ["cluster/c1/sasl.password"] = "pw" } }).Add(new ClusterInfo("c1", "Prod", "broker:9093")
+        {
+            Secrets = new() { [ClusterSecretNames.SaslPassword] = "pw" }
+        });
+        var keyring = Substitute.For<ISecretStore>();
+        keyring.IsPersistent.Returns(true);
+        keyring.Get("cluster/c1/sasl.password").Returns("pw");
+        var repo = new ClusterInfoRepository(file, keyring);
+        // Keyring becomes read-only/locked after load.
+        keyring.When(k => k.Set(Arg.Any<string>(), Arg.Any<string>())).Do(_ => throw new InvalidOperationException("keyring locked"));
+
+        var loaded = repo.GetById("c1");
+        loaded.Name = "Renamed";
+        repo.Update(loaded);
+
+        new ClusterInfoRepository(file, new InMemorySecretStore()).GetById("c1").Name.Should().Be("Renamed");
+        keyring.DidNotReceive().Set(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public void ChangedSecret_IsWritten_EvenWhenMutatedInPlace()
+    {
+        var keyring = new FakeKeyring();
+        var repo = new ClusterInfoRepository(file, keyring);
+        repo.Add(NewCluster("old"));
+
+        var loaded = repo.GetById("c1");
+        loaded.Secrets![ClusterSecretNames.SaslPassword] = "new";
+        repo.Update(loaded);
+
+        keyring.Items["cluster/c1/sasl.password"].Should().Be("new");
+    }
 }
