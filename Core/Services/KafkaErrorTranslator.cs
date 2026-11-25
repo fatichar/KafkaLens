@@ -97,7 +97,8 @@ public static class KafkaErrorTranslator
     public static string Message(Exception exception, Error? lastClientError) =>
         Describe(Classify(exception, lastClientError)) ?? exception.Message;
 
-    private static int Specificity(ConnectionProblemKind kind) => kind switch
+    /// <summary>How specific a cause is: authentication/authorization/TLS (2) &gt; unreachable (1) &gt; other (0).</summary>
+    public static int Specificity(ConnectionProblemKind kind) => kind switch
     {
         ConnectionProblemKind.Authentication or ConnectionProblemKind.Tls or ConnectionProblemKind.Authorization => 2,
         ConnectionProblemKind.Unreachable => 1,

@@ -140,4 +140,29 @@ public class ConnectionDiagnosticsTests
 
         result.ErrorMessage.Should().StartWith(KafkaErrorTranslator.AuthorizationMessage);
     }
+
+    [Fact]
+    public async Task SpecificClientError_IsNotReplacedByLaterGenericError()
+    {
+        var admin = Substitute.For<IAdminClient>();
+        admin.GetMetadata(Arg.Any<TimeSpan>()).Returns(_ => throw new KafkaException(new Error(ErrorCode.Local_Transport, "Broker transport failure")));
+        using var consumer = new ConfluentConsumer("broker:9092", new KafkaConfig(), admin, () => Substitute.For<IConsumer<byte[], byte[]>>());
+        consumer.RecordClientError(new Error(ErrorCode.Local_Authentication, "SASL authentication error: invalid credentials"));
+        consumer.RecordClientError(new Error(ErrorCode.Local_AllBrokersDown, "1/1 brokers are down"));
+
+        var result = await consumer.ValidateConnectionWithDetailsAsync();
+
+        result.ErrorMessage.Should().StartWith(KafkaErrorTranslator.AuthenticationMessage);
+    }
+
+    [Fact]
+    public void StaleSpecificClientError_IsReplaced()
+    {
+        using var consumer = new ConfluentConsumer("broker:9092", new KafkaConfig(), Substitute.For<IAdminClient>(),
+            () => Substitute.For<IConsumer<byte[], byte[]>>());
+        consumer.RecordClientError(new Error(ErrorCode.Local_Authentication, "old"), DateTime.UtcNow.AddMinutes(-5));
+        consumer.RecordClientError(new Error(ErrorCode.Local_AllBrokersDown, "1/1 brokers are down"));
+
+        consumer.LastClientError!.Code.Should().Be(ErrorCode.Local_AllBrokersDown);
+    }
 }

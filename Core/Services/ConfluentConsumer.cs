@@ -182,13 +182,29 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
     // Last error reported on a client's error callback. librdkafka reports the real cause of a failed
     // connection (SASL login, TLS handshake) there, while calls only see a generic transport failure.
-    private volatile Error? lastClientError;
+    private volatile ClientErrorRecord? lastClientErrorRecord;
+
+    private sealed record ClientErrorRecord(Error Error, ConnectionProblemKind Kind, DateTime At);
+
+    // A specific cause (failed login, TLS handshake) is kept for this long even if generic errors
+    // such as "all brokers down" follow, so the current connection attempt is explained correctly.
+    private static readonly TimeSpan SpecificErrorRetention = TimeSpan.FromSeconds(60);
+
+    private Error? lastClientError => lastClientErrorRecord?.Error;
 
     internal Error? LastClientError => lastClientError;
 
-    internal void RecordClientError(Error error)
+    internal void RecordClientError(Error error) => RecordClientError(error, DateTime.UtcNow);
+
+    internal void RecordClientError(Error error, DateTime at)
     {
-        if (error.IsError) lastClientError = error;
+        if (!error.IsError) return;
+        var kind = KafkaErrorTranslator.Classify(error);
+        var existing = lastClientErrorRecord;
+        if (existing != null && at - existing.At < SpecificErrorRetention
+            && KafkaErrorTranslator.Specificity(kind) < KafkaErrorTranslator.Specificity(existing.Kind))
+            return;
+        lastClientErrorRecord = new ClientErrorRecord(error, kind, at);
     }
 
     private string Redact(string? text) => SecretRedactor.Redact(text, connection.Secrets.Values);
@@ -560,7 +576,8 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             }
             catch (Exception e)
             {
-                channel.Writer.TryComplete(e);
+                // Same actionable translation as the MessageStream path (used by the gRPC server).
+                channel.Writer.TryComplete(DescribeFailure(e));
             }
         }, CancellationToken.None);
 
