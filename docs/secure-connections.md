@@ -61,8 +61,21 @@ With SASL_SSL the TLS fields above (CA certificate, optional client certificate)
 SASL_PLAINTEXT sends the user name and password **unencrypted**; the dialog shows a warning and the
 cluster list marks it *(unencrypted)*. Prefer SASL_SSL.
 
-Passwords are removed from error messages and logs. A wrong password or mechanism shows as a failed
-connection test.
+Passwords are removed from error messages and logs.
+
+## Troubleshooting messages
+
+Connection tests, the cluster status and topic loading explain the most common failures:
+
+| Message | Typical cause |
+|---|---|
+| *Authentication failed: check the user name, password and SASL mechanism.* | Wrong credentials, wrong mechanism (e.g. PLAIN vs SCRAM), or a deleted API key. |
+| *Not authorized: … lack the required ACLs* | Login worked but the principal may not describe the cluster/topics or read them. |
+| *TLS handshake failed: …* | Unknown CA (set *CA certificate*), host name not in the broker certificate, or TLS selected for a plaintext listener. |
+| *Cannot reach the brokers: …* | Wrong address/port, VPN down, firewall, or plaintext selected for a TLS listener. |
+| *The SASL password is missing.* | No credential store was available last session; re-enter the password. |
+
+The original Kafka error is kept under *Show error details*.
 
 ### Verifying with a local test broker
 

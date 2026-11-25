@@ -80,6 +80,7 @@ public class LiveBrokerSecurityTests
         using (consumer)
         {
             result.Succeeded.Should().BeFalse();
+            result.ErrorMessage.Should().StartWith(KafkaErrorTranslator.AuthenticationMessage);
             (result.ErrorMessage + result.ErrorDetails).Should().NotContain("wrong-password");
         }
     }
@@ -95,7 +96,11 @@ public class LiveBrokerSecurityTests
     public async Task Tls_WithoutTrustedCa_IsRejected()
     {
         var (result, consumer) = await ValidateAsync("localhost:29096", new ClusterSecurity { Protocol = KafkaSecurityProtocol.Ssl }, null);
-        using (consumer) result.Succeeded.Should().BeFalse("the test CA is not in the system trust store");
+        using (consumer)
+        {
+            result.Succeeded.Should().BeFalse("the test CA is not in the system trust store");
+            result.ErrorMessage.Should().StartWith(KafkaErrorTranslator.TlsMessage);
+        }
     }
 
     [LiveBrokerFact]
