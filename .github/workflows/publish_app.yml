@@ -7,6 +7,9 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   DOTNET_VERSION: '10.0.x'
 
@@ -22,13 +25,19 @@ jobs:
 
       - name: Extract version
         id: version
+        env:
+          RELEASE_REF: ${{ github.ref }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            VERSION=$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          version=$(sed -nE 's/.*<Version>([^<]+)<\/Version>.*/\1/p' Directory.Build.props)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "::error::Expected a numeric release version in Directory.Build.props"
+            exit 1
           fi
+          if [[ "$RELEASE_REF" == refs/tags/* && "$RELEASE_REF" != "refs/tags/v$version" ]]; then
+            echo "::error::Release tag does not match Directory.Build.props"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Check if tag
         id: check_tag
@@ -42,53 +51,48 @@ jobs:
   build-windows:
     needs: extract-version
     runs-on: windows-latest
+    environment: windows-release-signing
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ needs.extract-version.outputs.version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: dotnet restore KafkaLens.slnx
-
-      - name: Publish Windows
-        id: publish
+      - name: Publish Windows application
         run: |
-          $version = "${{ needs.extract-version.outputs.version }}"
-          $platformName = "win-x64"
-          $baseName = "KafkaLens-${version}-${platformName}"
-          $outDir = "Releases/KafkaLens_win"
-          $releasesDir = "Releases"
-
-          # Build
           dotnet publish UI/KafkaLens.Desktop/KafkaLens.Desktop.csproj `
-            -r "$platformName" `
-            -c Release `
-            --sc `
-            -p:PublishTrimmed=false `
-            -o "$outDir"
+            -r win-x64 -c Release --self-contained -p:PublishTrimmed=false -o Releases/KafkaLens_win
 
-          # Create installer
-          & "ISCC.exe" "Installer/install_windows.iss"
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
+        with:
+          client-id: ${{ vars.AZURE_SIGNING_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_SIGNING_TENANT_ID }}
+          allow-no-subscriptions: true
 
-          # Rename installer to standard format
-          $installerName = "KafkaLens-${version}-win-x64-installer.exe"
-          Move-Item "$releasesDir/KafkaLensSetup.exe" "$releasesDir/$installerName"
-
-          echo "Created: $releasesDir/$installerName"
-          echo "version=$version" >> $env:GITHUB_OUTPUT
-
-          # Cleanup
-          Remove-Item -Recurse -Force "$outDir"
+      - name: Sign and package Windows
+        env:
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+        run: ./Installer/package-windows.ps1 -Version $env:RELEASE_VERSION
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: kafkalens-windows-${{ steps.publish.outputs.version }}
-          path: Releases/KafkaLens-*.exe
+          name: kafkalens-windows-${{ env.RELEASE_VERSION }}
+          path: Releases/KafkaLens-${{ env.RELEASE_VERSION }}-win-x64-installer.exe
+          if-no-files-found: error
 
   build-linux:
     needs: extract-version
@@ -194,6 +198,8 @@ jobs:
     needs: [extract-version, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     if: needs.extract-version.outputs.is_tag == 'true'
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -206,8 +212,9 @@ jobs:
           path: artifacts
 
       - name: Extract tag message
-        run: |
-          git tag -l --format='%(contents)' ${{ github.ref_name }} > tag_message.txt
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: git tag -l --format='%(contents)' "$RELEASE_TAG" > tag_message.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -217,6 +224,7 @@ jobs:
             artifacts/kafkalens-windows-${{ needs.extract-version.outputs.version }}/*.exe
             artifacts/kafkalens-linux-${{ needs.extract-version.outputs.version }}/*.zip
             artifacts/kafkalens-macos-${{ needs.extract-version.outputs.version }}/*.zip
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
           generate_release_notes: false
