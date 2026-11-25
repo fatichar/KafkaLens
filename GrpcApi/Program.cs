@@ -17,11 +17,24 @@ configuration.Bind(config);
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Credentials: KAFKALENS_SECRET__* environment variables first, then the OS keyring if one is available.
+var secretStore = KafkaLens.Shared.Security.SecretStoreFactory.CreateForServer();
+
 builder.WebHost.ConfigureKestrel(options =>
     {
+        var endpoints = config.Kestrel.EndpointDefaults;
         options.Listen(IPAddress.Any,
-            config.Kestrel.EndpointDefaults.HttpPort,
+            endpoints.HttpPort,
             listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+        if (!string.IsNullOrWhiteSpace(endpoints.CertificatePath))
+        {
+            var password = secretStore.Get("server/https.certificate.password");
+            options.Listen(IPAddress.Any, endpoints.HttpsPort, listenOptions =>
+            {
+                listenOptions.Protocols = HttpProtocols.Http2;
+                listenOptions.UseHttps(endpoints.CertificatePath, password);
+            });
+        }
     });
 
 // Additional configuration is required to successfully run gRPC on macOS.
@@ -34,8 +47,6 @@ services.AddSingleton(config);
 services.AddSingleton(config.GrpcFetch);
 services.AddSingleton(new KafkaLens.Shared.Models.KafkaConfig());
 services.AddSingleton<GrpcFetchLimiter>();
-// Credentials: KAFKALENS_SECRET__* environment variables first, then the OS keyring if one is available.
-var secretStore = KafkaLens.Shared.Security.SecretStoreFactory.CreateForServer();
 services.AddSingleton(secretStore);
 var clusterRepo = new ClusterInfoRepository(config.DatabasePath, secretStore);
 services.AddSingleton<IClusterInfoRepository>(clusterRepo);

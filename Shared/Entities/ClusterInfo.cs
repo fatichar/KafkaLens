@@ -27,6 +27,11 @@ public class ClusterInfo(string id, string name, string address, string? protoco
     [JsonPropertyName("isEnabled")]
     public bool IsEnabled { get; set; } = true;
 
+    /// <summary>TLS/authentication settings. Null means plaintext (configs written before security support).</summary>
+    [JsonPropertyName("security")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ClusterSecurity? Security { get; set; }
+
     /// <summary>
     /// Credentials for this cluster, keyed by secret name (see <see cref="ClusterSecretNames"/>).
     /// Never serialised: <see cref="DataAccess.ClusterInfoRepository"/> keeps them in the OS credential store.

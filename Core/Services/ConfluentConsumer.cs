@@ -149,13 +149,20 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
     internal ConfluentConsumer(string url, KafkaConfig kafkaConfig,
         IAdminClient? adminClient = null, Func<IConsumer<byte[], byte[]>>? consumerFactory = null)
+        : this(KafkaConnectionSettings.Plain(url), kafkaConfig, adminClient, consumerFactory)
     {
+    }
+
+    internal ConfluentConsumer(KafkaConnectionSettings settings, KafkaConfig kafkaConfig,
+        IAdminClient? adminClient = null, Func<IConsumer<byte[], byte[]>>? consumerFactory = null)
+    {
+        this.connection = settings;
         this.kafkaConfig = kafkaConfig;
         queryWatermarkTimeout = TimeSpan.FromMilliseconds(kafkaConfig.QueryWatermarkTimeoutMs);
         queryTopicsTimeout = TimeSpan.FromMilliseconds(kafkaConfig.QueryTopicsTimeoutMs);
         consumeTimeout = TimeSpan.FromMilliseconds(kafkaConfig.ConsumeTimeoutMs);
 
-        Config = CreateConsumerConfig(url);
+        Config = CreateConsumerConfig(settings.BootstrapServers);
         Config.Set("log_level", "0");
         AdminClient = adminClient ?? CreateAdminClient(Config.BootstrapServers);
         this.consumerFactory = consumerFactory ?? CreateConsumer;
@@ -170,9 +177,11 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             .Build();
     }
 
+    private readonly KafkaConnectionSettings connection;
+
     private ConsumerConfig CreateConsumerConfig(String url)
     {
-        return new ConsumerConfig
+        var config = new ConsumerConfig
         {
             GroupId = kafkaConfig.GroupId,
             ClientId = "KafkaLens.Server",
@@ -184,6 +193,8 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             LogQueue = true,
             EnablePartitionEof = true
         };
+        KafkaSecurityConfigurator.Apply(config, connection with { BootstrapServers = url });
+        return config;
     }
 
     protected virtual IAdminClient CreateAdminClient(string url)
@@ -192,6 +203,7 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
         {
             BootstrapServers = url
         };
+        KafkaSecurityConfigurator.Apply(config, connection with { BootstrapServers = url });
         config.Set("log_level", "0");
         return new AdminClientBuilder(config)
             .SetLogHandler((c, m) => { })

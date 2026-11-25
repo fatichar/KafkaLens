@@ -164,12 +164,18 @@ public class ClusterInfoRepository : IClusterInfoRepository
         }
 
         // Secrets that could not be read at load time are not "removed" by the caller: keep their
-        // references (and the stored values) unless a new value replaces them.
+        // references (and the stored values) unless a new value replaces them or the cluster's security
+        // settings no longer use them.
+        var applicable = (cluster.Security ?? new Models.ClusterSecurity()).ApplicableSecretNames();
         var unresolved = (cluster.UnresolvedSecretNames ?? []).Concat(previous?.UnresolvedSecretNames ?? [])
-            .Where(n => !current.ContainsKey(n))
+            .Where(n => !current.ContainsKey(n) && applicable.Contains(n))
             .ToHashSet(StringComparer.Ordinal);
 
-        var previouslyStored = (previous?.StoredSecretNames ?? []).Concat(cluster.StoredSecretNames ?? []).Distinct();
+        var previouslyStored = (previous?.StoredSecretNames ?? [])
+            .Concat((IEnumerable<string>?)previous?.Secrets?.Keys ?? [])
+            .Concat(cluster.StoredSecretNames ?? [])
+            .Distinct()
+            .ToList();
         foreach (var name in previouslyStored.Where(n => !current.ContainsKey(n) && !unresolved.Contains(n)))
             secretStore.Delete(Key(cluster, name));
 

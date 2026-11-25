@@ -30,6 +30,16 @@ public sealed class ClusterInfoRepositorySecretsTests : IDisposable
         public void Delete(string key) => Items.Remove(key);
     }
 
+    // A cluster whose security settings use a key password, so the secret stays applicable.
+    private static ClusterInfo KeyCluster(string password) => new("c1", "Prod", "broker:9093")
+    {
+        Security = new KafkaLens.Shared.Models.ClusterSecurity
+        {
+            Protocol = KafkaLens.Shared.Models.KafkaSecurityProtocol.Ssl, SslCertificateLocation = "/c.pem", SslKeyLocation = "/c.key"
+        },
+        Secrets = new() { [ClusterSecretNames.SslKeyPassword] = password }
+    };
+
     private static ClusterInfo NewCluster(string password) => new("c1", "Prod", "broker:9093")
     {
         Secrets = new() { [ClusterSecretNames.SaslPassword] = password }
@@ -177,24 +187,24 @@ public sealed class ClusterInfoRepositorySecretsTests : IDisposable
     public void UnreadableSecrets_SurviveUnrelatedUpdates_AndResolveLater()
     {
         var keyring = new FakeKeyring();
-        new ClusterInfoRepository(file, keyring).Add(NewCluster("kept"));
+        new ClusterInfoRepository(file, keyring).Add(KeyCluster("kept"));
 
         // Next start: no keyring -> session-only fallback, the secret cannot be read.
         var offline = new ClusterInfoRepository(file, new InMemorySecretStore());
         var loaded = offline.GetById("c1");
-        loaded.GetSecret(ClusterSecretNames.SaslPassword).Should().BeNull();
+        loaded.GetSecret(ClusterSecretNames.SslKeyPassword).Should().BeNull();
         loaded.Name = "Renamed";
         offline.Update(loaded); // same instance, Secrets is an empty (loaded) dictionary
 
-        File.ReadAllText(file).Should().Contain("sasl.password");
-        new ClusterInfoRepository(file, keyring).GetById("c1").GetSecret(ClusterSecretNames.SaslPassword).Should().Be("kept");
+        File.ReadAllText(file).Should().Contain("ssl.key.password");
+        new ClusterInfoRepository(file, keyring).GetById("c1").GetSecret(ClusterSecretNames.SslKeyPassword).Should().Be("kept");
     }
 
     [Fact]
     public void UnreadableSecret_IsNotDeletedFromKeyring_OnUnrelatedUpdate()
     {
         var keyring = new FakeKeyring();
-        new ClusterInfoRepository(file, keyring).Add(NewCluster("kept"));
+        new ClusterInfoRepository(file, keyring).Add(KeyCluster("kept"));
         var flaky = Substitute.For<ISecretStore>();
         flaky.IsPersistent.Returns(true);
         flaky.Get(Arg.Any<string>()).Returns(_ => throw new InvalidOperationException("keyring locked"));
@@ -205,7 +215,7 @@ public sealed class ClusterInfoRepositorySecretsTests : IDisposable
         repo.Update(loaded);
 
         flaky.DidNotReceive().Delete(Arg.Any<string>());
-        File.ReadAllText(file).Should().Contain("sasl.password");
+        File.ReadAllText(file).Should().Contain("ssl.key.password");
     }
 
     [Fact]
