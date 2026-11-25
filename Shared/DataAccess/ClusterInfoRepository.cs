@@ -121,7 +121,9 @@ public class ClusterInfoRepository : IClusterInfoRepository
             return false;
         }
 
-        cluster.StoredSecretNames = cluster.Secrets.Keys.Order(StringComparer.Ordinal).ToList();
+        // Keep references to secrets that exist in the store but could not be read right now.
+        cluster.StoredSecretNames = cluster.Secrets.Keys.Concat(cluster.UnresolvedSecretNames ?? [])
+            .Distinct().Order(StringComparer.Ordinal).ToList();
         cluster.PlaintextSecrets = null;
         Log.Information("Moved {Count} plaintext secret(s) of cluster {ClusterName} to {SecretStore}",
             plaintext.Count, cluster.Name, secretStore.BackendName);
@@ -165,7 +167,14 @@ public class ClusterInfoRepository : IClusterInfoRepository
             secretStore.Delete(Key(cluster, name));
 
         cluster.Secrets = current;
-        var names = (secretStore.IsPersistent ? (IEnumerable<string>)current.Keys : []).Concat(unresolved).Distinct().Order(StringComparer.Ordinal).ToList();
+        // With a persistent store every current secret is referenced. Without one (e.g. a server reading
+        // KAFKALENS_SECRET__* variables, chained with the in-memory fallback), references that were already
+        // in the file stay; only new, session-only secrets are not added.
+        var referencedBefore = (previous?.StoredSecretNames ?? []).Concat(cluster.StoredSecretNames ?? []).ToHashSet(StringComparer.Ordinal);
+        var referenced = secretStore.IsPersistent
+            ? current.Keys
+            : current.Keys.Where(referencedBefore.Contains);
+        var names = referenced.Concat(unresolved).Distinct().Order(StringComparer.Ordinal).ToList();
         cluster.StoredSecretNames = names.Count > 0 ? names : null;
         cluster.UnresolvedSecretNames = unresolved.Count > 0 ? unresolved : null;
 
