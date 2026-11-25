@@ -3,10 +3,10 @@
         xmlns:views="clr-namespace:KafkaLens.UI.Views"
         x:Class="KafkaLens.UI.Views.AddEditClusterDialog"
         Title="Add/Edit Cluster"
-        Width="480" MinWidth="380" MinHeight="320"
-        SizeToContent="Height" MaxHeight="680"
+        Width="480" MinWidth="380" MinHeight="360"
+        SizeToContent="Height"
         WindowStartupLocation="CenterOwner">
-    <Grid Margin="20,20,20,20" RowDefinitions="*, Auto">
+    <Grid Margin="20,20,20,20" RowDefinitions="Auto, Auto">
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,12,0">
         <StackPanel Spacing="10">
             <Label Content="Cluster Name"/>
@@ -62,6 +62,24 @@
                 <Label Content="Private key password"/>
                 <TextBox Name="KeyPasswordBox" PasswordChar="•" PlaceholderText="only if the key is encrypted"/>
             </StackPanel>
+
+            <Expander Name="SchemaRegistryExpander" Header="Schema Registry (optional)" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <StackPanel Spacing="6">
+                    <Label Content="URL"/>
+                    <TextBox Name="SchemaRegistryBox" PlaceholderText="e.g. http://localhost:8081 or https://psrc-xxxx.confluent.cloud"/>
+                    <Label Content="User name (API key) — only if the registry requires authentication"/>
+                    <TextBox Name="SchemaRegistryUsernameBox"/>
+                    <Label Content="Password (API secret)"/>
+                    <TextBox Name="SchemaRegistryPasswordBox" PasswordChar="•"/>
+                    <Label Content="CA certificate (PEM) — optional, for HTTPS with a private CA"/>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                        <TextBox Name="SchemaRegistryCaBox" PlaceholderText="system trust store"/>
+                        <Button Grid.Column="1" Content="Browse…" Tag="SchemaRegistryCaBox" Click="Browse_Click"/>
+                    </Grid>
+                    <Button Name="TestSchemaRegistryButton" Content="Test Schema Registry" Click="TestSchemaRegistryButton_Click"
+                            ToolTip.Tip="Test connection to the Schema Registry"/>
+                </StackPanel>
+            </Expander>
 
             <TextBlock Name="SecretStorageHint" TextWrapping="Wrap" FontSize="12" Opacity="0.75" IsVisible="False"/>
 

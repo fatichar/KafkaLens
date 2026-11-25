@@ -39,12 +39,15 @@ public partial class EditClustersDialog : DialogBase
             var context = Context;
             var validator = new Func<ClusterConnectionInput, System.Threading.Tasks.Task<ConnectionValidationResult>>(input =>
                 context.TestConnectionAsync(null, context.BuildTestSettings(null, input.Address, input.Security, input.Secrets)));
-            var dialog = new AddEditClusterDialog(existingNames, validator, SecretStore);
+            var dialog = new AddEditClusterDialog(existingNames, validator, SecretStore)
+            {
+                SchemaRegistryValidator = (url, user, password, ca) => context.TestSchemaRegistryAsync(null, url, user, password, ca)
+            };
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
             if (result != null)
             {
-                await Context.StageAddClusterAsync(result.Name, result.Address, result.Security, result.Secrets);
+                await Context.StageAddClusterAsync(result.Name, result.Address, result.SchemaRegistryUrl, result.Security, result.Secrets);
             }
         }
         catch (Exception ex)
@@ -65,17 +68,20 @@ public partial class EditClustersDialog : DialogBase
             var context = Context;
             var validator = new Func<ClusterConnectionInput, System.Threading.Tasks.Task<ConnectionValidationResult>>(input =>
                 context.TestConnectionAsync(selected, context.BuildTestSettings(selected, input.Address, input.Security, input.Secrets)));
-            var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address)
+            var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address, schemaRegistryUrl: selected.SchemaRegistryUrl)
             {
                 Security = selected.Security.Clone(),
                 StoredSecretNames = context.AvailableSecretNames(selected).ToList()
             };
-            var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator, SecretStore);
+            var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator, SecretStore)
+            {
+                SchemaRegistryValidator = (url, user, password, ca) => context.TestSchemaRegistryAsync(selected, url, user, password, ca)
+            };
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
             if (result != null)
             {
-                await Context.StageUpdateCluster(selected, result.Name, result.Address, result.Security, result.Secrets);
+                await Context.StageUpdateCluster(selected, result.Name, result.Address, result.SchemaRegistryUrl, result.Security, result.Secrets);
             }
         }
         catch (Exception ex)
@@ -120,7 +126,7 @@ public partial class EditClustersDialog : DialogBase
 
             if (result != null)
             {
-                await Context.StageAddClientAsync(result.Name, result.Address, result.Protocol);
+                await Context.StageAddClientAsync(result.Name, result.Address, result.Protocol, result.SchemaRegistryUrl);
             }
         }
         catch (Exception ex)
@@ -140,7 +146,7 @@ public partial class EditClustersDialog : DialogBase
             var existingNames = Context.Clients.Select(c => c.Name).ToList();
             var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(
                 address => Context.TestClientConnectionAsync(selected, address));
-            var info = new ClientInfo(selected.Id, selected.Name, selected.Address, selected.Protocol) { IsEnabled = selected.IsEnabled };
+            var info = new ClientInfo(selected.Id, selected.Name, selected.Address, selected.Protocol, selected.SchemaRegistryUrl) { IsEnabled = selected.IsEnabled };
             var dialog = new AddEditClientDialog(info, existingNames, validator);
             var result = await dialog.ShowDialog<ClientInfo?>(this);
 

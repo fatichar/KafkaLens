@@ -22,7 +22,7 @@ public partial class MainViewModel
         try
         {
             await ClientFactory.LoadClientsAsync();
-            RefreshClientEnabledIndex();
+            RefreshClientInfoIndex();
             var clients = ClientFactory.GetAllClients().Where(c =>
                 (c.Name == "Local" && c.CanEditClusters) || IsClientEnabled(c.Name)).ToList();
             AppLogService.LogInfo($"Loaded {clients.Count} clients", "Startup");
@@ -112,8 +112,9 @@ public partial class MainViewModel
                     existing.ReplaceClient(loaded.Client, resetTopics: addressChanged);
                     existing.Name = loaded.Name;
                     existing.Address = loaded.Address;
+                    existing.SchemaRegistryUrl = loaded.SchemaRegistryUrl;
                     existing.IsEnabled = loaded.IsEnabled;
-                    ApplyClientAvailability(existing);
+                    ApplyClientSettings(existing);
                     ApplyLoadedStatus(existing, loaded);
                     if (!existing.IsAvailable) CloseTabsForCluster(existing.Id);
                     if (existing.IsAvailable && !existing.IsUnavailablePlaceholder && (addressChanged || !wasAvailable))
@@ -122,7 +123,7 @@ public partial class MainViewModel
                 }
                 else
                 {
-                    ApplyClientAvailability(loaded);
+                    ApplyClientSettings(loaded);
                     Clusters.Add(loaded);
                     canonical.Add(loaded);
                     if (loaded.IsAvailable && !loaded.IsUnavailablePlaceholder && loaded.Status != ConnectionState.Connected)
@@ -275,7 +276,7 @@ public partial class MainViewModel
         foreach (var added in Clusters.Where(c => !subscribedClusters.Contains(c)))
         {
             subscribedClusters.Add(added);
-            ApplyClientAvailability(added);
+            ApplyClientSettings(added);
             added.PropertyChanged += OnClusterPropertyChanged;
             if (IsClusterAvailable(added)) AddClusterToMenu(added);
         }

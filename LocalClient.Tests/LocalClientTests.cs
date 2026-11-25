@@ -224,6 +224,21 @@ public class LocalClientTests
         Assert.Equal("localhost:9092", result[0].Address);
     }
 
+    [Fact]
+    public async Task UpdateClusterAsync_PersistsAndReloadsRegistryUrl()
+    {
+        const string url = "http://schema-registry:8081";
+        var cluster = new ClusterInfo("id1", "MyCluster", "localhost:9092");
+        repository.GetAll().Returns(new ReadOnlyDictionary<string, ClusterInfo>(
+            new Dictionary<string, ClusterInfo> { { cluster.Id, cluster } }));
+
+        var updated = await client.UpdateClusterAsync(cluster.Id, new KafkaClusterUpdate(cluster.Name, cluster.Address, url));
+
+        repository.Received(1).Update(Arg.Is<ClusterInfo>(info => info.SchemaRegistryUrl == url));
+        Assert.Equal(url, updated.SchemaRegistryUrl);
+        Assert.Equal(url, (await client.GetClusterByIdAsync(cluster.Id)).SchemaRegistryUrl);
+    }
+
     #endregion
 
     #region GetClusterByIdAsync

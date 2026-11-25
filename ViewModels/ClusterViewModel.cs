@@ -59,6 +59,35 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     private string address;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveSchemaRegistryUrl))]
+    private string? schemaRegistryUrl;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveSchemaRegistryUrl))]
+    private string? clientSchemaRegistryUrl;
+
+    public string? EffectiveSchemaRegistryUrl => string.IsNullOrWhiteSpace(ClientSchemaRegistryUrl)
+        ? SchemaRegistryUrl
+        : ClientSchemaRegistryUrl;
+
+    /// <summary>
+    /// Full registry connection used for decoding: URL plus credentials/CA for directly connected clusters
+    /// (from the client, which reads them from the credential store), URL only otherwise.
+    /// </summary>
+    public KafkaLens.Formatting.SchemaRegistryOptions? EffectiveSchemaRegistry
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(EffectiveSchemaRegistryUrl)) return null;
+            if (string.IsNullOrWhiteSpace(ClientSchemaRegistryUrl) && Client is ISchemaRegistryProvider provider
+                && provider.GetSchemaRegistry(Id) is { } settings
+                && settings.Url == EffectiveSchemaRegistryUrl.Trim())
+                return new(settings.Url, settings.Username, settings.Password, settings.CaLocation);
+            return new(EffectiveSchemaRegistryUrl.Trim());
+        }
+    }
+
+    [ObservableProperty]
     private TopicLoadState topicLoadState = TopicLoadState.NotLoaded;
 
     [ObservableProperty]
@@ -109,6 +138,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         OnPropertyChanged(nameof(Security));
         OnPropertyChanged(nameof(SecuritySummary));
         OnPropertyChanged(nameof(StoredSecretNames));
+        OnPropertyChanged(nameof(EffectiveSchemaRegistryUrl)); // registry credentials may have changed
         if (changed) InvalidateOperations(resetEvidence: true);
     }
 
@@ -117,6 +147,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
     {
         cluster.StoredSecretNames = storedSecretNames.ToList();
         OnPropertyChanged(nameof(StoredSecretNames));
+        OnPropertyChanged(nameof(EffectiveSchemaRegistryUrl));
         InvalidateOperations(resetEvidence: true);
     }
 
@@ -146,6 +177,7 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         this.telemetry = telemetry ?? NullTelemetry.Instance;
         name = cluster.Name;
         address = cluster.Address;
+        schemaRegistryUrl = cluster.SchemaRegistryUrl;
         isEnabled = cluster.IsEnabled;
         brokerStatus = cluster.Status;
         brokerError = cluster.LastError;

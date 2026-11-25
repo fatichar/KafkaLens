@@ -35,6 +35,8 @@ public class KafkaServiceTests
     {
         // Arrange
         var clusters = fixture.CreateMany<Models.KafkaCluster>(3).ToList();
+        clusters[0].SchemaRegistryUrl = "http://registry:8081";
+        clusters[1].SchemaRegistryUrl = null;
         kafkaLensClient.GetAllClustersAsync().Returns(clusters);
 
         // Act
@@ -42,6 +44,8 @@ public class KafkaServiceTests
 
         // Assert
         response.Clusters.Should().HaveCount(clusters.Count);
+        response.Clusters[0].SchemaRegistryUrl.Should().Be(clusters[0].SchemaRegistryUrl);
+        response.Clusters[1].HasSchemaRegistryUrl.Should().BeFalse();
         for (int i = 0; i < clusters.Count; i++)
         {
             response.Clusters[i].Id.Should().Be(clusters[i].Id);

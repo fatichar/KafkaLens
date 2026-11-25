@@ -57,6 +57,16 @@ public sealed class ClusterSecurity
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SaslUsername { get; set; }
 
+    /// <summary>Schema Registry basic-auth user (API key). Its password is the <see cref="ClusterSecretNames.SchemaRegistryPassword"/> secret.</summary>
+    [JsonPropertyName("schemaRegistryUsername")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SchemaRegistryUsername { get; set; }
+
+    /// <summary>PEM CA for an HTTPS Schema Registry with a private CA. Empty = OS trust store.</summary>
+    [JsonPropertyName("schemaRegistryCaLocation")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SchemaRegistryCaLocation { get; set; }
+
     [JsonIgnore]
     public bool UsesTls => Protocol is KafkaSecurityProtocol.Ssl or KafkaSecurityProtocol.SaslSsl;
 
@@ -78,7 +88,9 @@ public sealed class ClusterSecurity
     };
 
     [JsonIgnore]
-    public bool IsDefault => Protocol == KafkaSecurityProtocol.Plaintext;
+    public bool IsDefault => Protocol == KafkaSecurityProtocol.Plaintext
+                             && string.IsNullOrWhiteSpace(SchemaRegistryUsername)
+                             && string.IsNullOrWhiteSpace(SchemaRegistryCaLocation);
 
     public string Summary() => Protocol switch
     {
@@ -94,6 +106,7 @@ public sealed class ClusterSecurity
         var names = new HashSet<string>(StringComparer.Ordinal);
         if (UsesTls && !string.IsNullOrWhiteSpace(SslKeyLocation)) names.Add(ClusterSecretNames.SslKeyPassword);
         if (UsesSasl) names.Add(ClusterSecretNames.SaslPassword);
+        if (!string.IsNullOrWhiteSpace(SchemaRegistryUsername)) names.Add(ClusterSecretNames.SchemaRegistryPassword);
         return names;
     }
 
@@ -134,7 +147,9 @@ public sealed class ClusterSecurity
                       && Norm(SslCertificateLocation) == Norm(other.SslCertificateLocation)
                       && Norm(SslKeyLocation) == Norm(other.SslKeyLocation)
                       && (UsesSasl ? EffectiveSaslMechanism : (KafkaSaslMechanism?)null) == (other.UsesSasl ? other.EffectiveSaslMechanism : null)
-                      && Norm(SaslUsername) == Norm(other.SaslUsername);
+                      && Norm(SaslUsername) == Norm(other.SaslUsername)
+                      && Norm(SchemaRegistryUsername) == Norm(other.SchemaRegistryUsername)
+                      && Norm(SchemaRegistryCaLocation) == Norm(other.SchemaRegistryCaLocation);
 
     private static string Norm(string? s) => s?.Trim() ?? "";
 
@@ -146,6 +161,8 @@ public sealed class ClusterSecurity
         copy.SslCertificateLocation = Blank(SslCertificateLocation);
         copy.SslKeyLocation = Blank(SslKeyLocation);
         copy.SaslUsername = Blank(SaslUsername);
+        copy.SchemaRegistryUsername = Blank(SchemaRegistryUsername);
+        copy.SchemaRegistryCaLocation = Blank(SchemaRegistryCaLocation);
         if (!copy.UsesTls)
             copy.SslCaLocation = copy.SslCertificateLocation = copy.SslKeyLocation = null;
         if (copy.UsesSasl)

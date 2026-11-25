@@ -361,6 +361,7 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
         disposed = true;
         StopLoading("closed");
         DetachMessageStream();
+        CurrentMessages.Clear();
         fetchCts?.Dispose();
         cluster.PropertyChanged -= OnClusterPropertyChanged;
         Topics.CollectionChanged -= OnTopicsCollectionChanged;
@@ -396,6 +397,8 @@ public partial class OpenedClusterViewModel : ViewModelBase, ITreeNode, IDisposa
             UpdateClusterName(cluster.Name);
         else if (e.PropertyName == nameof(ClusterViewModel.Address))
             OnPropertyChanged(nameof(Address));
+        else if (e.PropertyName == nameof(ClusterViewModel.EffectiveSchemaRegistryUrl))
+            UpdateSchemaRegistryFormatters();
     }
 
     private static bool AreSameLogicalNode(ITreeNode? first, ITreeNode? second)

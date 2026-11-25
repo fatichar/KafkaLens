@@ -24,6 +24,8 @@ public partial class ClientInfoViewModel : ConnectionViewModelBase
     private string address;
     
     public string Id => Info.Id;
+
+    public string? SchemaRegistryUrl => Info.SchemaRegistryUrl;
     
     [ObservableProperty]
     private string protocol;
@@ -40,6 +42,7 @@ public partial class ClientInfoViewModel : ConnectionViewModelBase
     public void UpdateInfo(ClientInfo info)
     {
         Info = info;
+        OnPropertyChanged(nameof(SchemaRegistryUrl));
         Name = info.Name;
         Address = info.Address;
         Protocol = info.Protocol;

@@ -183,6 +183,28 @@ public class EditClustersPerformanceTests
     }
 
     [AvaloniaFact]
+    public async Task StageSave_RegistryOnlyEditsPersistWithoutCheckingBroker()
+    {
+        using var fixture = new DialogFixture();
+        fixture.Live.Status = ConnectionState.Connected;
+        const string url = "http://schema-registry:8081";
+        await fixture.Dialog.StageUpdateCluster(fixture.Live, fixture.Live.Name, fixture.Live.Address, url);
+        await fixture.Dialog.SaveAsync();
+
+        fixture.ClusterRepo.Received(1).Update(Arg.Is<ClusterInfo>(c => c.SchemaRegistryUrl == url));
+        Assert.Equal(url, fixture.Live.SchemaRegistryUrl);
+        Assert.Equal(ConnectionState.Connected, fixture.Live.Status);
+
+        await fixture.Dialog.StageUpdateCluster(fixture.Live, fixture.Live.Name, fixture.Live.Address, null);
+        await fixture.Dialog.SaveAsync();
+
+        fixture.ClusterRepo.Received(1).Update(Arg.Is<ClusterInfo>(c => c.SchemaRegistryUrl == null));
+        Assert.Null(fixture.Live.SchemaRegistryUrl);
+        Assert.Equal(ConnectionState.Connected, fixture.Live.Status);
+        await fixture.Local.DidNotReceiveWithAnyArgs().ValidateConnectionAsync(default!);
+    }
+
+    [AvaloniaFact]
     public void StageRemoveLiveArgument_DoesNotRemoveCanonicalUntilSave()
     {
         using var fixture = new DialogFixture();
@@ -273,10 +295,11 @@ public class EditClustersPerformanceTests
     {
         using var fixture = new DialogFixture();
         fixture.Factory.LoadClientsAsync().Returns(Task.FromException(new InvalidOperationException("Reload failed")), Task.CompletedTask);
-        await fixture.Dialog.StageAddClientAsync("Added", "added-server");
+        const string registryUrl = "http://registry:8081";
+        await fixture.Dialog.StageAddClientAsync("Added", "added-server", schemaRegistryUrl: registryUrl);
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Dialog.SaveAsync());
         await fixture.Dialog.SaveAsync();
-        fixture.ClientRepo.Received(1).Add(Arg.Is<ClientInfo>(c => c.Name == "Added"));
+        fixture.ClientRepo.Received(1).Add(Arg.Is<ClientInfo>(c => c.Name == "Added" && c.SchemaRegistryUrl == registryUrl));
         Assert.Equal(new[] { "Added" }, fixture.Refreshes);
     }
 

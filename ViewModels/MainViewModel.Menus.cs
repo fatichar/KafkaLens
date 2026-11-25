@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using CommunityToolkit.Mvvm.Input;
 using KafkaLens.Shared;
+using KafkaLens.Clients.Entities;
 using Serilog;
 
 using KafkaLens.ViewModels.Telemetry;
@@ -14,7 +15,7 @@ public partial class MainViewModel
 {
     private readonly ObservableCollection<MenuItemViewModel> openClusterMenuItems = new();
     private readonly Dictionary<ClusterViewModel, System.ComponentModel.PropertyChangedEventHandler> openClusterMenuHandlers = new();
-    private readonly Dictionary<string, bool> clientEnabledByName = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ClientInfo> clientInfoByName = new(StringComparer.Ordinal);
     private MenuItemViewModel openMenu = null!;
     private MenuItemViewModel closeTabMenuItem = null!;
     private MenuItemViewModel appLogMenuItem = null!;
@@ -73,38 +74,41 @@ public partial class MainViewModel
         return menu;
     }
 
-    internal void RefreshClientEnabledIndex()
+    internal void RefreshClientInfoIndex()
     {
-        clientEnabledByName.Clear();
+        clientInfoByName.Clear();
         var clients = ClientInfoRepository.GetAll();
         if (clients == null) return;
 
         foreach (var client in clients.Values)
-            clientEnabledByName[client.Name] = client.IsEnabled;
+            clientInfoByName[client.Name] = client;
     }
 
     private bool IsClientEnabled(string clientName)
     {
-        return !clientEnabledByName.TryGetValue(clientName, out var isEnabled) || isEnabled;
+        return !clientInfoByName.TryGetValue(clientName, out var info) || info.IsEnabled;
     }
 
     private bool IsClusterAvailable(ClusterViewModel cluster) => cluster.IsAvailable;
 
     public void RefreshAvailability()
     {
-        RefreshClientEnabledIndex();
+        RefreshClientInfoIndex();
         foreach (var cluster in Clusters)
         {
-            ApplyClientAvailability(cluster);
+            ApplyClientSettings(cluster);
             if (!cluster.IsAvailable) CloseTabsForCluster(cluster.Id);
         }
         ReconcileOpenClusterMenu();
     }
 
-    private void ApplyClientAvailability(ClusterViewModel cluster)
+    private void ApplyClientSettings(ClusterViewModel cluster)
     {
         cluster.IsClientEnabled = (cluster.Client.Name == "Local" && cluster.Client.CanEditClusters) ||
             IsClientEnabled(cluster.Client.Name);
+        var info = clientInfoByName.GetValueOrDefault(cluster.Client.Name);
+        cluster.ClientSchemaRegistryUrl = !cluster.Client.CanEditClusters && info?.Protocol == "grpc"
+            ? info.SchemaRegistryUrl : null;
     }
 
     private void AddClusterToMenu(ClusterViewModel cluster)

@@ -6,7 +6,7 @@ using KafkaLens.Shared.Models;
 
 namespace KafkaLens.Shared.Entities;
 
-public class ClusterInfo(string id, string name, string address, string? protocol = null)
+public class ClusterInfo(string id, string name, string address, string? protocol = null, string? schemaRegistryUrl = null)
 {
     [Required]
     [JsonPropertyName("id")]
@@ -23,6 +23,9 @@ public class ClusterInfo(string id, string name, string address, string? protoco
     [Required]
     [JsonPropertyName("protocol")]
     public string? Protocol { get; set; } = protocol;
+
+    [JsonPropertyName("schemaRegistryUrl")]
+    public string? SchemaRegistryUrl { get; set; } = schemaRegistryUrl;
 
     [JsonPropertyName("isEnabled")]
     public bool IsEnabled { get; set; } = true;
@@ -64,13 +67,13 @@ public class ClusterInfo(string id, string name, string address, string? protoco
     public string? GetSecret(string name) =>
         Secrets != null && Secrets.TryGetValue(name, out var value) && !string.IsNullOrEmpty(value) ? value : null;
 
-    public static ClusterInfo Create(string name, string address)
+    public static ClusterInfo Create(string name, string address, string? schemaRegistryUrl = null)
     {
-        return new ClusterInfo(Guid.NewGuid().ToString(), name, address);
+        return new ClusterInfo(Guid.NewGuid().ToString(), name, address, schemaRegistryUrl: schemaRegistryUrl);
     }
 
     public static ClusterInfo Create(NewKafkaCluster newCluster)
     {
-        return Create(newCluster.Name, newCluster.Address);
+        return Create(newCluster.Name, newCluster.Address, newCluster.SchemaRegistryUrl);
     }
 }

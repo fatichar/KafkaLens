@@ -8,7 +8,7 @@ public interface IClusterInfoRepository
 {
     ReadOnlyDictionary<string, ClusterInfo> GetAll();
     ClusterInfo GetById(string id);
-    ClusterInfo Add(string name, string address);
+    ClusterInfo Add(string name, string address, string? schemaRegistryUrl = null);
     void Add(ClusterInfo clusterInfo);
     void AddAll(IEnumerable<ClusterInfo> clusterInfos);
     void Update(ClusterInfo clusterInfo);

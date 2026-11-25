@@ -226,14 +226,14 @@ public class ClusterInfoRepository : IClusterInfoRepository
         return clusters[id];
     }
 
-    public ClusterInfo Add(string name, string address)
+    public ClusterInfo Add(string name, string address, string? schemaRegistryUrl = null)
     {
         if (clusters.Values.Any(cluster => cluster.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             throw new Exception($"Cluster with name \"{name}\" already exists. Names are not case sensitive.");
         }
 
-        var clusterInfo = ClusterInfo.Create(name, address);
+        var clusterInfo = ClusterInfo.Create(name, address, schemaRegistryUrl);
         clusterInfo.Secrets = new Dictionary<string, string>();
         Add(clusterInfo);
         return clusterInfo;
