@@ -105,4 +105,19 @@ public sealed class LocalClientSecurityTests : System.IDisposable
         result.ErrorMessage.Should().NotContain("pw-123");
         result.ErrorDetails.Should().NotContain("pw-123");
     }
+
+    [Fact]
+    public async Task ValidateWithPlainSettings_DoesNotReuseSavedSecuredConsumer()
+    {
+        var repo = new ClusterInfoRepository(file, new InMemorySecretStore());
+        var factory = new RecordingFactory();
+        factory.Consumer.ValidateConnectionWithDetailsAsync(Arg.Any<CancellationToken>()).Returns(ConnectionValidationResult.Success());
+        var sut = new LocalClient(repo, new KafkaConfig(), factory);
+        await sut.AddAsync(new NewKafkaCluster("tls", "broker:9093") { Security = MutualTls });
+
+        await sut.ValidateConnectionWithDetailsAsync(KafkaConnectionSettings.Plain("broker:9093"), CancellationToken.None);
+
+        factory.Plain.Should().ContainSingle("plaintext settings must be tested with a temporary plaintext consumer");
+        factory.Secured.Should().BeEmpty();
+    }
 }
