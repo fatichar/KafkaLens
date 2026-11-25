@@ -771,4 +771,24 @@ public class ConfluentConsumerTests
         // OffsetsForTimes returned offset 50. Limit is 5. Backward fetch should start at 50 - 5 = 45.
         Assert.Equal(45, assignedOffset);
     }
+
+    [Fact]
+    public async Task ChannelStream_MissingReadAcl_IsActionable()
+    {
+        var native = Substitute.For<IConsumer<byte[], byte[]>>();
+        native.Consume(Arg.Any<TimeSpan>()).Returns(_ => throw new ConsumeException(new ConsumeResult<byte[], byte[]>(),
+            new Error(ErrorCode.TopicAuthorizationFailed, "Not authorized to access topics")));
+        using var consumer = TestConfluentConsumer.Create("broker:9092", () => native, ValidationAdmin());
+        SetSuccessfulOffsets(consumer);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        var failure = await Record.ExceptionAsync(async () =>
+        {
+            await foreach (var message in consumer.StreamMessagesAsync("probe", new FetchOptions(FetchPosition.Start, 1), cancellation.Token))
+                Assert.Fail("Expected no messages");
+        });
+
+        var access = Assert.IsType<KafkaAccessException>(failure);
+        Assert.Equal(ConnectionProblemKind.Authorization, access.Kind);
+    }
 }

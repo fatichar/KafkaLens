@@ -5,6 +5,7 @@ using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using KafkaLens.Core.Utils;
 using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Security;
 using Serilog;
 using TopicPartition = Confluent.Kafka.TopicPartition;
 
@@ -149,13 +150,20 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
     internal ConfluentConsumer(string url, KafkaConfig kafkaConfig,
         IAdminClient? adminClient = null, Func<IConsumer<byte[], byte[]>>? consumerFactory = null)
+        : this(KafkaConnectionSettings.Plain(url), kafkaConfig, adminClient, consumerFactory)
     {
+    }
+
+    internal ConfluentConsumer(KafkaConnectionSettings settings, KafkaConfig kafkaConfig,
+        IAdminClient? adminClient = null, Func<IConsumer<byte[], byte[]>>? consumerFactory = null)
+    {
+        this.connection = settings;
         this.kafkaConfig = kafkaConfig;
         queryWatermarkTimeout = TimeSpan.FromMilliseconds(kafkaConfig.QueryWatermarkTimeoutMs);
         queryTopicsTimeout = TimeSpan.FromMilliseconds(kafkaConfig.QueryTopicsTimeoutMs);
         consumeTimeout = TimeSpan.FromMilliseconds(kafkaConfig.ConsumeTimeoutMs);
 
-        Config = CreateConsumerConfig(url);
+        Config = CreateConsumerConfig(settings.BootstrapServers);
         Config.Set("log_level", "0");
         AdminClient = adminClient ?? CreateAdminClient(Config.BootstrapServers);
         this.consumerFactory = consumerFactory ?? CreateConsumer;
@@ -166,13 +174,85 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
     {
         return new ConsumerBuilder<byte[], byte[]>(Config)
             .SetLogHandler((c, m) => { })
-            .SetErrorHandler((c, e) => { })
+            .SetErrorHandler((c, e) => RecordClientError(e))
             .Build();
+    }
+
+    private readonly KafkaConnectionSettings connection;
+
+    // Last error reported on a client's error callback. librdkafka reports the real cause of a failed
+    // connection (SASL login, TLS handshake) there, while calls only see a generic transport failure.
+    private volatile ClientErrorRecord? lastClientErrorRecord;
+
+    private sealed record ClientErrorRecord(Error Error, ConnectionProblemKind Kind, DateTime At);
+
+    // A specific cause (failed login, TLS handshake) is kept for this long even if generic errors
+    // such as "all brokers down" follow, so the current connection attempt is explained correctly.
+    private static readonly TimeSpan SpecificErrorRetention = TimeSpan.FromSeconds(60);
+
+    private Error? lastClientError => lastClientErrorRecord?.Error;
+
+    internal Error? LastClientError => lastClientError;
+
+    internal void RecordClientError(Error error) => RecordClientError(error, DateTime.UtcNow);
+
+    internal void RecordClientError(Error error, DateTime at)
+    {
+        if (!error.IsError) return;
+        var kind = KafkaErrorTranslator.Classify(error);
+        var existing = lastClientErrorRecord;
+        if (existing != null && at - existing.At < SpecificErrorRetention
+            && KafkaErrorTranslator.Specificity(kind) < KafkaErrorTranslator.Specificity(existing.Kind))
+            return;
+        lastClientErrorRecord = new ClientErrorRecord(error, kind, at);
+    }
+
+    private string Redact(string? text) => SecretRedactor.Redact(text, connection.Secrets.Values);
+
+    /// <summary>A failed validation with an actionable message and redacted technical details.</summary>
+    private ConnectionValidationResult Fail(Exception e)
+    {
+        var client = lastClientError;
+        var details = e.ToString();
+        if (client != null) details = $"Client error: {client.Code}: {client.Reason}{Environment.NewLine}{details}";
+        Log.Warning("Connection validation failed for {Connection}: {Error}", connection, Redact(client?.Reason ?? e.Message));
+        var hint = KafkaErrorTranslator.Describe(KafkaErrorTranslator.Classify(e, client));
+        var message = hint == null ? e.Message : $"{hint} ({e.Message})";
+        return ConnectionValidationResult.Failed(Redact(message), Redact(details));
+    }
+
+    /// <summary>
+    /// Authentication, authorization and TLS failures become actionable messages; transport errors and
+    /// timeouts keep their original type so retry/timeout handling still recognises them.
+    /// </summary>
+    protected override Exception DescribeFailure(Exception e)
+    {
+        var kind = KafkaErrorTranslator.Classify(e, lastClientError);
+        if (kind is not (ConnectionProblemKind.Authentication or ConnectionProblemKind.Authorization or ConnectionProblemKind.Tls))
+            return e;
+        if (e is KafkaAccessException) return e;
+        return new KafkaAccessException(kind, $"{KafkaErrorTranslator.Describe(kind)} ({Redact(e.Message)})", e);
+    }
+
+    /// <summary>
+    /// Metadata answered by a broker. Right after start-up librdkafka may return metadata without an
+    /// originating broker (no connection yet); keep asking until one answers or the timeout elapses.
+    /// </summary>
+    private Metadata GetLiveMetadata(TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (true)
+        {
+            var remaining = deadline - DateTime.UtcNow;
+            var metadata = GetMetadata(remaining > TimeSpan.Zero ? remaining : TimeSpan.FromMilliseconds(1));
+            if (metadata.OriginatingBrokerId != -1 || DateTime.UtcNow >= deadline) return metadata;
+            Thread.Sleep(100);
+        }
     }
 
     private ConsumerConfig CreateConsumerConfig(String url)
     {
-        return new ConsumerConfig
+        var config = new ConsumerConfig
         {
             GroupId = kafkaConfig.GroupId,
             ClientId = "KafkaLens.Server",
@@ -184,6 +264,8 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             LogQueue = true,
             EnablePartitionEof = true
         };
+        KafkaSecurityConfigurator.Apply(config, connection with { BootstrapServers = url });
+        return config;
     }
 
     protected virtual IAdminClient CreateAdminClient(string url)
@@ -192,10 +274,11 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
         {
             BootstrapServers = url
         };
+        KafkaSecurityConfigurator.Apply(config, connection with { BootstrapServers = url });
         config.Set("log_level", "0");
         return new AdminClientBuilder(config)
             .SetLogHandler((c, m) => { })
-            .SetErrorHandler((c, e) => { })
+            .SetErrorHandler((c, e) => RecordClientError(e))
             .Build();
     }
 
@@ -219,12 +302,12 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
         Metadata metadata;
         try
         {
-            metadata = GetMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
+            metadata = GetLiveMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
         }
         catch (Exception e)
         {
             Log.Error(e, "Connection validation failed");
-            return ConnectionValidationResult.Failed(e.Message, e.ToString());
+            return Fail(e);
         }
 
         // AdminClient metadata can report success from a stale/cached broker connection even
@@ -244,7 +327,7 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
         catch (Exception e)
         {
             Log.Error(e, "Connection validation failed while listing topics");
-            return ConnectionValidationResult.Failed(e.Message, e.ToString());
+            return Fail(e);
         }
 
         if (topic == null)
@@ -262,7 +345,7 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
         catch (Exception e)
         {
             Log.Error(e, "Connection validation failed while probing topic {Topic}", topic.Topic);
-            return ConnectionValidationResult.Failed(e.Message, e.ToString());
+            return Fail(e);
         }
     }
 
@@ -272,7 +355,7 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var metadata = GetMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
+                var metadata = GetLiveMetadata(TimeSpan.FromMilliseconds(kafkaConfig.AdminMetadataTimeoutMs));
                 cancellationToken.ThrowIfCancellationRequested();
                 var topic = SelectValidationPartition(metadata);
                 if (topic == null)
@@ -303,14 +386,14 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 Log.Error(e, "Connection validation failed");
-                return ConnectionValidationResult.Failed(e.Message, e.ToString());
+                return Fail(e);
             }
         }, cancellationToken);
 
     private static TopicPartition? SelectValidationPartition(Metadata metadata)
     {
         if (metadata.OriginatingBrokerId == -1)
-            throw new InvalidOperationException("No originating broker available to validate connectivity.");
+            throw new TimeoutException("No broker answered the metadata request.");
         var topicError = metadata.Topics.FirstOrDefault(t => t.Error.IsError);
         if (topicError != null)
             throw new KafkaException(topicError.Error);
@@ -391,10 +474,18 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
 
     protected override List<Topic> FetchTopics()
     {
-        var metadata = GetMetadata(queryTopicsTimeout);
+        Metadata metadata;
+        try
+        {
+            metadata = GetMetadata(queryTopicsTimeout);
+        }
+        catch (Exception e)
+        {
+            throw DescribeFailure(e);
+        }
         var topicError = metadata.Topics.FirstOrDefault(t => t.Error.IsError);
         if (topicError != null)
-            throw new KafkaException(topicError.Error);
+            throw DescribeFailure(new KafkaException(topicError.Error));
 
         var topics = metadata.Topics
             .ConvertAll(topic => new Topic(topic.Topic, topic.Partitions.Count));
@@ -485,7 +576,8 @@ internal class ConfluentConsumer : ConsumerBase, IStreamingKafkaConsumer, IDispo
             }
             catch (Exception e)
             {
-                channel.Writer.TryComplete(e);
+                // Same actionable translation as the MessageStream path (used by the gRPC server).
+                channel.Writer.TryComplete(DescribeFailure(e));
             }
         }, CancellationToken.None);
 

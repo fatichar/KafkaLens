@@ -88,6 +88,38 @@ public sealed partial class ClusterViewModel: ConnectionViewModelBase
         InvalidateOperations(resetEvidence: true);
     }
 
+    /// <summary>TLS/authentication settings (never secrets).</summary>
+    public ClusterSecurity Security => cluster.Security ??= new ClusterSecurity();
+
+    /// <summary>Short description for lists, e.g. "Plaintext" or "TLS".</summary>
+    public string SecuritySummary => Security.Summary();
+
+    /// <summary>Names of the secrets saved for this cluster.</summary>
+    public IReadOnlyCollection<string> StoredSecretNames => cluster.StoredSecretNames;
+
+    /// <summary>Secrets entered in the Edit Clusters dialog that are not saved yet.</summary>
+    internal Dictionary<string, string>? PendingSecrets { get; set; }
+
+    /// <summary>Replaces the security settings; resets connection state because the connection itself changed.</summary>
+    public void UpdateSecurity(ClusterSecurity security, IReadOnlyCollection<string>? storedSecretNames = null)
+    {
+        var changed = !Security.SameAs(security);
+        cluster.Security = security.Clone();
+        if (storedSecretNames != null) cluster.StoredSecretNames = storedSecretNames.ToList();
+        OnPropertyChanged(nameof(Security));
+        OnPropertyChanged(nameof(SecuritySummary));
+        OnPropertyChanged(nameof(StoredSecretNames));
+        if (changed) InvalidateOperations(resetEvidence: true);
+    }
+
+    /// <summary>Call after the stored secrets changed so cached state does not hide a now-(in)valid login.</summary>
+    internal void NotifySecretsChanged(IReadOnlyCollection<string> storedSecretNames)
+    {
+        cluster.StoredSecretNames = storedSecretNames.ToList();
+        OnPropertyChanged(nameof(StoredSecretNames));
+        InvalidateOperations(resetEvidence: true);
+    }
+
     private void InvalidateOperations(bool resetEvidence)
     {
         ConnectionVersion++;

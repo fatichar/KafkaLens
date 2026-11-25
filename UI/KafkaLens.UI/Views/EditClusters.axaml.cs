@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using Avalonia.Controls;
@@ -25,6 +25,10 @@ public partial class EditClustersDialog : DialogBase
 
     private EditClustersViewModel? Context => DataContext as EditClustersViewModel;
 
+    private static KafkaLens.Shared.Security.ISecretStore? SecretStore =>
+        (Avalonia.Application.Current as App)?.Services?.GetService(typeof(KafkaLens.Shared.Security.ISecretStore))
+            as KafkaLens.Shared.Security.ISecretStore;
+
     #region Direct Clusters
     private async void AddCluster_Click(object? sender, RoutedEventArgs e)
     {
@@ -32,13 +36,15 @@ public partial class EditClustersDialog : DialogBase
         {
             if (Context == null) return;
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
-            var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(Context.TestConnectionAsync);
-            var dialog = new AddEditClusterDialog(existingNames, validator);
+            var context = Context;
+            var validator = new Func<ClusterConnectionInput, System.Threading.Tasks.Task<ConnectionValidationResult>>(input =>
+                context.TestConnectionAsync(null, context.BuildTestSettings(null, input.Address, input.Security, input.Secrets)));
+            var dialog = new AddEditClusterDialog(existingNames, validator, SecretStore);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
             if (result != null)
             {
-                await Context.StageAddClusterAsync(result.Name, result.Address);
+                await Context.StageAddClusterAsync(result.Name, result.Address, result.Security, result.Secrets);
             }
         }
         catch (Exception ex)
@@ -56,15 +62,20 @@ public partial class EditClustersDialog : DialogBase
 
             if (Context == null) return;
             var existingNames = Context.Clusters.Select(c => c.Name).ToList();
-            var validator = new Func<string, System.Threading.Tasks.Task<ConnectionValidationResult>>(
-                address => Context.TestConnectionAsync(selected, address));
-            var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address);
-            var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator);
+            var context = Context;
+            var validator = new Func<ClusterConnectionInput, System.Threading.Tasks.Task<ConnectionValidationResult>>(input =>
+                context.TestConnectionAsync(selected, context.BuildTestSettings(selected, input.Address, input.Security, input.Secrets)));
+            var clusterInfo = new ClusterInfo(selected.Id, selected.Name, selected.Address)
+            {
+                Security = selected.Security.Clone(),
+                StoredSecretNames = context.AvailableSecretNames(selected).ToList()
+            };
+            var dialog = new AddEditClusterDialog(clusterInfo, existingNames, validator, SecretStore);
             var result = await dialog.ShowDialog<ClusterInfo?>(this);
 
             if (result != null)
             {
-                await Context.StageUpdateCluster(selected, result.Name, result.Address);
+                await Context.StageUpdateCluster(selected, result.Name, result.Address, result.Security, result.Secrets);
             }
         }
         catch (Exception ex)
