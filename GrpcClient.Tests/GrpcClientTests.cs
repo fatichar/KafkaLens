@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Linq;
 using System.Threading.Tasks;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
@@ -325,6 +326,28 @@ public class GrpcClientTests
 
     private static AsyncUnaryCall<T> CreateFailedCall<T>(StatusCode code, string detail = "Error") =>
         new(Task.FromException<T>(new RpcException(new Status(code, detail))), Task.FromResult(new Metadata()), () => new Status(code, detail), () => new Metadata(), () => { });
+
+    [Fact]
+    public async Task GetAllClustersAsync_MapsOptionalSchemaRegistryUrl()
+    {
+        var mockApi = Substitute.For<KafkaLens.Grpc.KafkaApi.KafkaApiClient>();
+        var response = new GetClustersResponse();
+        response.Clusters.Add(new GrpcCluster
+        {
+            Id = "new",
+            SchemaRegistryUrl = "http://registry:8081"
+        });
+        response.Clusters.Add(new GrpcCluster { Id = "old" });
+        mockApi.GetAllClustersAsync(Arg.Any<Empty>(), Arg.Any<Metadata>(), Arg.Any<DateTime?>(),
+                Arg.Any<System.Threading.CancellationToken>())
+            .Returns(_ => CreateCall(response));
+        using var client = new GrpcClient("Test", "http://localhost:50051", mockApi);
+
+        var clusters = (await client.GetAllClustersAsync()).ToArray();
+
+        Assert.Equal("http://registry:8081", clusters.Single(c => c.Id == "new").SchemaRegistryUrl);
+        Assert.Null(clusters.Single(c => c.Id == "old").SchemaRegistryUrl);
+    }
 
     [Fact]
     public async Task ValidateConnection_WhenUnimplemented_FallsBackToClusters_MatchingConnected()

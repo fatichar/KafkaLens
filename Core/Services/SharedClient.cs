@@ -271,6 +271,7 @@ public class SharedClient(
             var oldFingerprint = KafkaConnectionSettings.From(existing).Fingerprint();
             existing.Name = update.Name;
             existing.Address = update.Address;
+            existing.SchemaRegistryUrl = update.SchemaRegistryUrl;
             if (update.Security != null)
                 existing.Security = update.Security.Normalized() is { IsDefault: false } security ? security : null;
             if (update.Security != null || update.Secrets != null)
@@ -368,7 +369,7 @@ public class SharedClient(
     #region Mappers
     private KafkaCluster ToModel(Shared.Entities.ClusterInfo clusterInfo)
     {
-        return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address)
+        return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address, clusterInfo.SchemaRegistryUrl)
         {
             IsEnabled = clusterInfo.IsEnabled,
             Security = clusterInfo.Security?.Clone() ?? new ClusterSecurity(),

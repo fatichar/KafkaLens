@@ -158,7 +158,7 @@ public partial class MainViewModel : ViewModelBase
         this.savedMessagesClient = savedMessagesClient;
         ClusterInfoRepository = clusterInfoRepository;
         ClientInfoRepository = clientInfoRepository;
-        RefreshClientEnabledIndex();
+        RefreshClientInfoIndex();
         ClientFactory = clientFactory;
         UpdateService = updateService;
         _pluginRegistry  = pluginRegistry;

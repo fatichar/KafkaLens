@@ -60,7 +60,11 @@ public partial class OpenedClusterViewModel
         messages.Finished -= streamFinishedHandler;
         streamFinishedHandler = null;
         messages = null;
-        lock (pendingMessages) pendingMessages.Clear();
+        lock (pendingMessages)
+        {
+            foreach (var message in pendingMessages) message.CancelRegistryDecodes();
+            pendingMessages.Clear();
+        }
     }
 
     private string FetchResult(MessageStream stream) =>
@@ -231,8 +235,8 @@ public partial class OpenedClusterViewModel
             var keyFormatterName = formatterService.NormalizeFormatterName(node.KeyFormatterName, KeyFormatterNames);
             foreach (var msg in e.NewItems ?? new List<Message>())
             {
-                var viewModel = new MessageViewModel((Message)msg, valueFormatterName, keyFormatterName);
-                viewModel.Topic = topicName;
+                var viewModel = new MessageViewModel((Message)msg, valueFormatterName, keyFormatterName,
+                    cluster.EffectiveSchemaRegistry, topicName);
                 pendingMessages.Add(viewModel);
             }
 

@@ -70,10 +70,10 @@ public sealed class EditClustersViewModel : IDisposable
         ApplyExistingClientStatuses();
     }
 
-    private static ClusterInfo CopyCluster(ClusterInfo c) => new(c.Id, c.Name, c.Address, c.Protocol)
+    private static ClusterInfo CopyCluster(ClusterInfo c) => new(c.Id, c.Name, c.Address, c.Protocol, c.SchemaRegistryUrl)
         { IsEnabled = c.IsEnabled, Security = c.Security?.Clone(), StoredSecretNames = c.Secrets?.Keys.ToList() ?? c.StoredSecretNames?.ToList() };
-    private static ClientInfo CopyClient(ClientInfo c) => new(c.Id, c.Name, c.Address, c.Protocol) { IsEnabled = c.IsEnabled };
-    private static ClusterViewModel CopyCluster(ClusterViewModel c) => new(new KafkaCluster(c.Id, c.Name, c.Address)
+    private static ClientInfo CopyClient(ClientInfo c) => new(c.Id, c.Name, c.Address, c.Protocol, c.SchemaRegistryUrl) { IsEnabled = c.IsEnabled };
+    private static ClusterViewModel CopyCluster(ClusterViewModel c) => new(new KafkaCluster(c.Id, c.Name, c.Address, c.SchemaRegistryUrl)
         {
             IsEnabled = c.IsEnabled, Status = c.Status, LastError = c.LastError,
             Security = c.Security.Clone(), StoredSecretNames = c.StoredSecretNames.ToList()
@@ -378,21 +378,22 @@ public sealed class EditClustersViewModel : IDisposable
             ? ConnectionState.Connected : ConnectionState.Unknown;
     }
 
-    public async Task AddClusterImmediatelyAsync(string name, string address,
+    public async Task AddClusterImmediatelyAsync(string name, string address, string? schemaRegistryUrl = null,
         ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
     {
-        await StageAddClusterAsync(name, address, security, secrets);
+        await StageAddClusterAsync(name, address, schemaRegistryUrl, security, secrets);
         await SaveCoreAsync(Clusters.Last().Id, null);
     }
 
-    /// <param name="security">TLS/authentication settings; null = plaintext.</param>
-    /// <param name="secrets">Secrets entered by the user (e.g. key password); stored in the credential store on save.</param>
-    public Task StageAddClusterAsync(string name, string address,
+    /// <param name="schemaRegistryUrl">Optional Schema Registry URL.</param>
+    /// <param name="security">TLS/authentication settings (Kafka and Schema Registry); null = plaintext, no registry auth.</param>
+    /// <param name="secrets">Secrets entered by the user; stored in the credential store on save.</param>
+    public Task StageAddClusterAsync(string name, string address, string? schemaRegistryUrl = null,
         ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
     {
-        var info = ClusterInfo.Create(name, address);
+        var info = ClusterInfo.Create(name, address, schemaRegistryUrl);
         addedClusterIds.Add(info.Id);
-        Clusters.Add(new ClusterViewModel(new KafkaCluster(info.Id, name, address)
+        Clusters.Add(new ClusterViewModel(new KafkaCluster(info.Id, name, address, info.SchemaRegistryUrl)
             {
                 IsEnabled = true,
                 Security = security?.Normalized() ?? new ClusterSecurity()
@@ -401,14 +402,18 @@ public sealed class EditClustersViewModel : IDisposable
         return Task.CompletedTask;
     }
 
+    public Task StageUpdateCluster(ClusterViewModel cluster, string name, string address) =>
+        StageUpdateCluster(cluster, name, address, cluster.SchemaRegistryUrl);
+
     /// <param name="security">New security settings, or null to keep the current ones.</param>
     /// <param name="secrets">Newly entered secrets; empty/omitted values keep what is stored.</param>
-    public Task StageUpdateCluster(ClusterViewModel cluster, string name, string address,
+    public Task StageUpdateCluster(ClusterViewModel cluster, string name, string address, string? schemaRegistryUrl,
         ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
     {
         var row = Clusters.FirstOrDefault(c => c.Id == cluster.Id) ?? throw new ArgumentException("Cluster is not staged in this dialog.", nameof(cluster));
         row.Name = name;
         row.Address = address;
+        row.SchemaRegistryUrl = schemaRegistryUrl;
         if (security != null) row.UpdateSecurity(security.Normalized());
         if (NonEmpty(secrets) is { } entered)
         {
@@ -456,10 +461,45 @@ public sealed class EditClustersViewModel : IDisposable
         return new KafkaConnectionSettings(address.Trim(), normalized, ClusterSecurity.MergeSecrets(existing, enteredSecrets, normalized));
     }
 
-    public async Task UpdateClusterImmediatelyAsync(ClusterViewModel cluster, string name, string address,
-        ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
+    /// <summary>
+    /// Tests Schema Registry settings from the Add/Edit dialog. An empty password means "use the saved one".
+    /// </summary>
+    public async Task<ConnectionValidationResult> TestSchemaRegistryAsync(ClusterViewModel? cluster, string url,
+        string? username, string? enteredPassword, string? caLocation)
     {
-        await StageUpdateCluster(cluster, name, address, security, secrets);
+        var password = enteredPassword;
+        if (string.IsNullOrEmpty(password) && cluster != null)
+        {
+            var staged = Clusters.FirstOrDefault(c => c.Id == cluster.Id);
+            password = staged?.PendingSecrets?.GetValueOrDefault(ClusterSecretNames.SchemaRegistryPassword)
+                       ?? StoredSecrets(cluster.Id)?.GetValueOrDefault(ClusterSecretNames.SchemaRegistryPassword);
+        }
+        var options = new KafkaLens.Formatting.SchemaRegistryOptions(url.Trim(),
+            string.IsNullOrWhiteSpace(username) ? null : username.Trim(), password,
+            string.IsNullOrWhiteSpace(caLocation) ? null : caLocation.Trim());
+        try
+        {
+            using var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var subjects = await Task.Run(() => KafkaLens.Formatting.SchemaRegistryFormatter.TestConnectionAsync(options, timeout.Token));
+            return ConnectionValidationResult.Success() with { ErrorMessage = $"{subjects} subject(s) found." };
+        }
+        catch (Exception e)
+        {
+            var secrets = new[] { password };
+            var message = e.Message.Contains("401") || e.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)
+                ? "Schema Registry rejected the credentials (HTTP 401): check the user name/API key and password."
+                : e.Message.Contains("403")
+                    ? "Schema Registry denied access (HTTP 403): the credentials lack permission to read subjects."
+                    : e.Message;
+            return ConnectionValidationResult.Failed(KafkaLens.Shared.Security.SecretRedactor.Redact(message, secrets),
+                KafkaLens.Shared.Security.SecretRedactor.Redact(e.ToString(), secrets));
+        }
+    }
+
+    public async Task UpdateClusterImmediatelyAsync(ClusterViewModel cluster, string name, string address,
+        string? schemaRegistryUrl = null, ClusterSecurity? security = null, Dictionary<string, string>? secrets = null)
+    {
+        await StageUpdateCluster(cluster, name, address, schemaRegistryUrl ?? cluster.SchemaRegistryUrl, security, secrets);
         await SaveCoreAsync(cluster.Id, null);
     }
 
@@ -496,9 +536,9 @@ public sealed class EditClustersViewModel : IDisposable
         await SaveCoreAsync(null, Clients.Last().Id);
     }
 
-    public Task StageAddClientAsync(string name, string address, string protocol = "grpc")
+    public Task StageAddClientAsync(string name, string address, string protocol = "grpc", string? schemaRegistryUrl = null)
     {
-        var info = new ClientInfo(Guid.NewGuid().ToString(), name, address, protocol);
+        var info = new ClientInfo(Guid.NewGuid().ToString(), name, address, protocol, schemaRegistryUrl);
         addedClientIds.Add(info.Id);
         var row = new ClientInfoViewModel(info);
         row.PropertyChanged += OnStagedClientChanged;
@@ -523,9 +563,9 @@ public sealed class EditClustersViewModel : IDisposable
         ApplyStagedAvailability();
     }
 
-    private sealed record ClusterChange(string Id, string Name, string Address, string? Protocol, bool Enabled, bool Added, bool AddressChanged, bool NewlyEnabled,
+    private sealed record ClusterChange(string Id, string Name, string Address, string? Protocol, string? SchemaRegistryUrl, bool Enabled, bool Added, bool AddressChanged, bool NewlyEnabled,
         ClusterSecurity Security, Dictionary<string, string>? NewSecrets, bool SecurityChanged);
-    private sealed record ClientChange(string Id, string Name, string Address, string Protocol, bool Enabled, bool Added, string? OldName, bool TransportChanged, bool NewlyEnabled);
+    private sealed record ClientChange(string Id, string Name, string Address, string Protocol, string? SchemaRegistryUrl, bool Enabled, bool Added, string? OldName, bool TransportChanged, bool NewlyEnabled);
 
     public Task SaveAsync() => SaveCoreAsync(null, null);
 
@@ -551,18 +591,18 @@ public sealed class EditClustersViewModel : IDisposable
             var old = originalClusters.GetValueOrDefault(row.Id);
             var security = row.Security.Normalized();
             var securityChanged = old != null && (!security.SameAs(old.Security ?? new ClusterSecurity()) || row.PendingSecrets != null);
-            return new ClusterChange(row.Id, row.Name, row.Address, old?.Protocol, row.IsEnabled, addedClusterIds.Contains(row.Id),
+            return new ClusterChange(row.Id, row.Name, row.Address, old?.Protocol, row.SchemaRegistryUrl, row.IsEnabled, addedClusterIds.Contains(row.Id),
                 old != null && (old.Address != row.Address || securityChanged), old is { IsEnabled: false } && row.IsEnabled,
                 security, row.PendingSecrets, securityChanged);
         }).Where(c => c.Added || c.SecurityChanged || originalClusters.GetValueOrDefault(c.Id) is { } old
-            && (old.Name != c.Name || old.Address != c.Address || old.IsEnabled != c.Enabled)).ToArray();
+            && (old.Name != c.Name || old.Address != c.Address || old.SchemaRegistryUrl != c.SchemaRegistryUrl || old.IsEnabled != c.Enabled)).ToArray();
         var clientChanges = clientRows.Select(row =>
         {
             var old = originalClients.GetValueOrDefault(row.Id);
-            return new ClientChange(row.Id, row.Name, row.Address, row.Protocol, row.IsEnabled, addedClientIds.Contains(row.Id), old?.Name,
+            return new ClientChange(row.Id, row.Name, row.Address, row.Protocol, row.SchemaRegistryUrl, row.IsEnabled, addedClientIds.Contains(row.Id), old?.Name,
                 old != null && (old.Address != row.Address || old.Protocol != row.Protocol), old is { IsEnabled: false } && row.IsEnabled);
         }).Where(c => c.Added || originalClients.GetValueOrDefault(c.Id) is { } old
-            && (old.Name != c.Name || c.TransportChanged || old.IsEnabled != c.Enabled)).ToArray();
+            && (old.Name != c.Name || c.TransportChanged || old.SchemaRegistryUrl != c.SchemaRegistryUrl || old.IsEnabled != c.Enabled)).ToArray();
         var clusterRemovals = removedClusterIds.Where(id => onlyClientId == null && (onlyClusterId == null || id == onlyClusterId)).ToArray();
         var clientRemovals = removedClientIds.Where(id => onlyClusterId == null && (onlyClientId == null || id == onlyClientId)).ToArray();
         if (clusterChanges.Length + clientChanges.Length + clusterRemovals.Length + clientRemovals.Length == 0
@@ -590,7 +630,7 @@ public sealed class EditClustersViewModel : IDisposable
         }
         foreach (var change in clientChanges)
         {
-            var info = new ClientInfo(change.Id, change.Name, change.Address, change.Protocol) { IsEnabled = change.Enabled };
+            var info = new ClientInfo(change.Id, change.Name, change.Address, change.Protocol, change.SchemaRegistryUrl) { IsEnabled = change.Enabled };
             if (change.Added) ClientRepository.Add(info); else ClientRepository.Update(info);
             originalClients[change.Id] = CopyClient(info);
             addedClientIds.Remove(change.Id);
@@ -611,7 +651,7 @@ public sealed class EditClustersViewModel : IDisposable
         }
         foreach (var change in clusterChanges)
         {
-            var info = new ClusterInfo(change.Id, change.Name, change.Address, change.Protocol)
+            var info = new ClusterInfo(change.Id, change.Name, change.Address, change.Protocol, change.SchemaRegistryUrl)
             {
                 IsEnabled = change.Enabled,
                 Security = change.Security.IsDefault ? null : change.Security,
@@ -631,7 +671,7 @@ public sealed class EditClustersViewModel : IDisposable
             var live = AllClusters.FirstOrDefault(c => c.Id == change.Id);
             if (live == null && change.Added)
             {
-                live = new ClusterViewModel(new KafkaCluster(change.Id, change.Name, change.Address)
+                live = new ClusterViewModel(new KafkaCluster(change.Id, change.Name, change.Address, change.SchemaRegistryUrl)
                     {
                         IsEnabled = change.Enabled, Security = change.Security.Clone(), StoredSecretNames = storedNames
                     }, LocalClient, telemetry: telemetry);
@@ -641,6 +681,7 @@ public sealed class EditClustersViewModel : IDisposable
             {
                 live.Name = change.Name;
                 live.Address = change.Address;
+                live.SchemaRegistryUrl = change.SchemaRegistryUrl;
                 live.UpdateSecurity(change.Security, storedNames);
                 if (change.SecurityChanged) live.NotifySecretsChanged(storedNames);
                 live.IsEnabled = change.Enabled;

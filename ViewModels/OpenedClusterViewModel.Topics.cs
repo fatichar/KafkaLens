@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using KafkaLens.Shared;
+using KafkaLens.Formatting;
 using KafkaLens.Shared.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Serilog;
@@ -72,11 +73,12 @@ public partial class OpenedClusterViewModel
     {
         if (disposed || cluster.TopicLoadState != TopicLoadState.Loaded) return;
         Topics.Clear();
+        var registryDefault = GetRegistryDefault();
         foreach (var topic in cluster.Topics)
         {
             var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
-            var valueFormatter = formatterService.NormalizeFormatterName(settings.ValueFormatter, ValueFormatterNames);
-            var keyFormatter = formatterService.NormalizeFormatterName(settings.KeyFormatter, KeyFormatterNames);
+            var valueFormatter = formatterService.NormalizeFormatterName(settings.ValueFormatter ?? registryDefault, ValueFormatterNames);
+            var keyFormatter = formatterService.NormalizeFormatterName(settings.KeyFormatter ?? registryDefault, KeyFormatterNames);
             Topics.Add(new TopicViewModel(topic, valueFormatter, keyFormatter));
         }
         FilterTopics();
@@ -86,6 +88,34 @@ public partial class OpenedClusterViewModel
             telemetry.Track(TelemetrySchema.Events.TopicsAvailable, new Dictionary<string, object?> { ["source"] = source });
         }
         RestorePendingSessionState();
+    }
+
+    private string? GetRegistryDefault() =>
+        string.IsNullOrWhiteSpace(cluster.EffectiveSchemaRegistryUrl) ? null : SchemaRegistryFormatter.Name;
+
+    private void UpdateSchemaRegistryFormatters()
+    {
+        var registryDefault = GetRegistryDefault();
+        foreach (var topic in Topics)
+        {
+            var settings = topicSettingsService.GetSettings(cluster.Id, topic.Name);
+            if (settings.ValueFormatter == null && (formatterService.IsUnknownFormatter(topic.FormatterName) ||
+                topic.FormatterName == SchemaRegistryFormatter.Name))
+            {
+                topic.FormatterName = formatterService.NormalizeFormatterName(registryDefault, ValueFormatterNames);
+            }
+            if (settings.KeyFormatter == null && (formatterService.IsUnknownFormatter(topic.KeyFormatterName) ||
+                topic.KeyFormatterName == SchemaRegistryFormatter.Name))
+            {
+                topic.KeyFormatterName = formatterService.NormalizeFormatterName(registryDefault, KeyFormatterNames);
+            }
+        }
+
+        foreach (var message in CurrentMessages.Messages)
+            message.UpdateSchemaRegistry(cluster.EffectiveSchemaRegistry);
+        lock (pendingMessages)
+            foreach (var message in pendingMessages)
+                message.UpdateSchemaRegistry(cluster.EffectiveSchemaRegistry);
     }
 
     internal void FilterTopics()

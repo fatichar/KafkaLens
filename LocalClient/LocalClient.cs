@@ -11,7 +11,7 @@ using Serilog;
 
 namespace KafkaLens.Clients;
 
-public class LocalClient : IKafkaLensClient, IConnectionTestClient, ICancellableConnectionClient, ISecureConnectionTestClient
+public class LocalClient : IKafkaLensClient, IConnectionTestClient, ICancellableConnectionClient, ISecureConnectionTestClient, ISchemaRegistryProvider
 {
     public string Name { get; } = "Local";
     public bool CanEditClusters => true;
@@ -250,6 +250,7 @@ public class LocalClient : IKafkaLensClient, IConnectionTestClient, ICancellable
             var oldFingerprint = KafkaConnectionSettings.From(existing).Fingerprint();
             existing.Name = update.Name;
             existing.Address = update.Address;
+            existing.SchemaRegistryUrl = update.SchemaRegistryUrl;
             if (update.Security != null)
                 existing.Security = update.Security.Normalized() is { IsDefault: false } security ? security : null;
             if (update.Security != null || update.Secrets != null)
@@ -337,10 +338,22 @@ public class LocalClient : IKafkaLensClient, IConnectionTestClient, ICancellable
     }
     #endregion Validations
 
+    #region Schema Registry
+    public SchemaRegistrySettings? GetSchemaRegistry(string clusterId)
+    {
+        if (!Clusters.TryGetValue(clusterId, out var cluster) || string.IsNullOrWhiteSpace(cluster.SchemaRegistryUrl))
+            return null;
+        return new SchemaRegistrySettings(cluster.SchemaRegistryUrl.Trim(),
+            cluster.Security?.SchemaRegistryUsername,
+            cluster.GetSecret(ClusterSecretNames.SchemaRegistryPassword),
+            cluster.Security?.SchemaRegistryCaLocation);
+    }
+    #endregion
+
     #region Mappers
     private Shared.Models.KafkaCluster ToModel(ClusterInfo clusterInfo)
     {
-        return new Shared.Models.KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address)
+        return new Shared.Models.KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address, clusterInfo.SchemaRegistryUrl)
         {
             IsEnabled = clusterInfo.IsEnabled,
             Security = clusterInfo.Security?.Clone() ?? new ClusterSecurity(),

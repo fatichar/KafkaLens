@@ -48,6 +48,7 @@ message Cluster {
   string bootstrap_servers = 3;
   optional bool is_connected = 4;
   optional bool is_enabled = 5;
+  optional string schema_registry_url = 6;
 }
 
 message ValidateConnectionRequest {

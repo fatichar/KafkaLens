@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using KafkaLens.Clients.Entities;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
@@ -278,6 +279,44 @@ public class MainViewModelBusinessLogicTests
         cluster.Name = "After removal";
         Assert.Equal("Renamed", current.Header);
         Assert.Empty(vm.MenuItems![0].Items![1].Items!);
+    }
+
+    [AvaloniaFact]
+    public async Task EditGrpcClient_RegistryOverrideAppliesToLoadedClustersAndCanBeCleared()
+    {
+        const string serverRegistry = "http://server-registry:8081";
+        const string overrideRegistry = "http://desktop-registry:8081";
+        var client = new ClientInfo("grpc-id", "Remote", "server:5000", "grpc");
+        var clients = new Dictionary<string, ClientInfo> { [client.Id] = client };
+        clientInfoRepository.GetAll().Returns(new ReadOnlyDictionary<string, ClientInfo>(clients));
+        clientInfoRepository.When(repo => repo.Update(Arg.Any<ClientInfo>()))
+            .Do(call => clients[client.Id] = call.Arg<ClientInfo>());
+        mockClient.Name.Returns(client.Name);
+        mockClient.CanEditClusters.Returns(false);
+        mockClient.ValidateConnectionAsync(Arg.Any<string>()).Returns(true);
+        clientFactory.GetClient(client.Name).Returns(mockClient);
+        var cluster = new ClusterViewModel(new KafkaCluster("broker-id", "Cluster", "broker:9092", serverRegistry)
+            { Status = ConnectionState.Connected }, mockClient);
+        var vm = CreateViewModel(new ObservableCollection<ClusterViewModel> { cluster });
+        await vm.LoadClusters();
+        using var dialog = vm.CreateEditClustersViewModel();
+        dialog.AvailabilityChanged = vm.RefreshAvailability;
+        Assert.Empty(dialog.Clusters);
+        Assert.Equal(serverRegistry, cluster.EffectiveSchemaRegistryUrl);
+
+        await dialog.StageUpdateClient(new ClientInfo(client.Id, client.Name, client.Address, client.Protocol, overrideRegistry));
+        await dialog.SaveAsync();
+
+        Assert.Equal(overrideRegistry, clients[client.Id].SchemaRegistryUrl);
+        Assert.Equal(overrideRegistry, cluster.EffectiveSchemaRegistryUrl);
+        Assert.Same(cluster, Assert.Single(vm.Clusters));
+        Assert.Equal(ConnectionState.Connected, cluster.Status);
+
+        await dialog.StageUpdateClient(client);
+        await dialog.SaveAsync();
+
+        Assert.Null(clients[client.Id].SchemaRegistryUrl);
+        Assert.Equal(serverRegistry, cluster.EffectiveSchemaRegistryUrl);
     }
 
     [AvaloniaFact]

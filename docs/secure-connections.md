@@ -63,6 +63,26 @@ cluster list marks it *(unencrypted)*. Prefer SASL_SSL.
 
 Passwords are removed from error messages and logs.
 
+## Schema Registry
+
+Messages produced with Confluent serializers (Avro, Protobuf, JSON Schema) carry a schema id. Configure
+the registry per cluster under **Schema Registry (optional)** in the Add/Edit Cluster dialog:
+
+| Field | Meaning |
+|---|---|
+| URL | e.g. `http://localhost:8081` or `https://psrc-xxxx.region.provider.confluent.cloud` |
+| User name / Password | Basic authentication (for Confluent Cloud: the Schema Registry API key and secret). The password is stored in the credential store. |
+| CA certificate | Only for an HTTPS registry with a private CA. Registry certificates are always verified. |
+
+Use **Test Schema Registry** to check the settings. When a registry is configured, topics without an
+explicit formatter use the **Schema Registry** formatter, which resolves the schema id, follows Protobuf
+imports/references and shows the message as JSON. Schemas are cached per registry. If decoding fails,
+the raw message is shown with the error.
+
+For clusters served by a KafkaLens backend, a registry URL can be set by the server (per cluster) or on
+the KafkaLens client in Edit Clusters → KafkaLens Clients. Registry authentication is currently only
+supported for directly connected clusters.
+
 ## Troubleshooting messages
 
 Connection tests, the cluster status and topic loading explain the most common failures:

@@ -49,7 +49,7 @@ public sealed class EditClustersSecurityTests : IDisposable
         var clusters = new ObservableCollection<ClusterViewModel>();
         using var dialog = NewDialog(clusters);
 
-        await dialog.StageAddClusterAsync("secure", "b:9093", MutualTls(), new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
+        await dialog.StageAddClusterAsync("secure", "b:9093", security: MutualTls(), secrets: new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
         await dialog.SaveAsync();
 
         var saved = repo.GetAll().Values.Single();
@@ -66,7 +66,7 @@ public sealed class EditClustersSecurityTests : IDisposable
         var clusters = new ObservableCollection<ClusterViewModel>();
         using (var add = NewDialog(clusters))
         {
-            await add.StageAddClusterAsync("secure", "b:9093", MutualTls(), new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
+            await add.StageAddClusterAsync("secure", "b:9093", security: MutualTls(), secrets: new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
             await add.SaveAsync();
         }
         var id = clusters.Single().Id;
@@ -74,7 +74,7 @@ public sealed class EditClustersSecurityTests : IDisposable
         using (var rename = NewDialog(clusters))
         {
             var row = rename.Clusters.Single();
-            await rename.StageUpdateCluster(row, "renamed", "b:9093", MutualTls(), new());
+            await rename.StageUpdateCluster(row, "renamed", "b:9093", null, MutualTls(), new());
             await rename.SaveAsync();
         }
         repo.GetById(id).GetSecret(ClusterSecretNames.SslKeyPassword).Should().Be("pw");
@@ -82,7 +82,7 @@ public sealed class EditClustersSecurityTests : IDisposable
         using (var plain = NewDialog(clusters))
         {
             var row = plain.Clusters.Single();
-            await plain.StageUpdateCluster(row, "renamed", "b:9092", new ClusterSecurity());
+            await plain.StageUpdateCluster(row, "renamed", "b:9092", null, new ClusterSecurity());
             await plain.SaveAsync();
         }
         repo.GetById(id).Security.Should().BeNull();
@@ -96,7 +96,7 @@ public sealed class EditClustersSecurityTests : IDisposable
         var clusters = new ObservableCollection<ClusterViewModel>();
         using (var add = NewDialog(clusters))
         {
-            await add.StageAddClusterAsync("secure", "b:9093", MutualTls(), new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
+            await add.StageAddClusterAsync("secure", "b:9093", security: MutualTls(), secrets: new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
             await add.SaveAsync();
         }
         KafkaConnectionSettings? tested = null;
@@ -120,7 +120,7 @@ public sealed class EditClustersSecurityTests : IDisposable
         using var dialog = NewDialog(clusters);
         var sasl = new ClusterSecurity { Protocol = KafkaSecurityProtocol.SaslSsl, SaslMechanism = KafkaSaslMechanism.ScramSha512, SaslUsername = "alice" };
 
-        await dialog.StageAddClusterAsync("auth", "b:9093", sasl, new() { [ClusterSecretNames.SaslPassword] = "s3cr3t" });
+        await dialog.StageAddClusterAsync("auth", "b:9093", security: sasl, secrets: new() { [ClusterSecretNames.SaslPassword] = "s3cr3t" });
         await dialog.SaveAsync();
 
         var saved = repo.GetAll().Values.Single();
@@ -136,7 +136,7 @@ public sealed class EditClustersSecurityTests : IDisposable
         var clusters = new ObservableCollection<ClusterViewModel>();
         using (var add = NewDialog(clusters))
         {
-            await add.StageAddClusterAsync("secure", "b:9093", MutualTls(), new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
+            await add.StageAddClusterAsync("secure", "b:9093", security: MutualTls(), secrets: new() { [ClusterSecretNames.SslKeyPassword] = "pw" });
             await add.SaveAsync();
         }
         var live = clusters.Single();
@@ -161,7 +161,7 @@ public sealed class EditClustersSecurityTests : IDisposable
         using var dialog = NewDialog(clusters);
         var sasl = new ClusterSecurity { Protocol = KafkaSecurityProtocol.SaslSsl, SaslUsername = "alice" };
 
-        await dialog.StageAddClusterAsync("auth", "b:9093", sasl, new() { [ClusterSecretNames.SaslPassword] = "pw" });
+        await dialog.StageAddClusterAsync("auth", "b:9093", security: sasl, secrets: new() { [ClusterSecretNames.SaslPassword] = "pw" });
 
         dialog.AvailableSecretNames(dialog.Clusters.Single()).Should().Contain(ClusterSecretNames.SaslPassword);
     }

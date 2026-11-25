@@ -375,7 +375,8 @@ public class GrpcClient : IKafkaLensClient, IConnectionTestClient, ICancellableC
     #region Convertors
     private static KafkaCluster ToClusterModel(Cluster cluster)
     {
-        var model = new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers)
+        var model = new KafkaCluster(cluster.Id, cluster.Name, cluster.BootstrapServers,
+            cluster.HasSchemaRegistryUrl ? cluster.SchemaRegistryUrl : null)
         {
             IsEnabled = !cluster.HasIsEnabled || cluster.IsEnabled
         };

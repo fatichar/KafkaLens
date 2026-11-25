@@ -64,10 +64,16 @@ public class FormatterService : IFormatterService
 
         foreach (var formatterName in prioritized)
         {
+            if (formatterName == SchemaRegistryFormatter.Name) continue;
             var formatter = FormatterFactory.Instance.GetFormatter(formatterName);
-            if (formatter.Format(message.Key ?? Array.Empty<byte>(), false) != null)
+            try
             {
-                return formatter;
+                if (formatter.Format(message.Key ?? Array.Empty<byte>(), false) != null)
+                    return formatter;
+            }
+            catch
+            {
+                // A failed candidate must not stop key format detection.
             }
         }
 
@@ -108,13 +114,13 @@ public class FormatterService : IFormatterService
     public string GetDefaultFormatterName() => FormatterFactory.Instance.DefaultFormatter.Name;
 
     public IList<string> GetAllFormatterNames() =>
-        FormatterFactory.Instance.GetFormatters().ConvertAll(f => f.Name);
+        [.. FormatterFactory.Instance.GetFormatterNames(), SchemaRegistryFormatter.Name];
 
     public IList<string> GetBuiltInFormatterNames() =>
-        FormatterFactory.Instance.GetBuiltInFormatterNames();
+        [.. FormatterFactory.Instance.GetBuiltInFormatterNames(), SchemaRegistryFormatter.Name];
 
     public IList<string> GetBuiltInKeyFormatterNames() =>
-        FormatterFactory.Instance.GetBuiltInKeyFormatterNames();
+        [.. FormatterFactory.Instance.GetBuiltInKeyFormatterNames(), SchemaRegistryFormatter.Name];
 
     public IList<string> GetPluginFormatterNames() =>
         FormatterFactory.Instance.GetPluginFormatterNames();

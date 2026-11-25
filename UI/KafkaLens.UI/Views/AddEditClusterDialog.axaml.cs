@@ -26,6 +26,9 @@ public partial class AddEditClusterDialog : DialogBase
     private readonly HashSet<string> storedSecretNames = new(StringComparer.Ordinal);
     private readonly Func<ClusterConnectionInput, Task<ConnectionValidationResult>>? connectionValidator;
 
+    /// <summary>Tests registry settings: url, user name, entered password (empty = saved one), CA.</summary>
+    public Func<string, string?, string?, string?, Task<ConnectionValidationResult>>? SchemaRegistryValidator { get; init; }
+
     public AddEditClusterDialog()
     {
         InitializeComponent();
@@ -58,6 +61,7 @@ public partial class AddEditClusterDialog : DialogBase
         originalId = existing.Id;
         NameBox.Text = existing.Name;
         AddressBox.Text = existing.Address;
+        SchemaRegistryBox.Text = existing.SchemaRegistryUrl;
         foreach (var name in existing.StoredSecretNames ?? []) storedSecretNames.Add(name);
         LoadSecurity(existing.Security ?? new ClusterSecurity());
         Title = "Edit Cluster";
@@ -77,6 +81,11 @@ public partial class AddEditClusterDialog : DialogBase
         if (mechanism != null) MechanismCombo.SelectedItem = mechanism;
         if (storedSecretNames.Contains(ClusterSecretNames.SaslPassword))
             SaslPasswordBox.PlaceholderText = "saved — leave empty to keep";
+        SchemaRegistryUsernameBox.Text = security.SchemaRegistryUsername;
+        SchemaRegistryCaBox.Text = security.SchemaRegistryCaLocation;
+        if (storedSecretNames.Contains(ClusterSecretNames.SchemaRegistryPassword))
+            SchemaRegistryPasswordBox.PlaceholderText = "saved — leave empty to keep";
+        SchemaRegistryExpander.IsExpanded = !string.IsNullOrWhiteSpace(SchemaRegistryBox.Text);
     }
 
     private KafkaSaslMechanism SelectedMechanism =>
@@ -104,7 +113,7 @@ public partial class AddEditClusterDialog : DialogBase
         TlsPanel.IsVisible = security.UsesTls;
         SaslPanel.IsVisible = security.UsesSasl;
         UnencryptedWarning.IsVisible = security.SendsCredentialsUnencrypted;
-        SecretStorageHint.IsVisible = !string.IsNullOrEmpty(SecretStorageHint.Text) && !security.IsDefault;
+        SecretStorageHint.IsVisible = !string.IsNullOrEmpty(SecretStorageHint.Text);
     }
 
     private ClusterSecurity ReadSecurity() => new ClusterSecurity
@@ -114,7 +123,9 @@ public partial class AddEditClusterDialog : DialogBase
         SslCertificateLocation = CertificateLocationBox.Text,
         SslKeyLocation = KeyLocationBox.Text,
         SaslMechanism = SelectedMechanism,
-        SaslUsername = SaslUsernameBox.Text
+        SaslUsername = SaslUsernameBox.Text,
+        SchemaRegistryUsername = SchemaRegistryUsernameBox.Text,
+        SchemaRegistryCaLocation = SchemaRegistryCaBox.Text
     }.Normalized();
 
     /// <summary>Only secrets the user typed; empty fields mean "keep the saved value".</summary>
@@ -123,6 +134,7 @@ public partial class AddEditClusterDialog : DialogBase
         var secrets = new Dictionary<string, string>(StringComparer.Ordinal);
         if (!string.IsNullOrEmpty(KeyPasswordBox.Text)) secrets[ClusterSecretNames.SslKeyPassword] = KeyPasswordBox.Text;
         if (!string.IsNullOrEmpty(SaslPasswordBox.Text)) secrets[ClusterSecretNames.SaslPassword] = SaslPasswordBox.Text;
+        if (!string.IsNullOrEmpty(SchemaRegistryPasswordBox.Text)) secrets[ClusterSecretNames.SchemaRegistryPassword] = SchemaRegistryPasswordBox.Text;
         return secrets;
     }
 
@@ -215,6 +227,42 @@ public partial class AddEditClusterDialog : DialogBase
         }
     }
 
+    private async void TestSchemaRegistryButton_Click(object? sender, RoutedEventArgs e)
+    {
+        ClearMessages();
+        var url = SchemaRegistryBox.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            ErrorTextBlock.Text = "Please enter a Schema Registry URL.";
+            return;
+        }
+        if (SchemaRegistryValidator == null) return;
+
+        TestSchemaRegistryButton.IsEnabled = false;
+        StatusTextBlock.Text = "Testing Schema Registry connection...";
+        StatusTextBlock.Foreground = Brushes.Blue;
+        try
+        {
+            var result = await SchemaRegistryValidator(url, SchemaRegistryUsernameBox.Text, SchemaRegistryPasswordBox.Text, SchemaRegistryCaBox.Text);
+            if (result.Succeeded)
+            {
+                StatusTextBlock.Text = $"Schema Registry connected successfully. {result.ErrorMessage}";
+                StatusTextBlock.Foreground = Brushes.Green;
+            }
+            else
+            {
+                StatusTextBlock.Text = "";
+                ErrorTextBlock.Text = $"Schema Registry error: {result.ErrorMessage}";
+                DetailsTextBox.Text = result.ErrorDetails ?? "";
+                DetailsExpander.IsVisible = true;
+            }
+        }
+        finally
+        {
+            TestSchemaRegistryButton.IsEnabled = true;
+        }
+    }
+
     private void OkButton_Click(object? sender, RoutedEventArgs e)
     {
         ClearMessages();
@@ -245,7 +293,8 @@ public partial class AddEditClusterDialog : DialogBase
             return;
         }
 
-        Result = new ClusterInfo(originalId ?? Guid.NewGuid().ToString(), newName, AddressBox.Text.Trim())
+        var schemaRegistryUrl = string.IsNullOrWhiteSpace(SchemaRegistryBox.Text) ? null : SchemaRegistryBox.Text.Trim();
+        Result = new ClusterInfo(originalId ?? Guid.NewGuid().ToString(), newName, AddressBox.Text.Trim(), schemaRegistryUrl: schemaRegistryUrl)
         {
             Security = security,
             Secrets = ReadSecrets()

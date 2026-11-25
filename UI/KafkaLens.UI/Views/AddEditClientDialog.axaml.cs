@@ -42,6 +42,7 @@ public partial class AddEditClientDialog : DialogBase
         originalId = existing.Id;
         NameBox.Text = existing.Name;
         AddressBox.Text = existing.Address;
+        SchemaRegistryBox.Text = existing.SchemaRegistryUrl;
         Title = "Edit Client";
 
         // Pre-select protocol
@@ -119,7 +120,8 @@ public partial class AddEditClientDialog : DialogBase
         var protocolItem = ProtocolBox.SelectedItem as ComboBoxItem;
         var protocol = protocolItem?.Content?.ToString() ?? "grpc";
 
-        Result = new ClientInfo(originalId ?? Guid.NewGuid().ToString(), newName, AddressBox.Text.Trim(), protocol);
+        var schemaRegistryUrl = string.IsNullOrWhiteSpace(SchemaRegistryBox.Text) ? null : SchemaRegistryBox.Text.Trim();
+        Result = new ClientInfo(originalId ?? Guid.NewGuid().ToString(), newName, AddressBox.Text.Trim(), protocol, schemaRegistryUrl);
         Close(Result);
     }
 

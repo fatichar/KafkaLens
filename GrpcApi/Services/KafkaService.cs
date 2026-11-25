@@ -256,7 +256,7 @@ public class KafkaService(
 
     private static Cluster ToClusterResponse(Models.KafkaCluster cluster)
     {
-        return new()
+        var response = new Cluster
         {
             Id = cluster.Id,
             Name = cluster.Name,
@@ -264,6 +264,9 @@ public class KafkaService(
             IsConnected = cluster.Status == Models.ConnectionState.Connected,
             IsEnabled = cluster.IsEnabled
         };
+        if (!string.IsNullOrWhiteSpace(cluster.SchemaRegistryUrl))
+            response.SchemaRegistryUrl = cluster.SchemaRegistryUrl;
+        return response;
     }
 
     private static Topic ToTopicResponse(Models.Topic topic)
