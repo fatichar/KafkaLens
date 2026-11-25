@@ -110,6 +110,19 @@ public sealed class ClusterSecurity
         return names;
     }
 
+    public const string ConfluentCloudHint =
+        "Confluent Cloud requires \"SASL over SSL/TLS\" with the PLAIN mechanism: use a cluster API key as user name and its secret as password.";
+
+    /// <summary>Non-blocking advice for well-known services, e.g. Confluent Cloud; null when nothing to suggest.</summary>
+    public static string? HintFor(string? bootstrapServers, ClusterSecurity security)
+    {
+        if (bootstrapServers == null || !bootstrapServers.Contains(".confluent.cloud", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return security.Protocol == KafkaSecurityProtocol.SaslSsl && security.EffectiveSaslMechanism == KafkaSaslMechanism.Plain
+            ? null
+            : ConfluentCloudHint;
+    }
+
     /// <summary>Returns a problem description, or null when the settings are usable.</summary>
     public string? Validate()
     {
