@@ -217,4 +217,43 @@ public sealed class ClusterInfoRepositorySecretsTests : IDisposable
         flaky.DidNotReceive().Delete(Arg.Any<string>());
         File.ReadAllText(file).Should().Contain("ssl.key.password");
     }
+
+    [Fact]
+    public void EnvironmentBackedSecretReferences_SurviveUpdates_WithoutKeyring()
+    {
+        File.WriteAllText(file, """
+            { "clusters": [ { "id": "c1", "name": "Prod", "address": "broker:9093", "protocol": null,
+                              "storedSecrets": [ "sasl.password" ] } ] }
+            """);
+        var env = new EnvironmentSecretStore(n => n == "KAFKALENS_SECRET__CLUSTER__C1__SASL_PASSWORD" ? "from-env" : null);
+        var store = new ChainedSecretStore(env, new InMemorySecretStore()); // like CreateForServer() without keyring
+
+        var repo = new ClusterInfoRepository(file, store);
+        var loaded = repo.GetById("c1");
+        loaded.GetSecret(ClusterSecretNames.SaslPassword).Should().Be("from-env");
+        loaded.Name = "Renamed";
+        repo.Update(loaded);
+
+        File.ReadAllText(file).Should().Contain("sasl.password").And.NotContain("from-env");
+        new ClusterInfoRepository(file, store).GetById("c1").GetSecret(ClusterSecretNames.SaslPassword).Should().Be("from-env");
+    }
+
+    [Fact]
+    public void Migration_KeepsReferencesToUnreadableSecrets()
+    {
+        File.WriteAllText(file, """
+            { "clusters": [ { "id": "c1", "name": "Prod", "address": "broker:9093", "protocol": null,
+                              "storedSecrets": [ "ssl.key.password" ],
+                              "secrets": { "sasl.password": "plain-old" } } ] }
+            """);
+        var keyring = Substitute.For<ISecretStore>();
+        keyring.IsPersistent.Returns(true);
+        keyring.Get("cluster/c1/ssl.key.password").Returns(_ => throw new InvalidOperationException("access denied"));
+
+        new ClusterInfoRepository(file, keyring);
+
+        var json = File.ReadAllText(file);
+        json.Should().Contain("ssl.key.password").And.Contain("sasl.password").And.NotContain("plain-old");
+        keyring.Received().Set("cluster/c1/sasl.password", "plain-old");
+    }
 }
