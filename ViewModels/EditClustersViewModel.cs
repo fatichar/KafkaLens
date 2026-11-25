@@ -266,8 +266,13 @@ public sealed class EditClustersViewModel : IDisposable
         var staged = Clusters.FirstOrDefault(c => c.Id == cluster.Id);
         if (staged != null && (!staged.IsAvailable || !IsOwnerEnabled(staged.Client, false)))
             return Task.FromResult(ConnectionValidationResult.Failed("Cluster or client is disabled."));
-        var unchanged = staged != null && staged.Address.Trim() == settings.BootstrapServers.Trim()
-                        && staged.Security.SameAs(settings.Security);
+        // Only a test of exactly the saved connection (address, security and secrets) may update the
+        // live cluster's status; anything unsaved is a dry run.
+        var saved = originalClusters.GetValueOrDefault(cluster.Id);
+        var unchanged = staged != null && saved != null && staged.PendingSecrets == null
+                        && new KafkaConnectionSettings(saved.Address, (saved.Security ?? new ClusterSecurity()).Normalized(),
+                                StoredSecrets(cluster.Id) ?? new Dictionary<string, string>())
+                            .Fingerprint() == settings.Fingerprint();
         return TestConnectionCoreAsync(settings.BootstrapServers, unchanged ? staged : null, settings);
     }
 
@@ -411,6 +416,17 @@ public sealed class EditClustersViewModel : IDisposable
             foreach (var (k, v) in entered) row.PendingSecrets[k] = v;
         }
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Secrets already available for a staged cluster: saved ones plus those entered earlier in this dialog
+    /// session but not saved yet. Used so editing a just-added cluster does not demand passwords again.
+    /// </summary>
+    public IReadOnlyCollection<string> AvailableSecretNames(ClusterViewModel cluster)
+    {
+        var row = Clusters.FirstOrDefault(c => c.Id == cluster.Id) ?? cluster;
+        return row.StoredSecretNames.Concat((IEnumerable<string>?)row.PendingSecrets?.Keys ?? [])
+            .Distinct(StringComparer.Ordinal).ToList();
     }
 
     private static Dictionary<string, string>? NonEmpty(Dictionary<string, string>? secrets)
