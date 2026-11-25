@@ -70,6 +70,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
     private bool LoadSecrets(ClusterInfo cluster)
     {
         cluster.Secrets = new Dictionary<string, string>();
+        cluster.UnresolvedSecretNames = null;
         foreach (var name in cluster.StoredSecretNames ?? [])
         {
             try
@@ -78,11 +79,14 @@ public class ClusterInfoRepository : IClusterInfoRepository
                 if (value != null)
                     cluster.Secrets[name] = value;
                 else
+                    (cluster.UnresolvedSecretNames ??= new(StringComparer.Ordinal)).Add(name);
+                if (value == null)
                     Log.Warning("Secret {SecretName} of cluster {ClusterName} was not found in {SecretStore}; it must be re-entered",
                         name, cluster.Name, secretStore.BackendName);
             }
             catch (Exception e)
             {
+                (cluster.UnresolvedSecretNames ??= new(StringComparer.Ordinal)).Add(name);
                 Log.Warning("Could not read secret {SecretName} of cluster {ClusterName} from {SecretStore}: {Error}",
                     name, cluster.Name, secretStore.BackendName, SecretRedactor.Redact(e.Message));
             }
@@ -133,6 +137,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
             cluster.Secrets = previous?.Secrets ?? new Dictionary<string, string>();
             cluster.StoredSecretNames = previous?.StoredSecretNames;
             cluster.PlaintextSecrets = previous?.PlaintextSecrets;
+            cluster.UnresolvedSecretNames = previous?.UnresolvedSecretNames;
             return;
         }
 
@@ -143,14 +148,20 @@ public class ClusterInfoRepository : IClusterInfoRepository
         foreach (var (name, value) in current)
             secretStore.Set(Key(cluster, name), value);
 
+        // Secrets that could not be read at load time are not "removed" by the caller: keep their
+        // references (and the stored values) unless a new value replaces them.
+        var unresolved = (cluster.UnresolvedSecretNames ?? []).Concat(previous?.UnresolvedSecretNames ?? [])
+            .Where(n => !current.ContainsKey(n))
+            .ToHashSet(StringComparer.Ordinal);
+
         var previouslyStored = (previous?.StoredSecretNames ?? []).Concat(cluster.StoredSecretNames ?? []).Distinct();
-        foreach (var name in previouslyStored.Where(n => !current.ContainsKey(n)))
+        foreach (var name in previouslyStored.Where(n => !current.ContainsKey(n) && !unresolved.Contains(n)))
             secretStore.Delete(Key(cluster, name));
 
         cluster.Secrets = current;
-        cluster.StoredSecretNames = secretStore.IsPersistent && current.Count > 0
-            ? current.Keys.Order(StringComparer.Ordinal).ToList()
-            : null;
+        var names = (secretStore.IsPersistent ? (IEnumerable<string>)current.Keys : []).Concat(unresolved).Distinct().Order(StringComparer.Ordinal).ToList();
+        cluster.StoredSecretNames = names.Count > 0 ? names : null;
+        cluster.UnresolvedSecretNames = unresolved.Count > 0 ? unresolved : null;
 
         // Unmigrated plaintext values (only possible without a persistent store) are stale once replaced or cleared.
         var plaintext = cluster.PlaintextSecrets ?? previous?.PlaintextSecrets;
@@ -256,6 +267,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
     {
         Secrets = c.Secrets,
         StoredSecretNames = c.StoredSecretNames?.ToList(),
+        UnresolvedSecretNames = c.UnresolvedSecretNames,
         PlaintextSecrets = c.PlaintextSecrets
     };
 

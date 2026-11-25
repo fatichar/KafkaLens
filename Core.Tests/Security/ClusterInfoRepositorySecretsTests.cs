@@ -172,4 +172,39 @@ public sealed class ClusterInfoRepositorySecretsTests : IDisposable
         repo.GetById("c1").GetSecret(ClusterSecretNames.SaslPassword).Should().Be("plain-old");
         File.ReadAllText(file).Should().Contain("plain-old");
     }
+
+    [Fact]
+    public void UnreadableSecrets_SurviveUnrelatedUpdates_AndResolveLater()
+    {
+        var keyring = new FakeKeyring();
+        new ClusterInfoRepository(file, keyring).Add(NewCluster("kept"));
+
+        // Next start: no keyring -> session-only fallback, the secret cannot be read.
+        var offline = new ClusterInfoRepository(file, new InMemorySecretStore());
+        var loaded = offline.GetById("c1");
+        loaded.GetSecret(ClusterSecretNames.SaslPassword).Should().BeNull();
+        loaded.Name = "Renamed";
+        offline.Update(loaded); // same instance, Secrets is an empty (loaded) dictionary
+
+        File.ReadAllText(file).Should().Contain("sasl.password");
+        new ClusterInfoRepository(file, keyring).GetById("c1").GetSecret(ClusterSecretNames.SaslPassword).Should().Be("kept");
+    }
+
+    [Fact]
+    public void UnreadableSecret_IsNotDeletedFromKeyring_OnUnrelatedUpdate()
+    {
+        var keyring = new FakeKeyring();
+        new ClusterInfoRepository(file, keyring).Add(NewCluster("kept"));
+        var flaky = Substitute.For<ISecretStore>();
+        flaky.IsPersistent.Returns(true);
+        flaky.Get(Arg.Any<string>()).Returns(_ => throw new InvalidOperationException("keyring locked"));
+
+        var repo = new ClusterInfoRepository(file, flaky);
+        var loaded = repo.GetById("c1");
+        loaded.Address = "other:9093";
+        repo.Update(loaded);
+
+        flaky.DidNotReceive().Delete(Arg.Any<string>());
+        File.ReadAllText(file).Should().Contain("sasl.password");
+    }
 }

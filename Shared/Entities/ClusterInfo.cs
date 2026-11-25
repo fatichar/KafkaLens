@@ -49,6 +49,13 @@ public class ClusterInfo(string id, string name, string address, string? protoco
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, string>? PlaintextSecrets { get; set; }
 
+    /// <summary>
+    /// Secrets listed in <see cref="StoredSecretNames"/> that could not be read at load time (e.g. the keyring was
+    /// locked or unavailable). Their references are kept on unrelated updates so they resolve again later.
+    /// </summary>
+    [JsonIgnore]
+    public HashSet<string>? UnresolvedSecretNames { get; set; }
+
     public string? GetSecret(string name) =>
         Secrets != null && Secrets.TryGetValue(name, out var value) && !string.IsNullOrEmpty(value) ? value : null;
 
