@@ -4,22 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KafkaLens Usage Guide | Kafka Cluster and Message Browsing</title>
-    <meta name="description" content="Learn how to use KafkaLens to connect Kafka clusters, browse topics and partitions, inspect messages, apply filters, and save message data.">
+    <meta name="description" content="Learn how to use KafkaLens: connect Kafka clusters, fetch messages from any offset or timestamp, filter with boolean expressions, decode JSON and binary payloads, and save messages.">
     <link rel="canonical" href="https://kafkalens.com/usage.html">
 
     <meta property="og:type" content="article">
     <meta property="og:url" content="https://kafkalens.com/usage.html">
     <meta property="og:title" content="KafkaLens Usage Guide | Kafka Cluster and Message Browsing">
-    <meta property="og:description" content="Learn how to connect clusters, browse Kafka messages, apply filters, and use KafkaLens advanced features.">
-    <meta property="og:image" content="https://kafkalens.com/assets/images/Main.png">
+    <meta property="og:description" content="Connect clusters, browse and filter Kafka messages, decode payloads and save messages with KafkaLens.">
+    <meta property="og:image" content="https://kafkalens.com/assets/images/screenshots/main.png">
     <meta property="og:image:alt" content="KafkaLens desktop Kafka message browser">
     <meta property="og:site_name" content="KafkaLens">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://kafkalens.com/usage.html">
     <meta name="twitter:title" content="KafkaLens Usage Guide | Kafka Cluster and Message Browsing">
-    <meta name="twitter:description" content="Learn how to connect clusters, browse Kafka messages, apply filters, and use KafkaLens advanced features.">
-    <meta name="twitter:image" content="https://kafkalens.com/assets/images/Main.png">
+    <meta name="twitter:description" content="Connect clusters, browse and filter Kafka messages, decode payloads and save messages with KafkaLens.">
+    <meta name="twitter:image" content="https://kafkalens.com/assets/images/screenshots/main.png">
     <meta name="twitter:image:alt" content="KafkaLens desktop Kafka message browser">
 
     <script type="application/ld+json">
@@ -55,87 +55,277 @@
     <main>
         <section class="page-header">
             <div class="container">
-                <h1>Usage Documentation</h1>
-                <p>Get the most out of KafkaLens with this step-by-step guide.</p>
+                <h1>Usage Guide</h1>
+                <p>Everything you need to browse, search and decode Kafka messages with KafkaLens.</p>
             </div>
         </section>
 
         <section class="usage-content">
             <div class="container">
-                <div class="usage-section">
-                    <h2>🏗️ Getting Started</h2>
-                    
+
+                <nav class="toc" aria-label="On this page">
+                    <h2>On this page</h2>
+                    <ol>
+                        <li><a href="#tour">Video tour</a></li>
+                        <li><a href="#connect">Connect a cluster</a></li>
+                        <li><a href="#layout">The main window</a></li>
+                        <li><a href="#fetch">Fetching messages</a></li>
+                        <li><a href="#inspect">Inspecting messages</a></li>
+                        <li><a href="#filter">Filtering &amp; search</a></li>
+                        <li><a href="#formatters">Formatters &amp; binary data</a></li>
+                        <li><a href="#save">Copying &amp; saving messages</a></li>
+                        <li><a href="#tabs">Working with several clusters</a></li>
+                        <li><a href="#vpc">Private clusters (KafkaLens backend)</a></li>
+                        <li><a href="#settings">Preferences, themes &amp; plugins</a></li>
+                        <li><a href="#shortcuts">Keyboard shortcuts</a></li>
+                        <li><a href="#help">Need help?</a></li>
+                    </ol>
+                </nav>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="tour">
+                    <h2>🎬 Video tour</h2>
+                    <p class="lead">A walkthrough of the most common tasks in under 90 seconds.</p>
+                    <div class="video-frame">
+                        <video controls preload="metadata" playsinline
+                               poster="assets/video/kafkalens-demo-poster.webp"
+                               width="1920" height="1200">
+                            <source src="assets/video/kafkalens-demo.mp4" type="video/mp4">
+                            Your browser can't play this video. <a href="assets/video/kafkalens-demo.mp4">Download it</a> instead.
+                        </video>
+                    </div>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="connect">
+                    <h2>🏗️ Connect a cluster</h2>
+
                     <div class="subsection">
-                        <h3>1. Adding your first Cluster</h3>
-                        <p>To begin, you need to tell KafkaLens where your Kafka brokers are located.</p>
+                        <h3>1. Add the cluster</h3>
                         <ol>
-                            <li>Click the <strong>Edit Clusters</strong> button in the sidebar.</li>
-                            <li>Click <strong>Add Cluster</strong>.</li>
-                            <li>Enter a friendly name and your bootstrap servers (e.g., <code>localhost:9092</code>).</li>
-                            <li>Click <strong>Save</strong>.</li>
+                            <li>Open <strong>Cluster → Edit Clusters</strong> (<kbd>Ctrl</kbd>+<kbd>E</kbd>).</li>
+                            <li>On the <strong>Direct Clusters</strong> tab click <strong>Add</strong>.</li>
+                            <li>Enter a name and the bootstrap servers, e.g. <code>localhost:9092</code> or a comma-separated list such as <code>broker-1:9092,broker-2:9092</code>.</li>
+                            <li>Click <strong>OK</strong>, then <strong>Save</strong>.</li>
                         </ol>
+                        <p>The coloured dot next to each cluster shows its connection status: <span class="dot green"></span> reachable, <span class="dot red"></span> unreachable, <span class="dot gray"></span> not checked yet. Untick <strong>Enabled</strong> to hide a cluster without deleting it.</p>
+                        <div class="shot-grid">
+                            <figure class="shot dialog">
+                                <a href="assets/images/screenshots/edit-clusters-dialog.webp"><img src="assets/images/screenshots/edit-clusters-dialog.webp" width="1284" height="1035" loading="lazy" alt="Edit Clusters dialog listing Production, Staging and Local Docker clusters with green status dots"></a>
+                                <figcaption>Edit Clusters lists every cluster with its status.</figcaption>
+                            </figure>
+                            <figure class="shot dialog">
+                                <a href="assets/images/screenshots/add-cluster-dialog.webp"><img src="assets/images/screenshots/add-cluster-dialog.webp" width="684" height="583" loading="lazy" alt="Add Cluster dialog with cluster name and bootstrap servers fields"></a>
+                                <figcaption>A cluster only needs a name and its bootstrap servers.</figcaption>
+                            </figure>
+                        </div>
                     </div>
 
                     <div class="subsection">
-                        <h3>2. Navigation</h3>
-                        <p>The sidebar contains all your configured clusters. Click a cluster to connect. Once connected, you can browse:</p>
-                        <ul>
-                            <li><strong>Topics</strong>: All available topics in the cluster.</li>
-                            <li><strong>Partitions</strong>: Drill down into specific partitions to see message distribution.</li>
-                        </ul>
+                        <h3>2. Open it</h3>
+                        <p>Choose <strong>Cluster → Open Cluster → <em>your cluster</em></strong>. It opens in a new tab and its topics appear on the left. Open tabs are restored the next time you start KafkaLens (configurable in Preferences).</p>
                     </div>
                 </div>
 
-                <div class="usage-section">
-                    <h2>🔍 Exploring Data</h2>
-                    
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="layout">
+                    <h2>🧭 The main window</h2>
+                    <figure class="shot">
+                        <a href="assets/images/screenshots/main.webp"><img src="assets/images/screenshots/main.webp" width="2484" height="1635" loading="lazy" alt="KafkaLens main window showing topics, a list of order messages and a pretty-printed JSON message"></a>
+                    </figure>
+                    <ul class="legend">
+                        <li><strong>Topics</strong> (left) — every topic in the cluster; expand one to see its partitions. Type in <em>Filter topics…</em> to narrow the list. <strong>Cluster Info</strong> shows the address and topic count.</li>
+                        <li><strong>Message list</strong> (centre, top) — partition, offset, timestamp, key and a one-line value summary. Click a column header to sort; drag to resize or reorder columns.</li>
+                        <li><strong>Message viewer</strong> (centre, bottom) — the selected message, formatted, with its headers on a second tab.</li>
+                        <li><strong>Fetch panel</strong> (right) — where to start reading and how many messages to fetch.</li>
+                        <li><strong>Status bar</strong> (bottom) — the latest activity; click <strong>Log</strong> to open the full application log.</li>
+                    </ul>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="fetch">
+                    <h2>📥 Fetching messages</h2>
+                    <p>Select a topic to read from all of its partitions, or expand it and select a single partition. The latest messages are fetched right away; use the fetch panel to change what is read, then click <strong>Fetch Messages</strong> (or press <kbd>F5</kbd>). Click <strong>Stop</strong> to cancel a long fetch.</p>
+                    <table class="doc-table">
+                        <thead><tr><th>From</th><th>What it reads</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>End</strong></td><td>The most recent messages (default).</td></tr>
+                            <tr><td><strong>Start</strong></td><td>The oldest messages still retained.</td></tr>
+                            <tr><td><strong>Timestamp</strong></td><td>Messages from a date and time (<code>HH:mm:ss</code>). Turn on <strong>Fetch backwards</strong> to read the messages <em>before</em> that time instead.</td></tr>
+                            <tr><td><strong>Offset</strong></td><td>Partitions only: messages from an exact offset, forwards or backwards.</td></tr>
+                        </tbody>
+                    </table>
+                    <p><strong>Count</strong> limits how many messages are fetched (10 to 25,000 by default; the list and the default are configurable in Preferences).</p>
+                    <figure class="shot">
+                        <a href="assets/images/screenshots/fetch-timestamp.webp"><img src="assets/images/screenshots/fetch-timestamp.webp" width="2484" height="1635" loading="lazy" alt="Fetching 50 messages from partition 2 of shipments.tracking starting at a timestamp"></a>
+                        <figcaption>Reading 50 messages from one partition, starting at a timestamp.</figcaption>
+                    </figure>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="inspect">
+                    <h2>🔍 Inspecting messages</h2>
+                    <p>Click a message to open it in the viewer. JSON is pretty-printed and syntax-highlighted; use the <strong>Zoom</strong> slider to change the font size. The <strong>Headers</strong> tab lists every Kafka header as text.</p>
+                    <figure class="shot">
+                        <a href="assets/images/screenshots/message-headers.webp"><img src="assets/images/screenshots/message-headers.webp" width="2484" height="1635" loading="lazy" alt="Headers tab showing content-type, source-service, schema-version, traceparent and correlation-id"></a>
+                        <figcaption>Message headers such as trace and correlation IDs.</figcaption>
+                    </figure>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="filter">
+                    <h2>🧪 Filtering &amp; search</h2>
+
                     <div class="subsection">
-                        <h3>Browsing Messages</h3>
-                        <p>Double-click a topic or partition to open a new data tab.</p>
-                        <ul>
-                            <li><strong>Fetch</strong>: Click "Load" to fetch the most recent messages.</li>
-                            <li><strong>Seek</strong>: Use the offset controls to jump to a specific point in time or a specific offset.</li>
-                        </ul>
+                        <h3>Filter the message list</h3>
+                        <p>Type in the filter box above the list (<kbd>Ctrl</kbd>+<kbd>F</kbd>) to show only messages whose value contains your terms. Matching is case-insensitive and works on everything already fetched, so it is instant. Combine terms with boolean operators:</p>
+                        <table class="doc-table">
+                            <thead><tr><th>Syntax</th><th>Meaning</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>a &amp;&amp; b</code></td><td>both terms</td><td><code>error &amp;&amp; !debug</code></td></tr>
+                                <tr><td><code>a || b</code></td><td>either term</td><td><code>CANCELLED || PAYMENT_FAILED</code></td></tr>
+                                <tr><td><code>!a</code></td><td>must not contain</td><td><code>!healthcheck</code></td></tr>
+                                <tr><td><code>( )</code></td><td>grouping</td><td><code>user &amp;&amp; (login || logout)</code></td></tr>
+                                <tr><td><code>"…"</code></td><td>exact phrase</td><td><code>"order_id":"ORD-2026-707037"</code></td></tr>
+                                <tr><td><code>a b</code></td><td>words without an operator are OR-ed</td><td><code>warn error</code></td></tr>
+                            </tbody>
+                        </table>
+                        <p>Click <strong>?</strong> next to the box for a quick reference.</p>
+                        <div class="shot-grid">
+                            <figure class="shot">
+                                <a href="assets/images/screenshots/filter-messages.webp"><img src="assets/images/screenshots/filter-messages.webp" width="2484" height="1635" loading="lazy" alt="Message list filtered with CANCELLED || PAYMENT_FAILED"></a>
+                                <figcaption>Only cancelled or failed orders out of 500 status changes.</figcaption>
+                            </figure>
+                            <figure class="shot">
+                                <a href="assets/images/screenshots/filter-help.webp"><img src="assets/images/screenshots/filter-help.webp" width="2484" height="1635" loading="lazy" alt="Filter syntax help popup"></a>
+                                <figcaption>The built-in filter syntax reference.</figcaption>
+                            </figure>
+                        </div>
                     </div>
 
                     <div class="subsection">
-                        <h3>Message Inspection</h3>
-                        <p>Select any message to view its details in the side panel. KafkaLens provides specialized formatters:</p>
+                        <h3>Filter inside a message</h3>
+                        <p>The <strong>Filter</strong> box under the viewer trims the selected message down to what you are looking for:</p>
                         <ul>
-                            <li><strong>JSON</strong>: Pretty-prints JSON payloads for easy reading.</li>
-                            <li><strong>String</strong>: Displays the raw UTF-8 string.</li>
-                            <li><strong>Hex</strong>: Perfect for debugging binary or proprietary formats.</li>
+                            <li>With <strong>Use Object Filter</strong> on (default), KafkaLens keeps only the JSON fields whose name or value matches, together with their parent objects — ideal for large, nested payloads.</li>
+                            <li>With it off, it keeps only the matching lines of the formatted message.</li>
                         </ul>
+                        <figure class="shot">
+                            <a href="assets/images/screenshots/object-filter.webp"><img src="assets/images/screenshots/object-filter.webp" width="2484" height="1635" loading="lazy" alt="Object filter 'method' reducing a payment event to its method object"></a>
+                            <figcaption>Filtering a payment event by <code>method</code> leaves just the payment-method object.</figcaption>
+                        </figure>
                     </div>
                 </div>
 
-                <div class="usage-section">
-                    <h2>💾 Advanced Features</h2>
-                    
-                    <div class="subsection">
-                        <h3>Saving Messages</h3>
-                        <p>Found a message you need to keep? Right-click any message in the list and select <strong>Save Message</strong>. This will export the full message (including headers and metadata) into a <code>.klm</code> file.</p>
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="formatters">
+                    <h2>🧩 Formatters &amp; binary data</h2>
+                    <p>KafkaLens decodes keys and values with <em>formatters</em>. When you first open a topic it guesses a suitable one; built-in formatters are <strong>Json</strong>, <strong>Text</strong> and the numeric types <strong>Int8 … UInt64</strong> (big-endian). Plugins can add more, e.g. for Avro or Protobuf.</p>
+                    <ul>
+                        <li>To change it for the whole topic, open the <strong>Configuration</strong> tab, pick a <strong>Key Formatter</strong> and <strong>Value Formatter</strong> (or click <strong>Guess</strong>), and click <strong>Save</strong>. Tick <strong>Apply to every cluster</strong> to use the same choice for this topic on all clusters.</li>
+                        <li>To view one message differently, use the <strong>Format</strong> drop-down under the viewer.</li>
+                        <li>Hide formatters you never need in <strong>Edit → Preferences → Message Format</strong>.</li>
+                    </ul>
+                    <div class="shot-grid">
+                        <figure class="shot">
+                            <a href="assets/images/screenshots/topic-config.webp"><img src="assets/images/screenshots/topic-config.webp" width="2484" height="1635" loading="lazy" alt="Topic Configuration tab with key and value formatter selectors"></a>
+                            <figcaption>Per-topic key and value formatters.</figcaption>
+                        </figure>
+                        <figure class="shot">
+                            <a href="assets/images/screenshots/numeric-formatter.webp"><img src="assets/images/screenshots/numeric-formatter.webp" width="2484" height="1635" loading="lazy" alt="Binary latency metrics decoded as Int64 numbers"></a>
+                            <figcaption>Binary 8-byte values decoded with the Int64 formatter.</figcaption>
+                        </figure>
                     </div>
-
-                    <div class="subsection">
-                        <h3>Filtering</h3>
-                        <p>Use the search bar in the message view to filter through loaded messages. You can use simple text matching or advanced boolean logic (e.g., <code>error && !timeout</code>).</p>
-                    </div>
+                    <figure class="shot">
+                        <a href="assets/images/screenshots/text-logs.webp"><img src="assets/images/screenshots/text-logs.webp" width="2484" height="1635" loading="lazy" alt="Plain-text log messages filtered with ERROR || WARN"></a>
+                        <figcaption>Plain-text payloads work too — here an audit log filtered to <code>ERROR || WARN</code>.</figcaption>
+                    </figure>
                 </div>
 
-                <div class="usage-section">
-                    <h2>❓ Need Help?</h2>
-                    <p>If you encounter issues or have feature requests, please open an issue on our <a href="https://github.com/fatichar/KafkaLens/issues" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
-                    
-                    <div class="help-card">
-                        <h3>Quick Tips</h3>
-                        <ul>
-                            <li>Use <strong>Ctrl+F</strong> (or <strong>Cmd+F</strong> on Mac) to quickly search through messages.</li>
-                            <li>Right-click on topics for additional context menu options.</li>
-                            <li>Pin frequently accessed tabs to keep them organized.</li>
-                            <li>Use the offset controls to navigate through large message sets efficiently.</li>
-                        </ul>
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="save">
+                    <h2>💾 Copying &amp; saving messages</h2>
+                    <p>Right-click the message list:</p>
+                    <ul>
+                        <li><strong>Copy</strong> → Key, Value, Offset, Timestamp or All of the selected message.</li>
+                        <li><strong>Save Selected</strong> / <strong>Save All</strong> → <strong>As RAW</strong> (<code>.klm</code>, can be reopened in KafkaLens) or <strong>As Formatted</strong> (<code>.txt</code>, readable anywhere).</li>
+                    </ul>
+                    <p>Messages are saved under <code>&lt;saved messages folder&gt;/&lt;cluster&gt;/&lt;topic&gt;/&lt;partition&gt;/&lt;offset&gt;</code>. The folder is set in <strong>Preferences → Browser</strong>; a notification after saving lets you open it.</p>
+                    <p>To browse saved RAW messages later — even without access to the cluster — use <strong>Cluster → Open Saved Messages</strong> (<kbd>Ctrl</kbd>+<kbd>O</kbd>) and select the cluster's folder. It opens as a tab named <em>&lt;folder&gt;(saved)</em> with the same filtering and formatting tools.</p>
+                    <figure class="shot">
+                        <a href="assets/images/screenshots/context-menu.webp"><img src="assets/images/screenshots/context-menu.webp" width="2484" height="1635" loading="lazy" alt="Message list context menu with Copy, Save Selected and Save All"></a>
+                    </figure>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="tabs">
+                    <h2>🗂️ Working with several clusters</h2>
+                    <p>Each opened cluster gets its own tab with its own topic selection, filters and fetch settings. Switch with <kbd>Ctrl</kbd>+<kbd>Tab</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Tab</kbd> and close with <kbd>Ctrl</kbd>+<kbd>W</kbd> or the ✕ on the tab. You can open the same cluster more than once, e.g. to compare two topics.</p>
+                    <figure class="shot">
+                        <a href="assets/images/screenshots/multi-cluster-tabs.webp"><img src="assets/images/screenshots/multi-cluster-tabs.webp" width="2484" height="1635" loading="lazy" alt="Three cluster tabs: Production, Staging and Local Docker, with the topic list filtered to 'order'"></a>
+                        <figcaption>Production, Staging and a local cluster side by side; the topic list is filtered to “order”.</figcaption>
+                    </figure>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="vpc">
+                    <h2>🔐 Private clusters (KafkaLens backend)</h2>
+                    <p>If your brokers are only reachable inside a private network (VPC), run the lightweight KafkaLens gRPC backend (<code>GrpcApi</code> in the repository) on a host inside that network. It exposes a <strong>read-only</strong> API, so the desktop app never needs direct access to Kafka.</p>
+                    <ol>
+                        <li>Deploy the backend inside the network and list your clusters in its <code>cluster_info.json</code>. By default it listens on port <code>8080</code>.</li>
+                        <li>In KafkaLens open <strong>Edit Clusters → KafkaLens Clients</strong>, click <strong>Add</strong>, and enter a name and the backend address (e.g. <code>kafkalens.internal:8080</code>) with protocol <code>grpc</code>.</li>
+                        <li>The clusters configured on the backend now appear under <strong>Cluster → Open Cluster</strong> alongside your direct clusters.</li>
+                    </ol>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="settings">
+                    <h2>⚙️ Preferences, themes &amp; plugins</h2>
+                    <p>Open <strong>Edit → Preferences</strong>:</p>
+                    <ul>
+                        <li><strong>General</strong> — theme (Light, Dark, or follow the system).</li>
+                        <li><strong>Kafka</strong> — consumer timeouts, fetch size limits and consumer group settings.</li>
+                        <li><strong>Browser</strong> — font size, available and default fetch counts, saved-messages folder, restoring tabs on startup, and how often cluster connectivity is checked.</li>
+                        <li><strong>Message Format</strong> — which formatters are offered for keys and values.</li>
+                        <li><strong>Privacy</strong> — turn anonymous usage statistics on or off and see exactly what was sent (<a href="privacy.html">details</a>).</li>
+                    </ul>
+                    <div class="shot-grid">
+                        <figure class="shot dialog">
+                            <a href="assets/images/screenshots/preferences-browser-dialog.webp"><img src="assets/images/screenshots/preferences-browser-dialog.webp" width="1059" height="1185" loading="lazy" alt="Preferences window, Browser tab"></a>
+                            <figcaption>Browser preferences.</figcaption>
+                        </figure>
+                        <figure class="shot">
+                            <a href="assets/images/screenshots/dark-theme.webp"><img src="assets/images/screenshots/dark-theme.webp" width="2484" height="1635" loading="lazy" alt="KafkaLens in the dark theme"></a>
+                            <figcaption>The dark theme (<strong>View → Theme</strong>).</figcaption>
+                        </figure>
                     </div>
+                    <p><strong>Edit → Plugin Manager</strong> installs plugins — extra formatters and themes — from plugin repositories. Want to write one? See the <a href="https://github.com/fatichar/KafkaLens/blob/master/docs/plugin-development.md" target="_blank" rel="noopener noreferrer">plugin development guide</a>.</p>
+                    <p><strong>View → Application Log</strong> (or the <strong>Log</strong> button in the status bar) shows what KafkaLens is doing — useful when a connection fails. It can be searched, filtered and copied.</p>
+                    <figure class="shot">
+                        <a href="assets/images/screenshots/app-log.webp"><img src="assets/images/screenshots/app-log.webp" width="2484" height="1635" loading="lazy" alt="Application log panel at the bottom of the window"></a>
+                    </figure>
+                    <p>KafkaLens checks for updates automatically; turn this off or check manually from the <strong>Help</strong> menu.</p>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="shortcuts">
+                    <h2>⌨️ Keyboard shortcuts</h2>
+                    <table class="doc-table">
+                        <tbody>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>Edit clusters</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open saved messages</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>W</kbd></td><td>Close the current tab</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>Tab</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Next / previous tab</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Focus the message filter</td></tr>
+                            <tr><td><kbd>F5</kbd></td><td>Fetch again with the current settings</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ─────────────────────────────────────────────── -->
+                <div class="usage-section" id="help">
+                    <h2>❓ Need help?</h2>
+                    <p>Found a bug or have a feature request? Please open an issue on <a href="https://github.com/fatichar/KafkaLens/issues" target="_blank" rel="noopener noreferrer">GitHub</a>. Attaching the application log (<strong>Log → Open Log File</strong>) helps a lot.</p>
                 </div>
             </div>
         </section>

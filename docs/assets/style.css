@@ -685,6 +685,222 @@ nav {
     line-height: 1.7;
 }
 
+/* Usage guide: body text, tables, screenshots, video */
+.usage-section > p,
+.usage-section > ul,
+.usage-section > ol {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+
+.usage-section > ul,
+.usage-section > ol {
+    padding-left: 1.5rem;
+}
+
+.usage-section li {
+    margin-bottom: 0.4rem;
+}
+
+.usage-section code {
+    background: var(--background-secondary);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 0.88em;
+    overflow-wrap: anywhere;
+}
+
+.usage-section {
+    scroll-margin-top: 90px;
+}
+
+.lead {
+    font-size: 1.1rem;
+}
+
+kbd {
+    display: inline-block;
+    padding: 0.05rem 0.45rem;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 0.82em;
+    color: var(--text-primary);
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+}
+
+.toc {
+    background: var(--background-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 3.5rem;
+}
+
+.toc h2 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+}
+
+.toc ol {
+    columns: 2;
+    column-gap: 2rem;
+    padding-left: 1.25rem;
+}
+
+.toc li {
+    margin-bottom: 0.35rem;
+    break-inside: avoid;
+}
+
+.toc a,
+.usage-section a {
+    color: var(--primary-dark);
+}
+
+.doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0 1.5rem;
+    font-size: 0.95rem;
+}
+
+.doc-table th,
+.doc-table td {
+    text-align: left;
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.doc-table th {
+    color: var(--text-primary);
+    background: var(--background-secondary);
+    font-weight: 600;
+}
+
+.shot {
+    margin: 1.5rem 0 2rem;
+}
+
+.shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.shot.dialog {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.shot.dialog img {
+    width: auto;
+    max-width: 100%;
+    max-height: 420px;
+}
+
+.shot figcaption {
+    text-align: center;
+    font-size: 0.92rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+}
+
+.shot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem 1.5rem;
+}
+
+.shot-grid .shot {
+    margin: 0.5rem 0;
+}
+
+.legend {
+    list-style: none;
+    padding-left: 0 !important;
+}
+
+.legend li {
+    padding-left: 1rem;
+    border-left: 3px solid var(--primary-color);
+    margin-bottom: 0.8rem;
+}
+
+.dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin: 0 2px;
+}
+
+.dot.green { background: #28A745; }
+.dot.red { background: #DC3545; }
+.dot.gray { background: #6C757D; }
+
+.video-frame {
+    max-width: 1100px;
+    margin: 1.5rem auto 0;
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+    background: #121830;
+    line-height: 0;
+}
+
+.video-frame video {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Home page: demo video + screenshots that already carry their own frame/shadow */
+.demo-video {
+    padding: 5rem 0 2rem;
+    background: var(--background-secondary);
+}
+
+.demo-video p {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-top: -1.5rem;
+}
+
+.hero-image img.framed,
+.tour-image img.framed {
+    box-shadow: none;
+    border-radius: 0;
+    height: auto;
+}
+
+@media (max-width: 768px) {
+    .toc ol {
+        columns: 1;
+    }
+
+    .doc-table {
+        font-size: 0.88rem;
+    }
+
+    .doc-table th,
+    .doc-table td {
+        padding: 0.5rem;
+    }
+}
+
 /* Footer */
 footer {
     background: var(--text-primary);
