@@ -15,6 +15,10 @@ public class ClusterInfoRepository : IClusterInfoRepository
     private const string DEFAULT_FILE_PATH = "cluster_info.json";
     private readonly string filePath;
     private readonly ISecretStore secretStore;
+
+    // Values known to be in the secret store, per cluster id. Updates only write values that differ, so a
+    // metadata-only edit (rename, address) never needs a writable store.
+    private readonly Dictionary<string, Dictionary<string, string>> persistedSecrets = new(StringComparer.Ordinal);
     private Dictionary<string, ClusterInfo> clusters = new();
     private ReadOnlyDictionary<string, ClusterInfo> readOnlyClusters;
     public ReadOnlyDictionary<string, ClusterInfo> GetAll() => readOnlyClusters;
@@ -92,6 +96,8 @@ public class ClusterInfoRepository : IClusterInfoRepository
             }
         }
 
+        persistedSecrets[cluster.Id] = new Dictionary<string, string>(cluster.Secrets, StringComparer.Ordinal);
+
         if (cluster.PlaintextSecrets is not { Count: > 0 } plaintext)
         {
             cluster.PlaintextSecrets = null;
@@ -121,6 +127,9 @@ public class ClusterInfoRepository : IClusterInfoRepository
             return false;
         }
 
+        foreach (var (name, value) in plaintext)
+            persistedSecrets[cluster.Id][name] = value;
+
         // Keep references to secrets that exist in the store but could not be read right now.
         cluster.StoredSecretNames = cluster.Secrets.Keys.Concat(cluster.UnresolvedSecretNames ?? [])
             .Distinct().Order(StringComparer.Ordinal).ToList();
@@ -147,8 +156,12 @@ public class ClusterInfoRepository : IClusterInfoRepository
             .Where(kv => !string.IsNullOrEmpty(kv.Value))
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
+        var known = persistedSecrets.GetValueOrDefault(cluster.Id);
         foreach (var (name, value) in current)
+        {
+            if (known != null && known.TryGetValue(name, out var stored) && stored == value) continue;
             secretStore.Set(Key(cluster, name), value);
+        }
 
         // Secrets that could not be read at load time are not "removed" by the caller: keep their
         // references (and the stored values) unless a new value replaces them or the cluster's security
@@ -167,6 +180,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
             secretStore.Delete(Key(cluster, name));
 
         cluster.Secrets = current;
+        persistedSecrets[cluster.Id] = new Dictionary<string, string>(current, StringComparer.Ordinal);
         // With a persistent store every current secret is referenced. Without one (e.g. a server reading
         // KAFKALENS_SECRET__* variables, chained with the in-memory fallback), references that were already
         // in the file stay; only new, session-only secrets are not added.
@@ -299,6 +313,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
     {
         ValidateClusterById(id);
         DeleteSecrets(clusters[id]);
+        persistedSecrets.Remove(id);
         clusters.Remove(id);
         SaveClusters();
     }
@@ -307,6 +322,7 @@ public class ClusterInfoRepository : IClusterInfoRepository
     {
         foreach (var cluster in clusters.Values)
             DeleteSecrets(cluster);
+        persistedSecrets.Clear();
         clusters.Clear();
         SaveClusters();
     }
