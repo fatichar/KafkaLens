@@ -127,7 +127,9 @@ public class ClientFactory : IClientFactory
 
     private static string SanitizeAddress(string address)
     {
-        if (!address.StartsWith(HTTP_PROTOCOL_PREFIX))
+        // "https://host:port" connects to a TLS-enabled backend (or TLS proxy); keep explicit schemes.
+        if (!address.StartsWith(HTTP_PROTOCOL_PREFIX, StringComparison.OrdinalIgnoreCase)
+            && !address.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             address = HTTP_PROTOCOL_PREFIX + address;
         }

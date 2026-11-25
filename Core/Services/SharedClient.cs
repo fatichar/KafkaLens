@@ -4,6 +4,7 @@ using KafkaLens.Core.Utils;
 using KafkaLens.Shared;
 using KafkaLens.Shared.DataAccess;
 using KafkaLens.Shared.Models;
+using KafkaLens.Shared.Security;
 using Serilog;
 using KafkaCluster = KafkaLens.Shared.Models.KafkaCluster;
 
@@ -12,7 +13,7 @@ namespace KafkaLens.Core.Services;
 public class SharedClient(
     IClusterInfoRepository infoRepository,
     ConsumerFactory consumerFactory)
-    : IKafkaLensClient, IStreamingKafkaLensClient, IConnectionTestClient, ICancellableConnectionClient
+    : IKafkaLensClient, IStreamingKafkaLensClient, IConnectionTestClient, ICancellableConnectionClient, ISecureConnectionTestClient
 {
     public string Name => "Shared";
     public bool CanEditClusters => false;
@@ -22,7 +23,7 @@ public class SharedClient(
     private ReadOnlyDictionary<string, Shared.Entities.ClusterInfo> Clusters => infoRepository.GetAll();
 
     // key = clusterInfo id, value = kafka consumer
-    private readonly ConcurrentDictionary<string, (string Address, IKafkaConsumer Consumer)> consumers = new();
+    private readonly ConcurrentDictionary<string, (string Fingerprint, IKafkaConsumer Consumer)> consumers = new();
     private readonly object consumerGate = new();
 
     #region Create
@@ -79,6 +80,7 @@ public class SharedClient(
         Validate(newCluster);
 
         var cluster = Shared.Entities.ClusterInfo.Create(newCluster);
+        ApplySecurity(cluster, newCluster);
         try
         {
             infoRepository.Add(cluster);
@@ -98,7 +100,7 @@ public class SharedClient(
         {
             // CreateConsumer is called directly here; the outer GetOrAdd in GetConsumer
             // handles the ConcurrentDictionary insertion, so no nested GetOrAdd needed.
-            return CreateConsumer(clusterInfo.Address);
+            return consumerFactory.CreateFor(KafkaConnectionSettings.From(clusterInfo));
         }
         catch (Exception e)
         {
@@ -110,6 +112,36 @@ public class SharedClient(
     private IKafkaConsumer CreateConsumer(string address)
     {
         return consumerFactory.CreateNew(address);
+    }
+    public Task<ConnectionValidationResult> ValidateConnectionWithDetailsAsync(KafkaConnectionSettings settings, CancellationToken cancellationToken)
+    {
+        // Never resolve a saved cluster by address here: the explicit settings (e.g. switching a saved
+        // TLS cluster to plaintext) must be tested as entered, with a temporary consumer.
+        return Task.Run(async () =>
+        {
+            IKafkaConsumer? consumer = null;
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                // Always a temporary consumer: the settings may not be saved yet.
+                consumer = consumerFactory.CreateFor(settings);
+                return await consumer.ValidateConnectionWithDetailsAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                var secrets = settings.Secrets.Values;
+                Log.Warning("Connection validation failed for {Connection}: {Error}", settings, SecretRedactor.Redact(e.Message, secrets));
+                return ConnectionValidationResult.Failed(SecretRedactor.Redact(e.Message, secrets), SecretRedactor.Redact(e.ToString(), secrets));
+            }
+            finally
+            {
+                if (consumer != null) DisposeConsumer(consumer);
+            }
+        }, cancellationToken);
     }
     #endregion Create
 
@@ -236,10 +268,15 @@ public class SharedClient(
         lock (consumerGate)
         {
             var existing = ValidateClusterId(clusterId);
-            var addressChanged = existing.Address != update.Address;
+            var oldFingerprint = KafkaConnectionSettings.From(existing).Fingerprint();
             existing.Name = update.Name;
             existing.Address = update.Address;
+            if (update.Security != null)
+                existing.Security = update.Security.Normalized() is { IsDefault: false } security ? security : null;
+            if (update.Security != null || update.Secrets != null)
+                existing.Secrets = ClusterSecurity.MergeSecrets(existing.Secrets, update.Secrets, existing.Security ?? new ClusterSecurity());
             infoRepository.Update(existing);
+            var addressChanged = oldFingerprint != KafkaConnectionSettings.From(existing).Fingerprint();
             if (addressChanged && consumers.TryRemove(clusterId, out var oldConsumer))
                 DisposeConsumer(oldConsumer.Consumer);
         }
@@ -293,13 +330,13 @@ public class SharedClient(
                 throw new InvalidOperationException("The cluster is disabled.");
             if (consumers.TryGetValue(clusterId, out var cached))
             {
-                if (cached.Address == cluster.Address)
+                if (cached.Fingerprint == KafkaConnectionSettings.From(cluster).Fingerprint())
                     return cached.Consumer;
                 consumers.TryRemove(clusterId, out _);
                 DisposeConsumer(cached.Consumer);
             }
             var consumer = Connect(cluster);
-            consumers[clusterId] = (cluster.Address, consumer);
+            consumers[clusterId] = (KafkaConnectionSettings.From(cluster).Fingerprint(), consumer);
             return consumer;
         }
     }
@@ -333,8 +370,17 @@ public class SharedClient(
     {
         return new KafkaCluster(clusterInfo.Id, clusterInfo.Name, clusterInfo.Address)
         {
-            IsEnabled = clusterInfo.IsEnabled
+            IsEnabled = clusterInfo.IsEnabled,
+            Security = clusterInfo.Security?.Clone() ?? new ClusterSecurity(),
+            StoredSecretNames = clusterInfo.Secrets?.Keys.ToList() ?? []
         };
+    }
+
+    private static void ApplySecurity(Shared.Entities.ClusterInfo cluster, NewKafkaCluster newCluster)
+    {
+        var security = newCluster.Security?.Normalized();
+        cluster.Security = security is { IsDefault: false } ? security : null;
+        cluster.Secrets = ClusterSecurity.MergeSecrets(null, newCluster.Secrets, cluster.Security ?? new ClusterSecurity());
     }
     #endregion Mappers
 }
