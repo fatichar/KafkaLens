@@ -34,6 +34,16 @@ public partial class AddEditClusterDialog : DialogBase
         InitializeComponent();
         existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         ProtocolCombo.SelectedIndex = 0;
+        Opened += (_, _) => ApplyScreenMaxHeight();
+    }
+
+    /// <summary>Lets the dialog grow with its content, up to 90% of the screen's working area.</summary>
+    private void ApplyScreenMaxHeight()
+    {
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen is null) return;
+        // WorkingArea is in device pixels; MaxHeight is in logical units.
+        MaxHeight = screen.WorkingArea.Height / screen.Scaling * 0.9;
     }
 
     /// <param name="secretStore">Where secrets will be kept; used to tell the user whether they persist.</param>
