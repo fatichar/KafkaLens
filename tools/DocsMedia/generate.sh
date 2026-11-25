@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenerates website screenshots and the demo video into docs/assets.
-# Requires: .NET 10 SDK, python3 + Pillow, ffmpeg, Fonts: Inter, JetBrains Mono (Linux).
+# Requires: .NET 10 SDK, python3 + Pillow + numpy + edge-tts, ffmpeg, Fonts: Inter, JetBrains Mono (Linux).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../.." && pwd)"

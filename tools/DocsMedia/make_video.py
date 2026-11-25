@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Compose the KafkaLens demo video from frames rendered by `DocsMedia <out> video`.
 
-Adds an animated pointer, click ripples, captions, an intro and an outro card, and encodes
-H.264 MP4 with ffmpeg.
+Adds an animated pointer, click ripples, captions, an intro and an outro card, encodes
+H.264 MP4 with ffmpeg, then adds a voiceover + music track (narrate.py).
 
 Usage: make_video.py <frames-dir> <logo.png> <out.mp4>
+Set KL_NO_AUDIO=1 to skip the audio step (e.g. offline); the caption timeline is still
+written to <frames-dir>/../timeline.json so narrate.py can be run later.
 """
+import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -122,8 +126,21 @@ ff = subprocess.Popen([
 ], stdin=subprocess.PIPE)
 
 
+frame_no = 0
+segments = []  # caption timeline for narrate.py, in seconds
+
+
 def emit(img):
+    global frame_no
     ff.stdin.write(img.convert("RGB").tobytes())
+    frame_no += 1
+
+
+def mark(caption):
+    t = frame_no / FPS
+    if segments and segments[-1]["end"] is None:
+        segments[-1]["end"] = t
+    segments.append({"start": t, "end": None, "caption": caption})
 
 
 def fade(a, b, n):
@@ -133,6 +150,7 @@ def fade(a, b, n):
 
 # intro
 black = Image.new("RGB", (W, H), (0, 0, 0))
+mark("__intro__")
 fade(black, INTRO, 12)
 for _ in range(int(3.0 * FPS)):
     emit(INTRO)
@@ -149,6 +167,7 @@ for i, (name, cx, cy, click, cap) in enumerate(rows):
     img.alpha_composite(CURSOR, (int(x) - 2, int(y) - 2))
     if cap != prev_caption:
         prev_caption, caption_age = cap, 0
+        mark(cap)
     caption_age += 1
     img.alpha_composite(caption_layer(cap, min(1.0, caption_age / 6)))
     rgb = img.convert("RGB")
@@ -158,11 +177,22 @@ for i, (name, cx, cy, click, cap) in enumerate(rows):
     emit(rgb)
     composed_last = rgb
 
+mark("__outro__")
 fade(composed_last, OUTRO, 15)
 for _ in range(int(4.0 * FPS)):
     emit(OUTRO)
 fade(OUTRO, black, 12)
 
+mark("")
 ff.stdin.close()
 ff.wait()
 print("wrote", out_path)
+
+timeline = {"duration": frame_no / FPS, "segments": [s for s in segments if s["caption"]]}
+timeline_path = frames_dir.parent / "timeline.json"
+timeline_path.write_text(json.dumps(timeline, indent=1, ensure_ascii=False), encoding="utf-8")
+
+if os.environ.get("KL_NO_AUDIO") != "1":
+    sys.path.insert(0, str(Path(__file__).parent))
+    import narrate
+    narrate.build(timeline, out_path, out_path, frames_dir.parent / "audio")
