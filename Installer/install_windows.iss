@@ -24,6 +24,10 @@ OutputBaseFilename=KafkaLensSetup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+#ifdef ReleaseSigning
+SignTool=AzureArtifactSigning
+SignedUninstaller=yes
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

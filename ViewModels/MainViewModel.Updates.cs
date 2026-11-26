@@ -40,6 +40,21 @@ public partial class MainViewModel
             ["to_version"] = result.LatestVersion?.TrimStart('v'),
         });
 
+        if (OperatingSystem.IsMacOS())
+        {
+            try
+            {
+                // Finder replaces the whole signed bundle, including its notarization ticket.
+                Process.Start(new ProcessStartInfo { FileName = result.DownloadUrl!, UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to open the macOS update download");
+                ShowMessage("Update Download", "Could not open the update. Download KafkaLens from the GitHub Releases page.");
+            }
+            return;
+        }
+
         var appDir = AppContext.BaseDirectory;
         var updaterPath = Path.Combine(appDir, "KafkaLens.Updater");
         if (OperatingSystem.IsWindows()) updaterPath += ".exe";
