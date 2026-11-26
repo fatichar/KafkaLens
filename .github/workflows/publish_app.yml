@@ -7,6 +7,9 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   DOTNET_VERSION: '10.0.x'
 
@@ -22,73 +25,80 @@ jobs:
 
       - name: Extract version
         id: version
+        env:
+          RELEASE_REF: ${{ github.ref }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            VERSION=$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          version=$(sed -nE 's/.*<Version>([^<]+)<\/Version>.*/\1/p' Directory.Build.props)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Expected a numeric release version in Directory.Build.props"
+            exit 1
           fi
+          if [[ "$RELEASE_REF" == refs/tags/* && "$RELEASE_REF" != "refs/tags/v$version" ]]; then
+            echo "::error::Release tag does not match Directory.Build.props"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Check if tag
         id: check_tag
+        env:
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref }}
         run: |
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "is_tag=true" >> $GITHUB_OUTPUT
+          if [[ "$RELEASE_EVENT" == "push" && "$RELEASE_REF" == refs/tags/* ]]; then
+            echo "is_tag=true" >> "$GITHUB_OUTPUT"
           else
-            echo "is_tag=false" >> $GITHUB_OUTPUT
+            echo "is_tag=false" >> "$GITHUB_OUTPUT"
           fi
 
   build-windows:
     needs: extract-version
     runs-on: windows-latest
+    environment: windows-release-signing
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ needs.extract-version.outputs.version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: dotnet restore KafkaLens.slnx
-
-      - name: Publish Windows
-        id: publish
+      - name: Publish Windows application
         run: |
-          $version = "${{ needs.extract-version.outputs.version }}"
-          $platformName = "win-x64"
-          $baseName = "KafkaLens-${version}-${platformName}"
-          $outDir = "Releases/KafkaLens_win"
-          $releasesDir = "Releases"
-
-          # Build
           dotnet publish UI/KafkaLens.Desktop/KafkaLens.Desktop.csproj `
-            -r "$platformName" `
-            -c Release `
-            --sc `
-            -p:PublishTrimmed=false `
-            -o "$outDir"
+            -r win-x64 -c Release --self-contained -p:PublishTrimmed=false -o Releases/KafkaLens_win
 
-          # Create installer
-          & "ISCC.exe" "Installer/install_windows.iss"
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
+        with:
+          client-id: ${{ vars.AZURE_SIGNING_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_SIGNING_TENANT_ID }}
+          allow-no-subscriptions: true
 
-          # Rename installer to standard format
-          $installerName = "KafkaLens-${version}-win-x64-installer.exe"
-          Move-Item "$releasesDir/KafkaLensSetup.exe" "$releasesDir/$installerName"
+      - name: Sign and package Windows
+        env:
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+        run: ./Installer/package-windows.ps1 -Version $env:RELEASE_VERSION
 
-          echo "Created: $releasesDir/$installerName"
-          echo "version=$version" >> $env:GITHUB_OUTPUT
-
-          # Cleanup
-          Remove-Item -Recurse -Force "$outDir"
+      - name: Smoke-test signed Windows installation
+        run: ./Installer/smoke-windows.ps1 -Installer "Releases/KafkaLens-$env:RELEASE_VERSION-win-x64-installer.exe"
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: kafkalens-windows-${{ steps.publish.outputs.version }}
-          path: Releases/KafkaLens-*.exe
+          name: kafkalens-windows-${{ env.RELEASE_VERSION }}
+          path: Releases/KafkaLens-${{ env.RELEASE_VERSION }}-win-x64-installer.exe
+          if-no-files-found: error
 
   build-linux:
     needs: extract-version
@@ -134,66 +144,76 @@ jobs:
           # Cleanup
           rm -rf "$outDir"
 
+      - name: Smoke-test Linux archive in a virtual display
+        env:
+          RELEASE_VERSION: ${{ needs.extract-version.outputs.version }}
+        run: |
+          if ! command -v xvfb-run || ! command -v xauth || ! command -v xwininfo; then
+            sudo apt-get update
+            sudo apt-get install -y xvfb xauth x11-utils
+          fi
+          bash Installer/smoke-linux.sh "Releases/KafkaLens-$RELEASE_VERSION-linux-x64.zip"
+
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v7
         with:
           name: kafkalens-linux-${{ steps.publish.outputs.version }}
-          path: Releases/KafkaLens-*.zip
+          path: Releases/KafkaLens-${{ steps.publish.outputs.version }}-linux-x64.zip
+          if-no-files-found: error
 
   build-macos:
     needs: extract-version
-    runs-on: macos-latest
+    runs-on: ${{ matrix.runner }}
+    environment: macos-release-signing
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+    env:
+      RELEASE_VERSION: ${{ needs.extract-version.outputs.version }}
+      RELEASE_ARCH: ${{ matrix.arch }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: dotnet restore KafkaLens.slnx
-
-      - name: Publish macOS
-        id: publish
+      - name: Publish macOS application
         run: |
-          version="${{ needs.extract-version.outputs.version }}"
-          platformName="osx-arm64"
-          baseName="KafkaLens-${version}-macos-arm64"
-          outDir="Releases/${baseName}"
-          zipFile="Releases/${baseName}.zip"
-
-          # Build
           dotnet publish UI/KafkaLens.Desktop/KafkaLens.Desktop.csproj \
-            -r "$platformName" \
-            -c Release \
-            --sc \
-            -p:PublishTrimmed=false \
-            -o "$outDir"
+            -r "osx-$RELEASE_ARCH" -c Release --self-contained -p:PublishTrimmed=false -o Releases/KafkaLens_mac
 
-          # Package
-          rm -f "$zipFile"
-          cd Releases
-          zip -r "${baseName}.zip" "$baseName"
-          cd ..
-
-          echo "Created: $zipFile"
-          echo "version=$version" >> $GITHUB_OUTPUT
-
-          # Cleanup
-          rm -rf "$outDir"
+      - name: Sign, notarize and verify macOS archive
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_NOTARY_KEY_BASE64: ${{ secrets.MACOS_NOTARY_KEY_BASE64 }}
+          MACOS_NOTARY_KEY_ID: ${{ vars.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ vars.MACOS_NOTARY_ISSUER_ID }}
+        run: bash Installer/package-macos.sh "$RELEASE_VERSION" "$RELEASE_ARCH"
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: kafkalens-macos-${{ steps.publish.outputs.version }}
-          path: Releases/KafkaLens-*.zip
+          name: kafkalens-macos-${{ env.RELEASE_VERSION }}-${{ matrix.arch }}
+          path: Releases/KafkaLens-${{ env.RELEASE_VERSION }}-macos-${{ matrix.arch }}.zip
+          if-no-files-found: error
 
   create-release:
     needs: [extract-version, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     if: needs.extract-version.outputs.is_tag == 'true'
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -205,9 +225,17 @@ jobs:
         with:
           path: artifacts
 
-      - name: Extract tag message
+      - name: Prepare release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          git tag -l --format='%(contents)' ${{ github.ref_name }} > tag_message.txt
+          git tag -l --format='%(contents)' "$RELEASE_TAG" > tag_message.txt
+          printf '\n\n%s\n\n%s\n' '### Updating macOS from KafkaLens 1.0.1 or earlier' \
+            'Download the ZIP for your Mac from the assets below. Quit KafkaLens, extract the ZIP, and move `KafkaLens.app` to Applications. Earlier versions require a manual download for this upgrade.' \
+            >> tag_message.txt
+          printf '\n%s\n\n%s\n' '### Updating Linux from KafkaLens 1.0.1 or earlier' \
+            'Download and extract the Linux ZIP into a new directory. Quit the old version and launch KafkaLens from the new directory. Earlier versions require a manual download for this upgrade.' \
+            >> tag_message.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -216,7 +244,9 @@ jobs:
           files: |
             artifacts/kafkalens-windows-${{ needs.extract-version.outputs.version }}/*.exe
             artifacts/kafkalens-linux-${{ needs.extract-version.outputs.version }}/*.zip
-            artifacts/kafkalens-macos-${{ needs.extract-version.outputs.version }}/*.zip
+            artifacts/kafkalens-macos-${{ needs.extract-version.outputs.version }}-arm64/*.zip
+            artifacts/kafkalens-macos-${{ needs.extract-version.outputs.version }}-x64/*.zip
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
           generate_release_notes: false

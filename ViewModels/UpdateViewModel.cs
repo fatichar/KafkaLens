@@ -10,6 +10,9 @@ public partial class UpdateViewModel : ViewModelBase
     [ObservableProperty] private string? releaseNotes;
     [ObservableProperty] private bool updateAvailable;
 
+    public string UpdateButtonText => OperatingSystem.IsMacOS() ? "Download Update" : "Update Now";
+    public bool ShowMacUpdateInstructions => OperatingSystem.IsMacOS();
+
     public UpdateCheckResult Result { get; }
 
     public IRelayCommand UpdateCommand { get; }
