@@ -1,11 +1,17 @@
 <Project>
-    <PropertyGroup>
-        <Nullable>enable</Nullable>
-        <AvaloniaVersion>12.0.0</AvaloniaVersion>
-        <Version>1.0.1</Version>
-        <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(CI)' != 'true'">
-        <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <AvaloniaVersion>12.0.0</AvaloniaVersion>
+    <Version>1.0.1</Version>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+  </PropertyGroup>
+  <!--
+    Outside CI, don't let the SDK read git metadata (SourceLink, commit hash in the informational version).
+    Its git reader (Microsoft.Build.Tasks.Git) fails on clones using the reftable ref format
+    ("Unsupported repository extension 'refstorage'"). CI (CI=true on GitHub Actions) keeps it, so
+    published NuGet packages and CI-built releases still carry SourceLink and the commit hash.
+  -->
+  <PropertyGroup Condition="'$(CI)' != 'true'">
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+  </PropertyGroup>
 </Project>
